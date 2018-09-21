@@ -26,7 +26,7 @@
 """
 
 from reynir import TOK
-from reynir.bintokenizer import tokenize as reynir_tokenize
+from reynir.bintokenizer import DefaultPipeline
 
 
 # Set of word forms that are allowed to appear more than once in a row
@@ -612,13 +612,13 @@ class CorrectToken:
     def __repr__(self):
         return (
             "<CorrectToken(kind: {0}, txt: '{1}', val: {2})>"
-            .format(self.kind, self.txt, self.val)
+            .format(TOK.descr[self.kind], self.txt, self.val)
         )
 
     def __str__(self):
         return (
             "(kind: {0}, txt: '{1}', val: {2})"
-            .format(self.kind, self.txt, self.val)
+            .format(TOK.descr[self.kind], self.txt, self.val)
         )
 
 
@@ -688,6 +688,16 @@ def parse_errors(token_stream):
             yield token
 
 
+def lookup_unknown_words(db, token_stream):
+    """ Try to fix unknown words in the token stream """
+    for token in token_stream:
+        if token.kind == TOK.WORD and not token.val:
+            # Do something
+            print("Unknown word: '{0}'".format(token.txt))
+            pass
+        yield token
+
+
 # Used this way:
 # ...  y = y, mo = mo, d = d, h = h, m = m, s = s, error=compound_error(token.error, next_token.error))
 def compound_error(*args):
@@ -702,8 +712,24 @@ def compound_error(*args):
     return comp_err
 
 
+class CorrectionPipeline(DefaultPipeline):
+
+    """ Override the default tokenization pipeline defined in binparser.py
+        in ReynirPackage, adding a correction phase """
+
+    def __init__(self, text, auto_uppercase=False):
+        super().__init__(text, auto_uppercase)
+
+    def correct(self, stream):
+        return parse_errors(stream)
+
+    def lookup_unknown_words(self, stream):
+        """ Attempt to resolve unknown words """
+        return lookup_unknown_words(self._db, stream)
+
+
 def tokenize(text, auto_uppercase=False):
-
-    token_stream = reynir_tokenize(text, auto_uppercase, correction_func=parse_errors)
-
-    return token_stream
+    """ Tokenize text using the correction pipeline, overriding a part
+        of the default tokenization pipeline """
+    pipeline = CorrectionPipeline(text, auto_uppercase)
+    return pipeline.tokenize()
