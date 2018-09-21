@@ -693,7 +693,6 @@ def lookup_unknown_words(db, token_stream):
     for token in token_stream:
         if token.kind == TOK.WORD and not token.val:
             # Do something
-            print("Unknown word: '{0}'".format(token.txt))
             pass
         yield token
 
