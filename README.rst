@@ -16,7 +16,7 @@ by the same authors, to tokenize and parse text.
 Example
 *******
 
->>> from reynir-correct import Corrector
+>>> from reynir_correct import Corrector
 
 *************
 Prerequisites
@@ -39,7 +39,7 @@ If you want to be able to edit the source, do like so (assuming you have **git**
     $ # [ Activate your virtualenv here if you have one ]
     $ python setup.py develop
 
-The package source code is now in ``ReynirCorrect/src/reynir-correct``.
+The package source code is now in ``ReynirCorrect/src/reynir_correct``.
 
 *****
 Tests
