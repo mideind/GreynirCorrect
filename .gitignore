@@ -3,8 +3,22 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# IDEs and editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
 # C extensions
 *.so
+*.o
+*.exe
+*.dll
+
+# Doc stuff
+doc/Makefile
+doc/make.bat
+doc/_build/
 
 # Distribution / packaging
 .Python
@@ -63,9 +77,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-
 # PyBuilder
 target/
 
@@ -102,3 +113,14 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
