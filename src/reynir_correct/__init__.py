@@ -23,6 +23,7 @@
 
 from reynir import Reynir
 from .settings import Settings
+from .errtokenizer import tokenize
 
 __author__ = u"Miðeind ehf"
 
