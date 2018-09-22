@@ -25,8 +25,8 @@
 
 """
 
-from reynir import TOK
-from reynir.bintokenizer import DefaultPipeline
+#from reynir import TOK
+from reynir.bintokenizer import DefaultPipeline, TOK
 
 
 # Set of word forms that are allowed to appear more than once in a row
@@ -633,6 +633,9 @@ class CompoundError(Error):
     def __init__(self):
         super().__init__()
 
+# !!! TODO skrifa yfir smiðinn fyrir TOK úr tokenizer.py í Tokenizer-pakka
+# Tok = namedtuple('Tok', ['kind', 'txt', 'val', 'error'], )
+# Mögulega líka allar aðferðir
 
 def parse_errors(token_stream):
 
@@ -713,10 +716,11 @@ def compound_error(*args):
 
 class CorrectionPipeline(DefaultPipeline):
 
-    """ Override the default tokenization pipeline defined in binparser.py
+    """ Override the default tokenization pipeline defined in bintokenizer.py
         in ReynirPackage, adding a correction phase """
 
     def __init__(self, text, auto_uppercase=False):
+        print(super(DefaultPipeline))
         super().__init__(text, auto_uppercase)
 
     def correct(self, stream):
@@ -730,5 +734,6 @@ class CorrectionPipeline(DefaultPipeline):
 def tokenize(text, auto_uppercase=False):
     """ Tokenize text using the correction pipeline, overriding a part
         of the default tokenization pipeline """
+    print("KEMST Í ERRTOKENIZER")
     pipeline = CorrectionPipeline(text, auto_uppercase)
     return pipeline.tokenize()

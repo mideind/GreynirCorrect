@@ -21,7 +21,7 @@
 
 # Expose the reynir-correct API
 
-from reynir import Reynir
+#from reynir import Reynir  # TODO Putting back in when pip issues are resolved
 from .settings import Settings
 from .errtokenizer import tokenize
 
