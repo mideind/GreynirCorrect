@@ -35,3 +35,6 @@ def test_correct():
             print("   {0}".format(err))
 
 
+if __name__ == "__main__":
+
+    test_correct()
