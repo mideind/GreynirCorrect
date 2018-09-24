@@ -12,13 +12,8 @@ from settings import Settings
 
 
 _PATH = os.path.dirname(__file__) or "."
-_SPELLING_PICKLE = os.path.abspath(
-    os.path.join(
-        _PATH, "resources", "spelling.pickle"
-    )
-)
+_SPELLING_PICKLE = os.path.abspath(os.path.join(_PATH, "resources", "spelling.pickle"))
 
-# Edit distance correction
 
 class Dictionary:
 
@@ -28,14 +23,49 @@ class Dictionary:
     # since they occur often enough in the source text
     # to be taken seriously if not explicitly removed
     _REMOVE = [
-        "ad", "tad", "tess", "thvi", "thad", "thess",
-        "med", "eda", "tho", "ac", "ed", "da", "tm",
-        "ted", "se", "de", "le", "sa", "ap", "am",
-        "sg", "sr", "sþ", "afd", "av", "ba", "okkir",
-        "tilhneygingu", "ff", "matarlist", "þu", "ut",
-        "in", "min", "bin", "þin", "sb", "di", "fra",
-        "þvi", "hb", "framundan"
-    ] + [ c for c in "abcdðeéfghijklmnopqrstuúvwxyýzþö" ]
+        "ad",
+        "tad",
+        "tess",
+        "thvi",
+        "thad",
+        "thess",
+        "med",
+        "eda",
+        "tho",
+        "ac",
+        "ed",
+        "da",
+        "tm",
+        "ted",
+        "se",
+        "de",
+        "le",
+        "sa",
+        "ap",
+        "am",
+        "sg",
+        "sr",
+        "sþ",
+        "afd",
+        "av",
+        "ba",
+        "okkir",
+        "tilhneygingu",
+        "ff",
+        "matarlist",
+        "þu",
+        "ut",
+        "in",
+        "min",
+        "bin",
+        "þin",
+        "sb",
+        "di",
+        "fra",
+        "þvi",
+        "hb",
+        "framundan",
+    ] + [c for c in "abcdðeéfghijklmnopqrstuúvwxyýzþö"]
 
     def __init__(self):
         # All words in vocabulary, case significant
@@ -70,7 +100,7 @@ class Dictionary:
         self.log_total = math.log(self.total)
 
     def _load_bin(self):
-        with open("./resources/bin_words.txt", 'r') as f:
+        with open("./resources/bin_words.txt", "r") as f:
             for line in f:
                 self.bin_words.add(line)
 
@@ -136,7 +166,7 @@ class Dictionary:
 @lru_cache(maxsize=2048)
 def _splits(word):
     """ Return a list of all possible (first, rest) pairs that comprise word. """
-    return [ (word[:i], word[i:]) for i in range(len(word) + 1) ]
+    return [(word[:i], word[i:]) for i in range(len(word) + 1)]
 
 
 class Corrector:
@@ -148,207 +178,207 @@ class Corrector:
 
     # Translate wrongly accented characters before correcting
     _TRANSLATE = {
-        "à" : "á",
-        "è" : "é",
-        "ì" : "í",
-        "ò" : "ó",
-        "ô" : "ó", # Possibly ö
-        "ù" : "ú",
-        "ø" : "ö"
+        "à": "á",
+        "è": "é",
+        "ì": "í",
+        "ò": "ó",
+        "ô": "ó",  # Possibly ö
+        "ù": "ú",
+        "ø": "ö",
     }
     _TRANSLATE_REGEX = "(" + "|".join(_TRANSLATE.keys()) + ")"
 
     _SUBSTITUTE = {
         # keyboard distance
-        "a" : ["q", "w", "s", "z"],
-        "s" : ["w", "e", "d", "x", "z", "a"],
-        "d" : ["e", "r", "f", "c", "x", "s"],
-        "f" : ["r", "t", "g", "v", "c", "d"],
-        "g" : ["t", "y", "h", "b", "v", "f"],
-        "h" : ["y", "u", "j", "n", "b", "g"],
-        "j" : ["u", "i", "k", "m", "n", "h"],
-        "k" : ["i", "o", "l", "m", "j"],
-        "l" : ["o", "p", "æ", "k"],
-        "æ" : ["p", "ð", "þ", "l"],
-        "q" : ["w", "a"],
-        "w" : ["e", "s", "a", "q"],
-        "e" : ["r", "d", "s", "w"],
-        "r" : ["t", "f", "d", "e"],
-        "t" : ["y", "g", "f", "r"],
-        "y" : ["u", "h", "g", "t"],
-        "u" : ["i", "j", "h", "y"],
-        "i" : ["o", "k", "j", "u"],
-        "o" : ["p", "l", "k", "i"],
-        "p" : ["ö", "ð", "æ", "l", "o"],
-        "ð" : ["ö", "-", "æ", "p"],
-        "z" : ["a", "s", "x"],
-        "x" : ["z", "s", "d", "c"],
-        "c" : ["x", "d", "f", "v"],
-        "v" : ["c", "f", "g", "b"],
-        "b" : ["v", "g", "h", "n"],
-        "n" : ["b", "h", "j", "m"],
-        "m" : ["n", "j", "k"],
-        "þ" : ["æ"],
+        "a": ["q", "w", "s", "z"],
+        "s": ["w", "e", "d", "x", "z", "a"],
+        "d": ["e", "r", "f", "c", "x", "s"],
+        "f": ["r", "t", "g", "v", "c", "d"],
+        "g": ["t", "y", "h", "b", "v", "f"],
+        "h": ["y", "u", "j", "n", "b", "g"],
+        "j": ["u", "i", "k", "m", "n", "h"],
+        "k": ["i", "o", "l", "m", "j"],
+        "l": ["o", "p", "æ", "k"],
+        "æ": ["p", "ð", "þ", "l"],
+        "q": ["w", "a"],
+        "w": ["e", "s", "a", "q"],
+        "e": ["r", "d", "s", "w"],
+        "r": ["t", "f", "d", "e"],
+        "t": ["y", "g", "f", "r"],
+        "y": ["u", "h", "g", "t"],
+        "u": ["i", "j", "h", "y"],
+        "i": ["o", "k", "j", "u"],
+        "o": ["p", "l", "k", "i"],
+        "p": ["ö", "ð", "æ", "l", "o"],
+        "ð": ["ö", "-", "æ", "p"],
+        "z": ["a", "s", "x"],
+        "x": ["z", "s", "d", "c"],
+        "c": ["x", "d", "f", "v"],
+        "v": ["c", "f", "g", "b"],
+        "b": ["v", "g", "h", "n"],
+        "n": ["b", "h", "j", "m"],
+        "m": ["n", "j", "k"],
+        "þ": ["æ"],
         # ng/nk
-        "áng" : ["ang"],
-        "eing" : ["eng"],
-        "eyng" : ["eng"],
-        "úng" : ["ung"],
-        "íng" : ["yng", "ing"],
-        "ýng" : ["yng", "ing"],
-        "aung" : ["öng"],
-        "ánk" : ["ank"],
-        "eink" : ["enk"],
-        "eynk" : ["enk"],
-        "únk" : ["unk"],
-        "ínk" : ["ynk", "ink"],
-        "ýnk" : ["ynk", "ink"],
-        "aunk" : ["önk"],
+        "áng": ["ang"],
+        "eing": ["eng"],
+        "eyng": ["eng"],
+        "úng": ["ung"],
+        "íng": ["yng", "ing"],
+        "ýng": ["yng", "ing"],
+        "aung": ["öng"],
+        "ánk": ["ank"],
+        "eink": ["enk"],
+        "eynk": ["enk"],
+        "únk": ["unk"],
+        "ínk": ["ynk", "ink"],
+        "ýnk": ["ynk", "ink"],
+        "aunk": ["önk"],
         # sníkjuhljóð
-        "dl" : ["ll", "rl"],
-        "dn" : ["nn", "rn"],
-        "rdl" : ["rl"],
-        "rdn" : ["rn"],
-        "sdl" : ["sl"],
-        "sdn" : ["sn"],
+        "dl": ["ll", "rl"],
+        "dn": ["nn", "rn"],
+        "rdl": ["rl"],
+        "rdn": ["rn"],
+        "sdl": ["sl"],
+        "sdn": ["sn"],
         # g/j/ø
-        "ýa" : ["ýja"],
-        "ýu" : ["ýu"],
-        "æu" : ["æju"],
-        "ji" : ["i", "gi"],
-        "j" : ["gj"],
-        "ægi" : ["agi"],
-        "eigi" : ["egi"],
-        "eygi" : ["egi"],
-        "ígi" : ["igi"],
-        "ýgi" : ["igi"],
-        "oji" : ["ogi"],
-        "uji" : ["ugi"],
-        "yji" : ["ygi"],
-        "augi" : ["ögi"],
+        "ýa": ["ýja"],
+        "ýu": ["ýu"],
+        "æu": ["æju"],
+        "ji": ["i", "gi"],
+        "j": ["gj"],
+        "ægi": ["agi"],
+        "eigi": ["egi"],
+        "eygi": ["egi"],
+        "ígi": ["igi"],
+        "ýgi": ["igi"],
+        "oji": ["ogi"],
+        "uji": ["ugi"],
+        "yji": ["ygi"],
+        "augi": ["ögi"],
         # g/ø, f/ø í innstöðu
-        "á" : ["ág", "áf"],
-        "í" : ["íg"],
-        "æ" : ["æg"],
-        "ú" : ["úg", "úf"],
-        "ó" : ["óg", "óf"],
+        "á": ["ág", "áf"],
+        "í": ["íg"],
+        "æ": ["æg"],
+        "ú": ["úg", "úf"],
+        "ó": ["óg", "óf"],
         # einfaldir/tvöfaldir samhljóðar
-        "g" : ["gg"],
-        "gg" : ["g"],
-        "k" : ["kk"],
-        "kk" : ["k"],
-        "l" : ["ll"],
-        "ll" : ["l"],
-        "m" : ["mm"],
-        "mm" : ["m"],
-        "n" : ["nn"],
-        "nn" : ["n"],
-        "p" : ["pp"],
-        "pp" : ["p"],
-        "r" : ["rr"],
-        "rr" : ["r"],
-        "s" : ["ss"],
-        "ss" : ["s"],
-        "t" : ["tt"],
-        "tt" : ["t"],
-        "gð" : ["ggð"],
-        "ggð" : ["gð"],
-        "gt" : ["ggt"],
-        "ggt" : ["gt"],
-        "gl" : ["ggl"],
-        "ggl" : ["gl"],
-        "gn" : ["ggn"],
-        "ggn" : ["gn"],
-        "kn" : ["kkn"],
-        "kkn" : ["kn"],
-        "kl" : ["kkl"],
-        "kkl" : ["kl"],
-        "kt" : ["kkt"],
-        "kkt" : ["kt"],
-        "pl" : ["ppl"],
-        "ppl" : ["pl"],
-        "pn" : ["ppn"],
-        "ppn" : ["pn"],
-        "pt" : ["ppt"],
-        "ppt" : ["pt"],
-        "tl" : ["ttl"],
-        "ttl" : ["tl"],
-        "tn" : ["ttn"],
-        "ttn" : ["tn"],
+        "g": ["gg"],
+        "gg": ["g"],
+        "k": ["kk"],
+        "kk": ["k"],
+        "l": ["ll"],
+        "ll": ["l"],
+        "m": ["mm"],
+        "mm": ["m"],
+        "n": ["nn"],
+        "nn": ["n"],
+        "p": ["pp"],
+        "pp": ["p"],
+        "r": ["rr"],
+        "rr": ["r"],
+        "s": ["ss"],
+        "ss": ["s"],
+        "t": ["tt"],
+        "tt": ["t"],
+        "gð": ["ggð"],
+        "ggð": ["gð"],
+        "gt": ["ggt"],
+        "ggt": ["gt"],
+        "gl": ["ggl"],
+        "ggl": ["gl"],
+        "gn": ["ggn"],
+        "ggn": ["gn"],
+        "kn": ["kkn"],
+        "kkn": ["kn"],
+        "kl": ["kkl"],
+        "kkl": ["kl"],
+        "kt": ["kkt"],
+        "kkt": ["kt"],
+        "pl": ["ppl"],
+        "ppl": ["pl"],
+        "pn": ["ppn"],
+        "ppn": ["pn"],
+        "pt": ["ppt"],
+        "ppt": ["pt"],
+        "tl": ["ttl"],
+        "ttl": ["tl"],
+        "tn": ["ttn"],
+        "ttn": ["tn"],
         # sérhljóðar
-        "a" : ["á"],
-        "´a" :["á"],    # Virkar þetta?
-        "´e" :["é"],
-        "´i" :["í"],
-        "´o" :["ó"],
-        "´u" :["ú"],
-        "´y" :["ý"],
-        "e" : ["é"],
-        "ei" : ["ey"],
-        "ey" : ["ei"],
-        "i" : ["í", "y"],
-        "o" : ["ó", "ö"],
-        "u" : ["ú"],
-        "y" : ["i", "ý"],
-        "je" : ["é"],
-        "æ" : ["aí"],   # Tæland → Taíland
+        "a": ["á"],
+        "´a": ["á"],  # Virkar þetta?
+        "´e": ["é"],
+        "´i": ["í"],
+        "´o": ["ó"],
+        "´u": ["ú"],
+        "´y": ["ý"],
+        "e": ["é"],
+        "ei": ["ey"],
+        "ey": ["ei"],
+        "i": ["í", "y"],
+        "o": ["ó", "ö"],
+        "u": ["ú"],
+        "y": ["i", "ý"],
+        "je": ["é"],
+        "æ": ["aí"],  # Tæland → Taíland
         # zeta og tengdir samhljóðaklasar
-        "z" : ["s", "ds", "ðs", "ts"],
-        "zt" : ["st"],
-        "zl" : ["sl"],
-        "nzk" : ["nsk"],
-        "tzt" : ["st"],
-        "ttzt" : ["st"],
+        "z": ["s", "ds", "ðs", "ts"],
+        "zt": ["st"],
+        "zl": ["sl"],
+        "nzk": ["nsk"],
+        "tzt": ["st"],
+        "ttzt": ["st"],
         # einföldun samhljóðaklasa
-        "md" : ["fnd"],
-        "mt" : ["fnd"],
-        "bl" : ["fl"],
-        "bbl" : ["fl"],
-        "bn" : ["fn"],
-        "bbn" : ["fn"],
-        "lgd" : ["gld"],
-        "gld" : ["lgd"],
-        "lgt" : ["glt"],
-        "glt" : ["lgt"],
-        "ngd" : ["gnd"],
-        "gnd" : ["ngd"],
-        "ngt" : ["gnt"],
-        "gnt" : ["ngt"],
-        "lfd" : ["fld"],
-        "fld" : ["lfd"],
-        "lft" : ["flt"],
-        "flt" : ["lft"],
-        "sn" : ["stn"],
-        "rn" : ["rfn"],
-        "rð" : ["rgð"],
-        "rgð" : ["rð"],
-        "ft" : ["pt", "ppt"],
-        "pt" : ["ft"],
-        "ppt" : ["ft"],
-        "nd" : ["rnd"],
-        "st" : ["rst"],
-        "ksk" : ["sk"],
+        "md": ["fnd"],
+        "mt": ["fnd"],
+        "bl": ["fl"],
+        "bbl": ["fl"],
+        "bn": ["fn"],
+        "bbn": ["fn"],
+        "lgd": ["gld"],
+        "gld": ["lgd"],
+        "lgt": ["glt"],
+        "glt": ["lgt"],
+        "ngd": ["gnd"],
+        "gnd": ["ngd"],
+        "ngt": ["gnt"],
+        "gnt": ["ngt"],
+        "lfd": ["fld"],
+        "fld": ["lfd"],
+        "lft": ["flt"],
+        "flt": ["lft"],
+        "sn": ["stn"],
+        "rn": ["rfn"],
+        "rð": ["rgð"],
+        "rgð": ["rð"],
+        "ft": ["pt", "ppt"],
+        "pt": ["ft"],
+        "ppt": ["ft"],
+        "nd": ["rnd"],
+        "st": ["rst"],
+        "ksk": ["sk"],
         # annað
-        "kv" : ["hv"],
-        "hv" : ["kv"],
-        "gs" : ["x"],
-        "ks" : ["x"],
-        "x" : ["gs", "ks"],
-        "v" : ["f"],
-        "b" : ["p"],
-        "g" : ["k"],
-        "d" : ["t"],
+        "kv": ["hv"],
+        "hv": ["kv"],
+        "gs": ["x"],
+        "ks": ["x"],
+        "x": ["gs", "ks"],
+        "v": ["f"],
+        "b": ["p"],
+        "g": ["k"],
+        "d": ["t"],
         # erlent lyklaborð
-        "ae" : ["æ"],
-        "t" : ["þ"],
-        "th" : ["þ"],
-        "d" : ["ð"],
+        "ae": ["æ"],
+        "t": ["þ"],
+        "th": ["þ"],
+        "d": ["ð"],
         # ljóslestur
-        "c" : ["æ", "é"]
+        "c": ["æ", "é"],
     }
 
     # Sort the substitution keys in descending order by length
-    _SUBSTITUTE_KEYS = sorted(_SUBSTITUTE.keys(), key=lambda x: len(x), reverse = True)
+    _SUBSTITUTE_KEYS = sorted(_SUBSTITUTE.keys(), key=lambda x: len(x), reverse=True)
     # Create a regex to extract word fragments ending with substitution keys
     _SUBSTITUTE_REGEX = re.compile("(.*?(" + "|".join(_SUBSTITUTE_KEYS) + "))")
 
@@ -356,7 +386,7 @@ class Corrector:
     # word in order for it to be returned
     _MIN_LOG_PROBABILITY = math.log(3.65e-9)
 
-    def __init__(self, dictionary = None):
+    def __init__(self, dictionary=None):
         self.d = dictionary or Dictionary()
         # Function for probability of word
         self.p_word = self.d.pdist()
@@ -378,28 +408,30 @@ class Corrector:
             """ Return the subset of words that are actually in the dictionary. """
             return {w for w in words if w in self.d or w in self.d.bin_words}
 
-        def edits0(word): 
+        def edits0(word):
             """ Return all strings that are zero edits away from word (i.e., just word itself). """
             return {word}
 
         def edits1(word, pairs):
             """ Return all strings that are one edit away from this word. """
             # Deletes
-            result  = {a+b[1:]           for (a, b) in pairs if b}
+            result = {a + b[1:]                 for (a, b) in pairs if b}
             # Transposes
-            result |= {a+b[1]+b[0]+b[2:] for (a, b) in pairs if len(b) > 1}
+            result |= {a + b[1] + b[0] + b[2:]  for (a, b) in pairs if len(b) > 1}
             # Replaces
-            result |= {a+c+b[1:]         for (a, b) in pairs for c in alphabet if b}
+            result |= {a + c + b[1:]            for (a, b) in pairs for c in alphabet if b}
             # Inserts
-            result |= {a+c+b             for (a, b) in pairs for c in alphabet}
+            result |= {a + c + b                for (a, b) in pairs for c in alphabet}
             return result
 
         def edits2(word, pairs):
             """ Return all strings that are two edits away from this word. """
+
             def sub_edits1(word):
                 pairs = _splits(word)
                 return edits1(word, pairs)
-            return { e2 for e1 in edits1(word, pairs) for e2 in sub_edits1(e1) }
+
+            return {e2 for e1 in edits1(word, pairs) for e2 in sub_edits1(e1)}
 
         def subs(word):
             """ Return all potential substitutions """
@@ -409,7 +441,7 @@ class Corrector:
             combs = []
             for frag, sub in fragments:
                 end += len(frag)
-                subs = [sub] + self._SUBSTITUTE[sub]
+                subs = self._SUBSTITUTE[sub]
                 combs.append(subs)
                 num_combs *= 1 + len(subs)
             suffix = word[end:]
@@ -421,7 +453,7 @@ class Corrector:
                     if ix == 0:
                         result.append(frag)
                     else:
-                        result.append(frag[:-len(sub)] + subs[ix-1])
+                        result.append(frag[: -len(sub)] + subs[ix - 1])
                     combo //= len(subs) + 1
                 result.append(suffix)
                 yield "".join(result)
@@ -430,8 +462,12 @@ class Corrector:
             """ Generate candidates in order of generally decreasing likelihood """
             EDIT_0_FACTOR = math.log(1.0 / 1.0)
             EDIT_S_FACTOR = math.log(1.0 / 8.0)
-            EDIT_1_FACTOR = math.log(1.0 / 64.0) # Edit distance 1 is 25 times more unlikely than 0
-            EDIT_2_FACTOR = math.log(1.0 / 2048.0) # Edit distance 2 is 16 times more unlikely than 1
+            EDIT_1_FACTOR = math.log(
+                1.0 / 64.0
+            )  # Edit distance 1 is 25 times more unlikely than 0
+            EDIT_2_FACTOR = math.log(
+                1.0 / 2048.0
+            )  # Edit distance 2 is 16 times more unlikely than 1
             P = self.d.pdist_log()
             e0 = edits0(word)
             for c in known(e0):
@@ -459,10 +495,10 @@ class Corrector:
         for c, log_prob in gen_candidates(word):
             if log_prob > self.accept_threshold:
                 if c == word:
-                    #print(f"The original word {word} is above the threshold, returning it")
+                    # print(f"The original word {word} is above the threshold, returning it")
                     return word
                 # This candidate is likely enough: stop iterating and return it
-                #print(f"Candidate {c} has log_prob {log_prob:.3f} > threshold")
+                # print(f"Candidate {c} has log_prob {log_prob:.3f} > threshold")
                 acceptable += 1
             # Otherwise, add to candidate list
             candidates.append((c, log_prob))
@@ -472,15 +508,15 @@ class Corrector:
                 break
         if not candidates:
             # No candidates beside the word itself: return it
-            #print(f"Candidate {word} is only candidate, returning it")
+            # print(f"Candidate {word} is only candidate, returning it")
             return word
         # Return the highest probability candidate
-        #for i, (c, log_prob) in enumerate(sorted(candidates, key=lambda t:t[1], reverse=True)[0:5]):
-            #print(f"Candidate {i+1} for {word} is {c} with log_prob {log_prob:.3f}")
-        m = max(candidates, key=lambda t:t[1])
+        # for i, (c, log_prob) in enumerate(sorted(candidates, key=lambda t:t[1], reverse=True)[0:5]):
+        # print(f"Candidate {i+1} for {word} is {c} with log_prob {log_prob:.3f}")
+        m = max(candidates, key=lambda t: t[1])
         if m[1] < self._MIN_LOG_PROBABILITY:
             # Best candidate is very unlikely: return the original word
-            #print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
+            # print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
             return word
         # Return the most likely word
         return m[0]
@@ -488,18 +524,15 @@ class Corrector:
     @staticmethod
     def _case_of(text):
         """ Return the case-function appropriate for text: upper, lower, title, or just str. """
-        return (
-            # str.lower if text.islower() else
-            str.upper if text.isupper() else
-            str.title if text.istitle() else
-            str
-        )
+        return str.upper if text.isupper() else str.title if text.istitle() else str
 
     def _cast(self, word):
         """ Cast the word to lowercase and correct accents """
-        return re.sub(self._TRANSLATE_REGEX,
+        return re.sub(
+            self._TRANSLATE_REGEX,
             lambda match: self._TRANSLATE[match.group()],
-            word.lower())
+            word.lower(),
+        )
 
     def correct(self, word):
         return self._case_of(word)(self._correct(self._cast(word)))
@@ -516,17 +549,12 @@ class Corrector:
 
         # The regex finds all Unicode alphabetic letter sequences
         # (not including digits or underscores)
-        # return re.sub(r'[^\W\d_]+', correct_match, text)
-        return re.sub(r'[:alpha:]+', correct_match, text)
+        return re.sub(r"[^\W\d_]+", correct_match, text)
 
 
-def main():
-    #print("Welcome to Test.")
+def test():
+
     c = Corrector()
-    return c
-
-
-def test(c):
 
     txts = [
         """
@@ -578,9 +606,6 @@ def test(c):
         print(c.correct_text(t))
 
 
-c = None
-
 if __name__ == "__main__":
 
-    c = main()
-    test(c)
+    test()
