@@ -26,8 +26,15 @@ def test_correct():
     """ Test that importing and initializing the reynir module works """
     import reynir_correct as rc
 
-    g = rc.tokenize("Kexið er gott báðumegin, sagði Cthulhu.")
+    g = rc.tokenize("Kexið er gott báðumegin, sagði sagði Cthulhu og rak sig uppundir þakið. Það var aftaka veður í gær.")
 
     for token in g:
         print("{0}".format(token))
+        err = token.error_description
+        if err:
+            print("   {0}".format(err))
 
+
+if __name__ == "__main__":
+
+    test_correct()

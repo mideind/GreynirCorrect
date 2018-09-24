@@ -46,7 +46,6 @@ ALLOWED_MULTIPLES = frozenset(
         "eins",
         "ekki",
         "er",
-        "er ",
         "falla",
         "fallið",
         "ferð",
@@ -146,7 +145,6 @@ ALLOWED_MULTIPLES = frozenset(
         "undan",
         "undir",
         "upp",
-        "upp ",
         "valda",
         "vanda",
         "var",
@@ -167,17 +165,13 @@ ALLOWED_MULTIPLES = frozenset(
         "yfir",
         "yrði",
         "á",
-        "á ",
         "átta",
         "í",
-        "í ",
         "ó",
         "ómar",
         "úr",
         "út",
-        "út ",
         "úti",
-        "úti ",
         "þegar",
         "þjóna",
     ]
@@ -592,21 +586,33 @@ SPLIT_COMPOUNDS = {
 
 class CorrectToken:
 
+    """ This class sneakily replaces the tokenizer.Tok tuple in the tokenization
+        pipeline. When applying a CorrectionPipeline (instead of a DefaultPipeline,
+        as defined in binparser.py in ReynirPackage), tokens get translated to
+        instances of this class in the correct() phase. This works due to Python's
+        duck typing, because a CorrectToken class instance is able to walk and quack
+        - i.e. behave - like a tokenizer.Tok tuple. It adds an _err attribute to hold
+        information about spelling and grammar errors, and some higher level functions
+        to aid in error reporting and correction. """
+
     def __init__(self, kind, txt, val):
         self.kind = kind
         self.txt = txt
         self.val = val
-        self.err = None
+        self._err = None
 
     def __getitem__(self, index):
+        """ Support tuple-style indexing, as raw tokens do """
         return (self.kind, self.txt, self.val)[index]
 
     @classmethod
-    def FromToken(cls, token):
+    def from_token(cls, token):
+        """ Wrap a raw token in a CorrectToken """
         return cls(token.kind, token.txt, token.val)
 
     @classmethod
-    def Word(cls, txt, val=None):
+    def word(cls, txt, val=None):
+        """ Create a wrapped word token """
         return cls(TOK.WORD, txt, val)
 
     def __repr__(self):
@@ -615,23 +621,70 @@ class CorrectToken:
             .format(TOK.descr[self.kind], self.txt, self.val)
         )
 
-    def __str__(self):
-        return (
-            "(kind: {0}, txt: '{1}', val: {2})"
-            .format(TOK.descr[self.kind], self.txt, self.val)
-        )
+    __str__ = __repr__
+
+    def set_error(self, err):
+        """ Associate an Error class instance with this token """
+        self._err = err
+
+    def copy_error(self, other):
+        """ Copy the error field from another CorrectToken instance """
+        if isinstance(other, CorrectToken):
+            self._err = other._err
+
+    @property
+    def error_description(self):
+        """ Return the description of an error associated with this token, if any """
+        return "" if self._err is None else self._err.description
 
 
 class Error:
 
-    def __init__(self):
-        pass
+    """ Base class for spelling and grammar errors, warnings and recommendations.
+        An Error has a code and can provide a description of itself. """
+
+    def __init__(self, code):
+        self._code = code
+
+    @property
+    def code(self):
+        return self._code
+    
+    @property
+    def description(self):
+        """ Should be overridden """
+        raise NotImplementedError
 
 
 class CompoundError(Error):
 
-    def __init__(self):
-        super().__init__()
+    """ A CompoundError is an error where words are duplicated, split or not
+        split correctly. """
+
+    def __init__(self, code, txt):
+        # Compound error codes start with "C"
+        super().__init__("C" + code)
+        self._txt = txt
+
+    @property
+    def description(self):
+        return self._txt
+
+
+class UnknownWordError(Error):
+
+    """ An UnknownWordError is an error where the given word form does not
+        exist in BÍN or additional vocabularies, and cannot be explained as
+        a compound word. """
+
+    def __init__(self, code, txt):
+        # Unknown word error codes start with "U"
+        super().__init__("U" + code)
+        self._txt = txt
+
+    @property
+    def description(self):
+        return self._txt
 
 # !!! TODO skrifa yfir smiðinn fyrir TOK úr tokenizer.py í Tokenizer-pakka
 # Tok = namedtuple('Tok', ['kind', 'txt', 'val', 'error'], )
@@ -639,10 +692,14 @@ class CompoundError(Error):
 
 def parse_errors(token_stream):
 
+    """ This tokenization phase is done before BÍN annotation
+        and before static phrases are identified. It finds duplicated words,
+        and words that have been incorrectly split or should be split. """
+
     def get():
         """ Get the next token in the underlying stream and wrap it
             in a CorrectToken instance """
-        return CorrectToken.FromToken(next(token_stream))
+        return CorrectToken.from_token(next(token_stream))
 
     token = None
     try:
@@ -661,24 +718,40 @@ def parse_errors(token_stream):
                 and token.kind == TOK.WORD
             ):
                 # Step to next token
-                next_token = CorrectToken.Word(token.txt)
-                # next_token.err = compound_error(2, token.error, next_token.error)
+                next_token = CorrectToken.word(token.txt)
+                next_token.set_error(
+                    CompoundError(
+                        "001", "Endurtekið orð ('{0} {0}') var fellt burt"
+                        .format(token.txt)
+                    )
+                )
                 token = next_token
                 continue
 
             # Splitting wrongly compounded words; GrammCorr 1A
             if token.txt and token.txt.lower() in NOT_COMPOUNDS:
                 for phrase_part in NOT_COMPOUNDS[token.txt.lower()]:
-                    new_token = CorrectToken.Word(phrase_part)
-                    # new_token.err = compound_error(4)
+                    new_token = CorrectToken.word(phrase_part)
+                    new_token.set_error(
+                        CompoundError(
+                            "002", "Orðinu '{0}' var skipt upp"
+                            .format(token.txt)
+                        )
+                    )
                     yield new_token
                 token = next_token
                 continue
 
             # Unite wrongly split compounds; GrammCorr 1X
             if (token.txt, next_token.txt) in SPLIT_COMPOUNDS:
-                token = CorrectToken.Word(token.txt + next_token.txt)
-                # token.err = compound_error(token.error, 5, next_token.error)
+                first_txt = token.txt
+                token = CorrectToken.word(token.txt + next_token.txt)
+                token.set_error(
+                    CompoundError(
+                        "003", "Orðin '{0} {1}' voru sameinuð í eitt"
+                        .format(first_txt, next_token.txt)
+                    )
+                )
                 continue
 
             # Yield the current token and advance to the lookahead
@@ -692,26 +765,17 @@ def parse_errors(token_stream):
 
 
 def lookup_unknown_words(db, token_stream):
-    """ Try to fix unknown words in the token stream """
+    """ Try to identify unknown words in the token stream, for instance
+        as spelling errors (character juxtaposition, deletion, insertion...) """
     for token in token_stream:
         if token.kind == TOK.WORD and not token.val:
-            # Do something
-            pass
+            # Mark the token as an unknown word
+            token.set_error(
+                UnknownWordError(
+                    "001", "Óþekkt orð: '{0}'".format(token.txt)
+                )
+            )
         yield token
-
-
-# Used this way:
-# ...  y = y, mo = mo, d = d, h = h, m = m, s = s, error=compound_error(token.error, next_token.error))
-def compound_error(*args):
-    comp_err = []
-    for arg in args:
-        if not arg:
-            continue
-        if arg is list:
-            comp_err.extend(arg)
-        else:
-            comp_err.append(arg)
-    return comp_err
 
 
 class CorrectionPipeline(DefaultPipeline):
@@ -723,7 +787,18 @@ class CorrectionPipeline(DefaultPipeline):
         print(super(DefaultPipeline))
         super().__init__(text, auto_uppercase)
 
+    def word_token_ctor(self, txt, val=None, token=None):
+        """ Use our own CorrectToken class for word token instances """
+        ct = CorrectToken.word(txt, val)
+        if token is not None:
+            # This token is being constructed in reference to a previously
+            # generated token, which might have had an associated error:
+            # make sure that it is preserved
+            ct.copy_error(token)
+        return ct
+
     def correct(self, stream):
+        """ Add a correction pass just before BÍN annotation """
         return parse_errors(stream)
 
     def lookup_unknown_words(self, stream):
