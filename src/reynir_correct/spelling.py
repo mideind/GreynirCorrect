@@ -1,18 +1,54 @@
+"""
+
+    Reynir: Natural language processing for Icelandic
+
+    Spelling correction module
+
+    Copyright (C) 2018 Miðeind ehf.
+
+       This program is free software: you can redistribute it and/or modify
+       it under the terms of the GNU General Public License as published by
+       the Free Software Foundation, either version 3 of the License, or
+       (at your option) any later version.
+       This program is distributed in the hope that it will be useful,
+       but WITHOUT ANY WARRANTY; without even the implied warranty of
+       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+       GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see http://www.gnu.org/licenses/.
+
+
+    This module uses word frequency information extracted from the
+    Reynir (greynir.is) database as a basis for guessing the correct
+    spelling of words not found in BÍN and not recognized by the
+    compound word algorithm.
+
+"""
 
 import os
-import sys
 import math
 import re
 import pickle
 
-from collections import Counter, defaultdict
+from collections import defaultdict
 from functools import lru_cache
 
-from settings import Settings
+if __package__:
+    from .settings import Settings
+else:
+    from settings import Settings
 
 
 _PATH = os.path.dirname(__file__) or "."
 _SPELLING_PICKLE = os.path.abspath(os.path.join(_PATH, "resources", "spelling.pickle"))
+
+EDIT_0_FACTOR = math.log(1.0 / 1.0)
+EDIT_S_FACTOR = math.log(1.0 / 8.0)
+# Edit distance 1 is 25 times more unlikely than 0
+EDIT_1_FACTOR = math.log(1.0 / 64.0)
+# Edit distance 2 is 16 times more unlikely than 1
+EDIT_2_FACTOR = math.log(1.0 / 2048.0)
 
 
 class Dictionary:
@@ -410,14 +446,14 @@ class Corrector:
         alphabet = self._ALPHABET
 
         def known(words):
-            """ Return the subset of words that are actually in the dictionary. """
-            return {w for w in words if w in self.d or w in self.d.bin_words}
+            """ Return a generator of words that are actually in the dictionary. """
+            return (w for w in words if w in self.d or w in self.d.bin_words)
 
         def edits0(word):
             """ Return all strings that are zero edits away from word (i.e., just word itself). """
             return {word}
 
-        def edits1(word, pairs):
+        def edits1(pairs):
             """ Return all strings that are one edit away from this word. """
             # Deletes
             result = {a + b[1:]                 for (a, b) in pairs if b}
@@ -429,14 +465,14 @@ class Corrector:
             result |= {a + c + b                for (a, b) in pairs for c in alphabet}
             return result
 
-        def edits2(word, pairs):
+        def edits2(pairs):
             """ Return all strings that are two edits away from this word. """
 
             def sub_edits1(word):
                 pairs = _splits(word)
-                return edits1(word, pairs)
+                return edits1(pairs)
 
-            return {e2 for e1 in edits1(word, pairs) for e2 in sub_edits1(e1)}
+            return {e2 for e1 in edits1(pairs) for e2 in sub_edits1(e1)}
 
         def subs(word):
             """ Return all potential substitutions """
@@ -465,12 +501,6 @@ class Corrector:
 
         def gen_candidates(word):
             """ Generate candidates in order of generally decreasing likelihood """
-            EDIT_0_FACTOR = math.log(1.0 / 1.0)
-            EDIT_S_FACTOR = math.log(1.0 / 8.0)
-            # Edit distance 1 is 25 times more unlikely than 0
-            EDIT_1_FACTOR = math.log(1.0 / 64.0)
-            # Edit distance 2 is 16 times more unlikely than 1
-            EDIT_2_FACTOR = math.log(1.0 / 2048.0)
             P = self.d.pdist_log()
             e0 = edits0(word)
             for c in known(e0):
@@ -482,12 +512,12 @@ class Corrector:
             #         self.d.probs[c] = P(c)
             #     yield (c, self.d.probs[c] + EDIT_S_FACTOR)
             pairs = _splits(word)
-            e1 = edits1(word, pairs) - e0
+            e1 = edits1(pairs) - e0
             for c in known(e1):
                 if c not in self.d.probs:
                     self.d.probs[c] = P(c)
                 yield (c, self.d.probs[c] + EDIT_1_FACTOR)
-            e2 = edits2(word, pairs) - e1 - e0
+            e2 = edits2(pairs) - e1 - e0
             for c in known(e2):
                 if c not in self.d.probs:
                     self.d.probs[c] = P(c)
