@@ -36,6 +36,7 @@ from collections import defaultdict
 from functools import lru_cache
 
 from reynir import tokenize, correct_spaces, TOK
+from reynir.bindb import BIN_Db
 
 if __package__:
     from .settings import Settings
@@ -427,7 +428,10 @@ class Corrector:
     # word in order for it to be returned
     _MIN_LOG_PROBABILITY = math.log(3.65e-9)
 
-    def __init__(self, dictionary=None):
+    def __init__(self, db, dictionary=None):
+        # Word database
+        self._db = db
+        # Word frequency dictionary
         self.d = dictionary or Dictionary()
         # Function for probability of word
         self.p_word = self.d.pdist()
@@ -462,19 +466,24 @@ class Corrector:
             yield "".join(result)
 
     @lru_cache(maxsize=4096)
-    def _correct(self, word):
+    def _correct(self, original_word, word):
         """ Find the best spelling correction for this word.
             Credits for this elegant code are due to Peter Norvig,
             cf. http://nbviewer.jupyter.org/url/norvig.com/ipython/
             How%20to%20Do%20Things%20with%20Words.ipynb """
 
-        # Note: word is assumed to be in lowercase
+        # Note: word is assumed to be in lowercase, while
+        # original_word has the original case from the source text
 
         alphabet = self._ALPHABET
 
         def known(words):
             """ Return a generator of words that are actually in the dictionary. """
-            return (w for w in words if w in self.d or w in self.d.bin_words)
+            # return (w for w in words if w in self.d or w in self.d.bin_words)
+            # !!! TODO: This should really be a case-insensitive check,
+            # !!! otherwise words such as 'ísland' are not recognized
+            # !!! (they are only capitalized or uppercased in BÍN)
+            return (w for w in words if w in self._db)
 
         def edits0(word):
             """ Return all strings that are zero edits away from word (i.e., just word itself). """
@@ -526,10 +535,10 @@ class Corrector:
                 result.append(suffix)
                 yield "".join(result)
 
-        def gen_candidates(word):
+        def gen_candidates(original_word, word):
             """ Generate candidates in order of generally decreasing likelihood """
             P = self.d.pdist_log()
-            e0 = edits0(word)
+            e0 = edits0(word) | edits0(original_word)
             for c in known(e0):
                 if c not in self.d.probs:
                     self.d.probs[c] = P(c)
@@ -544,15 +553,17 @@ class Corrector:
                 if c not in self.d.probs:
                     self.d.probs[c] = P(c)
                 yield (c, self.d.probs[c] + EDIT_1_FACTOR)
-            e2 = edits2(pairs) - e1 - e0
-            for c in known(e2):
-                if c not in self.d.probs:
-                    self.d.probs[c] = P(c)
-                yield (c, self.d.probs[c] + EDIT_2_FACTOR)
+            # The following edit distance=2 stuff is hugely expensive
+            # in terms of processor time and memory
+            #e2 = edits2(pairs) - e1 - e0
+            #for c in known(e2):
+            #    if c not in self.d.probs:
+            #        self.d.probs[c] = P(c)
+            #    yield (c, self.d.probs[c] + EDIT_2_FACTOR)
 
         candidates = []
         acceptable = 0
-        for c, log_prob in gen_candidates(word):
+        for c, log_prob in gen_candidates(original_word, word):
             if log_prob > self.accept_threshold:
                 if c == word:
                     # print(f"The original word {word} is above the threshold, returning it")
@@ -562,10 +573,9 @@ class Corrector:
                 acceptable += 1
             # Otherwise, add to candidate list
             candidates.append((c, log_prob))
-            if acceptable >= 10:
-                # We already have ten candidates above the threshold:
-                # that's enough
-                break
+            # if acceptable >= 100:
+            #     # We already have plenty of candidates above the threshold
+            #     break
         if not candidates:
             # No candidates beside the word itself: return it
             # print(f"Candidate {word} is only candidate, returning it")
@@ -574,9 +584,9 @@ class Corrector:
         # for i, (c, log_prob) in enumerate(sorted(candidates, key=lambda t:t[1], reverse=True)[0:5]):
         # print(f"Candidate {i+1} for {word} is {c} with log_prob {log_prob:.3f}")
         m = max(candidates, key=lambda t: t[1])
-        if m[1] < self._MIN_LOG_PROBABILITY:
+        if m[1] < self._MIN_LOG_PROBABILITY and word in self._db:
             # Best candidate is very unlikely: return the original word
-            # print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
+            print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
             return word
         # Return the most likely word
         return m[0]
@@ -595,56 +605,51 @@ class Corrector:
         )
 
     def correct(self, word):
-        return self._case_of(word)(self._correct(self._cast(word)))
+        """ Correct a single word, keeping its case (lower/upper/title) intact """
+        return self._case_of(word)(self._correct(word, self._cast(word)))
 
     def __getitem__(self, word):
+        """ For the fun of it, support corrector["myword"] syntax """
         return self.correct(word)
 
     def correct_text(self, text):
-        """ Correct all the words within a text, returning the corrected text. """
-
-        def correct_match(match):
-            """ Spell-correct word in match, and preserve proper upper/lower/title case. """
-            return self.correct(match.group())
-
+        """ Attempt to correct all words within a text, returning the corrected text. """
         result = []
         for token in tokenize(text):
             if token.kind == TOK.WORD:
+                # Word: try to correct it
                 result.append(self.correct(token.txt))
             elif token.txt:
                 result.append(token.txt)
         return correct_spaces(" ".join(result))
 
-        # The regex finds all Unicode alphabetic letter sequences
-        # (not including digits or underscores)
-        # return re.sub(r"[^\W\d_]+", correct_match, text)
-
 
 def test():
 
-    c = Corrector()
+    with BIN_Db.get_db() as db:
+        c = Corrector(db)
 
-    txts = [
-        """
+        txts = [
+            """
         FF er flokkur með rasisku ívafi og tilhneygjingu til að einkavinavæða alla fjölmiðla
         Íslands og færa þar með elítunni að geta ein haft áhrif á skoðanamyndandi áhri í
         fjölmiðlaheiminum, er ekki viðbúið að svona flokkur gamgi til samstarf við íhaldið
         eftir kosningar en ekki þessa vondu félagshyggjuflokka
-        """,
-        """
+            """,
+            """
         fæ alveg hræðileg drauma vegna fyrri áfalla og það hjálpar mér að ná góðum svef og þar með
         betri andlegri lýðan og líka til að auka matarlist. Tek samt skýrt fram að ég hef bæði
         missnotað kannabis og ekki. Hef engan áhuga á að vera undir áhrifum kannabis alla dag.
         Mikil munur á að nota og missnota !
-        """,
-        """
+            """,
+            """
         Bæði , lyf gegn áfengissyki (leiða) , mér hefur ekki leiðst mikið seinustu 30 ár. Gegn
         Taugaveiklun, konan hamrar á mér alla daga , skærur hennar eru langar og strangar. En ef ég fæ
         eina pípu og gríp gitarinn má hún tuða í mér klukkutímum saman.Ég er bæði rólegur og læri hratt
         á gítarinn, eftir 10 ára hjónaband er ég bara ótrúlega heill og stefni hátt. Ég og gitarinn erum
         orðnir samvaxnir. Auðvitað stefnum við á skilnað og þá mun ég sakna skalaæfinganna.
-        """,
-        """
+            """,
+            """
         biddu nu hæg - var Kvennalistinn eins malefnis hreyfing. Hvað attu við - ef þu telur malefnið
         hafa verið eitt hvert var það? Kannski leikskola fyrir öll börn? Sömu laun fyrir sömu störf?
         Að borgarskipulag tæki mið af þörfum beggja kynja? Að kynjagleraugu væru notuð við gerð
@@ -654,8 +659,8 @@ def test():
         telurðu það EITT malefni þo að i grunninn hafi baratta okkar sem stoðum að Kvennaframboðinu
         og -listanum gengið ut a að ,,betri,, helmingur þjoðarinnar öðlast - ekki bara i orði heldur
         einnig a borði - sömu rettindi og raðandi helmingurinn
-        """,
-        """
+            """,
+            """
         Salvör ekki standa i að reyna að klora yfir mistök þin. Reynsluheimur kvenna visar að sjalsögðu
         til þess að helmingur mannkynsins - -konur - er olikur hinum helmingnum bæði sökum lffræðilegs munar og
         þess að þær eru gerðar að konum (sb de Beauvoir) þe fra frumbernsku er drengjum hrosað fyrir annað en
@@ -665,39 +670,39 @@ def test():
         sem stofnaði Kvennafranboðið og - listann börðumst gegn - a öllum vigstöðvum. Að skilgreina barattu okkar
         Kvennalistans - fyrir rettindum halfrar þjoðarinnar til að skapa ,,rettlatara samfelag,, - sem eins mals flokk er
         fjarstæða.
-        """,
-    ]
+            """,
+        ]
 
-    def linebreak(txt, margin=80, left_margin=0):
-        """ Return a nicely column-formatted string representation of the given text,
-            where each line is not longer than the given margin (if possible).
-            A left margin can be optionally added, as a sequence of spaces.
-            The lines are joined by newlines ('\n') but there is no trailing
-            newline. """
-        result = []
-        line = []
-        len_line = 0
-        for wrd in txt.split():
-            if len_line + 1 + len(wrd) > margin:
+        def linebreak(txt, margin=80, left_margin=0):
+            """ Return a nicely column-formatted string representation of the given text,
+                where each line is not longer than the given margin (if possible).
+                A left margin can be optionally added, as a sequence of spaces.
+                The lines are joined by newlines ('\n') but there is no trailing
+                newline. """
+            result = []
+            line = []
+            len_line = 0
+            for wrd in txt.split():
+                if len_line + 1 + len(wrd) > margin:
+                    result.append(" ".join(line))
+                    line = []
+                    len_line = 0
+                line.append(wrd)
+                len_line += 1 + len(wrd)
+            if line:
                 result.append(" ".join(line))
-                line = []
-                len_line = 0
-            line.append(wrd)
-            len_line += 1 + len(wrd)
-        if line:
-            result.append(" ".join(line))
-        return "\n".join(" " * left_margin + line for line in result)
+            return "\n".join(" " * left_margin + line for line in result)
 
-    t0 = time.time()
+        t0 = time.time()
 
-    for t in txts:
-        print("\nOriginal:\n")
-        print(t)
-        print("\nCorrected:\n")
-        print(linebreak(c.correct_text(t), left_margin=8))
+        for t in txts:
+            print("\nOriginal:\n")
+            print(t)
+            print("\nCorrected:\n")
+            print(linebreak(c.correct_text(t), left_margin=8))
 
-    t1 = time.time()
-    print("Total time: {0:.2f} seconds".format(t1 - t0))
+        t1 = time.time()
+        print("\nTotal time: {0:.2f} seconds".format(t1 - t0))
 
 
 if __name__ == "__main__":
