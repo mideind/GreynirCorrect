@@ -30,9 +30,12 @@ import os
 import math
 import re
 import pickle
+import time
 
 from collections import defaultdict
 from functools import lru_cache
+
+from reynir import tokenize, correct_spaces, TOK
 
 if __package__:
     from .settings import Settings
@@ -226,35 +229,38 @@ class Corrector:
 
     _SUBSTITUTE_LIST = [
         # keyboard distance
-        ("a", ["q", "w", "s", "z"]),
-        ("s", ["w", "e", "d", "x", "z", "a"]),
-        ("d", ["e", "r", "f", "c", "x", "s"]),
-        ("f", ["r", "t", "g", "v", "c", "d"]),
-        ("g", ["t", "y", "h", "b", "v", "f"]),
-        ("h", ["y", "u", "j", "n", "b", "g"]),
-        ("j", ["u", "i", "k", "m", "n", "h"]),
-        ("k", ["i", "o", "l", "m", "j"]),
-        ("l", ["o", "p", "æ", "k"]),
-        ("æ", ["p", "ð", "þ", "l"]),
-        ("q", ["w", "a"]),
-        ("w", ["e", "s", "a", "q"]),
-        ("e", ["r", "d", "s", "w"]),
-        ("r", ["t", "f", "d", "e"]),
-        ("t", ["y", "g", "f", "r"]),
-        ("y", ["u", "h", "g", "t"]),
-        ("u", ["i", "j", "h", "y"]),
-        ("i", ["o", "k", "j", "u"]),
-        ("o", ["p", "l", "k", "i"]),
-        ("p", ["ö", "ð", "æ", "l", "o"]),
-        ("ð", ["ö", "-", "æ", "p"]),
-        ("z", ["a", "s", "x"]),
-        ("x", ["z", "s", "d", "c"]),
-        ("c", ["x", "d", "f", "v"]),
-        ("v", ["c", "f", "g", "b"]),
-        ("b", ["v", "g", "h", "n"]),
-        ("n", ["b", "h", "j", "m"]),
-        ("m", ["n", "j", "k"]),
-        ("þ", ["æ"]),
+        # Note: single character substitutions are already carried
+        # out in the edit distance algorithm, so they do not need
+        # to be repeated here.
+        # ("a", ["q", "w", "s", "z"]),
+        # ("s", ["w", "e", "d", "x", "z", "a"]),
+        # ("d", ["e", "r", "f", "c", "x", "s"]),
+        # ("f", ["r", "t", "g", "v", "c", "d"]),
+        # ("g", ["t", "y", "h", "b", "v", "f"]),
+        # ("h", ["y", "u", "j", "n", "b", "g"]),
+        # ("j", ["u", "i", "k", "m", "n", "h"]),
+        # ("k", ["i", "o", "l", "m", "j"]),
+        # ("l", ["o", "p", "æ", "k"]),
+        # ("æ", ["p", "ð", "þ", "l"]),
+        # ("q", ["w", "a"]),
+        # ("w", ["e", "s", "a", "q"]),
+        # ("e", ["r", "d", "s", "w"]),
+        # ("r", ["t", "f", "d", "e"]),
+        # ("t", ["y", "g", "f", "r"]),
+        # ("y", ["u", "h", "g", "t"]),
+        # ("u", ["i", "j", "h", "y"]),
+        # ("i", ["o", "k", "j", "u"]),
+        # ("o", ["p", "l", "k", "i"]),
+        # ("p", ["ö", "ð", "æ", "l", "o"]),
+        # ("ð", ["ö", "-", "æ", "p"]),
+        # ("z", ["a", "s", "x"]),
+        # ("x", ["z", "s", "d", "c"]),
+        # ("c", ["x", "d", "f", "v"]),
+        # ("v", ["c", "f", "g", "b"]),
+        # ("b", ["v", "g", "h", "n"]),
+        # ("n", ["b", "h", "j", "m"]),
+        # ("m", ["n", "j", "k"]),
+        # ("þ", ["æ"]),
         # n/nk
         ("áng", ["ang"]),
         ("eing", ["eng"]),
@@ -342,24 +348,18 @@ class Corrector:
         ("tn", ["ttn"]),
         ("ttn", ["tn"]),
         # sérhljóðar
-        ("a", ["á"]),
-        ("´a", ["á"]),  # Virkar þetta?
-        ("´e", ["é"]),
-        ("´i", ["í"]),
-        ("´o", ["ó"]),
-        ("´u", ["ú"]),
-        ("´y", ["ý"]),
-        ("e", ["é"]),
+        # ("a", ["á"]),
+        # ("e", ["é"]),
         ("ei", ["ey"]),
         ("ey", ["ei"]),
-        ("i", ["í", "y"]),
-        ("o", ["ó", "ö"]),
-        ("u", ["ú"]),
-        ("y", ["i", "ý"]),
+        # ("i", ["í", "y"]),
+        # ("o", ["ó", "ö"]),
+        # ("u", ["ú"]),
+        # ("y", ["i", "ý"]),
         ("je", ["é"]),
         ("æ", ["aí"]),  # Tæland → Taíland
         # zeta og tengdir samhljóðaklasar
-        ("z", ["s", "ds", "ðs", "ts"]),
+        ("z", ["ds", "ðs", "ts"]),  # "s"
         ("zt", ["st"]),
         ("zl", ["sl"]),
         ("nzk", ["nsk"]),
@@ -400,23 +400,23 @@ class Corrector:
         ("gs", ["x"]),
         ("ks", ["x"]),
         ("x", ["gs", "ks"]),
-        ("v", ["f"]),
-        ("b", ["p"]),
-        ("g", ["k"]),
-        ("d", ["t"]),
+        # ("v", ["f"]),
+        # ("b", ["p"]),
+        # ("g", ["k"]),
+        # ("d", ["t"]),
         # erlend lyklaborð
         ("ae", ["æ"]),
-        ("t", ["þ"]),
+        # ("t", ["þ"]),
         ("th", ["þ"]),
-        ("d", ["ð"]),
+        # ("d", ["ð"]),
         # ljóslestur
-        ("c", ["æ", "é"]),
+        # ("c", ["æ", "é"]),
     ]
 
     _SUBSTITUTE = defaultdict(set)
 
-    for key, subs in _SUBSTITUTE_LIST:
-        _SUBSTITUTE[key].update(subs)
+    for _key, _subs in _SUBSTITUTE_LIST:
+        _SUBSTITUTE[_key].update(_subs)
 
     # Sort the substitution keys in descending order by length
     _SUBSTITUTE_KEYS = sorted(_SUBSTITUTE.keys(), key=lambda x: len(x), reverse=True)
@@ -433,6 +433,33 @@ class Corrector:
         self.p_word = self.d.pdist()
         # Any word above the 40th percentile is probably correct
         self.accept_threshold = self.d.percentile_log_freq(40)
+
+    def test_subs(self, word):
+        """ Return all potential substitutions. This is used for
+            testing purposes only and will probably be deleted
+            eventually. """
+        fragments = re.findall(self._SUBSTITUTE_REGEX, word)
+        end = 0
+        num_combs = 1
+        combs = []
+        for frag, sub in fragments:
+            end += len(frag)
+            subs = list(self._SUBSTITUTE[sub])
+            combs.append(subs)
+            num_combs *= 1 + len(subs)
+        suffix = word[end:]
+        for counter in range(1, num_combs):
+            combo = counter
+            result = []
+            for (frag, sub), subs in zip(fragments, combs):
+                ix = combo % (len(subs) + 1)
+                if ix == 0:
+                    result.append(frag)
+                else:
+                    result.append(frag[: -len(sub)] + subs[ix - 1])
+                combo //= len(subs) + 1
+            result.append(suffix)
+            yield "".join(result)
 
     @lru_cache(maxsize=4096)
     def _correct(self, word):
@@ -507,10 +534,10 @@ class Corrector:
                 if c not in self.d.probs:
                     self.d.probs[c] = P(c)
                 yield (c, self.d.probs[c] + EDIT_0_FACTOR)
-            # for c in known(subs(word)):
-            #     if c not in self.d.probs:
-            #         self.d.probs[c] = P(c)
-            #     yield (c, self.d.probs[c] + EDIT_S_FACTOR)
+            for c in known(subs(word)):
+                if c not in self.d.probs:
+                    self.d.probs[c] = P(c)
+                yield (c, self.d.probs[c] + EDIT_S_FACTOR)
             pairs = _splits(word)
             e1 = edits1(pairs) - e0
             for c in known(e1):
@@ -535,8 +562,8 @@ class Corrector:
                 acceptable += 1
             # Otherwise, add to candidate list
             candidates.append((c, log_prob))
-            if acceptable >= 4:
-                # We already have four candidates above the threshold:
+            if acceptable >= 10:
+                # We already have ten candidates above the threshold:
                 # that's enough
                 break
         if not candidates:
@@ -580,9 +607,17 @@ class Corrector:
             """ Spell-correct word in match, and preserve proper upper/lower/title case. """
             return self.correct(match.group())
 
+        result = []
+        for token in tokenize(text):
+            if token.kind == TOK.WORD:
+                result.append(self.correct(token.txt))
+            elif token.txt:
+                result.append(token.txt)
+        return correct_spaces(" ".join(result))
+
         # The regex finds all Unicode alphabetic letter sequences
         # (not including digits or underscores)
-        return re.sub(r"[^\W\d_]+", correct_match, text)
+        # return re.sub(r"[^\W\d_]+", correct_match, text)
 
 
 def test():
@@ -632,11 +667,37 @@ def test():
         fjarstæða.
         """,
     ]
+
+    def linebreak(txt, margin=80, left_margin=0):
+        """ Return a nicely column-formatted string representation of the given text,
+            where each line is not longer than the given margin (if possible).
+            A left margin can be optionally added, as a sequence of spaces.
+            The lines are joined by newlines ('\n') but there is no trailing
+            newline. """
+        result = []
+        line = []
+        len_line = 0
+        for wrd in txt.split():
+            if len_line + 1 + len(wrd) > margin:
+                result.append(" ".join(line))
+                line = []
+                len_line = 0
+            line.append(wrd)
+            len_line += 1 + len(wrd)
+        if line:
+            result.append(" ".join(line))
+        return "\n".join(" " * left_margin + line for line in result)
+
+    t0 = time.time()
+
     for t in txts:
         print("\nOriginal:\n")
         print(t)
         print("\nCorrected:\n")
-        print(c.correct_text(t))
+        print(linebreak(c.correct_text(t), left_margin=8))
+
+    t1 = time.time()
+    print("Total time: {0:.2f} seconds".format(t1 - t0))
 
 
 if __name__ == "__main__":
