@@ -107,18 +107,19 @@ class Dictionary:
         "framundan",
     ] + [c for c in "abcdðeéfghijklmnopqrstuúvwxyýzþö"]
 
-    def __init__(self):
+    def __init__(self, db=None):
         # All words in vocabulary, case significant
         self.words = set()
-        self.bin_words = set()
         # Word count, case not significant
         self.counts = dict()
         # Total word count, case not significant
         self.total = 0
         # Logarithm of total word count
         self.log_total = 0.0
+        # Word database
+        self._db = set() if db is None else db
         # Storing probabilities for words already found
-        self.probs = dict()
+        self._prob_cache = dict()
         self._load()
 
     def _load_pickle(self):
@@ -138,11 +139,6 @@ class Dictionary:
         # Calculate a sum total of the counts
         self.total = sum(self.counts.values())
         self.log_total = math.log(self.total)
-
-    def _load_bin(self):
-        with open("./resources/bin_words.txt", "r") as f:
-            for line in f:
-                self.bin_words.add(line)
 
     def __getitem__(self, wrd):
         """ Return the count of the given word, assumed to be lowercase """
@@ -171,12 +167,17 @@ class Dictionary:
     def freq_1(self, wrd):
         """ Get the frequency of the given word as a ratio between 0.0 and 1.0,
             but give out-of-vocabulary words a count of 1 instead of 0 """
-        return self.counts.get(wrd, self.bin(wrd)) / self.total
+        return self.adjusted_count(wrd) / self.total
 
     def log_freq_1(self, wrd):
         """ Get the logarithm of the frequency of the given word,
             however assigning out-of-vocabulary words a count of 1 instead of 0 """
-        return math.log(self.counts.get(wrd, self.bin(wrd))) - self.log_total
+        try:
+            return self._prob_cache[wrd]
+        except KeyError:
+            p = math.log(self.adjusted_count(wrd)) - self.log_total
+            self._prob_cache[wrd] = p
+            return p
 
     def percentile_log_freq(self, percentile):
         """ Return the frequency of the word at the n'th percentile,
@@ -186,21 +187,10 @@ class Dictionary:
         cnt = cts[(len(cts) - 1) * percentile // 100]
         return math.log(cnt) - self.log_total
 
-    def pdist(self):
-        """ Returns a probability distribution function """
-        return lambda wrd: self.freq_1(wrd)
-
-    def pdist_log(self):
-        """ Returns a log probability distribution function """
-        return lambda wrd: self.log_freq_1(wrd)
-
-    def bin(self, word):
-        if word in self.bin_words:
-            self.probs[word] = 2
-            return 2
-        else:
-            self.probs[word] = 1
-            return 1
+    def adjusted_count(self, word):
+        if word in self.counts:
+            return self.counts[word] + 1
+        return 2 if word in self._db else 1
 
 
 @lru_cache(maxsize=2048)
@@ -432,9 +422,9 @@ class Corrector:
         # Word database
         self._db = db
         # Word frequency dictionary
-        self.d = dictionary or Dictionary()
+        self.d = dictionary or Dictionary(self._db)
         # Function for probability of word
-        self.p_word = self.d.pdist()
+        self.p_word = self.d.freq_1
         # Any word above the 40th percentile is probably correct
         self.accept_threshold = self.d.percentile_log_freq(40)
 
@@ -537,29 +527,21 @@ class Corrector:
 
         def gen_candidates(original_word, word):
             """ Generate candidates in order of generally decreasing likelihood """
-            P = self.d.pdist_log()
+            P = self.d.log_freq_1
             e0 = edits0(word) | edits0(original_word)
             for c in known(e0):
-                if c not in self.d.probs:
-                    self.d.probs[c] = P(c)
-                yield (c, self.d.probs[c] + EDIT_0_FACTOR)
+                yield (c, P(c) + EDIT_0_FACTOR)
             for c in known(subs(word)):
-                if c not in self.d.probs:
-                    self.d.probs[c] = P(c)
-                yield (c, self.d.probs[c] + EDIT_S_FACTOR)
+                yield (c, P(c) + EDIT_S_FACTOR)
             pairs = _splits(word)
             e1 = edits1(pairs) - e0
             for c in known(e1):
-                if c not in self.d.probs:
-                    self.d.probs[c] = P(c)
-                yield (c, self.d.probs[c] + EDIT_1_FACTOR)
+                yield (c, P(c) + EDIT_1_FACTOR)
             # The following edit distance=2 stuff is hugely expensive
             # in terms of processor time and memory
             #e2 = edits2(pairs) - e1 - e0
             #for c in known(e2):
-            #    if c not in self.d.probs:
-            #        self.d.probs[c] = P(c)
-            #    yield (c, self.d.probs[c] + EDIT_2_FACTOR)
+            #    yield (c, P(c) + EDIT_2_FACTOR)
 
         candidates = []
         acceptable = 0
