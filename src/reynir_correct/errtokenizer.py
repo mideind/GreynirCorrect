@@ -721,7 +721,7 @@ def parse_errors(token_stream):
                 next_token = CorrectToken.word(token.txt)
                 next_token.set_error(
                     CompoundError(
-                        "001", "Endurtekið orð ('{0} {0}') var fellt burt"
+                        "001", "Endurtekið orð ('{0}') var fellt burt"
                         .format(token.txt)
                     )
                 )

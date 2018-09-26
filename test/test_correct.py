@@ -21,10 +21,11 @@
 
 """
 
+import reynir_correct as rc
+
 
 def test_correct():
-    """ Test that importing and initializing the reynir module works """
-    import reynir_correct as rc
+    """ Test the spelling and grammar correction module """
 
     g = rc.tokenize("Kexið er gott báðumegin, sagði sagði Cthulhu og rak sig uppundir þakið. Það var aftaka veður í gær.")
 
