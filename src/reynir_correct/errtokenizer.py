@@ -28,7 +28,7 @@
 #from reynir import TOK
 from reynir.bintokenizer import DefaultPipeline, TOK
 from reynir.settings import AllowedMultiples, WrongCompounds, SplitCompounds
-
+from tokenizer import tokenize
 
 class CorrectToken:
 
@@ -252,8 +252,12 @@ class CorrectionPipeline(DefaultPipeline):
         return lookup_unknown_words(self._db, stream)
 
 
-def tokenize(text, auto_uppercase=False):
+def tokenize(text, auto_uppercase=False, correct=True):
     """ Tokenize text using the correction pipeline, overriding a part
         of the default tokenization pipeline """
-    pipeline = CorrectionPipeline(text, auto_uppercase)
-    return pipeline.tokenize()
+    if correct:
+        #print("Correction was chosen.")
+        pipeline = CorrectionPipeline(text, auto_uppercase)
+        return pipeline.tokenize()
+    else:
+        return tokenize(text)
