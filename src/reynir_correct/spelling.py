@@ -48,6 +48,7 @@ _PATH = os.path.dirname(__file__) or "."
 _SPELLING_PICKLE = os.path.abspath(os.path.join(_PATH, "resources", "spelling.pickle"))
 
 EDIT_0_FACTOR = math.log(1.0 / 1.0)
+EDIT_REPLACE_FACTOR = math.log(1.0 / 1.25)
 EDIT_S_FACTOR = math.log(1.0 / 8.0)
 # Edit distance 1 is 25 times more unlikely than 0
 EDIT_1_FACTOR = math.log(1.0 / 64.0)
@@ -414,6 +415,21 @@ class Corrector:
     # Create a regex to extract word fragments ending with substitution keys
     _SUBSTITUTE_REGEX = re.compile("(.*?(" + "|".join(_SUBSTITUTE_KEYS) + "))")
 
+    # Very likely corrections
+    _WORD_REPLACE = {
+        "i": "í",
+        "a": "á",
+        "þu": "þú",
+        "þo": "þó",
+        "þin": "þín",
+        "eg": "ég",
+        "þe": "þ.e.",
+        "fra": "frá",
+        "nu": "nú",
+        "ut": "út",
+        "aldrey": "aldrei",
+    }
+
     # Minimum probability of a candidate other than the original
     # word in order for it to be returned
     _MIN_LOG_PROBABILITY = math.log(3.65e-9)
@@ -428,31 +444,47 @@ class Corrector:
         # Any word above the 40th percentile is probably correct
         self.accept_threshold = self.d.percentile_log_freq(40)
 
-    def test_subs(self, word):
-        """ Return all potential substitutions. This is used for
-            testing purposes only and will probably be deleted
-            eventually. """
+    def subs(self, word):
+        """ Return all combinations of potential substitutions into the word. """
+        # The following yields a list of tuples, for instance
+        # [('gl', 'gl'), ('er', 'r'), ('aug', 'g')] for the word "gleraugu"
         fragments = re.findall(self._SUBSTITUTE_REGEX, word)
         end = 0
+        # num_combs is the total number of potential combinations
         num_combs = 1
+        # combs is a list of possibilities for each combination slot
         combs = []
+        # Enumerate through the combination slots
         for frag, sub in fragments:
             end += len(frag)
-            subs = list(self._SUBSTITUTE[sub])
+            if len(frag) > len(sub):
+                # The fragment has a constant (fixed) part in front of
+                # the combination slot
+                combs.append([frag[0:-len(sub)]])
+            # Collect all combinations for this slot
+            subs = [sub] + list(self._SUBSTITUTE[sub])
             combs.append(subs)
-            num_combs *= 1 + len(subs)
+            # Keep tab of the total number of combinations so far
+            num_combs *= len(subs)
+        # The word may end with a constant (fixed) suffix
         suffix = word[end:]
-        for counter in range(1, num_combs):
-            combo = counter
-            result = []
-            for (frag, sub), subs in zip(fragments, combs):
-                ix = combo % (len(subs) + 1)
-                if ix == 0:
-                    result.append(frag)
-                else:
-                    result.append(frag[: -len(sub)] + subs[ix - 1])
-                combo //= len(subs) + 1
-            result.append(suffix)
+        if suffix:
+            combs.append([suffix])
+        # Prepare the result list, from which we will create result strings
+        result = [c[0] for c in combs]
+        # Prepare the combinations that we'll be selecting from at each slot
+        z = [(c, len(c)) for c in combs]
+        # Generate all the combinations, numbered from zero
+        for counter in range(num_combs):
+            numerator = counter
+            for i, (c, d) in enumerate(z):
+                # d is the divisor, i.e. the number of combinations for this slot
+                if d > 1:
+                    numerator, ix = divmod(numerator, d)
+                    # Assign the selected combination to the result
+                    result[i] = c[ix]
+            # assert numerator == 0
+            # print(result)
             yield "".join(result)
 
     @lru_cache(maxsize=4096)
@@ -500,38 +532,16 @@ class Corrector:
 
             return {e2 for e1 in edits1(pairs) for e2 in sub_edits1(e1)}
 
-        def subs(word):
-            """ Return all potential substitutions """
-            fragments = re.findall(self._SUBSTITUTE_REGEX, word)
-            end = 0
-            num_combs = 1
-            combs = []
-            for frag, sub in fragments:
-                end += len(frag)
-                subs = list(self._SUBSTITUTE[sub])
-                combs.append(subs)
-                num_combs *= 1 + len(subs)
-            suffix = word[end:]
-            for counter in range(1, num_combs):
-                combo = counter
-                result = []
-                for (frag, sub), subs in zip(fragments, combs):
-                    ix = combo % (len(subs) + 1)
-                    if ix == 0:
-                        result.append(frag)
-                    else:
-                        result.append(frag[: -len(sub)] + subs[ix - 1])
-                    combo //= len(subs) + 1
-                result.append(suffix)
-                yield "".join(result)
-
         def gen_candidates(original_word, word):
             """ Generate candidates in order of generally decreasing likelihood """
             P = self.d.log_freq_1
             e0 = edits0(word) | edits0(original_word)
+            if word in self._WORD_REPLACE:
+                # Known common word replacements
+                yield (self._WORD_REPLACE[word], EDIT_REPLACE_FACTOR)
             for c in known(e0):
                 yield (c, P(c) + EDIT_0_FACTOR)
-            for c in known(subs(word)):
+            for c in known(self.subs(word)):
                 yield (c, P(c) + EDIT_S_FACTOR)
             pairs = _splits(word)
             e1 = edits1(pairs) - e0
@@ -539,9 +549,9 @@ class Corrector:
                 yield (c, P(c) + EDIT_1_FACTOR)
             # The following edit distance=2 stuff is hugely expensive
             # in terms of processor time and memory
-            #e2 = edits2(pairs) - e1 - e0
-            #for c in known(e2):
-            #    yield (c, P(c) + EDIT_2_FACTOR)
+            # e2 = edits2(pairs) - e1 - e0
+            # for c in known(e2):
+            #     yield (c, P(c) + EDIT_2_FACTOR)
 
         candidates = []
         acceptable = 0
@@ -593,6 +603,10 @@ class Corrector:
     def __getitem__(self, word):
         """ For the fun of it, support corrector["myword"] syntax """
         return self.correct(word)
+
+    def __contains__(self, word):
+        """ Support "word" in corrector """
+        return self._db.__contains__(word)
 
     def correct_text(self, text):
         """ Attempt to correct all words within a text, returning the corrected text. """
