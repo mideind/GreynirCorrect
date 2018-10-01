@@ -12,6 +12,12 @@ Overview
 ReynirCorrector uses the `Reynir <https://pypi.org/project/reynir/>`_ package,
 by the same authors, to tokenize and parse text.
 
+******
+Status
+******
+
+**This code is under active development and has not reached Alpha status.**
+
 *******
 Example
 *******
