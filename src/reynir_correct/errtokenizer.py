@@ -28,7 +28,6 @@
 #from reynir import TOK
 from reynir.bintokenizer import DefaultPipeline, TOK
 from reynir.settings import AllowedMultiples, WrongCompounds, SplitCompounds
-from tokenizer import tokenize
 
 class CorrectToken:
 
@@ -233,7 +232,7 @@ class CorrectionPipeline(DefaultPipeline):
     def __init__(self, text, auto_uppercase=False):
         super().__init__(text, auto_uppercase)
 
-    def word_token_ctor(self, txt, val=None, token=None):
+    def word_token_ctor(self, txt, val=None, token=None, error=None):
         """ Use our own CorrectToken class for word token instances """
         ct = CorrectToken.word(txt, val)
         if token is not None:
@@ -241,6 +240,9 @@ class CorrectionPipeline(DefaultPipeline):
             # generated token, which might have had an associated error:
             # make sure that it is preserved
             ct.copy_error(token)
+            if error:
+                if error[0] == "C004":
+                    token.set_error(CompoundError("004", "Óleyfilegur fyrri liður: '{0}'".format(error[1])))
         return ct
 
     def correct(self, stream):
@@ -252,12 +254,8 @@ class CorrectionPipeline(DefaultPipeline):
         return lookup_unknown_words(self._db, stream)
 
 
-def tokenize(text, auto_uppercase=False, correct=True):
+def tokenize(text, auto_uppercase=False):
     """ Tokenize text using the correction pipeline, overriding a part
         of the default tokenization pipeline """
-    if correct:
-        #print("Correction was chosen.")
-        pipeline = CorrectionPipeline(text, auto_uppercase)
-        return pipeline.tokenize()
-    else:
-        return tokenize(text)
+    pipeline = CorrectionPipeline(text, auto_uppercase)
+    return pipeline.tokenize()
