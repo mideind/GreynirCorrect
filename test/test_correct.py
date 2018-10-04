@@ -27,7 +27,8 @@ import reynir_correct as rc
 def test_correct():
     """ Test the spelling and grammar correction module """
 
-    g = rc.tokenize("Kexið er gott báðumegin, sagði sagði Cthulhu og rak sig uppundir þakið. Það var aftaka veður í gær.")
+    # g = rc.tokenize("Kexið er gott báðumegin, sagði sagði Cthulhu og rak sig uppundir þakið. Það var aftaka veður í gær.")
+    g = rc.tokenize("Jeg stögg ifir steyninn aff þvý að það var aldrey gamann")
 
     for token in g:
         print("{0}".format(token))

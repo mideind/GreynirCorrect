@@ -6,7 +6,7 @@ import time
 
 def test(word):
     t0 = time.time()
-    result = list(c.test_subs(word))
+    result = list(c.subs(word))
     valid = [r for r in result if r in c]
     t1 = time.time()
     print("Word: {0}, combinations: {1}, time {2:.3f} secs".format(word, len(result), t1 - t0))

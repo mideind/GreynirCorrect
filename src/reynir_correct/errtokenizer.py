@@ -28,6 +28,8 @@
 from reynir import TOK
 from reynir.bintokenizer import DefaultPipeline
 
+from .spelling import Corrector
+
 
 # Set of word forms that are allowed to appear more than once in a row
 ALLOWED_MULTIPLES = frozenset(
@@ -687,6 +689,22 @@ class UnknownWordError(Error):
         return self._txt
 
 
+class SpellingError(Error):
+
+    """ A SpellingError is an error where the original word in the
+        source text was believed to be misspelled and has been
+        corrected. """
+
+    def __init__(self, code, txt):
+        # Spelling error codes start with "S"
+        super().__init__("S" + code)
+        self._txt = txt
+
+    @property
+    def description(self):
+        return self._txt
+
+
 def parse_errors(token_stream):
 
     """ This tokenization phase is done before BÍN annotation
@@ -761,18 +779,45 @@ def parse_errors(token_stream):
             yield token
 
 
-def lookup_unknown_words(db, token_stream):
+def lookup_unknown_words(corrector, token_stream, auto_uppercase):
     """ Try to identify unknown words in the token stream, for instance
         as spelling errors (character juxtaposition, deletion, insertion...) """
-    for token in token_stream:
-        if token.kind == TOK.WORD and not token.val:
-            # Mark the token as an unknown word
-            token.set_error(
-                UnknownWordError(
-                    "001", "Óþekkt orð: '{0}'".format(token.txt)
+    at_sentence_start = False
+    for t in token_stream:
+        if t.kind != TOK.WORD:
+            # Not a word: relay the token unchanged
+            yield t
+            if t.kind == TOK.S_BEGIN or (
+                t.kind == TOK.PUNCTUATION and t.txt == ":"
+            ):
+                at_sentence_start = True
+            elif t.kind != TOK.PUNCTUATION and t.kind != TOK.ORDINAL:
+                at_sentence_start = False
+            continue
+        if not t.val:
+            correct = corrector[t.txt]
+            if correct != t.txt:
+                # Correct the word
+                original = t.txt
+                correct, m = corrector.db.lookup_word(
+                    correct, at_sentence_start, auto_uppercase
                 )
-            )
-        yield token
+                t = CorrectToken.word(correct, m)
+                t.set_error(
+                    SpellingError(
+                        "001", "Orðið '{0}' var leiðrétt".format(original)
+                    )
+                )
+            else:
+                # Mark the token as an unknown word
+                t.set_error(
+                    UnknownWordError(
+                        "001", "Óþekkt orð: '{0}'".format(t.txt)
+                    )
+                )
+        yield t
+        # No longer at sentence start
+        at_sentence_start = False
 
 
 class CorrectionPipeline(DefaultPipeline):
@@ -782,6 +827,8 @@ class CorrectionPipeline(DefaultPipeline):
 
     def __init__(self, text, auto_uppercase=False):
         super().__init__(text, auto_uppercase)
+        # Instantiate a Corrector only upon demand
+        self._corrector = None
 
     def word_token_ctor(self, txt, val=None, token=None):
         """ Use our own CorrectToken class for word token instances """
@@ -799,7 +846,13 @@ class CorrectionPipeline(DefaultPipeline):
 
     def lookup_unknown_words(self, stream):
         """ Attempt to resolve unknown words """
-        return lookup_unknown_words(self._db, stream)
+        # !!! TODO: There should also be a mechanism for
+        # !!! dealing with very rare words that are likely to be
+        # !!! misspellings of much more common words. Rarity could
+        # !!! be partly evaluated as a function of trigram context.
+        if self._corrector is None:
+            self._corrector = Corrector(self._db)
+        return lookup_unknown_words(self._corrector, stream, self._auto_uppercase)
 
 
 def tokenize(text, auto_uppercase=False):
