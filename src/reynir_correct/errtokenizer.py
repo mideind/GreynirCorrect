@@ -132,7 +132,7 @@ class UnknownWordError(Error):
         return self._txt
 
 
-def parse_errors(token_stream):
+def parse_errors_1(token_stream):
 
     """ This tokenization phase is done before BÍN annotation
         and before static phrases are identified. It finds duplicated words,
@@ -151,7 +151,7 @@ def parse_errors(token_stream):
             next_token = get()
             # Make the lookahead checks we're interested in
 
-            # Word duplication; GrammCorr 1B
+            # Word duplication
             if (
                 token.txt
                 and next_token.txt
@@ -170,7 +170,7 @@ def parse_errors(token_stream):
                 token = next_token
                 continue
 
-            # Splitting wrongly compounded words; GrammCorr 1A
+            # Splitting wrongly compounded words
             if token.txt and token.txt.lower() in WrongCompounds.DICT:
                 for phrase_part in WrongCompounds.DICT[token.txt.lower()].split():
                     new_token = CorrectToken.word(phrase_part)
@@ -184,7 +184,7 @@ def parse_errors(token_stream):
                 token = next_token
                 continue
 
-            # Unite wrongly split compounds; GrammCorr 1X
+            # Unite wrongly split compounds
             if (
                 token.txt 
                 and next_token.txt 
@@ -200,6 +200,7 @@ def parse_errors(token_stream):
                 )
                 continue
 
+
             # Yield the current token and advance to the lookahead
             yield token
             token = next_token
@@ -209,6 +210,8 @@ def parse_errors(token_stream):
         if token:
             yield token
 
+def parse_errors_2(token_stream):
+    return token_stream
 
 def lookup_unknown_words(db, token_stream):
     """ Try to identify unknown words in the token stream, for instance
@@ -243,15 +246,22 @@ class CorrectionPipeline(DefaultPipeline):
             if error:
                 if error[0] == "C004":
                     token.set_error(CompoundError("004", "Óleyfilegur fyrri liður: '{0}'".format(error[1])))
+                elif error[0] == "C005":
+                    token.set_error(CompoundError("005", "Óæskilegur fyrri liður: '{0}', betra er að nota '{1}'".format(error[1], error[2])))
+                    #print("{} → {}".format(error[1], error[2]))
         return ct
 
-    def correct(self, stream):
+    def correct_1(self, stream):
         """ Add a correction pass just before BÍN annotation """
-        return parse_errors(stream)
+        return parse_errors_1(stream)
 
     def lookup_unknown_words(self, stream):
         """ Attempt to resolve unknown words """
         return lookup_unknown_words(self._db, stream)
+
+    def correct_2(self, stream):
+        """ Add a correction pass after BÍN annotation and phrase """
+        return parse_errors_2(stream)
 
 
 def tokenize(text, auto_uppercase=False):
