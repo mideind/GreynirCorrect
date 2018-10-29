@@ -428,6 +428,7 @@ class Corrector:
         "nu": "nú",
         "ut": "út",
         "aldrey": "aldrei",
+        "ifir" : "yfir",
     }
 
     # Minimum probability of a candidate other than the original
@@ -443,6 +444,11 @@ class Corrector:
         self.p_word = self.d.freq_1
         # Any word above the 40th percentile is probably correct
         self.accept_threshold = self.d.percentile_log_freq(40)
+
+    @property
+    def db(self):
+        """ Return the associated word database """
+        return self._db
 
     def subs(self, word):
         """ Return all combinations of potential substitutions into the word. """
