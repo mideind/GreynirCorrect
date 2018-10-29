@@ -27,7 +27,32 @@ import reynir_correct as rc
 def test_correct():
     """ Test the spelling and grammar correction module """
 
-    g = rc.tokenize("Kexið er gott báðumegin, sagði sagði Cthulhu og rak sig uppundir þakið. Það var aftaka veður í gær.")
+    g = rc.tokenize(
+        "Kexið er gott báðumegin, sagði sagði Cthulhu og rak sig uppundir þakið. "
+        "Það var aldrey aftaka veður í gær."
+    )
+
+    for token in g:
+        print("{0}".format(token))
+        err = token.error_description
+        if err:
+            print("   {0}".format(err))
+
+    g = rc.tokenize(
+        "Hann borðaði alltsaman en allsekki það sem ég gaf honum. "
+        "Þið hafið hafið mótið að viðstöddum fimmhundruð áhorfendum."
+    )
+
+    for token in g:
+        print("{0}".format(token))
+        err = token.error_description
+        if err:
+            print("   {0}".format(err))
+
+    g = rc.tokenize(
+        "Ég gaf honum klukkustundar frest áður áður en hann fékk 50 ml af lyfinu. "
+        "Langtíma þróun sýnir 25% hækkun hækkun frá 1. janúar 1980."
+    )
 
     for token in g:
         print("{0}".format(token))

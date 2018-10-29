@@ -501,11 +501,9 @@ class Corrector:
 
         def known(words):
             """ Return a generator of words that are actually in the dictionary. """
-            # return (w for w in words if w in self.d or w in self.d.bin_words)
-            # !!! TODO: This should really be a case-insensitive check,
-            # !!! otherwise words such as 'ísland' are not recognized
-            # !!! (they are only capitalized or uppercased in BÍN)
-            return (w for w in words if w in self._db)
+            # A word is known if its lower case form is in the dictionary or
+            # if its title form is in the dictionary (for example 'Ísland')
+            return (w for w in words if (w in self._db or w.title() in self._db))
 
         def edits0(word):
             """ Return all strings that are zero edits away from word (i.e., just word itself). """

@@ -49,6 +49,10 @@ _DEFAULT_SORT_LOCALE = ("IS_is", "UTF-8")
 _ALL_CASES = frozenset(("nf", "þf", "þgf", "ef"))
 _ALL_GENDERS = frozenset(("kk", "kvk", "hk"))
 
+ALLOWED_MULTIPLES = set()
+NOT_COMPOUNDS = dict()
+SPLIT_COMPOUNDS = dict()
+
 
 class ConfigError(Exception):
 
@@ -152,9 +156,10 @@ def sort_strings(strings, loc=None):
     with changedlocale(loc) as strxfrm:
         return sorted(strings, key=strxfrm)
 
-# Global settings
 
 class Settings:
+
+    """ Global settings"""
 
     _lock = threading.Lock()
     loaded = False
@@ -182,6 +187,51 @@ class Settings:
             raise ConfigError("Invalid parameter value: {0} = {1}".format(par, val))
 
     @staticmethod
+    def _handle_allowed_multiples(s):
+        """ Handle config parameters in the allowed_multiples section """
+        assert s
+        if len(s.split()) != 1:
+            raise ConfigError("Only one word per line allowed in allowed_multiples section")
+        if s in ALLOWED_MULTIPLES:
+            raise ConfigError("'{0}' is repeated in allowed_multiples section".format(s))
+        ALLOWED_MULTIPLES.add(s)
+
+    @staticmethod
+    def _handle_not_compounds(s):
+        """ Handle config parameters in the not_compounds section """
+        a = s.lower().split(":", maxsplit=1)
+        word = a[0].strip()
+        parts = a[1].strip().split()
+        if not word:
+            raise ConfigError("Expected word before the colon in not_compounds section")
+        if len(parts) < 2:
+            raise ConfigError("Missing word part(s) in not_compounds section")
+        if len(word.split()) != 1:
+            raise ConfigError("Multiple words not allowed before colon in not_compounds section")
+        if word in NOT_COMPOUNDS:
+            raise ConfigError("Multiple definition of '{0}' in not_compounds section".format(word))
+        NOT_COMPOUNDS[word] = tuple(parts)
+
+    @staticmethod
+    def _handle_split_compounds(s):
+        """ Handle config parameters in the not_compounds section """
+        a = s.lower().split(":", maxsplit=1)
+        parts = tuple(a[0].strip().split())
+        word = a[1].strip()
+        if not word:
+            raise ConfigError("Expected word after the colon in split_compounds section")
+        if len(parts) < 2:
+            raise ConfigError("Missing word part(s) in split_compounds section")
+        if len(word.split()) != 1:
+            raise ConfigError("Multiple words not allowed after colon in not_compounds section")
+        if parts in SPLIT_COMPOUNDS:
+            raise ConfigError(
+                "Multiple definition of '{0}' in split_compounds section"
+                .format(" ".join(parts))
+            )
+        SPLIT_COMPOUNDS[parts] = word
+
+    @staticmethod
     def read(fname):
         """ Read configuration file """
 
@@ -192,6 +242,9 @@ class Settings:
 
             CONFIG_HANDLERS = {
                 "settings": Settings._handle_settings,
+                "allowed_multiples": Settings._handle_allowed_multiples,
+                "not_compounds": Settings._handle_not_compounds,
+                "split_compounds": Settings._handle_split_compounds,
             }
             handler = None  # Current section handler
 
