@@ -8,6 +8,7 @@ __pycache__/
 .vscode/
 *.sublime-project
 *.sublime-workspace
+*.code-workspace
 
 # C extensions
 *.so
@@ -123,4 +124,3 @@ Desktop.ini
 
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
-
