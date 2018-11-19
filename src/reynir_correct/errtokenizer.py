@@ -93,9 +93,19 @@ class CorrectToken:
         return self._err is not None
 
     @property
+    def error(self):
+        """ Return the error object associated with this token, if any """
+        return self._err
+
+    @property
     def error_description(self):
         """ Return the description of an error associated with this token, if any """
         return "" if self._err is None else self._err.description
+
+    @property
+    def error_code(self):
+        """ Return the code of an error associated with this token, if any """
+        return "" if self._err is None else self._err.code
 
 
 class Error:
