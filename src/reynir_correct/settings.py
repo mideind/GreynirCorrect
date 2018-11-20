@@ -52,7 +52,9 @@ _ALL_GENDERS = frozenset(("kk", "kvk", "hk"))
 ALLOWED_MULTIPLES = set()
 NOT_COMPOUNDS = dict()
 SPLIT_COMPOUNDS = dict()
-
+UNIQUE_ERRORS = dict()
+MW_ERRORS_SEARCH = dict()
+MW_ERRORS = dict()
 
 class ConfigError(Exception):
 
@@ -156,7 +158,6 @@ def sort_strings(strings, loc=None):
     with changedlocale(loc) as strxfrm:
         return sorted(strings, key=strxfrm)
 
-
 class Settings:
 
     """ Global settings"""
@@ -214,7 +215,7 @@ class Settings:
 
     @staticmethod
     def _handle_split_compounds(s):
-        """ Handle config parameters in the not_compounds section """
+        """ Handle config parameters in the split_compounds section """
         a = s.lower().split(":", maxsplit=1)
         parts = tuple(a[0].strip().split())
         word = a[1].strip()
@@ -223,13 +224,36 @@ class Settings:
         if len(parts) < 2:
             raise ConfigError("Missing word part(s) in split_compounds section")
         if len(word.split()) != 1:
-            raise ConfigError("Multiple words not allowed after colon in not_compounds section")
+            raise ConfigError("Multiple words not allowed after colon in split_compounds section")
         if parts in SPLIT_COMPOUNDS:
             raise ConfigError(
                 "Multiple definition of '{0}' in split_compounds section"
                 .format(" ".join(parts))
             )
         SPLIT_COMPOUNDS[parts] = word
+
+    @staticmethod
+    def _handle_unique_errors(s):
+        """ Handle config parameters in the unique_errors section """
+        a = s.lower().split(":", maxsplit=1)
+        word = a[0].strip()
+        corr = a[1].strip().split()
+        if not word:
+            raise ConfigError("Expected word before the colon in unique_errors section")
+        if len(word.split()) != 1:
+            raise ConfigError("Multiple words not allowed before colon in unique_errors section")
+        if word in NOT_COMPOUNDS:
+            raise ConfigError("Multiple definition of '{0}' in unique_errors section".format(word))
+        UNIQUE_ERRORS[word] = corr
+
+    @staticmethod
+    def _handle_multiword_errors(s):
+        """ Handle config parameters in the multiword_errors section """
+        a = s.lower().split(":", maxsplit=1)
+        sp = a[0].strip().split()
+        info = a[1].strip().split()
+        MW_ERRORS_SEARCH[sp[0]] = sp[1:] # Ath. þarf að geyma alla möguleika.
+        MW_ERRORS[" ".join(sp)] = info
 
     @staticmethod
     def read(fname):
@@ -245,6 +269,8 @@ class Settings:
                 "allowed_multiples": Settings._handle_allowed_multiples,
                 "not_compounds": Settings._handle_not_compounds,
                 "split_compounds": Settings._handle_split_compounds,
+                "unique_errors": Settings._handle_unique_errors,
+                "multiword_errors": Settings._handle_multiword_errors,
             }
             handler = None  # Current section handler
 
