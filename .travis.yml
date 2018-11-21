@@ -4,9 +4,10 @@ python:
   - "3.4"
   - "3.5"
   - "3.6"
-  - "pypy3.5"
 
 install:
+  - python -m pip install --upgrade pip
+  - python -m pip install --upgrade setuptools
   - python setup.py develop
 
 script:
