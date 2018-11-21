@@ -45,7 +45,13 @@ else:
 
 
 _PATH = os.path.dirname(__file__) or "."
-_SPELLING_PICKLE = os.path.abspath(os.path.join(_PATH, "resources", "spelling.pickle"))
+
+if __package__:
+    import pkg_resources
+    # Note: the following path should NOT use os.path.join()
+    _SPELLING_PICKLE = pkg_resources.resource_filename(__name__, "resources/spelling.pickle")
+else:
+    _SPELLING_PICKLE = os.path.abspath(os.path.join(_PATH, "resources", "spelling.pickle"))
 
 EDIT_0_FACTOR = math.log(1.0 / 1.0)
 EDIT_REPLACE_FACTOR = math.log(1.0 / 1.25)
