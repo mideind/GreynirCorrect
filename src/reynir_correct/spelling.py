@@ -582,7 +582,7 @@ class Corrector:
         m = max(candidates, key=lambda t: t[1])
         if m[1] < self._MIN_LOG_PROBABILITY and word in self._db:
             # Best candidate is very unlikely: return the original word
-            print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
+            # print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
             return word
         # Return the most likely word
         return m[0]
