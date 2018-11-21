@@ -4,10 +4,10 @@ python:
   - "3.4"
   - "3.5"
   - "3.6"
-  - "pypy3.5"
+#  - "pypy3.5"
 
 install:
-  # Python 3.4 and pypy3.5 seem to require pip and setuptools
+  # Python 3.4 seems to require pip and setuptools
   # upgrades to be able to correctly install reynir and access
   # embedded resources
   - python -m pip install --upgrade pip
