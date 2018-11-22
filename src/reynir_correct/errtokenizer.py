@@ -29,6 +29,7 @@ from reynir import TOK
 from reynir.bintokenizer import DefaultPipeline
 
 from .settings import ALLOWED_MULTIPLES, NOT_COMPOUNDS, SPLIT_COMPOUNDS, UNIQUE_ERRORS, MW_ERRORS_SEARCH, MW_ERRORS
+from reynir.settings import ErrorForms
 from .spelling import Corrector
 
 
@@ -93,9 +94,19 @@ class CorrectToken:
         return self._err is not None
 
     @property
+    def error(self):
+        """ Return the error object associated with this token, if any """
+        return self._err
+
+    @property
     def error_description(self):
         """ Return the description of an error associated with this token, if any """
         return "" if self._err is None else self._err.description
+
+    @property
+    def error_code(self):
+        """ Return the code of an error associated with this token, if any """
+        return "" if self._err is None else self._err.code
 
 
 class Error:
@@ -120,6 +131,9 @@ class CompoundError(Error):
 
     """ A CompoundError is an error where words are duplicated, split or not
         split correctly. """
+    # C001: Duplicated word removed. Should be corrected.
+    # C002: Wrongly compounded words split up. Should be corrected.
+    # C003: Wrongly split compounds united. Should be corrected.
 
     def __init__(self, code, txt):
         # Compound error codes start with "C"
@@ -136,6 +150,7 @@ class UnknownWordError(Error):
     """ An UnknownWordError is an error where the given word form does not
         exist in BÍN or additional vocabularies, and cannot be explained as
         a compound word. """
+    # U001: Unknown word. Nothing more is known. Cannot be corrected, only pointed out.
 
     def __init__(self, code, txt):
         # Unknown word error codes start with "U"
@@ -152,8 +167,9 @@ class SpellingError(Error):
     """ An SpellingError is an erroneous word that could be replaced
         by a much more likely word that exists in the dictionary. """
     # S001: Common errors picked up by unique_errors. Should be corrected
-    # S002: Errors handled by spelling.py. Should possibly only be suggested
-    # S003: Unknown word, no correction or suggestions available.
+    # S002: Errors handled by spelling.py. Corrections should possibly only be suggested.
+    # S003: Erroneously formed word forms picked up by ErrorForms. Should be corrected. TODO split up by nature.
+    # S004: Unknown word, no correction or suggestions available.
 
     def __init__(self, code, txt):
         # Spelling error codes start with "S"
@@ -176,14 +192,12 @@ def parse_errors(token_stream):
             in a CorrectToken instance """
         return CorrectToken.from_token(next(token_stream))
 
-    token = None
     try:
         # Maintain a one-token lookahead
         token = get()
         while True:
             next_token = get()
             # Make the lookahead checks we're interested in
-
             # Word duplication
             if (
                 token.txt
@@ -238,37 +252,51 @@ def parse_errors(token_stream):
         if token:
             yield token
 
+def annotate(db, token_ctor, token_stream, auto_uppercase):
+    return token_stream
 
 def lookup_unknown_words(db, token_ctor, token_stream, auto_uppercase):
     """ Try to identify unknown words in the token stream, for instance
         as spelling errors (character juxtaposition, deletion, insertion...) """
     at_sentence_start = False  # !!! TODO
-    unique = False # Says whether 
+    errkind = -1  # Says which kind of error is found
     c = Corrector(db)
     for token in token_stream:
-        if token.kind == TOK.WORD and not token.val:
+        if token.kind == TOK.WORD and not token.val: # Hasn't been annotated
             # Check unique errors first
             if token.txt in UNIQUE_ERRORS:
                 corrected = UNIQUE_ERRORS[token.txt]
-                unique = True
+                errkind = 1
+            # Check wrong word forms, TODO split the list up by nature of error
+            elif token.txt in ErrorForms.DICT:
+                corrected = ErrorForms.get_correct_form(token.txt)
+                errkind = 3
+            # Check edit distance errors
             else:
                 corrected = c.correct(token.txt)
+                errkind = 2
             if corrected != token.txt:
                 # It seems that we are able to correct the word:
                 # look it up in the BÍN database
                 w, m, error = db.lookup_word(corrected, at_sentence_start, auto_uppercase)
                 # Yield a word tuple with meanings
                 ct = token_ctor.Word(w, m, token=token)
-                if unique:
+                if errkind == 1:
                     ct.set_error(
                         SpellingError(
-                            "001", "Orðið '{0}' var leiðrétt í {1}".format(token.txt, w)
+                            "001", "Orðið '{0}' var leiðrétt í '{1}'".format(token.txt, w)
                         )
                     )
-                else:
+                elif errkind == 2:
                     ct.set_error(
                         SpellingError(
-                            "002", "Orðið '{0}' var leiðrétt í {1}".format(token.txt, w)
+                            "002", "Orðið '{0}' var leiðrétt í '{1}'".format(token.txt, w)
+                        )
+                    )
+                elif errkind == 3:
+                    ct.set_error(
+                        SpellingError(
+                            "003", "Orðið '{0}' var leiðrétt í '{1}'".format(token.txt, w)
                         )
                     )
                 yield ct
@@ -276,7 +304,7 @@ def lookup_unknown_words(db, token_ctor, token_stream, auto_uppercase):
             # Mark the token as an unknown word
             token.set_error(
                 UnknownWordError(
-                    "003", "Óþekkt orð: '{0}'".format(token.txt)
+                    "001", "Óþekkt orð: '{0}'".format(token.txt)
                 )
             )
         yield token
@@ -328,6 +356,10 @@ class CorrectionPipeline(DefaultPipeline):
     def correct(self, stream):
         """ Add a correction pass just before BÍN annotation """
         return parse_errors(stream)
+
+    #def annotate(self, stream):
+        """ Lookup meanings from dictionary and errors """
+    #    return annotate(self._db, self._ctor, stream, self._auto_uppercase)
 
     def lookup_unknown_words(self, stream):
         """ Attempt to resolve unknown words """
