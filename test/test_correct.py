@@ -97,6 +97,93 @@ def test_correct(verbose=False):
     assert "áður áður" not in s
     assert "hækkun hækkun" not in s
 
+    # Check allowed_multiples
+
+    g = rc.tokenize(
+        "Þetta gerði gerði ekkert fyrir mig. Bóndinn á Á á á á fjalli."
+    )
+
+    g = list(g)
+    if verbose: dump(g)
+
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "gerði gerði" in s
+    assert "á Á á á á" in s
+
+    # Check wrong_compounds
+
+    g = rc.tokenize(
+        "Það voru allskonar kökur á borðinu en ég vildi samt vera annarsstaðar."
+    )
+
+    g = list(g)
+    if verbose: dump(g)
+
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "allskonar" not in s
+    assert "alls konar" in s
+    assert "annarsstaðar" not in s
+    assert "annars staðar" in s
+
+    # Check split_compounds
+
+    g = rc.tokenize(
+        "Ég fór bakdyra megin inn í auka herbergi og sótti uppáhalds bragðtegund af ís."
+    )
+
+    g = list(g)
+    if verbose: dump(g)
+
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "bakdyra megin" not in s
+    assert "bakdyramegin" in s
+    assert "auka herbergi" not in s
+    assert "aukaherbergi" in s
+    assert "uppáhalds bragðtegund" not in s
+    assert "uppáhaldsbragðtegund" in s
+
+    # Check unique_errors
+
+    g = rc.tokenize(
+        "Björgvinn tók efitr þvi að han var jafvel ókeipis."
+    )
+
+    g = list(g)
+    if verbose: dump(g)
+
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "Björgvinn" not in s
+    assert "Björgvin" in s
+    assert "efitr" not in s
+    assert "eftir" in s
+    assert "þvi" not in s
+    assert "því" in s
+    assert "han " not in s
+    assert "hann " in s
+    assert "jafvel" not in s
+    assert "jafnvel" in s
+    assert "ókeipis" not in s
+    assert "ókeypis" in s
+
+    # Check error_forms
+
+    g = rc.tokenize(
+        "Margir fellibylir og jafvel hvirfilbylir gengu yfir hús bróðurs míns."
+    )
+
+    g = list(g)
+    if verbose: dump(g)
+
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "fellibylir" not in s
+    assert "fellibyljir" in s
+    assert "jafvel" not in s
+    assert "jafnvel" in s
+    assert "hvirfilbylir" not in s
+    assert "hvirfilbyljir" in s
+    assert "bróðurs" not in s
+    assert "bróður" in s
+
 
 if __name__ == "__main__":
 

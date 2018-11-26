@@ -376,9 +376,9 @@ class Settings:
         split = s.strip().split(";")
         if len(split) != 6:
             raise ConfigError("Expected lemma;wrong form;correct form;id;category;tag")
-        wrong_form = split[1].strip()
+        wrong_form = split[0].strip()
         meaning = (
-            split[0].strip(),  # Lemma (stofn)
+            split[1].strip(),  # Lemma (stofn)
             split[2].strip(),  # Correct form (ordmynd)
             split[3].strip(),  # Id (utg)
             split[4].strip(),  # Category (ordfl)
