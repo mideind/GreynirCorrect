@@ -264,13 +264,14 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
         as spelling errors (character juxtaposition, deletion, insertion...) """
     at_sentence_start = False  # !!! TODO
     for token in token_stream:
-        if token.kind == TOK.WORD and not token.val: # Hasn't been annotated
+        if token.kind == TOK.WORD and not token.val:  # Hasn't been annotated
             # Check unique errors first
             # TODO: What about upper/lower case?
             errkind = 0
             if token.txt in UniqueErrors.DICT:
                 # Note: corrected is a tuple
                 corrected = UniqueErrors.DICT[token.txt]
+                assert isinstance(corrected, tuple)
                 errkind = 1
             # Check wrong word forms, TODO split the list up by nature of error
             # TODO: What about upper/lower case?
@@ -287,7 +288,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                 # It seems that we are able to correct the word:
                 # look it up in the BÍN database
                 for ix, corrected_word in enumerate(corrected):
-                    w, m = db.lookup_word(
+                    w, m = corrector.db.lookup_word(
                         corrected_word, at_sentence_start, auto_uppercase
                     )
                     # Yield a word tuple with meanings
@@ -347,7 +348,7 @@ class CorrectionPipeline(DefaultPipeline):
 
     def __init__(self, text, auto_uppercase=False):
         super().__init__(text, auto_uppercase)
-        self._corrector = Corrector(self._db)
+        self._corrector = None
 
     # Use the _Correct_TOK class to construct tokens, instead of
     # TOK (tokenizer.py) or _Bin_TOK (bintokenizer.py)
@@ -359,6 +360,9 @@ class CorrectionPipeline(DefaultPipeline):
 
     def lookup_unknown_words(self, stream):
         """ Attempt to resolve unknown words """
+        # Create a Corrector on the first invocation
+        if self._corrector is None:
+            self._corrector = Corrector(self._db)
         return lookup_unknown_words(
             self._corrector, self._token_ctor, stream, self._auto_uppercase
         )

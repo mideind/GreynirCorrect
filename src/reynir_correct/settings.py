@@ -179,6 +179,7 @@ class WrongCompounds:
     def add(word, parts):
         if word in WrongCompounds.DICT:
             raise ConfigError("Multiple definition of '{0}' in wrong_compounds section".format(word))
+        assert isinstance(parts, tuple)
         WrongCompounds.DICT[word] = parts
 
 
@@ -194,6 +195,7 @@ class SplitCompounds:
                 "Multiple definition of '{0}' in split_compounds section"
                 .format(" ".join(parts))
             )
+        assert isinstance(parts, tuple)
         SplitCompounds.SET.add(parts)
 
 
@@ -206,6 +208,7 @@ class UniqueErrors:
     def add(word, corr):
         if word in UniqueErrors.DICT:
             raise ConfigError("Multiple definition of '{0}' in unique_errors section".format(word))
+        assert isinstance(corr, tuple)
         UniqueErrors.DICT[word] = corr
 
 
@@ -309,7 +312,7 @@ class Settings:
             raise ConfigError("Missing word part(s) in wrong_compounds section")
         if len(word.split()) != 1:
             raise ConfigError("Multiple words not allowed before comma in wrong_compounds section")
-        WrongCompounds.add(word, tuple(parts))
+        WrongCompounds.add(word, tuple(parts.split()))
 
     @staticmethod
     def _handle_split_compounds(s):
@@ -326,7 +329,18 @@ class Settings:
         if len(a) != 2:
             raise ConfigError("Expected comma between error word and its correction")
         word = a[0].strip()
-        corr = tuple(a[1].strip().split())
+        if len(word) < 3:
+            raise ConfigError("Expected nonempty word before comma in unique_errors section")
+        if word[0] != "\"" or word[-1] != "\"":
+            raise ConfigError("Expected word in double quotes in unique_errors section")
+        word = word[1:-1]
+        corr = a[1].strip()
+        if len(corr) < 3:
+            raise ConfigError("Expected nonempty word after comma in unique_errors section")
+        if corr[0] != "\"" or corr[-1] != "\"":
+            raise ConfigError("Expected word in double quotes after comma in unique_errors section")
+        corr = corr[1:-1]
+        corr = tuple(corr.split())
         if not word:
             raise ConfigError("Expected word before the comma in unique_errors section")
         if len(word.split()) != 1:
