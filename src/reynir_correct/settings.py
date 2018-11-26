@@ -56,6 +56,28 @@ UNIQUE_ERRORS = dict()
 MW_ERRORS_SEARCH = dict()
 MW_ERRORS = dict()
 
+
+# Magic stuff to change locale context temporarily
+
+@contextmanager
+def changedlocale(new_locale=None):
+    """ Change locale for collation temporarily within a context (with-statement) """
+    # The newone locale parameter should be a tuple: ('is_IS', 'UTF-8')
+    old_locale = locale.getlocale(locale.LC_COLLATE)
+    try:
+        locale.setlocale(locale.LC_COLLATE, new_locale or _DEFAULT_SORT_LOCALE)
+        yield locale.strxfrm  # Function to transform string for sorting
+    finally:
+        locale.setlocale(locale.LC_COLLATE, old_locale)
+
+
+def sort_strings(strings, loc=None):
+    """ Sort a list of strings using the specified locale's collation order """
+    # Change locale temporarily for the sort
+    with changedlocale(loc) as strxfrm:
+        return sorted(strings, key=strxfrm)
+
+
 class ConfigError(Exception):
 
     """ Exception class for configuration errors """
@@ -138,25 +160,100 @@ class LineReader:
             raise c
 
 
-# Magic stuff to change locale context temporarily
+class AllowedMultiples:
 
-@contextmanager
-def changedlocale(new_locale=None):
-    """ Change locale for collation temporarily within a context (with-statement) """
-    # The newone locale parameter should be a tuple: ('is_IS', 'UTF-8')
-    old_locale = locale.getlocale(locale.LC_COLLATE)
-    try:
-        locale.setlocale(locale.LC_COLLATE, new_locale or _DEFAULT_SORT_LOCALE)
-        yield locale.strxfrm  # Function to transform string for sorting
-    finally:
-        locale.setlocale(locale.LC_COLLATE, old_locale)
+    # Set of word forms allowed to appear more than once in a row
+    SET = set()
+
+    @staticmethod
+    def add(word):
+        AllowedMultiples.SET.add(word)
 
 
-def sort_strings(strings, loc=None):
-    """ Sort a list of strings using the specified locale's collation order """
-    # Change locale temporarily for the sort
-    with changedlocale(loc) as strxfrm:
-        return sorted(strings, key=strxfrm)
+class WrongCompounds:
+
+    # Dictionary structure: dict { wrong_compound : "right phrase" }
+    DICT = {}
+
+    @staticmethod
+    def add(word, parts):
+        if word in WrongCompounds.DICT:
+            raise ConfigError("Multiple definition of '{0}' in wrong_compounds section".format(word))
+        WrongCompounds.DICT[word] = parts
+
+
+class SplitCompounds:
+
+    # Set containing tuples of compound parts
+    SET = set()
+    
+    @staticmethod
+    def add(parts):
+        if parts in SplitCompounds.SET:
+            raise ConfigError(
+                "Multiple definition of '{0}' in split_compounds section"
+                .format(" ".join(parts))
+            )
+        SplitCompounds.SET.add(parts)
+
+
+class UniqueErrors:
+
+    # Dictionary structure: dict { wrong_word : (tuple of right words) }
+    DICT = {}
+
+    @staticmethod
+    def add(word, corr):
+        if word in UniqueErrors.DICT:
+            raise ConfigError("Multiple definition of '{0}' in unique_errors section".format(word))
+        UniqueErrors.DICT[word] = corr
+
+
+class MultiwordErrors:
+
+    # Dictionary structure: dict { phrase tuple: error specification }
+    DICT = {}
+
+    @staticmethod
+    def add(phrase, error):
+        if phrase in MultiwordErrors.DICT:
+            raise ConfigError(
+                "Multiple definition of '{0}' in multiword_errors section"
+                .format(" ".join(phrase))
+            )
+        # TODO: Fully implement this
+        MultiwordErrors.DICT[phrase] = error
+
+
+class ErrorForms:
+
+    # dict { wrong_word_form : [ lemma, correct_word_form, id, cat, tag ] }
+    DICT = dict()
+
+    @staticmethod
+    def add(wrong_form, meaning):
+        ErrorForms.DICT[wrong_form] = meaning
+
+    @staticmethod
+    def get_lemma(wrong_form):
+        return ErrorForms.DICT[wrong_form][0]
+
+    @staticmethod
+    def get_correct_form(wrong_form):
+        return ErrorForms.DICT[wrong_form][1]
+
+    @staticmethod
+    def get_id(wrong_form):
+        return ErrorForms.DICT[wrong_form][2]
+
+    @staticmethod
+    def get_category(wrong_form):
+        return ErrorForms.DICT[wrong_form][3]
+
+    @staticmethod
+    def get_tag(wrong_form):
+        return ErrorForms.DICT[wrong_form][4]
+
 
 class Settings:
 
@@ -164,6 +261,7 @@ class Settings:
 
     _lock = threading.Lock()
     loaded = False
+    DEBUG = False
 
     # Configuration settings from the ReynirCorrect.conf file
 
@@ -195,65 +293,84 @@ class Settings:
             raise ConfigError("Only one word per line allowed in allowed_multiples section")
         if s in ALLOWED_MULTIPLES:
             raise ConfigError("'{0}' is repeated in allowed_multiples section".format(s))
-        ALLOWED_MULTIPLES.add(s)
+        AllowedMultiples.add(s)
 
     @staticmethod
-    def _handle_not_compounds(s):
-        """ Handle config parameters in the not_compounds section """
-        a = s.lower().split(":", maxsplit=1)
-        word = a[0].strip()
-        parts = a[1].strip().split()
+    def _handle_wrong_compounds(s):
+        """ Handle config parameters in the wrong_compounds section """
+        a = s.lower().split(",", maxsplit=1)
+        if len(a) != 2:
+            raise ConfigError("Expected comma between compound word and its parts")
+        word = a[0].strip().strip("\"")
+        parts = a[1].strip().strip("\"")
         if not word:
-            raise ConfigError("Expected word before the colon in not_compounds section")
+            raise ConfigError("Expected word before the comma in wrong_compounds section")
         if len(parts) < 2:
-            raise ConfigError("Missing word part(s) in not_compounds section")
+            raise ConfigError("Missing word part(s) in wrong_compounds section")
         if len(word.split()) != 1:
-            raise ConfigError("Multiple words not allowed before colon in not_compounds section")
-        if word in NOT_COMPOUNDS:
-            raise ConfigError("Multiple definition of '{0}' in not_compounds section".format(word))
-        NOT_COMPOUNDS[word] = tuple(parts)
+            raise ConfigError("Multiple words not allowed before comma in wrong_compounds section")
+        WrongCompounds.add(word, tuple(parts))
 
     @staticmethod
     def _handle_split_compounds(s):
         """ Handle config parameters in the split_compounds section """
-        a = s.lower().split(":", maxsplit=1)
-        parts = tuple(a[0].strip().split())
-        word = a[1].strip()
-        if not word:
-            raise ConfigError("Expected word after the colon in split_compounds section")
+        parts = tuple(s.split())
         if len(parts) < 2:
             raise ConfigError("Missing word part(s) in split_compounds section")
-        if len(word.split()) != 1:
-            raise ConfigError("Multiple words not allowed after colon in split_compounds section")
-        if parts in SPLIT_COMPOUNDS:
-            raise ConfigError(
-                "Multiple definition of '{0}' in split_compounds section"
-                .format(" ".join(parts))
-            )
-        SPLIT_COMPOUNDS[parts] = word
+        SplitCompounds.add(parts)
 
     @staticmethod
     def _handle_unique_errors(s):
         """ Handle config parameters in the unique_errors section """
-        a = s.lower().split(":", maxsplit=1)
+        a = s.lower().split(",", maxsplit=1)
+        if len(a) != 2:
+            raise ConfigError("Expected comma between error word and its correction")
         word = a[0].strip()
-        corr = a[1].strip().split()
+        corr = tuple(a[1].strip().split())
         if not word:
-            raise ConfigError("Expected word before the colon in unique_errors section")
+            raise ConfigError("Expected word before the comma in unique_errors section")
         if len(word.split()) != 1:
-            raise ConfigError("Multiple words not allowed before colon in unique_errors section")
-        if word in NOT_COMPOUNDS:
-            raise ConfigError("Multiple definition of '{0}' in unique_errors section".format(word))
-        UNIQUE_ERRORS[word] = corr
+            raise ConfigError("Multiple words not allowed before the comma in unique_errors section")
+        UniqueErrors.add(word, corr)
+
+    @staticmethod
+    def _handle_capitalization_errors(s):
+        pass
+
+    @staticmethod
+    def _handle_taboo_words(s):
+        pass
 
     @staticmethod
     def _handle_multiword_errors(s):
         """ Handle config parameters in the multiword_errors section """
-        a = s.lower().split(":", maxsplit=1)
-        sp = a[0].strip().split()
-        info = a[1].strip().split()
-        MW_ERRORS_SEARCH[sp[0]] = sp[1:] # Ath. þarf að geyma alla möguleika.
-        MW_ERRORS[" ".join(sp)] = info
+        a = s.lower().split("$error", maxsplit=1)
+        if len(a) != 2:
+            raise ConfigError("Expected phrase followed by $error(...)")
+        phrase = tuple(a[0].strip().split())
+        if len(phrase) < 2:
+            raise ConfigError("Multiword phrase must contain at least two words")
+        error = a[1].strip()
+        if len(error) < 3:
+            raise ConfigError("Incomplete error specification for multiword phrase")
+        if error[0] != "(" or error[-1] != ")":
+            raise ConfigError("Error specification should be enclosed in parentheses")
+        MultiwordErrors.add(phrase, error)
+
+    @staticmethod
+    def _handle_error_forms(s):
+        split = s.strip().split(";")
+        if len(split) != 6:
+            raise ConfigError("Expected lemma;wrong form;correct form;id;category;tag")
+        wrong_form = split[1].strip()
+        meaning = (
+            split[0].strip(),  # Lemma (stofn)
+            split[2].strip(),  # Correct form (ordmynd)
+            split[3].strip(),  # Id (utg)
+            split[4].strip(),  # Category (ordfl)
+            split[5].strip(),  # Tag (beyging)
+        )
+        ErrorForms.add(wrong_form, meaning)
 
     @staticmethod
     def read(fname):
@@ -267,10 +384,13 @@ class Settings:
             CONFIG_HANDLERS = {
                 "settings": Settings._handle_settings,
                 "allowed_multiples": Settings._handle_allowed_multiples,
-                "not_compounds": Settings._handle_not_compounds,
+                "wrong_compounds": Settings._handle_wrong_compounds,
                 "split_compounds": Settings._handle_split_compounds,
                 "unique_errors": Settings._handle_unique_errors,
+                "capitalization_errors": Settings._handle_capitalization_errors,
+                "taboo_words": Settings._handle_taboo_words,
                 "multiword_errors": Settings._handle_multiword_errors,
+                "error_forms": Settings._handle_error_forms,
             }
             handler = None  # Current section handler
 

@@ -28,8 +28,10 @@
 from reynir import TOK
 from reynir.bintokenizer import DefaultPipeline
 
-from .settings import ALLOWED_MULTIPLES, NOT_COMPOUNDS, SPLIT_COMPOUNDS, UNIQUE_ERRORS, MW_ERRORS_SEARCH, MW_ERRORS
-from reynir.settings import ErrorForms
+from .settings import (
+    AllowedMultiples, WrongCompounds, SplitCompounds, UniqueErrors,
+    MultiwordErrors, ErrorForms
+)
 from .spelling import Corrector
 
 
@@ -203,7 +205,7 @@ def parse_errors(token_stream):
                 token.txt
                 and next_token.txt
                 and token.txt.lower() == next_token.txt.lower()
-                and token.txt.lower() not in ALLOWED_MULTIPLES
+                and token.txt.lower() not in AllowedMultiples.SET
                 and token.kind == TOK.WORD
             ):
                 # Step to next token
@@ -218,8 +220,8 @@ def parse_errors(token_stream):
                 continue
 
             # Splitting wrongly compounded words
-            if token.txt and token.txt.lower() in NOT_COMPOUNDS:
-                for phrase_part in NOT_COMPOUNDS[token.txt.lower()]:
+            if token.txt and token.txt.lower() in WrongCompounds.DICT:
+                for phrase_part in WrongCompounds.DICT[token.txt.lower()]:
                     new_token = CorrectToken.word(phrase_part)
                     new_token.set_error(
                         CompoundError(
@@ -232,7 +234,11 @@ def parse_errors(token_stream):
                 continue
 
             # Unite wrongly split compounds
-            if (token.txt, next_token.txt) in SPLIT_COMPOUNDS:
+            if (
+                token.txt is not None
+                and next_token.txt is not None
+                and (token.txt.lower(), next_token.txt.lower()) in SplitCompounds.SET
+            ):
                 first_txt = token.txt
                 token = CorrectToken.word(token.txt + next_token.txt)
                 token.set_error(
@@ -252,56 +258,53 @@ def parse_errors(token_stream):
         if token:
             yield token
 
-def annotate(db, token_ctor, token_stream, auto_uppercase):
-    return token_stream
 
-def lookup_unknown_words(db, token_ctor, token_stream, auto_uppercase):
+def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
     """ Try to identify unknown words in the token stream, for instance
         as spelling errors (character juxtaposition, deletion, insertion...) """
     at_sentence_start = False  # !!! TODO
-    errkind = -1  # Says which kind of error is found
-    c = Corrector(db)
     for token in token_stream:
         if token.kind == TOK.WORD and not token.val: # Hasn't been annotated
             # Check unique errors first
-            if token.txt in UNIQUE_ERRORS:
-                corrected = UNIQUE_ERRORS[token.txt]
+            # TODO: What about upper/lower case?
+            errkind = 0
+            if token.txt in UniqueErrors.DICT:
+                # Note: corrected is a tuple
+                corrected = UniqueErrors.DICT[token.txt]
                 errkind = 1
             # Check wrong word forms, TODO split the list up by nature of error
+            # TODO: What about upper/lower case?
             elif token.txt in ErrorForms.DICT:
-                corrected = ErrorForms.get_correct_form(token.txt)
+                corrected = [ErrorForms.get_correct_form(token.txt)]
                 errkind = 3
             # Check edit distance errors
             else:
-                corrected = c.correct(token.txt)
-                errkind = 2
-            if corrected != token.txt:
+                corrected = corrector.correct(token.txt)
+                if corrected != token.txt:
+                    errkind = 2
+                    corrected = [corrected]
+            if errkind != 0:
                 # It seems that we are able to correct the word:
                 # look it up in the BÍN database
-                w, m, error = db.lookup_word(corrected, at_sentence_start, auto_uppercase)
-                # Yield a word tuple with meanings
-                ct = token_ctor.Word(w, m, token=token)
-                if errkind == 1:
-                    ct.set_error(
-                        SpellingError(
-                            "001", "Orðið '{0}' var leiðrétt í '{1}'".format(token.txt, w)
-                        )
+                for ix, corrected_word in enumerate(corrected):
+                    w, m = db.lookup_word(
+                        corrected_word, at_sentence_start, auto_uppercase
                     )
-                elif errkind == 2:
-                    ct.set_error(
-                        SpellingError(
-                            "002", "Orðið '{0}' var leiðrétt í '{1}'".format(token.txt, w)
+                    # Yield a word tuple with meanings
+                    ct = token_ctor.Word(w, m, token=token if ix == 0 else None)
+                    if ix == 0:
+                        # Only mark the first generated token
+                        # of a multi-word sequence
+                        ct.set_error(
+                            SpellingError(
+                                "{0:03}".format(errkind),
+                                "Orðið '{0}' var leiðrétt í '{1}'"
+                                .format(token.txt, " ".join(corrected))
+                            )
                         )
-                    )
-                elif errkind == 3:
-                    ct.set_error(
-                        SpellingError(
-                            "003", "Orðið '{0}' var leiðrétt í '{1}'".format(token.txt, w)
-                        )
-                    )
-                yield ct
+                    yield ct
                 continue
-            # Mark the token as an unknown word
+            # Not able to correct: mark the token as an unknown word
             token.set_error(
                 UnknownWordError(
                     "001", "Óþekkt orð: '{0}'".format(token.txt)
@@ -309,11 +312,7 @@ def lookup_unknown_words(db, token_ctor, token_stream, auto_uppercase):
             )
         yield token
 
-def correct_phrases(token_stream):
-    for token in token_stream:
-        #if token.kind == TOK.WORD:
-        #    print(token)
-        yield token
+
 class _Correct_TOK(TOK):
 
     """ A derived class to override token construction methods
@@ -348,6 +347,7 @@ class CorrectionPipeline(DefaultPipeline):
 
     def __init__(self, text, auto_uppercase=False):
         super().__init__(text, auto_uppercase)
+        self._corrector = Corrector(self._db)
 
     # Use the _Correct_TOK class to construct tokens, instead of
     # TOK (tokenizer.py) or _Bin_TOK (bintokenizer.py)
@@ -357,23 +357,15 @@ class CorrectionPipeline(DefaultPipeline):
         """ Add a correction pass just before BÍN annotation """
         return parse_errors(stream)
 
-    #def annotate(self, stream):
-        """ Lookup meanings from dictionary and errors """
-    #    return annotate(self._db, self._ctor, stream, self._auto_uppercase)
-
     def lookup_unknown_words(self, stream):
         """ Attempt to resolve unknown words """
         return lookup_unknown_words(
-            self._db, self._token_ctor, stream, self._auto_uppercase
+            self._corrector, self._token_ctor, stream, self._auto_uppercase
         )
 
-    def correct_phrases(self, stream):
-        """ Add a correction pass after phrase disambiguation """
-        return correct_phrases(stream)
 
 def tokenize(text, auto_uppercase=False):
     """ Tokenize text using the correction pipeline, overriding a part
         of the default tokenization pipeline """
     pipeline = CorrectionPipeline(text, auto_uppercase)
-    x = pipeline.tokenize()
     return pipeline.tokenize()
