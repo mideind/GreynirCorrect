@@ -90,12 +90,10 @@ def test_correct(verbose=False):
     if verbose: dump(g)
 
     assert len(g) == 24
-    assert g[4].error_code == "C003"
-    assert g[5].error_code == "C001"
+    assert g[6].error_code == "C001"
     assert g[19].error_code == "C001"
 
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
-    assert "klukkustundarfrest" in s
     assert "áður áður" not in s
     assert "hækkun hækkun" not in s
 
