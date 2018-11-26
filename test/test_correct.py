@@ -22,9 +22,19 @@
 """
 
 import reynir_correct as rc
+import tokenizer
 
 
-def test_correct():
+def dump(tokens):
+    print("\n{0} tokens:\n".format(len(tokens)))
+    for token in tokens:
+        print("{0}".format(token))
+        err = token.error_description
+        if err:
+            print("   {0}: {1}".format(token.error_code, err))
+
+
+def test_correct(verbose=False):
     """ Test the spelling and grammar correction module """
 
     g = rc.tokenize(
@@ -32,35 +42,64 @@ def test_correct():
         "Það var aldrey aftaka veður í gær."
     )
 
-    for token in g:
-        print("{0}".format(token))
-        err = token.error_description
-        if err:
-            print("   {0}".format(err))
+    g = list(g)
+    if verbose: dump(g)
+
+    assert len(g) == 24
+    assert g[4].error_code == "C002"
+    assert g[6].error_code == "C001"
+    assert g[7].error_code == "U001"
+    assert g[11].error_code == "C002"
+    assert g[19].error_code == "S001"
+    assert g[20].error_code == "C003"
+
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "báðum megin" in s
+    assert "upp undir" in s
+    assert "aldrei" in s
+    assert "aldrey" not in s
+    assert "aftakaveður" in s
+    assert "sagði sagði" not in s
 
     g = rc.tokenize(
         "Hann borðaði alltsaman en allsekki það sem ég gaf honum. "
         "Þið hafið hafið mótið að viðstöddum fimmhundruð áhorfendum."
     )
 
-    for token in g:
-        print("{0}".format(token))
-        err = token.error_description
-        if err:
-            print("   {0}".format(err))
+    g = list(g)
+    if verbose: dump(g)
+
+    assert len(g) == 25
+    assert g[3].error_code == "C002"
+    assert g[4].error_code == "C002"
+    assert g[6].error_code == "C002"
+    assert g[21].error_code == "C002"
+
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "allt saman" in s
+    assert "alls ekki" in s
+    assert "hafið hafið" in s
+    assert "fimm hundruð" in s
 
     g = rc.tokenize(
         "Ég gaf honum klukkustundar frest áður áður en hann fékk 50 ml af lyfinu. "
         "Langtíma þróun sýnir 25% hækkun hækkun frá 1. janúar 1980."
     )
 
-    for token in g:
-        print("{0}".format(token))
-        err = token.error_description
-        if err:
-            print("   {0}".format(err))
+    g = list(g)
+    if verbose: dump(g)
+
+    assert len(g) == 24
+    assert g[4].error_code == "C003"
+    assert g[5].error_code == "C001"
+    assert g[19].error_code == "C001"
+
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "klukkustundarfrest" in s
+    assert "áður áður" not in s
+    assert "hækkun hækkun" not in s
 
 
 if __name__ == "__main__":
 
-    test_correct()
+    test_correct(verbose=True)

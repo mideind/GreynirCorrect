@@ -1,0 +1,4 @@
+graft src
+prune src/reynir_correct/__pycache__
+include src/reynir_correct/config/*.conf
+include src/reynir_correct/resources/spelling.pickle

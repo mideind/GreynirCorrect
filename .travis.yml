@@ -1,0 +1,20 @@
+language: python
+
+dist: xenial
+
+python:
+  - "3.4"
+  - "3.5"
+  - "3.6"
+  - "pypy3.5"
+
+install:
+  # Python 3.4 seems to require pip and setuptools
+  # upgrades to be able to correctly install reynir and access
+  # embedded resources
+  - python -m pip install --upgrade pip
+  - python -m pip install --upgrade setuptools
+  - python setup.py develop
+
+script:
+  - python -m pytest
