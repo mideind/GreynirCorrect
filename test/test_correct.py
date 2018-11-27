@@ -89,13 +89,17 @@ def test_correct(verbose=False):
     g = list(g)
     if verbose: dump(g)
 
-    assert len(g) == 24
-    assert g[6].error_code == "C001"
-    assert g[19].error_code == "C001"
+    assert len(g) == 23
+    assert g[5].error_code == "C001"  # áður áður
+    assert g[18].error_code == "C001"  # hækkun hækkun
 
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
     assert "áður áður" not in s
     assert "hækkun hækkun" not in s
+    assert "klukkustundar frest" not in s
+    assert "klukkustundarfrest" in s
+    assert "Langtíma þróun" not in s
+    assert "Langtímaþróun" in s
 
     # Check allowed_multiples
 
@@ -128,7 +132,8 @@ def test_correct(verbose=False):
     # Check split_compounds
 
     g = rc.tokenize(
-        "Ég fór bakdyra megin inn í auka herbergi og sótti uppáhalds bragðtegund af ís."
+        "Ég fór bakdyra megin inn í auka herbergi og sótti uppáhalds bragðtegund af ís. "
+        "Langtíma spá gerir ráð fyrir aftaka veðri. SÉR ÍSLENSKAN BELGING MÁ FINNA VÍÐA."
     )
 
     g = list(g)
@@ -141,6 +146,12 @@ def test_correct(verbose=False):
     assert "aukaherbergi" in s
     assert "uppáhalds bragðtegund" not in s
     assert "uppáhaldsbragðtegund" in s
+    assert "Langtíma spá" not in s
+    assert "Langtímaspá" in s
+    assert "aftaka veðri" not in s
+    assert "aftakaveðri" in s
+    assert "SÉR ÍSLENSKAN" not in s
+    assert "SÉRÍSLENSKAN" in s
 
     # Check unique_errors
 

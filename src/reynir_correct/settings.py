@@ -185,17 +185,20 @@ class WrongCompounds:
 
 class SplitCompounds:
 
-    # Set containing tuples of compound parts
-    SET = set()
-    
+    # Dict of the form { first_part : set(second_part_stem) }
+    DICT = defaultdict(set)
+
     @staticmethod
-    def add(parts):
-        if parts in SplitCompounds.SET:
+    def add(first_part, second_part_stem):
+        if (
+            first_part in SplitCompounds.DICT
+            and second_part_stem in SplitCompounds.DICT[first_part]
+        ):
             raise ConfigError(
                 "Multiple definition of '{0}' in split_compounds section"
-                .format(" ".join(parts))
+                .format(first_part + " " + second_part_stem)
             )
-        SplitCompounds.SET.add(parts)
+        SplitCompounds.DICT[first_part].add(second_part_stem)
 
 
 class UniqueErrors:
@@ -341,10 +344,10 @@ class Settings:
     @staticmethod
     def _handle_split_compounds(s):
         """ Handle config parameters in the split_compounds section """
-        parts = tuple(s.split())
-        if len(parts) < 2:
+        parts = s.split()
+        if len(parts) != 2:
             raise ConfigError("Missing word part(s) in split_compounds section")
-        SplitCompounds.add(parts)
+        SplitCompounds.add(parts[0], parts[1])
 
     @staticmethod
     def _handle_unique_errors(s):

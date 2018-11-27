@@ -183,7 +183,7 @@ class SpellingError(Error):
         return self._txt
 
 
-def parse_errors(token_stream):
+def parse_errors(token_stream, db):
 
     """ This tokenization phase is done before BÍN annotation
         and before static phrases are identified. It finds duplicated words,
@@ -193,6 +193,38 @@ def parse_errors(token_stream):
         """ Get the next token in the underlying stream and wrap it
             in a CorrectToken instance """
         return CorrectToken.from_token(next(token_stream))
+
+    def is_split_compound(token, next_token):
+        """ Check whether the combination of the given token and the next
+            token forms a split compound. Note that the latter part of
+            a split compound is specified as a stem (lemma), so we need
+            to check whether the next_token word form has a corresponding
+            lemma. Also, a single first part may have more than one (i.e.,
+            a set of) subsequent latter part stems.
+        """
+        txt = token.txt
+        next_txt = next_token.txt
+        if txt is None or next_txt is None or next_txt.istitle():
+            # If the latter part is in title case, we don't see it
+            # as a part of split compound
+            return False
+        if next_txt.isupper() and not txt.isupper():
+            # Don't allow a combination of an all-upper-case
+            # latter part with anything but an all-upper-case former part
+            return False
+        if txt.isupper() and not next_txt.isupper():
+            # ...and vice versa
+            return False
+        next_stems = SplitCompounds.DICT.get(txt.lower())
+        if not next_stems:
+            return False
+        _, meanings = db.lookup_word(next_txt.lower(), at_sentence_start=False)
+        if not meanings:
+            return False
+        # If any meaning of the following word has a stem (lemma)
+        # that fits the second part of the split compound, we
+        # have a match
+        return any(m.stofn.replace("-", "") in next_stems for m in meanings)
 
     token = None
     try:
@@ -235,11 +267,7 @@ def parse_errors(token_stream):
                 continue
 
             # Unite wrongly split compounds
-            if (
-                token.txt is not None
-                and next_token.txt is not None
-                and (token.txt.lower(), next_token.txt.lower()) in SplitCompounds.SET
-            ):
+            if is_split_compound(token, next_token):
                 first_txt = token.txt
                 token = CorrectToken.word(token.txt + next_token.txt)
                 token.set_error(
@@ -356,7 +384,7 @@ class CorrectionPipeline(DefaultPipeline):
 
     def correct(self, stream):
         """ Add a correction pass just before BÍN annotation """
-        return parse_errors(stream)
+        return parse_errors(stream, self._db)
 
     def lookup_unknown_words(self, stream):
         """ Attempt to resolve unknown words """
