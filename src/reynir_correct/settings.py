@@ -179,6 +179,7 @@ class WrongCompounds:
     def add(word, parts):
         if word in WrongCompounds.DICT:
             raise ConfigError("Multiple definition of '{0}' in wrong_compounds section".format(word))
+        assert isinstance(parts, tuple)
         WrongCompounds.DICT[word] = parts
 
 
@@ -328,7 +329,7 @@ class Settings:
         if len(a) != 2:
             raise ConfigError("Expected comma between compound word and its parts")
         word = a[0].strip().strip("\"")
-        parts = a[1].strip().strip("\"")
+        parts = a[1].strip().strip("\"").split()
         if not word:
             raise ConfigError("Expected word before the comma in wrong_compounds section")
         if len(parts) < 2:
@@ -387,10 +388,10 @@ class Settings:
     def _handle_error_forms(s):
         split = s.strip().split(";")
         if len(split) != 6:
-            raise ConfigError("Expected lemma;wrong form;correct form;id;category;tag")
-        wrong_form = split[1].strip()
+            raise ConfigError("Expected wrong form;lemma;correct form;id;category;tag")
+        wrong_form = split[0].strip()
         meaning = (
-            split[0].strip(),  # Lemma (stofn)
+            split[1].strip(),  # Lemma (stofn)
             split[2].strip(),  # Correct form (ordmynd)
             split[3].strip(),  # Id (utg)
             split[4].strip(),  # Category (ordfl)

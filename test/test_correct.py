@@ -50,7 +50,7 @@ def test_correct(verbose=False):
     assert g[6].error_code == "C001"
     assert g[7].error_code == "U001"
     assert g[11].error_code == "C002"
-    assert g[19].error_code == "S001"
+    assert g[19].error_code == "S002"
     assert g[20].error_code == "C003"
 
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
@@ -168,7 +168,7 @@ def test_correct(verbose=False):
     # Check error_forms
 
     g = rc.tokenize(
-        "Fellibylir og jafvel hvirfilbylir gengu yfir hús bróðurs míns."
+        "Fellibylir og jafvel HVIRFILBYLIR gengu yfir hús bróðurs míns."
     )
 
     g = list(g)
@@ -179,8 +179,8 @@ def test_correct(verbose=False):
     assert "Fellibyljir" in s
     assert "jafvel" not in s
     assert "jafnvel" in s
-    assert "hvirfilbylir" not in s
-    assert "hvirfilbyljir" in s
+    assert "HVIRFILBYLIR" not in s
+    assert "HVIRFILBYLJIR" in s
     assert "bróðurs" not in s
     assert "bróður" in s
 
