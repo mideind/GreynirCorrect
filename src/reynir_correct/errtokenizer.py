@@ -194,6 +194,7 @@ def parse_errors(token_stream):
             in a CorrectToken instance """
         return CorrectToken.from_token(next(token_stream))
 
+    token = None
     try:
         # Maintain a one-token lookahead
         token = get()
