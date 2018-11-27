@@ -46,12 +46,12 @@ def test_correct(verbose=False):
     if verbose: dump(g)
 
     assert len(g) == 24
-    assert g[4].error_code == "C002"
-    assert g[6].error_code == "C001"
-    assert g[7].error_code == "U001"
-    assert g[11].error_code == "C002"
-    assert g[19].error_code == "S002"
-    assert g[20].error_code == "C003"
+    assert g[4].error_code == "C002"  # báðumegin -> báðum megin
+    assert g[6].error_code == "C001"  # sagði sagði
+    assert g[7].error_code == "U001"  # Cthulhu
+    assert g[11].error_code == "C002"  # uppundir -> upp undir
+    assert g[19].error_code == "S001"  # aldrey
+    assert g[20].error_code == "C003"  # aftaka veður -> aftakaveður
 
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
     assert "báðum megin" in s
@@ -175,6 +175,13 @@ def test_correct(verbose=False):
     assert "jafnvel" in s
     assert "ókeipis" not in s
     assert "ókeypis" in s
+
+    g = rc.tokenize("Mér er sama þótt hann deyji.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "deyji" not in s
+    assert "deyi" in s
 
     # Check error_forms
 

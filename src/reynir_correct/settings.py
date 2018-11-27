@@ -356,7 +356,18 @@ class Settings:
         if len(a) != 2:
             raise ConfigError("Expected comma between error word and its correction")
         word = a[0].strip()
-        corr = tuple(a[1].strip().split())
+        if len(word) < 3:
+            raise ConfigError("Expected nonempty word before comma in unique_errors section")
+        if word[0] != "\"" or word[-1] != "\"":
+            raise ConfigError("Expected word in double quotes in unique_errors section")
+        word = word[1:-1]
+        corr = a[1].strip()
+        if len(corr) < 3:
+            raise ConfigError("Expected nonempty word after comma in unique_errors section")
+        if corr[0] != "\"" or corr[-1] != "\"":
+            raise ConfigError("Expected word in double quotes after comma in unique_errors section")
+        corr = corr[1:-1]
+        corr = tuple(corr.split())
         if not word:
             raise ConfigError("Expected word before the comma in unique_errors section")
         if len(word.split()) != 1:
@@ -389,6 +400,7 @@ class Settings:
 
     @staticmethod
     def _handle_error_forms(s):
+        """ Handle config parameters in the error_forms section """
         split = s.strip().split(";")
         if len(split) != 6:
             raise ConfigError("Expected wrong form;lemma;correct form;id;category;tag")
