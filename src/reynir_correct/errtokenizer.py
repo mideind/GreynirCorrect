@@ -275,8 +275,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                 assert isinstance(corrected, tuple)
                 errkind = 1
             # Check wrong word forms, TODO split the list up by nature of error
-            # TODO: What about upper/lower case?
-            elif token.txt in ErrorForms.DICT:
+            elif ErrorForms.contains(token.txt):
                 corrected = [ErrorForms.get_correct_form(token.txt)]
                 errkind = 3
             # Check edit distance errors

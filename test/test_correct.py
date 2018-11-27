@@ -168,15 +168,15 @@ def test_correct(verbose=False):
     # Check error_forms
 
     g = rc.tokenize(
-        "Margir fellibylir og jafvel hvirfilbylir gengu yfir hús bróðurs míns."
+        "Fellibylir og jafvel hvirfilbylir gengu yfir hús bróðurs míns."
     )
 
     g = list(g)
     if verbose: dump(g)
 
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
-    assert "fellibylir" not in s
-    assert "fellibyljir" in s
+    assert "Fellibylir" not in s
+    assert "Fellibyljir" in s
     assert "jafvel" not in s
     assert "jafnvel" in s
     assert "hvirfilbylir" not in s

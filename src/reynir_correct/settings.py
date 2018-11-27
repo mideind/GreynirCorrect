@@ -179,7 +179,6 @@ class WrongCompounds:
     def add(word, parts):
         if word in WrongCompounds.DICT:
             raise ConfigError("Multiple definition of '{0}' in wrong_compounds section".format(word))
-        assert isinstance(parts, tuple)
         WrongCompounds.DICT[word] = parts
 
 
@@ -195,7 +194,6 @@ class SplitCompounds:
                 "Multiple definition of '{0}' in split_compounds section"
                 .format(" ".join(parts))
             )
-        assert isinstance(parts, tuple)
         SplitCompounds.SET.add(parts)
 
 
@@ -208,7 +206,6 @@ class UniqueErrors:
     def add(word, corr):
         if word in UniqueErrors.DICT:
             raise ConfigError("Multiple definition of '{0}' in unique_errors section".format(word))
-        assert isinstance(corr, tuple)
         UniqueErrors.DICT[word] = corr
 
 
@@ -230,8 +227,17 @@ class MultiwordErrors:
 
 class ErrorForms:
 
-    # dict { wrong_word_form : [ lemma, correct_word_form, id, cat, tag ] }
+    # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
     DICT = dict()
+
+    @staticmethod
+    def contains(word):
+        """ Check whether the word form is in the error forms dictionary,
+            either in its original casing or in a lower case form """
+        d = ErrorForms.DICT
+        if word.islower():
+            return word in d
+        return word in d or word.lower() in d
 
     @staticmethod
     def add(wrong_form, meaning):
@@ -243,7 +249,24 @@ class ErrorForms:
 
     @staticmethod
     def get_correct_form(wrong_form):
-        return ErrorForms.DICT[wrong_form][1]
+        """ Return a corrected form of the given word, attempting
+            to emulate the lower/upper/title case of the word """
+        # First, try the original casing of the wrong form
+        c = ErrorForms.DICT.get(wrong_form)
+        if c is not None:
+            # Found it: we're done
+            return c[1]
+        # Lookup a lower case version
+        c = ErrorForms.DICT.get(wrong_form.lower())
+        if c is None:
+            # Not found: can't correct
+            return wrong_form
+        c = c[1]
+        if wrong_form.istitle():
+            return c.title()
+        if wrong_form.isupper():
+            return c.upper()
+        return c
 
     @staticmethod
     def get_id(wrong_form):
@@ -312,7 +335,7 @@ class Settings:
             raise ConfigError("Missing word part(s) in wrong_compounds section")
         if len(word.split()) != 1:
             raise ConfigError("Multiple words not allowed before comma in wrong_compounds section")
-        WrongCompounds.add(word, tuple(parts.split()))
+        WrongCompounds.add(word, tuple(parts))
 
     @staticmethod
     def _handle_split_compounds(s):
@@ -329,18 +352,7 @@ class Settings:
         if len(a) != 2:
             raise ConfigError("Expected comma between error word and its correction")
         word = a[0].strip()
-        if len(word) < 3:
-            raise ConfigError("Expected nonempty word before comma in unique_errors section")
-        if word[0] != "\"" or word[-1] != "\"":
-            raise ConfigError("Expected word in double quotes in unique_errors section")
-        word = word[1:-1]
-        corr = a[1].strip()
-        if len(corr) < 3:
-            raise ConfigError("Expected nonempty word after comma in unique_errors section")
-        if corr[0] != "\"" or corr[-1] != "\"":
-            raise ConfigError("Expected word in double quotes after comma in unique_errors section")
-        corr = corr[1:-1]
-        corr = tuple(corr.split())
+        corr = tuple(a[1].strip().split())
         if not word:
             raise ConfigError("Expected word before the comma in unique_errors section")
         if len(word.split()) != 1:
@@ -376,9 +388,9 @@ class Settings:
         split = s.strip().split(";")
         if len(split) != 6:
             raise ConfigError("Expected lemma;wrong form;correct form;id;category;tag")
-        wrong_form = split[0].strip()
+        wrong_form = split[1].strip()
         meaning = (
-            split[1].strip(),  # Lemma (stofn)
+            split[0].strip(),  # Lemma (stofn)
             split[2].strip(),  # Correct form (ordmynd)
             split[3].strip(),  # Id (utg)
             split[4].strip(),  # Category (ordfl)
