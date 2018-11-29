@@ -202,6 +202,29 @@ def test_correct(verbose=False):
     assert "bróðurs" not in s
     assert "bróður" in s
 
+    # Check capitalization_errors
+
+    g = rc.tokenize(
+        "Íslenskir menn drápu Danska menn og Gyðinga í evrópu gegn mótmælum Eistneskra sjálfstæðismanna."
+    )
+
+    g = list(g)
+    if verbose: dump(g)
+
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert s.startswith("Íslenskir ")
+    assert "Danska" not in s
+    assert "danska" in s
+    assert "Gyðinga" not in s
+    assert "gyðinga" in s
+    assert "evrópu" not in s
+    assert "Evrópu" in s
+    assert "Eistneskra" not in s
+    assert "eistneskra" in s
+    # 'sjálfstæðismanna' is in BÍN and is not flagged as an error
+    # assert "sjálfstæðismanna" not in s
+    # assert "Sjálfstæðismanna" in s
+
 
 if __name__ == "__main__":
 

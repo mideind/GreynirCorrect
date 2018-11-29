@@ -229,6 +229,41 @@ class MultiwordErrors:
         MultiwordErrors.DICT[phrase] = error
 
 
+class TabooWords:
+
+    # Dictionary structure: dict { taboo_word : suggested_replacement }
+    DICT = {}
+
+    @staticmethod
+    def add(word, replacement):
+        if word in TabooWords.DICT:
+            raise ConfigError("Multiple definition of '{0}' in taboo_words section".format(word))
+        TabooWords.DICT[word] = replacement
+
+
+class CapitalizationErrors:
+
+    # Set of wrongly capitalized words
+    SET = set()
+    # Reverse capitalization (íslendingur -> Íslendingur, Danskur -> danskur)
+    SET_REV = set()
+
+    @staticmethod
+    def add(word):
+        """ Add the given (wrongly capitalized) word stem to the stem set """
+        if word in CapitalizationErrors.SET:
+            raise ConfigError(
+                "Multiple definition of '{0}' in capitalization_errors section"
+                .format(word)
+            )
+        CapitalizationErrors.SET.add(word)
+        if word.islower():
+            CapitalizationErrors.SET_REV.add(word.title())
+        else:
+            assert word.istitle()
+            CapitalizationErrors.SET_REV.add(word.lower())
+
+
 class ErrorForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
@@ -376,11 +411,18 @@ class Settings:
 
     @staticmethod
     def _handle_capitalization_errors(s):
-        pass
+        """ Handle config parameters in the capitalization_errors section """
+        CapitalizationErrors.add(s)
 
     @staticmethod
     def _handle_taboo_words(s):
-        pass
+        """ Handle config parameters in the taboo_words section """
+        a = s.lower().split()
+        if len(a) != 2:
+            raise ConfigError("Expected taboo word and a suggested replacement")
+        if a[1].count("_") != 1:
+            raise ConfigError("Suggested replacement should include word category (_xx)")
+        TabooWords.add(a[0].strip(), a[1].strip())
 
     @staticmethod
     def _handle_multiword_errors(s):
