@@ -250,11 +250,11 @@ def parse_errors(token_stream, db):
         while True:
             next_token = get()
             # Make the lookahead checks we're interested in
-            # Word duplication
+            # Word duplication (note that word case must also match)
             if (
                 token.txt
                 and next_token.txt
-                and token.txt.lower() == next_token.txt.lower()
+                and token.txt == next_token.txt
                 and token.txt.lower() not in AllowedMultiples.SET
                 and token.kind == TOK.WORD
             ):
@@ -366,28 +366,42 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
             at_sentence_start = False
 
 
-def fix_capitalization(token_stream, db):
+def fix_capitalization(token_stream, db, token_ctor, auto_uppercase):
     """ Annotate tokens with errors if they are capitalized incorrectly """
 
     stems = CapitalizationErrors.SET_REV
 
-    def is_wrong(word):
+    def is_wrong(token):
         """ Return True if the word is wrongly capitalized """
+        word = token.txt
+        lower = True
         if word.islower():
             # íslendingur -> Íslendingur
+            # finni -> Finni
             rev_word = word.title()
         elif word.istitle():
             # Danskur -> danskur
             rev_word = word.lower()
+            lower = False
         else:
             # All upper case or other strange capitalization:
             # don't bother
             return False
         meanings = db.meanings(rev_word) or []
-        # If we find any of the stems of the "corrected"
+        # If we don't find any of the stems of the "corrected"
         # meanings in the corrected error set (SET_REV),
-        # the word was wrongly capitalized
-        return any(m.stofn in stems for m in meanings)
+        # the word was correctly capitalized
+        if all(m.stofn not in stems for m in meanings):
+            return False
+        # Potentially wrong, but check for a corner
+        # case: the original word may exist in its
+        # original case in a non-noun/adjective category,
+        # such as "finni" and "finna" as a verb
+        if lower and any(m.ordfl not in {"kk", "kvk", "hk"} for m in token.val):
+            # Not definitely wrong
+            return False
+        # Definitely wrong
+        return True
 
     at_sentence_start = False
     for token in token_stream:
@@ -395,22 +409,32 @@ def fix_capitalization(token_stream, db):
             yield token
             at_sentence_start = True
             continue
-        if token.kind == TOK.WORD and is_wrong(token.txt):
+        # !!! TODO: Consider whether to overwrite previous error,
+        # !!! if token.error is not None
+        if token.kind == TOK.WORD and is_wrong(token):
             if token.txt.istitle():
                 if not at_sentence_start:
                     original_txt = token.txt
-                    token = CorrectToken.word(token.txt.lower())
+                    w, m = db.lookup_word(
+                        token.txt.lower(), at_sentence_start, auto_uppercase
+                    )
+                    token = token_ctor.Word(w, m, token=token)
                     token.set_error(
                         CapitalizationError(
-                            "001", "Orð á að byrja á lágstaf: '{0}'".format(original_txt)
+                            "001",
+                            "Orð á að byrja á lágstaf: '{0}'".format(original_txt)
                         )
                     )
             elif token.txt.islower():
                 original_txt = token.txt
-                token = CorrectToken.word(token.txt.title())
+                w, m = db.lookup_word(
+                    token.txt.title(), at_sentence_start, auto_uppercase
+                )
+                token = token_ctor.Word(w, m, token=token)
                 token.set_error(
                     CapitalizationError(
-                        "002", "Orð á að byrja á hástaf: '{0}'".format(original_txt)
+                        "002",
+                        "Orð á að byrja á hástaf: '{0}'".format(original_txt)
                     )
                 )
         yield token
@@ -445,6 +469,16 @@ class _Correct_TOK(TOK):
             ct.copy_error(token)
         return ct
 
+    @staticmethod
+    def Person(w, m=None, token=None):
+        ct = CorrectToken(TOK.PERSON, w, m)
+        if token is not None:
+            # This token is being constructed in reference to a previously
+            # generated token, or a list of tokens, which might have had
+            # an associated error: make sure that it is preserved
+            ct.copy_error(token)
+        return ct
+
 
 class CorrectionPipeline(DefaultPipeline):
 
@@ -472,7 +506,9 @@ class CorrectionPipeline(DefaultPipeline):
             self._corrector, self._token_ctor, stream, self._auto_uppercase
         )
         # Finally, fix the capitalization
-        return fix_capitalization(stream, self._db)
+        return fix_capitalization(
+            stream, self._db, self._token_ctor, self._auto_uppercase
+        )
 
 
 def tokenize(text, auto_uppercase=False):

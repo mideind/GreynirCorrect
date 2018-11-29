@@ -101,7 +101,9 @@ def test_correct(verbose=False):
     assert "Langtíma þróun" not in s
     assert "Langtímaþróun" in s
 
-    # Check allowed_multiples
+
+def test_allowed_multiples(verbose=False):
+    """ Test allowed_multiples """
 
     g = rc.tokenize(
         "Þetta gerði gerði ekkert fyrir mig. Bóndinn á Á á á á fjalli."
@@ -114,7 +116,9 @@ def test_correct(verbose=False):
     assert "gerði gerði" in s
     assert "á Á á á á" in s
 
-    # Check wrong_compounds
+
+def test_wrong_compounds(verbose=False):
+    """ Check wrong_compounds """
 
     g = rc.tokenize(
         "Það voru allskonar kökur á borðinu en ég vildi samt vera annarsstaðar."
@@ -129,7 +133,9 @@ def test_correct(verbose=False):
     assert "annarsstaðar" not in s
     assert "annars staðar" in s
 
-    # Check split_compounds
+
+def test_split_compounds(verbose=False):
+    """ Check split_compounds """
 
     g = rc.tokenize(
         "Ég fór bakdyra megin inn í auka herbergi og sótti uppáhalds bragðtegund af ís. "
@@ -153,7 +159,9 @@ def test_correct(verbose=False):
     assert "SÉR ÍSLENSKAN" not in s
     assert "SÉRÍSLENSKAN" in s
 
-    # Check unique_errors
+
+def test_unique_errors(verbose=False):
+    """ Check unique_errors """
 
     g = rc.tokenize(
         "Björgvinn tók efitr þvi að han var jafvel ókeipis."
@@ -183,7 +191,9 @@ def test_correct(verbose=False):
     assert "deyji" not in s
     assert "deyi" in s
 
-    # Check error_forms
+
+def test_error_forms(verbose=False):
+    """ Check error_forms """
 
     g = rc.tokenize(
         "Fellibylir og jafvel HVIRFILBYLIR gengu yfir hús bróðurs míns."
@@ -202,7 +212,9 @@ def test_correct(verbose=False):
     assert "bróðurs" not in s
     assert "bróður" in s
 
-    # Check capitalization_errors
+
+def test_capitalization_errors(verbose=False):
+    """ Check capitalization_errors """
 
     g = rc.tokenize(
         "Íslenskir menn drápu Danska menn og Gyðinga í evrópu gegn mótmælum Eistneskra sjálfstæðismanna."
@@ -225,7 +237,26 @@ def test_correct(verbose=False):
     # assert "sjálfstæðismanna" not in s
     # assert "Sjálfstæðismanna" in s
 
+    g = rc.tokenize("finnar finna Finna hvar sem þeir leita en finnarnir fóru og hittu finnana.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    print(s)  # !!! DEBUG
+    assert s.startswith("Finnar ")
+    assert "finnarnir" not in s
+    assert "Finnarnir" in s
+    assert "finnana" not in s
+    assert "Finnana" in s
+    assert "Finna" in s
+
 
 if __name__ == "__main__":
 
     test_correct(verbose=True)
+    test_allowed_multiples(verbose=True)
+    test_split_compounds(verbose=True)
+    test_wrong_compounds(verbose=True)
+    test_unique_errors(verbose=True)
+    test_error_forms(verbose=True)
+    test_capitalization_errors(verbose=True)
+
