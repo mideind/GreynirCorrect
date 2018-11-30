@@ -249,6 +249,23 @@ def test_capitalization_errors(verbose=False):
     assert "Finna" in s
 
 
+def test_taboo_words(verbose=False):
+    g = rc.tokenize(
+        "Jón sagði að hún væri algjör pussa en hún svaraði að "
+        # "hann væri hommatittur og negri með lítinn tilla."
+        "hann væri negri með lítinn tilla."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    assert len(g) == 20
+    errors = {7, 14, 17}
+    for ix, t in enumerate(g):
+        if ix in errors:
+            assert g[ix].error_code == "T001"
+        else:
+            assert not g[ix].error_code
+
+
 if __name__ == "__main__":
 
     test_correct(verbose=True)
@@ -258,4 +275,5 @@ if __name__ == "__main__":
     test_unique_errors(verbose=True)
     test_error_forms(verbose=True)
     test_capitalization_errors(verbose=True)
+    test_taboo_words(verbose=True)
 

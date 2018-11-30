@@ -127,7 +127,8 @@ class Dictionary:
     ] + [c for c in "abcdðeéfghijklmnopqrstuúvwxyýzþö"]
 
     def __init__(self, db=None):
-        # Word database
+        # db is a word database. It can be any object that
+        # supports __contains__(word)
         self._db = set() if db is None else db
         with self._lock:
             # Upon first instantiation, load the pickled
@@ -142,6 +143,11 @@ class Dictionary:
             with open(_SPELLING_PICKLE, "rb") as f:
                 cls._counts = pickle.load(f)
                 cls._words = pickle.load(f)
+            # Remove known wrong words
+            for w in cls._REMOVE:
+                del cls._counts[w]
+                cls._words.discard(w)
+                cls._words.discard(w.title())
         except (FileNotFoundError, EOFError):
             cls._counts = dict()
             cls._words = set()
@@ -173,11 +179,13 @@ class Dictionary:
         return len(self._words)
 
     def freq(self, wrd):
-        """ Get the frequency of the given word as a ratio between 0.0 and 1.0 """
+        """ Get the frequency of the given word (assumed to be lowercase)
+            as a ratio between 0.0 and 1.0 """
         return self._counts[wrd] / self._total
 
     def log_freq(self, wrd):
-        """ Get the logarithm of the frequency of the given word """
+        """ Get the logarithm of the frequency of the given word
+            (which is assumed to be in lower case) """
         return math.log(self._counts[wrd]) - self._log_total
 
     def freq_1(self, wrd):
@@ -186,8 +194,9 @@ class Dictionary:
         return self.adjusted_count(wrd) / self._total
 
     def log_freq_1(self, wrd):
-        """ Get the logarithm of the frequency of the given word,
-            however assigning out-of-vocabulary words a count of 1 instead of 0 """
+        """ Get the logarithm of the frequency of the given word, which is
+            assumed to be lower case, however assigning out-of-vocabulary
+            words a count of 1 instead of 0 """
         try:
             return self._prob_cache[wrd]
         except KeyError:
@@ -195,16 +204,20 @@ class Dictionary:
             self._prob_cache[wrd] = p
             return p
 
+    @classmethod
     @lru_cache(maxsize=10)
-    def percentile_log_freq(self, percentile):
+    def percentile_log_freq(cls, percentile):
         """ Return the frequency of the word at the n'th percentile,
             where n is 0..100, n=0 is the most frequent word,
             n=100 the least frequent """
-        cts = sorted(self._counts.values(), reverse=True)
+        cts = sorted(cls._counts.values(), reverse=True)
         cnt = cts[(len(cts) - 1) * percentile // 100]
-        return math.log(cnt) - self._log_total
+        return math.log(cnt) - cls._log_total
 
     def adjusted_count(self, word):
+        """ Return the actual count of the given word (assumed to be
+            lower case) from the dictionary, plus one, or 2 if the word
+            is in the large word database, or 1 otherwise. """
         if word in self._counts:
             return self._counts[word] + 1
         return 2 if word in self._db else 1

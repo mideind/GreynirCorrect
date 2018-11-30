@@ -181,6 +181,21 @@ class CapitalizationError(Error):
         return self._txt
 
 
+class TabooWarning(Error):
+
+    """ A TabooWarning marks a word that is vulgar or not appropriate
+        in formal text. """
+
+    def __init__(self, code, txt):
+        # Taboo word warnings start with T
+        super().__init__("T" + code)
+        self._txt = txt
+
+    @property
+    def description(self):
+        return self._txt
+
+
 class SpellingError(Error):
 
     """ An SpellingError is an erroneous word that could be replaced
@@ -314,52 +329,67 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
             yield token
             at_sentence_start = True
             continue
-        if token.kind == TOK.WORD and not token.val:  # Hasn't been annotated
-            # Check unique errors first
-            errkind = 0
-            if token.txt in UniqueErrors.DICT:
-                # Note: corrected is a tuple
-                corrected = UniqueErrors.DICT[token.txt]
-                assert isinstance(corrected, tuple)
-                errkind = 1
-            # Check wrong word forms, TODO split the list up by nature of error
-            elif ErrorForms.contains(token.txt):
-                corrected = [ErrorForms.get_correct_form(token.txt)]
-                errkind = 3
-            # Check edit distance errors
-            else:
-                corrected = corrector.correct(token.txt)
-                if corrected != token.txt:
-                    errkind = 2
-                    corrected = [corrected]
-            if errkind != 0:
-                # It seems that we are able to correct the word:
-                # look it up in the BÍN database
-                for ix, corrected_word in enumerate(corrected):
-                    w, m = corrector.db.lookup_word(
-                        corrected_word, at_sentence_start, auto_uppercase
-                    )
-                    # Yield a word tuple with meanings
-                    ct = token_ctor.Word(w, m, token=token if ix == 0 else None)
-                    if ix == 0:
-                        # Only mark the first generated token
-                        # of a multi-word sequence
-                        ct.set_error(
-                            SpellingError(
-                                "{0:03}".format(errkind),
-                                "Orðið '{0}' var leiðrétt í '{1}'"
-                                .format(token.txt, " ".join(corrected))
+        if token.kind == TOK.WORD:
+            if token.val:
+                # Annotated, so the word is in BÍN
+                # Check taboo words
+                for m in token.val:
+                    if m.stofn in TabooWords.DICT:
+                        # Taboo word
+                        suggested_word = TabooWords.DICT[m.stofn].split("_")[0]
+                        token.set_error(
+                            TabooWarning(
+                                "001",
+                                "Óviðurkvæmilegt orð, skárra væri t.d. '{0}'".format(suggested_word)
                             )
                         )
-                    yield ct
-                    at_sentence_start = False
-                continue
-            # Not able to correct: mark the token as an unknown word
-            token.set_error(
-                UnknownWordError(
-                    "001", "Óþekkt orð: '{0}'".format(token.txt)
+            else:
+                # Hasn't been annotated
+                # Check unique errors first
+                errkind = 0
+                if token.txt in UniqueErrors.DICT:
+                    # Note: corrected is a tuple
+                    corrected = UniqueErrors.DICT[token.txt]
+                    assert isinstance(corrected, tuple)
+                    errkind = 1
+                # Check wrong word forms
+                elif ErrorForms.contains(token.txt):
+                    corrected = [ErrorForms.get_correct_form(token.txt)]
+                    errkind = 3
+                # Check edit distance errors
+                else:
+                    corrected = corrector.correct(token.txt)
+                    if corrected != token.txt:
+                        errkind = 2
+                        corrected = [corrected]
+                if errkind != 0:
+                    # It seems that we are able to correct the word:
+                    # look it up in the BÍN database
+                    for ix, corrected_word in enumerate(corrected):
+                        w, m = corrector.db.lookup_word(
+                            corrected_word, at_sentence_start, auto_uppercase
+                        )
+                        # Yield a word tuple with meanings
+                        ct = token_ctor.Word(w, m, token=token if ix == 0 else None)
+                        if ix == 0:
+                            # Only mark the first generated token
+                            # of a multi-word sequence
+                            ct.set_error(
+                                SpellingError(
+                                    "{0:03}".format(errkind),
+                                    "Orðið '{0}' var leiðrétt í '{1}'"
+                                        .format(token.txt, " ".join(corrected))
+                                )
+                            )
+                        yield ct
+                        at_sentence_start = False
+                    continue
+                # Not able to correct: mark the token as an unknown word
+                token.set_error(
+                    UnknownWordError(
+                        "001", "Óþekkt orð: '{0}'".format(token.txt)
+                    )
                 )
-            )
         yield token
         if token.kind != TOK.PUNCTUATION and token.kind != TOK.ORDINAL:
             # !!! TODO: This may need to be made more intelligent
