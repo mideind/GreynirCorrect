@@ -241,7 +241,6 @@ def test_capitalization_errors(verbose=False):
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
-    print(s)  # !!! DEBUG
     assert s.startswith("Finnar ")
     assert "finnarnir" not in s
     assert "Finnarnir" in s

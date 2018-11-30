@@ -31,17 +31,13 @@ import math
 import re
 import pickle
 import time
+import threading
 
 from collections import defaultdict
 from functools import lru_cache
 
 from reynir import tokenize, correct_spaces, TOK
 from reynir.bindb import BIN_Db
-
-if __package__:
-    from .settings import Settings
-else:
-    from settings import Settings
 
 
 _PATH = os.path.dirname(__file__) or "."
@@ -65,6 +61,22 @@ EDIT_2_FACTOR = math.log(1.0 / 2048.0)
 class Dictionary:
 
     """ Container for a frequency dictionary of words """
+
+    _lock = threading.Lock()
+
+    # Word frequency information, to be loaded from a pickle
+    # file upon the first instantiation of the Dictionary class
+
+    # All words in vocabulary, case significant
+    _words = None
+    # Word count, case not significant
+    _counts = None
+    # Total word count, case not significant
+    _total = 0
+    # Logarithm of total word count
+    _log_total = 0.0
+    # Probabilities for words already found
+    _prob_cache = dict()
 
     # Remove these words manually from the dictionary
     # since they occur often enough in the source text
@@ -115,66 +127,63 @@ class Dictionary:
     ] + [c for c in "abcdðeéfghijklmnopqrstuúvwxyýzþö"]
 
     def __init__(self, db=None):
-        # All words in vocabulary, case significant
-        self.words = set()
-        # Word count, case not significant
-        self.counts = dict()
-        # Total word count, case not significant
-        self.total = 0
-        # Logarithm of total word count
-        self.log_total = 0.0
         # Word database
         self._db = set() if db is None else db
-        # Storing probabilities for words already found
-        self._prob_cache = dict()
-        self._load()
+        with self._lock:
+            # Upon first instantiation, load the pickled
+            # word frequency information
+            if self._counts is None:
+                self.__class__._load()
 
-    def _load_pickle(self):
+    @classmethod
+    def _load_pickle(cls):
         """ Load the dictionary from a pickle file, if it exists """
         try:
             with open(_SPELLING_PICKLE, "rb") as f:
-                self.counts = pickle.load(f)
-                self.words = pickle.load(f)
+                cls._counts = pickle.load(f)
+                cls._words = pickle.load(f)
         except (FileNotFoundError, EOFError):
+            cls._counts = dict()
+            cls._words = set()
             return False
         return True
 
-    def _load(self):
+    @classmethod
+    def _load(cls):
         """ Load the dictionary from a pickle """
-        # self._load_bin()
-        self._load_pickle()
+        cls._load_pickle()
         # Calculate a sum total of the counts
-        self.total = sum(self.counts.values())
-        self.log_total = math.log(self.total)
+        cls._total = sum(cls._counts.values())
+        cls._log_total = math.log(cls._total)
 
     def __getitem__(self, wrd):
         """ Return the count of the given word, assumed to be lowercase """
-        return self.counts[wrd]
+        return self._counts[wrd]
 
     def get(self, wrd):
         """ Return the count of the given word, assumed to be lowercase """
-        return self.counts[wrd]
+        return self._counts[wrd]
 
     def __contains__(self, wrd):
         """ Return True if the word occurs in the dictionary, assumed to be lowercase """
-        return wrd in self.counts
+        return wrd in self._counts
 
     def __len__(self):
         """ Get the number of distinct words in the dictionary, case significant """
-        return len(self.words)
+        return len(self._words)
 
     def freq(self, wrd):
         """ Get the frequency of the given word as a ratio between 0.0 and 1.0 """
-        return self.counts[wrd] / self.total
+        return self._counts[wrd] / self._total
 
     def log_freq(self, wrd):
         """ Get the logarithm of the frequency of the given word """
-        return math.log(self.counts[wrd]) - self.log_total
+        return math.log(self._counts[wrd]) - self._log_total
 
     def freq_1(self, wrd):
         """ Get the frequency of the given word as a ratio between 0.0 and 1.0,
             but give out-of-vocabulary words a count of 1 instead of 0 """
-        return self.adjusted_count(wrd) / self.total
+        return self.adjusted_count(wrd) / self._total
 
     def log_freq_1(self, wrd):
         """ Get the logarithm of the frequency of the given word,
@@ -182,21 +191,22 @@ class Dictionary:
         try:
             return self._prob_cache[wrd]
         except KeyError:
-            p = math.log(self.adjusted_count(wrd)) - self.log_total
+            p = math.log(self.adjusted_count(wrd)) - self._log_total
             self._prob_cache[wrd] = p
             return p
 
+    @lru_cache(maxsize=10)
     def percentile_log_freq(self, percentile):
         """ Return the frequency of the word at the n'th percentile,
             where n is 0..100, n=0 is the most frequent word,
             n=100 the least frequent """
-        cts = sorted(self.counts.values(), reverse=True)
+        cts = sorted(self._counts.values(), reverse=True)
         cnt = cts[(len(cts) - 1) * percentile // 100]
-        return math.log(cnt) - self.log_total
+        return math.log(cnt) - self._log_total
 
     def adjusted_count(self, word):
-        if word in self.counts:
-            return self.counts[word] + 1
+        if word in self._counts:
+            return self._counts[word] + 1
         return 2 if word in self._db else 1
 
 
