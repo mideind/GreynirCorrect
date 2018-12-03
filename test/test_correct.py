@@ -184,12 +184,16 @@ def test_unique_errors(verbose=False):
     assert "ókeipis" not in s
     assert "ókeypis" in s
 
-    g = rc.tokenize("Mér er sama þótt hann deyji.")
+    g = rc.tokenize("Mér er sama þótt hann deyji enda er hann einhversslags asni.")
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
     assert "deyji" not in s
     assert "deyi" in s
+    assert "einhversslags" not in s
+    assert "einhvers konar" in s
+    assert g[10].val[0].stofn == "einhver"
+    assert g[11].val[0].stofn == "konar"
 
 
 def test_error_forms(verbose=False):
@@ -266,6 +270,23 @@ def test_taboo_words(verbose=False):
             assert not g[ix].error_code
 
 
+def test_complex(verbose=False):
+    s = """
+        biddu nu hæg - var Kvennalistinn eins malefnis hreyfing. Hvað attu við - ef þu telur malefnið
+        hafa verið eitt hvert var það? Kannski leikskola fyrir öll börn? Sömu laun fyrir sömu störf?
+        Að borgarskipulag tæki mið af þörfum beggja kynja? Að kynjagleraugu væru notuð við gerð
+        fjarlaga? Að þjoðfelagið opnaði augun fyrir kynferðsofbeldinu og sifjaspellum? (hvorutveggja
+        sagt aðeins viðgangast i utlöndum). Þetta eru aðeins örfa dæmi um malefni sem brunnu a okkur
+        og við börðumst fyrir. Ekki ertu i alvöru að tala framlag okkur niður. Tæplega
+        telurðu það EITT malefni þo að i grunninn hafi baratta okkar sem stoðum að Kvennaframboðinu
+        og -listanum gengið ut a að ,,betri,, helmingur þjoðarinnar öðlast - ekki bara i orði heldur
+        einnig a borði - sömu rettindi og raðandi helmingurinn
+    """
+    g = rc.tokenize(s)
+    g = list(g)
+    if verbose: dump(g)
+
+
 if __name__ == "__main__":
 
     test_correct(verbose=True)
@@ -276,4 +297,4 @@ if __name__ == "__main__":
     test_error_forms(verbose=True)
     test_capitalization_errors(verbose=True)
     test_taboo_words(verbose=True)
-
+    test_complex(verbose=True)

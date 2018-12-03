@@ -62,7 +62,7 @@ MW_ERRORS = dict()
 @contextmanager
 def changedlocale(new_locale=None):
     """ Change locale for collation temporarily within a context (with-statement) """
-    # The newone locale parameter should be a tuple: ('is_IS', 'UTF-8')
+    # The new_locale parameter should be a tuple: ('is_IS', 'UTF-8')
     old_locale = locale.getlocale(locale.LC_COLLATE)
     try:
         locale.setlocale(locale.LC_COLLATE, new_locale or _DEFAULT_SORT_LOCALE)
@@ -102,7 +102,7 @@ class ConfigError(Exception):
 
 
 class LineReader:
-    """ Read lines from a text file, recognizing $include directives """
+    """ Read lines from a resource stream, recognizing $include directives """
 
     def __init__(self, fname, outer_fname=None, outer_line=0):
         self._fname = fname
@@ -516,3 +516,4 @@ class Settings:
                 raise e
 
             Settings.loaded = True
+

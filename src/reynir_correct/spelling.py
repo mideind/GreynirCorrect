@@ -194,7 +194,7 @@ class Dictionary:
         return self.adjusted_count(wrd) / self._total
 
     def log_freq_1(self, wrd):
-        """ Get the logarithm of the frequency of the given word, which is
+        """ Get the logarithm of the probability of the given word, which is
             assumed to be lower case, however assigning out-of-vocabulary
             words a count of 1 instead of 0 """
         try:
@@ -469,10 +469,12 @@ class Corrector:
         self._db = db
         # Word frequency dictionary
         self.d = dictionary or Dictionary(self._db)
-        # Function for probability of word
-        self.p_word = self.d.freq_1
+        # Function for log probability of word
+        self.p_word = self.d.log_freq
         # Any word above the 40th percentile is probably correct
         self.accept_threshold = self.d.percentile_log_freq(40)
+        # Any word above the 95th percentile doesn't need further checks
+        self.rare_threshold = self.d.percentile_log_freq(95)
 
     @property
     def db(self):
@@ -628,6 +630,11 @@ class Corrector:
             lambda match: self._TRANSLATE[match.group()],
             word.lower(),
         )
+
+    def is_rare(self, word):
+        """ Return True if the word is so rare as to be suspicious """
+        wl = word.lower()
+        return (wl not in self.d) or (self.p_word(wl) <= self.rare_threshold)
 
     def correct(self, word):
         """ Correct a single word, keeping its case (lower/upper/title) intact """
