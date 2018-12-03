@@ -62,7 +62,7 @@ MW_ERRORS = dict()
 @contextmanager
 def changedlocale(new_locale=None):
     """ Change locale for collation temporarily within a context (with-statement) """
-    # The new_locale parameter should be a tuple: ('is_IS', 'UTF-8')
+    # The newone locale parameter should be a tuple: ('is_IS', 'UTF-8')
     old_locale = locale.getlocale(locale.LC_COLLATE)
     try:
         locale.setlocale(locale.LC_COLLATE, new_locale or _DEFAULT_SORT_LOCALE)
@@ -102,7 +102,7 @@ class ConfigError(Exception):
 
 
 class LineReader:
-    """ Read lines from a resource stream, recognizing $include directives """
+    """ Read lines from a text file, recognizing $include directives """
 
     def __init__(self, fname, outer_fname=None, outer_line=0):
         self._fname = fname
@@ -216,17 +216,46 @@ class UniqueErrors:
 class MultiwordErrors:
 
     # Dictionary structure: dict { phrase tuple: error specification }
-    DICT = {}
+    # List of tuples of multiword error phrases and their word category lists
+    LIST = []
+    # Parsing dictionary keyed by first word of phrase
+    DICT = defaultdict(list)
+    # Error dictionary, { phrase : (error_code, right_phrase, right_parts_of_speech) }
+    ERROR_DICT = defaultdict(list)
 
     @staticmethod
-    def add(phrase, error):
-        if phrase in MultiwordErrors.DICT:
+    def add(words, error):
+        if words in MultiwordErrors.ERROR_DICT:
             raise ConfigError(
                 "Multiple definition of '{0}' in multiword_errors section"
-                .format(" ".join(phrase))
+                .format(" ".join(words))
             )
-        # TODO: Fully implement this
-        MultiwordErrors.DICT[phrase] = error
+        MultiwordErrors.ERROR_DICT[words] = error
+
+        # Add to phrase list
+        ix = len(MultiwordErrors.LIST)
+
+        a = error.split(",")
+        if len(a) != 2:
+            raise ConfigError("Expected two comma-separated parameters within $error()")
+        code = a[0].strip()
+        replacement = a[1].strip().split()
+
+        # Append the phrase and the error specification in tuple form
+        MultiwordErrors.LIST.append((words, code, replacement))
+
+        # Dictionary structure: dict { firstword: [ (restword_list, phrase_index) ] }
+        MultiwordErrors.DICT[words[0]].append((words[1:], ix))
+
+    @staticmethod
+    def get_replacement(ix):
+        """ Return the replacement phrase with index ix """
+        return MultiwordErrors.LIST[ix][2]
+
+    @staticmethod
+    def get_code(ix):
+        """ Return the error code with index ix """
+        return MultiwordErrors.LIST[ix][1]
 
 
 class TabooWords:
@@ -438,7 +467,7 @@ class Settings:
             raise ConfigError("Incomplete error specification for multiword phrase")
         if error[0] != "(" or error[-1] != ")":
             raise ConfigError("Error specification should be enclosed in parentheses")
-        MultiwordErrors.add(phrase, error)
+        MultiwordErrors.add(phrase, error[1:-1])
 
     @staticmethod
     def _handle_error_forms(s):
@@ -516,4 +545,3 @@ class Settings:
                 raise e
 
             Settings.loaded = True
-

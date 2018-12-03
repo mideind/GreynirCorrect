@@ -270,6 +270,28 @@ def test_taboo_words(verbose=False):
             assert not g[ix].error_code
 
 
+def test_multiword_errors(verbose=False):
+    sent = """
+        Af gefnu tilefni fékk hann vilja sýnum framgengt við hana í auknu mæli
+        og að mestu leiti en hún helti úr skálum reiði sinnar.
+    """
+    g = rc.tokenize(sent)
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+
+    assert "Af gefnu" not in s
+    assert "Að gefnu" in s
+    assert "vilja sýnum" not in s
+    assert "vilja sínum" in s
+    assert "í auknu mæli" not in s
+    assert "í auknum mæli" in s
+    assert "að mestu leiti" not in s
+    assert "að mestu leyti" in s
+    assert "hún helti" not in s
+    assert "hún hellti" in s
+
+
 def test_complex(verbose=False):
     s = """
         biddu nu hæg - var Kvennalistinn eins malefnis hreyfing. Hvað attu við - ef þu telur malefnið
@@ -297,4 +319,5 @@ if __name__ == "__main__":
     test_error_forms(verbose=True)
     test_capitalization_errors(verbose=True)
     test_taboo_words(verbose=True)
+    test_multiword_errors(verbose=True)
     test_complex(verbose=True)
