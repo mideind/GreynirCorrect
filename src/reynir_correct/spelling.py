@@ -444,22 +444,6 @@ class Corrector:
     # Create a regex to extract word fragments ending with substitution keys
     _SUBSTITUTE_REGEX = re.compile("(.*?(" + "|".join(_SUBSTITUTE_KEYS) + "))")
 
-    # Very likely corrections
-    _WORD_REPLACE = {
-        "i": "í",
-        "a": "á",
-        "þu": "þú",
-        "þo": "þó",
-        "þin": "þín",
-        "eg": "ég",
-        "þe": "þ.e.",
-        "fra": "frá",
-        "nu": "nú",
-        "ut": "út",
-        "aldrey": "aldrei",
-        "ifir" : "yfir",
-    }
-
     # Minimum probability of a candidate other than the original
     # word in order for it to be returned
     _MIN_LOG_PROBABILITY = math.log(3.65e-9)
@@ -571,9 +555,6 @@ class Corrector:
             """ Generate candidates in order of generally decreasing likelihood """
             P = self.d.log_freq_1
             e0 = edits0(word) | edits0(original_word)
-            if word in self._WORD_REPLACE:
-                # Known common word replacements
-                yield (self._WORD_REPLACE[word], EDIT_REPLACE_FACTOR)
             for c in known(e0):
                 yield (c, P(c) + EDIT_0_FACTOR)
             for c in known(self.subs(word)):
