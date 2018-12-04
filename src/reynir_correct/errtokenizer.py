@@ -28,7 +28,7 @@
 from collections import defaultdict
 
 from reynir import TOK
-from reynir.bintokenizer import DefaultPipeline
+from reynir.bintokenizer import DefaultPipeline, MatchingStream
 
 from .settings import (
     AllowedMultiples, WrongCompounds, SplitCompounds, UniqueErrors,
@@ -343,6 +343,51 @@ def parse_errors(token_stream, db):
             yield token
 
 
+class MultiwordErrorStream(MatchingStream):
+
+    """ Class that filters a token stream looking for multi-word
+        matches with the MultiwordErrors phrase dictionary,
+        and inserting replacement phrases when matches are found """
+
+    def __init__(self, db, token_ctor):
+        super().__init__(MultiwordErrors.DICT)
+        self._token_ctor = token_ctor
+        self._db = db
+
+    def length(self, ix):
+        return len(MultiwordErrors.get_replacement(ix))
+
+    def match(self, tq, ix):
+        """ This is a complete match of an error phrase;
+            yield the replacement phrase """
+        replacement = MultiwordErrors.get_replacement(ix)
+        db = self._db
+        token_ctor = self._token_ctor
+        for i, replacement_word in enumerate(replacement):
+            # !!! TODO: at_sentence_start
+            w, m = db.lookup_word(
+                replacement_word, False, False
+            )
+            if i == 0:
+                # Fix capitalization of the first word
+                # !!! TODO: handle all-uppercase
+                if tq[0].txt.istitle():
+                    w = w.title()
+            ct = token_ctor.Word(w, m)
+            if i == 0:
+                ct.set_error(
+                    PhraseError(
+                        MultiwordErrors.get_code(ix),
+                        "Frasinn '{0}' var leiðréttur í '{1}'"
+                            .format(
+                                " ".join(t.txt for t in tq),
+                                " ".join(replacement)
+                            )
+                    )
+                )
+            yield ct
+
+
 def handle_multiword_errors(token_stream, db, token_ctor):
 
     """ Parse a stream of tokens looking for multiword phrases
@@ -351,107 +396,8 @@ def handle_multiword_errors(token_stream, db, token_ctor):
         length of the longest phrase.
     """
 
-    tq = []  # Token queue
-    state = defaultdict(list)  # Phrases we're considering
-    pdict = MultiwordErrors.DICT  # The phrase dictionary
-
-    try:
-
-        while True:
-
-            token = next(token_stream)
-
-            if token.kind != TOK.WORD:
-                # Not a word: no match; yield the token queue
-                if tq:
-                    yield from tq
-                    tq = []
-                # Discard the previous state, if any
-                if state:
-                    state = defaultdict(list)
-                # ...and yield the non-matching token
-                yield token
-                continue
-
-            # Look for matches in the current state and build a new state
-            newstate = defaultdict(list)
-            w = token.txt.lower()
-
-            def add_to_state(slist, index):
-                """ Add the list of subsequent words to the new parser state """
-                wrd = slist[0]
-                rest = slist[1:]
-                newstate[wrd].append((rest, index))
-
-            if w in state:
-                # This matches an expected token:
-                # go through potential continuations
-                tq.append(token)  # Add to lookahead token queue
-                token = None
-                for sl, ix in state[w]:
-                    if not sl:
-                        # No subsequent word: this is a complete match
-                        # Correct wrong words in the phrase
-                        replacement = MultiwordErrors.get_replacement(ix)
-                        for i, replacement_word in enumerate(replacement):
-                            # !!! TODO: at_sentence_start
-                            w, m = db.lookup_word(
-                                replacement_word, False, False
-                            )
-                            if i == 0:
-                                # Fix capitalization of the first word
-                                # !!! TODO: handle all-uppercase
-                                if tq[0].txt.istitle():
-                                    w = w.title()
-                            ct = token_ctor.Word(w, m)
-                            if i == 0:
-                                ct.set_error(
-                                    PhraseError(
-                                        MultiwordErrors.get_code(ix),
-                                        "Frasinn '{0}' var leiðréttur í '{1}'"
-                                            .format(
-                                                " ".join(t.txt for t in tq),
-                                                " ".join(replacement)
-                                            )
-                                    )
-                                )
-                            yield ct
-                        # Discard the state and start afresh
-                        if newstate:
-                            newstate = defaultdict(list)
-                        w = ""
-                        tq = []
-                        # Note that it is possible to match even longer phrases
-                        # by including a starting phrase in its entirety in
-                        # the static phrase dictionary
-                        break
-                    add_to_state(sl, ix)
-            elif tq:
-                # This does not continue a started phrase:
-                # yield the accumulated token queue
-                yield from tq
-                tq = []
-
-            if w in pdict:
-                # This word potentially starts a new phrase
-                for sl, ix in pdict[w]:
-                    # assert sl
-                    add_to_state(sl, ix)
-                if token:
-                    tq.append(token)  # Start a lookahead queue with this token
-            elif token:
-                # Not starting a new phrase: pass the token through
-                yield token
-
-            # Transition to the new state
-            state = newstate
-
-    except StopIteration:
-        # Token stream is exhausted
-        pass
-
-    # Yield any tokens remaining in queue
-    yield from tq
+    mwes = MultiwordErrorStream(db, token_ctor)
+    yield from mwes.generate(token_stream)
 
 
 def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
