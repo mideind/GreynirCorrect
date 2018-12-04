@@ -397,7 +397,7 @@ def handle_multiword_errors(token_stream, db, token_ctor):
     """
 
     mwes = MultiwordErrorStream(db, token_ctor)
-    yield from mwes.generate(token_stream)
+    yield from mwes.process(token_stream)
 
 
 def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
