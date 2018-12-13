@@ -256,16 +256,18 @@ def test_capitalization_errors(verbose=False):
 def test_taboo_words(verbose=False):
     g = rc.tokenize(
         "Jón sagði að hún væri algjör pussa en hún svaraði að "
-        # "hann væri hommatittur og negri með lítinn tilla."
-        "hann væri negri með lítinn tilla."
+        "hann væri hommatittur og negri með lítinn tilla."
+        # "hann væri negri með lítinn tilla."
     )
     g = list(g)
     if verbose: dump(g)
-    assert len(g) == 20
-    errors = {7, 14, 17}
+    assert len(g) == 22
+    errors = {7, 14, 16, 19}
     for ix, t in enumerate(g):
         if ix in errors:
-            assert g[ix].error_code == "T001"
+            # !!! TODO: We temporarily allow U001 as an error code for
+            # !!! 'hommatittur', until it is entered into ReynirPackage's vocabulary
+            assert g[ix].error_code == "T001" or g[ix].error_code == "U001"
         else:
             assert not g[ix].error_code
 

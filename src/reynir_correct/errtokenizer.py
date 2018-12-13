@@ -100,17 +100,18 @@ class CorrectToken:
     @property
     def error(self):
         """ Return the error object associated with this token, if any """
+        # Note that self._err may be a bool
         return self._err
 
     @property
     def error_description(self):
         """ Return the description of an error associated with this token, if any """
-        return "" if self._err is None else self._err.description
+        return self._err.description if hasattr(self._err, "description") else ""
 
     @property
     def error_code(self):
         """ Return the code of an error associated with this token, if any """
-        return "" if self._err is None else self._err.code
+        return self._err.code if hasattr(self._err, "code") else ""
 
 
 class Error:
@@ -210,7 +211,7 @@ class SpellingError(Error):
     # S001: Common errors picked up by unique_errors. Should be corrected
     # S002: Errors handled by spelling.py. Corrections should possibly only be suggested.
     # S003: Erroneously formed word forms picked up by ErrorForms. Should be corrected. TODO split up by nature.
-    # S004: Unknown word, no correction or suggestions available.
+    # S004: Rare word, a more common one has been substituted.
 
     def __init__(self, code, txt):
         # Spelling error codes start with "S"
@@ -378,13 +379,18 @@ class MultiwordErrorStream(MatchingStream):
                 ct.set_error(
                     PhraseError(
                         MultiwordErrors.get_code(ix),
-                        "Frasinn '{0}' var leiðréttur í '{1}'"
+                        "Orðasambandið '{0}' var leiðrétt í '{1}'"
                             .format(
                                 " ".join(t.txt for t in tq),
                                 " ".join(replacement)
                             )
                     )
                 )
+            else:
+                # Set the error field of multiword phrase
+                # continuation tokens to True, thus avoiding
+                # further meddling with them
+                ct.set_error(True)
             yield ct
 
 
@@ -422,6 +428,11 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                         .format(token.txt, corrected_display)
                 )
             )
+        else:
+            # In a multi-word sequence, mark the replacement
+            # tokens with a boolean value so that further
+            # replacements will not be made
+            ct.set_error(True)
         return ct
 
     for token in token_stream:
@@ -500,7 +511,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                 continue
 
         # Check rare (or nonexistent) words and see if we have a potential correction
-        if corrector.is_rare(token.txt):
+        if not token.error and corrector.is_rare(token.txt):
             # Yes, this is a rare one (>=95th percentile in a descending frequency distribution)
             corrected = corrector.correct(token.txt)
             if corrected != token.txt:
@@ -518,6 +529,11 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                     "001", "Óþekkt orð: '{0}'".format(token.txt)
                 )
             )
+
+        if token.error is True:
+            # Erase the boolean error continuation marker:
+            # we no longer need it
+            token.set_error(None)
 
         yield token
         at_sentence_start = False
