@@ -37,6 +37,16 @@ from .settings import (
 from .spelling import Corrector
 
 
+def emulate_case(s, template):
+    """ Return the string s but emulating the case of the template
+        (lower/upper/capitalized) """
+    if template.isupper():
+        return s.upper()
+    elif template and template[0].isupper():
+        return s.capitalize()
+    return s
+
+
 class CorrectToken:
 
     """ This class sneakily replaces the tokenizer.Tok tuple in the tokenization
@@ -406,11 +416,137 @@ def handle_multiword_errors(token_stream, db, token_ctor):
     yield from mwes.process(token_stream)
 
 
+# Compound word stuff
+
+# Illegal prefixes that will be split off from the rest of the word
+NOT_FORMERS = frozenset(("allra", "alhliða", "fjölnota", "margnota", "ótal"))
+
+# Illegal prefixes that will be substituted
+WRONG_FORMERS = {
+    "athugana": "athugunar",
+    "ferminga": "fermingar",
+    "feykna": "feikna",
+    "fyrna": "firna",
+    "fjarskiptar": "fjarskipta",
+    "fjárfestinga": "fjárfestingar",
+    "forvarna": "forvarnar",
+    "heyrna": "heyrnar",
+    "kvartana": "kvörtunar",
+    "kvenn": "kven",
+    "loftlags": "loftslags",
+    "pantana": "pöntunar",
+    "ráðninga": "ráðningar",
+    "skráninga": "skráningar",
+    "ábendinga": "ábendingar",
+}
+
+
+def fix_compound_words(token_stream, db, token_ctor, auto_uppercase):
+    """ Fix incorrectly compounded words """
+
+    at_sentence_start = False
+
+    for token in token_stream:
+
+        if token.kind == TOK.S_BEGIN:
+            yield token
+            at_sentence_start = True
+            continue
+
+        if token.kind == TOK.PUNCTUATION or token.kind == TOK.ORDINAL:
+            yield token
+            # Don't modify at_sentence_start in this case
+            continue
+
+        if token.kind != TOK.WORD or not token.val or "-" not in token.val[0].stofn:
+            # Not a compound word
+            yield token
+            at_sentence_start = False
+            continue
+
+        # Compound word
+        cw = token.val[0].stofn.split("-")
+
+        # Special case for the prefix "ótal" which the compounder
+        # splits into ó-tal
+        if len(cw) >= 3 and cw[0] == "ó" and cw[1] == "tal":
+            cw = ["ótal"] + cw[2:]
+
+        if cw[0] in NOT_FORMERS:
+            # Prefix is invalid as such; should be split
+            # into two words
+            prefix = emulate_case(cw[0], token.txt)
+            w, m = db.lookup_word(
+                prefix, at_sentence_start, auto_uppercase
+            )
+            t1 = token_ctor.Word(w, m, token=token)
+            t1.set_error(
+                CompoundError(
+                    "002",
+                    "Orðinu '{0}' var skipt upp".format(token.txt)
+                )
+            )
+            yield t1
+            at_sentence_start = False
+            suffix = token.txt[len(cw[0]):]
+            w, m = db.lookup_word(
+                suffix, at_sentence_start, auto_uppercase
+            )
+            t2 = token_ctor.Word(w, m, token=token)
+            t2.set_error(
+                CompoundError(
+                    "002",
+                    "Orðinu '{0}' var skipt upp".format(token.txt)
+                )
+            )
+            token = t2
+
+        elif cw[0] in WRONG_FORMERS:
+            # Splice a correct front onto the word
+            # ('feyknaglaður' -> 'feiknaglaður')
+            correct_former = WRONG_FORMERS[cw[0]]
+            corrected = correct_former + token.txt[len(cw[0]):]
+            corrected = emulate_case(corrected, token.txt)
+            w, m = db.lookup_word(
+                corrected, at_sentence_start, auto_uppercase
+            )
+            t1 = token_ctor.Word(w, m, token=token)
+            t1.set_error(
+                CompoundError(
+                    "004",
+                    "Samsetta orðinu '{0}' var breytt í '{1}'"
+                    .format(token.txt, corrected)
+                )
+            )
+            token = t1
+
+        yield token
+        at_sentence_start = False
+
+
 def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
     """ Try to identify unknown words in the token stream, for instance
         as spelling errors (character juxtaposition, deletion, insertion...) """
 
     at_sentence_start = False
+
+    # Dict of { (at sentence start, single letter token) : allowed correction }
+    single_letter_corrections = {
+        (False, "a"): "á",
+        (False, "i"): "í",
+        (True, "A"): "Á",
+        (True, "I"): "Í"
+    }
+
+    def is_abbrev(token):
+        """ Return True if the token is a recognized abbreviation,
+            which is never corrected """
+        if "." not in token.txt:
+            # No dot: not an abbreviation
+            return False
+        # Contains a dot: if it also has a BÍN meaning, it's a
+        # recognized abbreviation
+        return bool(token.val)
 
     def correct_word(code, token, corrected, corrected_display):
         """ Return a token for a corrected version of token_txt,
@@ -489,7 +625,6 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
 
         # Check taboo words
         if token.val:
-            # The token has an annotation, so the word is in BÍN
             # !!! TODO: This could be made more efficient if all
             # !!! TODO: taboo word forms could be generated ahead of time
             # !!! TODO: and checked via a set lookup
@@ -500,7 +635,8 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                     token.set_error(
                         TabooWarning(
                             "001",
-                            "Óviðurkvæmilegt orð, skárra væri t.d. '{0}'".format(suggested_word)
+                            "Óviðurkvæmilegt orð, skárra væri t.d. '{0}'"
+                            .format(suggested_word)
                         )
                     )
                     break
@@ -511,14 +647,28 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                 continue
 
         # Check rare (or nonexistent) words and see if we have a potential correction
-        if not token.error and corrector.is_rare(token.txt):
-            # Yes, this is a rare one (>=95th percentile in a descending frequency distribution)
+        if not token.error and not is_abbrev(token) and corrector.is_rare(token.txt):
+            # Yes, this is a rare one (>=95th percentile in a
+            # descending frequency distribution)
             corrected = corrector.correct(token.txt)
             if corrected != token.txt:
-                # We have a better candidate: yield it
-                yield correct_word(4, token, corrected, corrected)
-                at_sentence_start = False
-                continue
+                if token.txt[0].lower() == "ó" and corrected == token.txt[1:]:
+                    # The correction simply removed "ó" from the start of the
+                    # word: probably not a good idea
+                    pass
+                elif (
+                    len(token.txt) == 1
+                    and corrected != single_letter_corrections.get(
+                        (at_sentence_start, token.txt)
+                    )
+                ):
+                    # Only allow single-letter corrections of a->á and i->í
+                    pass
+                else:
+                    # We have a better candidate: yield it
+                    yield correct_word(4, token, corrected, corrected)
+                    at_sentence_start = False
+                    continue
 
         # Check for completely unknown and uncorrectable words
         if not token.val:
@@ -675,6 +825,11 @@ class CorrectionPipeline(DefaultPipeline):
         # Create a Corrector on the first invocation
         if self._corrector is None:
             self._corrector = Corrector(self._db)
+
+        # Fix compound words
+        stream = fix_compound_words(
+            stream, self._db, self._token_ctor, self._auto_uppercase
+        )
         # Fix multiword error phrases
         stream = handle_multiword_errors(
             stream, self._db, self._token_ctor
