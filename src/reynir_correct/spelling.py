@@ -71,6 +71,8 @@ class Dictionary:
     _words = None
     # Word count, case not significant
     _counts = None
+    # Word counts, sorted in descending order
+    _sorted_counts = None
     # Total word count, case not significant
     _total = 0
     # Logarithm of total word count
@@ -124,6 +126,7 @@ class Dictionary:
         "þvi",
         "hb",
         "framundan",
+        "reynar",
     ] + [c for c in "abcdðeéfghijklmnopqrstuúvwxyýzþö"]
 
     def __init__(self, db=None):
@@ -160,7 +163,10 @@ class Dictionary:
         cls._load_pickle()
         # Calculate a sum total of the counts
         cls._total = sum(cls._counts.values())
+        # Store the logarithm of the total
         cls._log_total = math.log(cls._total)
+        # Sort the word counts in descending order
+        cls._sorted_counts = sorted(cls._counts.values(), reverse=True)
 
     def __getitem__(self, wrd):
         """ Return the count of the given word, assumed to be lowercase """
@@ -198,20 +204,22 @@ class Dictionary:
             assumed to be lower case, however assigning out-of-vocabulary
             words a count of 1 instead of 0 """
         try:
-            return self._prob_cache[wrd]
+            p = self._prob_cache[wrd]
         except KeyError:
             p = math.log(self.adjusted_count(wrd)) - self._log_total
             self._prob_cache[wrd] = p
-            return p
+        return p
 
     @classmethod
     @lru_cache(maxsize=10)
     def percentile_log_freq(cls, percentile):
-        """ Return the frequency of the word at the n'th percentile,
+        """ Return the frequency of the word at the given percentile n,
             where n is 0..100, n=0 is the most frequent word,
             n=100 the least frequent """
-        cts = sorted(cls._counts.values(), reverse=True)
-        cnt = cts[(len(cts) - 1) * percentile // 100]
+        cts = cls._sorted_counts
+        percentile = max(0, min(percentile, 100))
+        index = (len(cts) - 1) * percentile // 100
+        cnt = cts[index]
         return math.log(cnt) - cls._log_total
 
     def adjusted_count(self, word):
@@ -455,9 +463,11 @@ class Corrector:
         self.d = dictionary or Dictionary(self._db)
         # Function for log probability of word
         self.p_word = self.d.log_freq
-        # Any word above the 40th percentile is probably correct
-        self.accept_threshold = self.d.percentile_log_freq(40)
-        # Any word above the 95th percentile doesn't need further checks
+        # Any word more common than the word at the 20th percentile
+        # is probably correct
+        self.accept_threshold = self.d.percentile_log_freq(20)
+        # Any word less common than the word at the 95th percentile is
+        # considered rare
         self.rare_threshold = self.d.percentile_log_freq(95)
 
     @property
