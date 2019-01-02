@@ -257,7 +257,6 @@ def test_taboo_words(verbose=False):
     g = rc.tokenize(
         "Jón sagði að hún væri algjör pussa en hún svaraði að "
         "hann væri hommatittur og negri með lítinn tilla."
-        # "hann væri negri með lítinn tilla."
     )
     g = list(g)
     if verbose: dump(g)
@@ -265,9 +264,7 @@ def test_taboo_words(verbose=False):
     errors = {7, 14, 16, 19}
     for ix, t in enumerate(g):
         if ix in errors:
-            # !!! TODO: We temporarily allow U001 as an error code for
-            # !!! 'hommatittur', until it is entered into ReynirPackage's vocabulary
-            assert g[ix].error_code == "T001" or g[ix].error_code == "U001"
+            assert g[ix].error_code == "T001"  # Taboo word
         else:
             assert not g[ix].error_code
 

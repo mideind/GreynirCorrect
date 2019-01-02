@@ -538,15 +538,14 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
         (True, "I"): "Í"
     }
 
-    def is_abbrev(token):
-        """ Return True if the token is a recognized abbreviation,
-            which is never corrected """
-        if "." not in token.txt:
-            # No dot: not an abbreviation
-            return False
-        # Contains a dot: if it also has a BÍN meaning, it's a
-        # recognized abbreviation
-        return bool(token.val)
+    def is_immune(token):
+        """ Return True if the token should definitely not be
+            corrected """
+        if token.val and len(token.val) == 1 and token.val[0].beyging == "-":
+            # This is probably an abbreviation, having a single meaning
+            # and no declension information
+            return True
+        return False
 
     def correct_word(code, token, corrected, corrected_display):
         """ Return a token for a corrected version of token_txt,
@@ -596,6 +595,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
 
         # Check unique errors - some of those may have
         # BÍN annotations via the compounder
+        # Examples: 'kvenær' -> 'hvenær', 'starfssemi' -> 'starfsemi'
         # !!! TODO: Handle upper/lowercase
         if token.txt in UniqueErrors.DICT:
             # Note: corrected is a tuple
@@ -647,7 +647,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                 continue
 
         # Check rare (or nonexistent) words and see if we have a potential correction
-        if not token.error and not is_abbrev(token) and corrector.is_rare(token.txt):
+        if not token.error and not is_immune(token) and corrector.is_rare(token.txt):
             # Yes, this is a rare one (>=95th percentile in a
             # descending frequency distribution)
             corrected = corrector.correct(token.txt)

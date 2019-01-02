@@ -602,7 +602,13 @@ class Corrector:
     @staticmethod
     def _case_of(text):
         """ Return the case-function appropriate for text: upper, lower, title, or just str. """
-        return str.upper if text.isupper() else str.title if text.istitle() else str
+        if text.isupper():
+            return str.upper
+        if text[0].isupper():
+            # We don't use .istitle() and .title() because
+            # they consider apostrophes to be word separators
+            return lambda s: s[0].upper() + s[1:]
+        return str
 
     def _cast(self, word):
         """ Cast the word to lowercase and correct accents """
@@ -615,7 +621,7 @@ class Corrector:
     def is_rare(self, word):
         """ Return True if the word is so rare as to be suspicious """
         wl = word.lower()
-        return (wl not in self.d) or (self.p_word(wl) <= self.rare_threshold)
+        return (wl not in self.d) or (self.p_word(wl) < self.rare_threshold)
 
     def correct(self, word):
         """ Correct a single word, keeping its case (lower/upper/title) intact """
