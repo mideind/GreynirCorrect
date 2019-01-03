@@ -95,16 +95,23 @@ class CorrectToken:
         """ Associate an Error class instance with this token """
         self._err = err
 
-    def copy_error(self, other):
+    def copy_error(self, other, coalesce=False):
         """ Copy the error field from another CorrectToken instance """
         if isinstance(other, list):
             # We have a list of CorrectToken instances to copy from:
             # find the first error in the list, if any, and copy it
             for t in other:
-                if self.copy_error(t):
+                if self.copy_error(t, coalesce=True):
                     break
         elif isinstance(other, CorrectToken):
             self._err = other._err
+            if coalesce and other.error_span > 1:
+                # The original token had an associated error
+                # spanning more than one token; now we're creating
+                # a single token out of then span
+                # ('fimm hundruð' -> number token), so we reset
+                # the span to one token
+                self._err.set_span(1)
         return self._err is not None
 
     @property
@@ -122,6 +129,11 @@ class CorrectToken:
     def error_code(self):
         """ Return the code of an error associated with this token, if any """
         return self._err.code if hasattr(self._err, "code") else ""
+
+    @property
+    def error_span(self):
+        """ Return the number of tokens affected by this error """
+        return self._err.span if hasattr(self._err, "span") else 1
 
 
 class Error:
@@ -151,14 +163,23 @@ class CompoundError(Error):
     # C002: Wrongly compounded words split up. Should be corrected.
     # C003: Wrongly split compounds united. Should be corrected.
 
-    def __init__(self, code, txt):
+    def __init__(self, code, txt, span=1):
         # Compound error codes start with "C"
         super().__init__("C" + code)
         self._txt = txt
+        self._span = span
 
     @property
     def description(self):
         return self._txt
+
+    @property
+    def span(self):
+        return self._span
+
+    def set_span(self, span):
+        """ Reset the span to the given number """
+        self._span = span
 
 
 class UnknownWordError(Error):
@@ -238,15 +259,24 @@ class PhraseError(Error):
     """ A PhraseError is a wrong multiword phrase, where a word is out
         of place in its context. """
 
-    def __init__(self, code, txt):
+    def __init__(self, code, txt, span):
         # Phrase error codes start with "P", and are followed by
         # a string indicating the type of error, i.e. YI for y/i, etc.
         super().__init__("P_" + code)
         self._txt = txt
+        self._span = span
 
     @property
     def description(self):
         return self._txt
+
+    @property
+    def span(self):
+        return self._span
+
+    def set_span(self, span):
+        """ Reset the span to the given number """
+        self._span = span
 
 
 def parse_errors(token_stream, db):
@@ -311,8 +341,8 @@ def parse_errors(token_stream, db):
                 next_token = CorrectToken.word(token.txt)
                 next_token.set_error(
                     CompoundError(
-                        "001", "Endurtekið orð ('{0}') var fellt burt"
-                        .format(token.txt)
+                        "001",
+                        "Endurtekið orð ('{0}') var fellt burt".format(token.txt)
                     )
                 )
                 token = next_token
@@ -320,14 +350,17 @@ def parse_errors(token_stream, db):
 
             # Splitting wrongly compounded words
             if token.txt and token.txt.lower() in WrongCompounds.DICT:
-                for phrase_part in WrongCompounds.DICT[token.txt.lower()]:
+                correct_phrase = WrongCompounds.DICT[token.txt.lower()]
+                for ix, phrase_part in enumerate(correct_phrase):
                     new_token = CorrectToken.word(phrase_part)
-                    new_token.set_error(
-                        CompoundError(
-                            "002", "Orðinu '{0}' var skipt upp"
-                            .format(token.txt)
+                    if ix == 0:
+                        new_token.set_error(
+                            CompoundError(
+                                "002",
+                                "Orðinu '{0}' var skipt upp".format(token.txt),
+                                span=len(correct_phrase)
+                            )
                         )
-                    )
                     yield new_token
                 token = next_token
                 continue
@@ -338,7 +371,8 @@ def parse_errors(token_stream, db):
                 token = CorrectToken.word(token.txt + next_token.txt)
                 token.set_error(
                     CompoundError(
-                        "003", "Orðin '{0} {1}' voru sameinuð í eitt"
+                        "003",
+                        "Orðin '{0} {1}' voru sameinuð í eitt"
                         .format(first_txt, next_token.txt)
                     )
                 )
@@ -390,10 +424,11 @@ class MultiwordErrorStream(MatchingStream):
                     PhraseError(
                         MultiwordErrors.get_code(ix),
                         "Orðasambandið '{0}' var leiðrétt í '{1}'"
-                            .format(
-                                " ".join(t.txt for t in tq),
-                                " ".join(replacement)
-                            )
+                        .format(
+                            " ".join(t.txt for t in tq),
+                            " ".join(replacement)
+                        ),
+                        span = len(replacement)
                     )
                 )
             else:
@@ -483,7 +518,8 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase):
             t1.set_error(
                 CompoundError(
                     "002",
-                    "Orðinu '{0}' var skipt upp".format(token.txt)
+                    "Orðinu '{0}' var skipt upp".format(token.txt),
+                    span=2
                 )
             )
             yield t1
@@ -492,14 +528,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase):
             w, m = db.lookup_word(
                 suffix, at_sentence_start, auto_uppercase
             )
-            t2 = token_ctor.Word(w, m, token=token)
-            t2.set_error(
-                CompoundError(
-                    "002",
-                    "Orðinu '{0}' var skipt upp".format(token.txt)
-                )
-            )
-            token = t2
+            token = token_ctor.Word(w, m, token=token)
 
         elif cw[0] in WRONG_FORMERS:
             # Splice a correct front onto the word
@@ -789,7 +818,7 @@ class _Correct_TOK(TOK):
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
-            ct.copy_error(token)
+            ct.copy_error(token, coalesce=True)
         return ct
 
     @staticmethod

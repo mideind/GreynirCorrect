@@ -71,7 +71,7 @@ def test_correct(verbose=False):
 
     assert len(g) == 25
     assert g[3].error_code == "C002"
-    assert g[4].error_code == "C002"
+    assert g[3].error_span == 2
     assert g[6].error_code == "C002"
     assert g[21].error_code == "C002"
 

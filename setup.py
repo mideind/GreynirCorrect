@@ -49,7 +49,8 @@ if sys.version_info < (3, 4):
 def read(*names, **kwargs):
     try:
         return io.open(
-            join(dirname(__file__), *names), encoding=kwargs.get("encoding", "utf8")
+            join(dirname(__file__), *names),
+            encoding=kwargs.get("encoding", "utf8")
         ).read()
     except (IOError, OSError):
         return ""
@@ -57,14 +58,15 @@ def read(*names, **kwargs):
 
 setup(
     name="reynir-correct",
-    version="0.1.0",
+    version="0.2.0",
     license="GNU GPLv3",
     description="A spelling and grammar corrector for Icelandic",
-    long_description="%s\n%s"
-    % (
-        re.compile("^.. start-badges.*^.. end-badges", re.M | re.S)
+    long_description="{0}\n{1}".format(
+        re
+            .compile("^.. start-badges.*^.. end-badges", re.M | re.S)
             .sub("", read("README.rst")),
-        re.sub(":[a-z]+:`~?(.*?)`", r"``\1``", read("CHANGELOG.rst")),
+        re
+            .sub(":[a-z]+:`~?(.*?)`", r"``\1``", read("CHANGELOG.rst")),
     ),
     author="Miðeind ehf",
     author_email="vt@extrada.com",
@@ -99,5 +101,5 @@ setup(
     ],
     keywords=["nlp", "parser", "icelandic"],
     setup_requires=[],
-    install_requires=["reynir>=1.3.3"],
+    install_requires=["reynir>=1.4.0"],
 )

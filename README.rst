@@ -2,8 +2,12 @@
 ReynirCorrect: A spelling and grammar corrector for Icelandic
 =============================================================
 
+.. start-badges
+
 .. image:: https://travis-ci.org/vthorsteinsson/ReynirCorrect.svg?branch=master
     :target: https://travis-ci.org/vthorsteinsson/ReynirCorrect
+
+.. end-badges
 
 ********
 Overview
