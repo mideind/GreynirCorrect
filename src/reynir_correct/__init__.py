@@ -21,9 +21,10 @@
 
 # Expose the reynir-correct API
 
-from reynir import Reynir 
+from reynir import Reynir, correct_spaces, mark_paragraphs
 from .settings import Settings
 from .errtokenizer import tokenize
+from .checker import check_single
 
 __author__ = u"Miðeind ehf"
 

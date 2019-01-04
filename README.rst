@@ -13,11 +13,27 @@ ReynirCorrect: A spelling and grammar corrector for Icelandic
 Overview
 ********
 
-**ReynirCorrector** is a Python 3.x package for
+**ReynirCorrect** is a Python 3.x package for
 **checking and correcting spelling and grammar** in Icelandic text.
 
-ReynirCorrector uses the `Reynir <https://pypi.org/project/reynir/>`_ package,
+ReynirCorrect uses the `Reynir <https://pypi.org/project/reynir/>`_ package,
 by the same authors, to tokenize and parse text.
+
+Token-level correction
+----------------------
+
+ReynirCorrect can tokenize text and return a corrected token list.
+This catches token-level errors, such as spelling errors and erroneous
+phrases, but not grammatical errors.
+
+Full grammar analysis
+---------------------
+
+ReynirCorrect can also analyze text grammatically by attempting to parse
+it, after token-level correction, using Reynir's context-free grammar for
+Icelandic. The analysis returns a set of annotations (errors and suggestions)
+that apply to spans (consecutive tokens) within sentences in the resulting
+token list.
 
 ******
 Status
@@ -29,7 +45,7 @@ Status
 Example
 *******
 
-To tokenize text with token-level correction (the text is not parsed,
+To tokenize text with token-level correction (the text is not parsed in this case,
 so no grammar checking is done):
 
 >>> from reynir_correct import tokenize
@@ -57,8 +73,11 @@ Output::
 
 To get a list of spelling and grammar annotations for a sentence:
 
->>> from reynir_correct import check
->>> toklist, annotations = check("Mér dreymdi kysu af gefnu tilefni.")
+>>> from reynir_correct import check_single, correct_spaces
+>>> sent = check_single("Mér dreymdi kysu af gefnu tilefni.")
+>>> print(correct_spaces(" ".join(t.txt for t in toklist if t.txt)))
+>>> for annotation in sent.annotations:
+>>>     print("{0:4} {1:4} {2}".format(ann.start, ann.end, ann.text))
 
 *************
 Prerequisites

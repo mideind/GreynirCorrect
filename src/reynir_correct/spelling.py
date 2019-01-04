@@ -330,7 +330,7 @@ class Corrector:
         # ,/ø, f/ø í innstöðu
         ("á", ["ág", "áf"]),
         ("í", ["íg"]),
-        ("æ", ["æg"]),
+        ("æ", ["æg", "ei"]), # áræðanlegur->áreiðanlegur
         ("ú", ["úg", "úf"]),
         ("ó", ["óg", "óf"]),
         # einfaldir/tvöfaldir samhljóðar

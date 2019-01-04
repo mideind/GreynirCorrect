@@ -350,7 +350,16 @@ def parse_errors(token_stream, db):
 
             # Splitting wrongly compounded words
             if token.txt and token.txt.lower() in WrongCompounds.DICT:
-                correct_phrase = WrongCompounds.DICT[token.txt.lower()]
+                correct_phrase = list(WrongCompounds.DICT[token.txt.lower()])
+                # Make the split phrase emulate the case of
+                # the original token
+                if token.txt.isupper():
+                    # All upper case
+                    for ix, p in enumerate(correct_phrase):
+                        correct_phrase[ix] = p.upper()
+                else:
+                    # First word might be capitalized
+                    correct_phrase[0] = emulate_case(correct_phrase[0], token.txt)
                 for ix, phrase_part in enumerate(correct_phrase):
                     new_token = CorrectToken.word(phrase_part)
                     if ix == 0:
