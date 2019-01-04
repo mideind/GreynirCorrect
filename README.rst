@@ -29,7 +29,36 @@ Status
 Example
 *******
 
->>> from reynir_correct import Corrector
+To tokenize text with token-level correction (the text is not parsed,
+so grammar checking is done):
+
+>>> from reynir_correct import tokenize
+>>> g = tokenize("Af gefnu tilefni fékk hann vilja sýnum "
+>>>		"framgengt við hana í auknu mæli.")
+>>> for tok in g:
+>>>     print("{0:10} {1}".format(tok.txt or "", tok.error_description))
+
+Output::
+
+	Að         Orðasambandið 'Af gefnu tilefni' var leiðrétt í 'að gefnu tilefni'
+	gefnu
+	tilefni
+	fékk
+	hann
+	vilja      Orðasambandið 'vilja sýnum framgengt' var leiðrétt í 'vilja sínum framgengt'
+	sínum
+	framgengt
+	við
+	hana
+	í          Orðasambandið 'í auknu mæli' var leiðrétt í 'í auknum mæli'
+	auknum
+	mæli
+	.
+
+To get a list of spelling and grammar annotations for a sentence:
+
+>>> from reynir_correct import check
+>>> toklist, annotations = check("Mér dreymdi kysu af gefnu tilefni.")
 
 *************
 Prerequisites
