@@ -30,11 +30,11 @@ Example
 *******
 
 To tokenize text with token-level correction (the text is not parsed,
-so grammar checking is done):
+so no grammar checking is done):
 
 >>> from reynir_correct import tokenize
->>> g = tokenize("Af gefnu tilefni fékk hann vilja sýnum "
->>>		"framgengt við hana í auknu mæli.")
+>>> g = tokenize("Af gefnu tilefni fékk fékk daninn vilja sýnum "
+>>>     "framgengt við hana í auknu mæli.")
 >>> for tok in g:
 >>>     print("{0:10} {1}".format(tok.txt or "", tok.error_description))
 
@@ -43,8 +43,8 @@ Output::
 	Að         Orðasambandið 'Af gefnu tilefni' var leiðrétt í 'að gefnu tilefni'
 	gefnu
 	tilefni
-	fékk
-	hann
+	fékk       Endurtekið orð ('fékk') var fellt burt
+	Daninn     Orð á að byrja á hástaf: 'daninn'
 	vilja      Orðasambandið 'vilja sýnum framgengt' var leiðrétt í 'vilja sínum framgengt'
 	sínum
 	framgengt
