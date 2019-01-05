@@ -101,5 +101,5 @@ setup(
     ],
     keywords=["nlp", "parser", "icelandic"],
     setup_requires=[],
-    install_requires=["reynir>=1.4.0"],
+    install_requires=["reynir>=1.4.1"],
 )
