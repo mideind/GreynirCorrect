@@ -10,6 +10,7 @@
        it under the terms of the GNU General Public License as published by
        the Free Software Foundation, either version 3 of the License, or
        (at your option) any later version.
+
        This program is distributed in the hope that it will be useful,
        but WITHOUT ANY WARRANTY; without even the implied warranty of
        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -207,6 +208,9 @@ class CapitalizationError(Error):
         except at the beginning of a sentence, or should be upper case
         but occurs in lower case. """
 
+    # Z001: Word should begin with lowercase letter
+    # Z002: Word should begin with uppercase letter
+
     def __init__(self, code, txt):
         # Capitalization error codes start with "Z"
         super().__init__("Z" + code)
@@ -258,6 +262,8 @@ class PhraseError(Error):
 
     """ A PhraseError is a wrong multiword phrase, where a word is out
         of place in its context. """
+
+    # P_xxx: Phrase error codes
 
     def __init__(self, code, txt, span):
         # Phrase error codes start with "P", and are followed by

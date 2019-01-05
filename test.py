@@ -11,7 +11,7 @@ for ix, tok in enumerate(sent.tokens):
 	print("{0:03} {1}".format(ix, tok.txt or ""))
 print("\nVillur:")
 for ann in sent.annotations:
-	print("{0:03}-{1:03} {2:6} {3}".format(ann["start"], ann["end"], ann["code"], ann["text"]))
+	print("{0:03}-{1:03} {2:6} {3}".format(ann.start, ann.end, ann.code, ann.text))
 print("")
 
 sys.exit(0)

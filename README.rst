@@ -77,7 +77,8 @@ To get a list of spelling and grammar annotations for a sentence:
 >>> sent = check_single("Mér dreymdi kysu af gefnu tilefni.")
 >>> print(correct_spaces(" ".join(t.txt for t in toklist if t.txt)))
 >>> for annotation in sent.annotations:
->>>     print("{0:4} {1:4} {2}".format(ann.start, ann.end, ann.text))
+>>>     print("{0:03}-{1:03} {2:6} {3}"
+>>>         .format(ann.start, ann.end, ann.code, ann.text))
 
 *************
 Prerequisites
