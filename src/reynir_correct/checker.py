@@ -28,8 +28,10 @@
 from threading import Lock
 
 from reynir import Reynir, correct_spaces
+from reynir.binparser import BIN_Token
 from reynir.fastparser import Fast_Parser, ParseForestNavigator
 from reynir.reducer import Reducer
+from reynir.settings import VerbSubjects
 
 from .errtokenizer import tokenize as tokenize_and_correct
 
@@ -102,6 +104,41 @@ class ErrorFinder(ParseForestNavigator):
         return None
 
 
+class ErrorDetectionToken(BIN_Token):
+
+    """ A subclass of BIN_Token that adds error detection behavior
+        to the base class """
+
+    _VERB_ERROR_SUBJECTS = VerbSubjects.VERBS_ERRORS
+
+    @staticmethod
+    def verb_is_impersonal(verb):
+        """ Return True if the given verb is strictly impersonal,
+            i.e. never appears with a nominative subject """
+        # Here, we return False because we want to catch errors
+        # where impersonal verbs are used with a nominative subject
+        return False
+
+    def verb_subject_matches(self, verb, subj):
+        """ Returns True if the given subject type/case is allowed for this verb
+            or if it is an erroneous subject which we can flag """
+        return (
+            subj in self._VERB_SUBJECTS.get(verb, set())
+            or subj in self._VERB_ERROR_SUBJECTS.get(verb, set())
+        )
+
+
+class ErrorDetectingParser(Fast_Parser):
+
+    """ A subclass of Fast_Parser that modifies its behavior to
+        include grammar error detection rules in the parsing process """
+
+    @staticmethod
+    def _create_wrapped_token(t, ix):
+        """ Create an instance of a wrapped token """
+        return ErrorDetectionToken(t, ix)
+
+
 class ReynirCorrect(Reynir):
 
     """ Parser augmented with the ability to add spelling and grammar
@@ -128,8 +165,8 @@ class ReynirCorrect(Reynir):
             if ReynirCorrect._parser is None:
                 # Initialize a singleton instance of the parser and the reducer.
                 # Both classes are re-entrant and thread safe.
-                ReynirCorrect._parser = fp = Fast_Parser()
-                ReynirCorrect._reducer = Reducer(fp.grammar)
+                ReynirCorrect._parser = edp = ErrorDetectingParser()
+                ReynirCorrect._reducer = Reducer(edp.grammar)
             return ReynirCorrect._parser
 
     @property
