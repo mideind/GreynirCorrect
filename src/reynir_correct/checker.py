@@ -25,9 +25,13 @@
 
 """
 
-from .errtokenizer import tokenize as tokenize_and_correct
+from threading import Lock
+
 from reynir import Reynir, correct_spaces
-from reynir.fastparser import ParseForestNavigator
+from reynir.fastparser import Fast_Parser, ParseForestNavigator
+from reynir.reducer import Reducer
+
+from .errtokenizer import tokenize as tokenize_and_correct
 
 
 class Annotation:
@@ -100,7 +104,15 @@ class ErrorFinder(ParseForestNavigator):
 
 class ReynirCorrect(Reynir):
 
-    """ Parser augmented with error correction """
+    """ Parser augmented with the ability to add spelling and grammar
+        annotations to the returned sentences """
+
+    # ReynirCorrect has its own class instances of a parser and a reducer,
+    # separate from the Reynir class, as they use different settings and
+    # parsing enviroments
+    _parser = None
+    _reducer = None
+    _lock = Lock()
 
     def __init__(self):
         super().__init__()
@@ -109,44 +121,80 @@ class ReynirCorrect(Reynir):
         """ Use the correcting tokenizer instead of the normal one """
         return tokenize_and_correct(text)
 
+    @property
+    def parser(self):
+        """ Override the parent class' construction of a parser instance """
+        with self._lock:
+            if ReynirCorrect._parser is None:
+                # Initialize a singleton instance of the parser and the reducer.
+                # Both classes are re-entrant and thread safe.
+                ReynirCorrect._parser = fp = Fast_Parser()
+                ReynirCorrect._reducer = Reducer(fp.grammar)
+            return ReynirCorrect._parser
+
+    @property
+    def reducer(self):
+        """ Return the reducer instance to be used """
+        # Should always retrieve the parser attribute first
+        assert ReynirCorrect._reducer is not None
+        return ReynirCorrect._reducer
+
+    @staticmethod
+    def annotate(sent):
+        """ Returns a list of annotations for a sentence object, containing
+            spelling and grammar annotations of that sentence """
+        ann = []
+        # First, add token-level annotations
+        for ix, t in enumerate(sent.tokens):
+            if t.error_code:
+                ann.append(
+                    Annotation(
+                        start=ix,
+                        end=ix + t.error_span - 1,
+                        text=t.error_description,
+                        code=t.error_code
+                    )
+                )
+        # Then: if the sentence couldn't be parsed,
+        # put an annotation on it as a whole
+        if sent.deep_tree is None:
+            ann.append(
+                # E001: Unable to parse sentence
+                Annotation(
+                    start=0,
+                    end=len(sent.tokens)-1,
+                    text="Ekki tókst að þátta setninguna",
+                    code="E001"
+                )
+            )
+        else:
+            # Successfully parsed:
+            # Add error rules from the grammar
+            ErrorFinder(ann, sent.tokens).go(sent.deep_tree)
+        # Sort the annotations by their start token index,
+        # and then by decreasing span length
+        ann.sort(key=lambda a: (a.start, -a.end))
+        return ann
+
+    def create_sentence(self, job, s):
+        """ Create a fresh sentence object and annotate it
+            before returning it to the client """
+        sent = super().create_sentence(job, s)
+        # Add spelling and grammar annotations to the sentence
+        sent.annotations = self.annotate(sent)
+        return sent
+
 
 def check_single(sentence):
     """ Check and annotate a single sentence, given in plain text """
-    r = ReynirCorrect()
-    sent = r.parse_single(sentence)
-    # Generate annotations
-    ann = []
-    # First, add token-level annotations
-    for ix, t in enumerate(sent.tokens):
-        if t.error_code:
-            ann.append(
-                Annotation(
-                    start=ix,
-                    end=ix + t.error_span - 1,
-                    text=t.error_description,
-                    code=t.error_code
-                )
-            )
-    # Then: if the sentence couldn't be parsed,
-    # put an annotation on it as a whole
-    if sent.deep_tree is None:
-        ann.append(
-            # E001: Unable to parse sentence
-            Annotation(
-                start=0,
-                end=len(sent.tokens)-1,
-                text="Ekki tókst að þátta setninguna",
-                code="E001"
-            )
-        )
-    else:
-        # Successfully parsed:
-        # Add error rules from the grammar
-        ErrorFinder(ann, sent.tokens).go(sent.deep_tree)
-    # Sort the annotations by their start token index,
-    # and then by decreasing span length
-    ann.sort(key=lambda a: (a.start, -a.end))
-    # Add an attribute to the returned sent object
-    sent.annotations = ann
-    return sent
+    rc = ReynirCorrect()
+    return rc.parse_single(sentence)
 
+
+def check(text):
+    """ Return a generator of checked paragraphs of text,
+        each being a generator of checked sentences with
+        annotations """
+    rc = ReynirCorrect()
+    job = rc.submit(text, parse=True)
+    yield from job.paragraphs()
