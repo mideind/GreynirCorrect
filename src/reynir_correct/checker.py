@@ -80,6 +80,18 @@ class ErrorFinder(ParseForestNavigator):
         self._ann = ann
         self._toklist = toklist
 
+    def _visit_token(self, level, node):
+        """ Entering a terminal/token match node """
+        if (
+            node.terminal.category == "so"
+            and node.terminal.is_subj
+            and node.terminal.has_variant("op")
+        ):
+            # Check whether the associated verb is allowed
+            # with a subject in this case
+            pass
+        return None
+
     def _visit_nonterminal(self, level, node):
         """ Entering a nonterminal node """
         if node.is_interior or node.nonterminal.is_optional:

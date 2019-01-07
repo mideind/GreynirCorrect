@@ -2,16 +2,20 @@
 import sys
 import reynir_correct as rc
 
+
 def display_annotations(sent):
 	print("\nNiðurstaða tókunar:")
 	for ix, tok in enumerate(sent.tokens):
 		print("{0:03} {1}".format(ix, tok.txt or ""))
+	print("\nSetningatré:")
+	print("[Ekkert]" if sent.tree is None else sent.tree.flat)
 	print("\nVillur:")
 	for ann in sent.annotations:
 		print("{0:03}-{1:03} {2:6} {3}".format(ann.start, ann.end, ann.code, ann.text))
 	print("")
 
-txt = "Einn af drengjunum fóru í sund af gefnu tilefni.\nÉg dreymdi köttinn."
+
+txt = "Einn af drengjunum fóru í sund af gefnu tilefni.\nMig hlakkaði til."
 txt = rc.mark_paragraphs(txt)
 print("\nUpphafleg setning: '{0}'".format(txt))
 sent = rc.check_single(txt)
