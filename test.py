@@ -4,6 +4,8 @@ import reynir_correct as rc
 
 
 def display_annotations(sent):
+	print("\nSetning:")
+	print(sent.text)
 	print("\nNiðurstaða tókunar:")
 	for ix, tok in enumerate(sent.tokens):
 		print("{0:03} {1}".format(ix, tok.txt or ""))
@@ -15,11 +17,12 @@ def display_annotations(sent):
 	print("")
 
 
-txt = "Einn af drengjunum fóru í sund af gefnu tilefni.\nMig hlakkaði til."
+txt = (
+	"Einn af drengjunum fóru í sund af gefnu tilefni.\n"
+	"Mig hlakkaði til.\nÉg dreymdi kött.\n"
+	"Páli, sem hefur verið landsliðsmaður í fótbolta í sjö ár, langaði að horfa á sjónvarpið."
+)
 txt = rc.mark_paragraphs(txt)
-print("\nUpphafleg setning: '{0}'".format(txt))
-sent = rc.check_single(txt)
-display_annotations(sent)
 
 print("\nUpphaflegur texti: '{0}'".format(txt))
 for pg in rc.check(txt):
