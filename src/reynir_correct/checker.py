@@ -113,8 +113,8 @@ class ErrorFinder(ParseForestNavigator):
             # tnode points to a SimpleTree instance
             tnode = self._terminal_nodes[node.start]
             verb = tnode.lemma
-            subj_case = node.terminal.variant(2)  # so_subj_op_þf
-            assert subj_case in {"nf", "þf", "þgf", "ef"}
+            subj_case = node.terminal.variant(-1)  # so_subj_op_et_þf
+            assert subj_case in {"nf", "þf", "þgf", "ef"}, "Óþekkt fall í " + node.terminal.name
             # Check whether this verb has an entry in the VERBS_ERRORS
             # dictionary, and whether that entry then has an item for
             # the present subject case
@@ -125,32 +125,41 @@ class ErrorFinder(ParseForestNavigator):
                 # Retrieve the correct case
                 correct_case = self._CASE_NAMES[errors[subj_case]]
                 # Try to recover the verb's subject
-                # First, find the IP (inflected phrase) node
+                # First, find the enclosing IP (inflected phrase) node, if any
                 subj = None
-                p = tnode.parent
-                while not p.match_tag("IP"):
-                    if p is p.parent:
-                        # Reached the parent node: we're done
-                        break
-                    p = p.parent
-                if p.match_tag("IP"):
-                    # Find the NP-SUBJ node, if any
+                p = tnode.enclosing_tag("IP")
+                if p is not None:
+                    # Found the inflected phrase:
+                    # find the NP-SUBJ node, if any
                     try:
                         subj = p.NP_SUBJ
                     except AttributeError:
                         pass
-                # Create and add an annotation
-                self._ann.append(
-                    Annotation(
-                        start=node.start,
-                        end=node.end-1,
-                        text="Frumlag sagnarinnar 'að {0}' {3}á að vera "
-                            "í {1}falli en ekki í {2}falli"
-                            .format(verb, correct_case, wrong_case,
-                                "" if subj is None else "('"+subj.tidy_text+"') "),
-                        code="E003"
+                if subj is not None:
+                    # We know what the subject is: annotate it
+                    start, end = subj.span
+                    self._ann.append(
+                        Annotation(
+                            start=start,
+                            end=end,
+                            text="Frumlag sagnarinnar 'að {0}' á að vera "
+                                "í {1}falli en ekki í {2}falli"
+                                .format(verb, correct_case, wrong_case),
+                            code="E003"
+                        )
                     )
-                )
+                else:
+                    # We don't seem to find the subject, so just annotate the verb
+                    self._ann.append(
+                        Annotation(
+                            start=node.start,
+                            end=node.end-1,
+                            text="Frumlag sagnarinnar 'að {0}' á að vera "
+                                "í {1}falli en ekki í {2}falli"
+                                .format(verb, correct_case, wrong_case),
+                            code="E003"
+                        )
+                    )
         return None
 
     def _visit_nonterminal(self, level, node):
@@ -185,7 +194,7 @@ class ErrorDetectionToken(BIN_Token):
     _VERB_ERROR_SUBJECTS = VerbSubjects.VERBS_ERRORS
 
     @staticmethod
-    def verb_is_impersonal(verb):
+    def _verb_is_impersonal(verb):
         """ Return True if the given verb is strictly impersonal,
             i.e. never appears with a nominative subject """
         # Here, we return False because we want to catch errors
