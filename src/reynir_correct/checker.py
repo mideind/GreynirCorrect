@@ -194,11 +194,19 @@ class ErrorDetectionToken(BIN_Token):
     _VERB_ERROR_SUBJECTS = VerbSubjects.VERBS_ERRORS
 
     @staticmethod
-    def _verb_is_impersonal(verb):
+    def verb_is_strictly_impersonal(verb):
         """ Return True if the given verb is strictly impersonal,
             i.e. never appears with a nominative subject """
         # Here, we return False because we want to catch errors
         # where impersonal verbs are used with a nominative subject
+        return False
+
+    @staticmethod
+    def verb_cannot_be_impersonal(verb, form):
+        """ Return True if this verb cannot match an so_xxx_op terminal. """
+        # Here, we return False because we want to catch
+        # errors where verbs such as 'hlakka' are used with a
+        # non-nominative subject
         return False
 
     def verb_subject_matches(self, verb, subj):
