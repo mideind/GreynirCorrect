@@ -13,7 +13,7 @@ def display_annotations(sent):
 	print("[Ekkert]" if sent.tree is None else sent.tree.flat)
 	print("\nVillur:")
 	for ann in sent.annotations:
-		print("{0:03}-{1:03} {2:6} {3}".format(ann.start, ann.end, ann.code, ann.text))
+		print("{0}".format(ann))
 	print("")
 
 
