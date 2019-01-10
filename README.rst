@@ -73,12 +73,18 @@ Output::
 
 To get a list of spelling and grammar annotations for a sentence:
 
->>> from reynir_correct import check_single, correct_spaces
->>> sent = check_single("Mér dreymdi kysu af gefnu tilefni.")
->>> print(correct_spaces(" ".join(t.txt for t in toklist if t.txt)))
+>>> from reynir_correct import check_single
+>>> sent = check_single("Páli, vini mínum, langaði að horfa á sjónvarpið.")
 >>> for annotation in sent.annotations:
->>>     print("{0:03}-{1:03} {2:6} {3}"
->>>         .format(ann.start, ann.end, ann.code, ann.text))
+>>>     print("{0}".format(annotation))
+
+Output::
+
+	000-004: E003   Frumlag sagnarinnar 'að langa' á að vera í þolfalli en ekki í þágufalli
+
+Note that the ``annotation.start`` and ``annotation.end`` properties
+(here ``start`` is 0 and ``end`` is 4) contain the indices of the first and last
+tokens to which the annotation applies. ``E003`` is an error code.
 
 *************
 Prerequisites
