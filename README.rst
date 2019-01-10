@@ -82,6 +82,9 @@ Output::
 
 	000-004: E003   Frumlag sagnarinnar 'að langa' á að vera í þolfalli en ekki í þágufalli
 
+	                [ The subject of the verb 'að langa/to want' should be in the
+	                  accusative case, not the dative case ]
+
 Note that the ``annotation.start`` and ``annotation.end`` properties
 (here ``start`` is 0 and ``end`` is 4) contain the indices of the first and last
 tokens to which the annotation applies. ``E003`` is an error code.
