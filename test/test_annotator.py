@@ -26,7 +26,6 @@
 """
 
 import reynir_correct as rc
-import tokenizer
 
 
 def dump(tokens):
