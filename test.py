@@ -19,7 +19,7 @@ def display_annotations(sent):
 
 txt = (
 	"Einn af drengjunum fóru í sund af gefnu tilefni.\n"
-	"Mig hlakkaði til.\nMig dreymdi kött.\n"
+	"Mig hlakkaði til.\nÉg dreymdi kött.\n"
 	"Páli, sem hefur verið landsliðsmaður í fótbolta í sjö ár, langaði að horfa á sjónvarpið.\n"
 	"Páli, vini mínum, langaði að horfa á sjónvarpið.\n"
 	"Hestinum Skjóna vantaði hamar.\n"

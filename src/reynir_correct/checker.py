@@ -49,11 +49,18 @@ class Annotation:
 
     def __init__(self, start, end, text, code):
         assert isinstance(start, int)
-        self._start = start
         assert isinstance(end, int)
+        self._start = start
         self._end = end
-        self._text = text
         self._code = code
+        self._text = text
+
+    def __str__(self):
+        """ Return a string representation of this annotation """
+        return (
+            "{0:03}-{1:03}: {2:6} {3}"
+            .format(self._start, self._end, self._code, self._text)
+        )
 
     @property
     def start(self):
