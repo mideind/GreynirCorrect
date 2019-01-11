@@ -47,7 +47,7 @@ class Annotation:
 
     """ An annotation of a span of a token list for a sentence """
 
-    def __init__(self, start, end, text, code):
+    def __init__(self, *, start, end, code, text):
         assert isinstance(start, int)
         assert isinstance(end, int)
         self._start = start
@@ -73,14 +73,14 @@ class Annotation:
         return self._end
 
     @property
-    def text(self):
-        """ A description of the annotation """
-        return self._text
-
-    @property
     def code(self):
         """ A code for the annotation type, usually an error or warning code """
         return self._code
+
+    @property
+    def text(self):
+        """ A description of the annotation """
+        return self._text
 
 
 class ErrorFinder(ParseForestNavigator):
@@ -149,10 +149,10 @@ class ErrorFinder(ParseForestNavigator):
                         Annotation(
                             start=start,
                             end=end,
+                            code="E003",
                             text="Frumlag sagnarinnar 'að {0}' á að vera "
                                 "í {1}falli en ekki í {2}falli"
                                 .format(verb, correct_case, wrong_case),
-                            code="E003"
                         )
                     )
                 else:
@@ -161,10 +161,10 @@ class ErrorFinder(ParseForestNavigator):
                         Annotation(
                             start=node.start,
                             end=node.end-1,
+                            code="E003",
                             text="Frumlag sagnarinnar 'að {0}' á að vera "
                                 "í {1}falli en ekki í {2}falli"
                                 .format(verb, correct_case, wrong_case),
-                            code="E003"
                         )
                     )
         return None
@@ -185,9 +185,9 @@ class ErrorFinder(ParseForestNavigator):
                 Annotation(
                     start=node.start,
                     end=node.end-1,
+                    code="E002",
                     text="'{0}' er líklega málfræðilega rangt (regla '{1}')"
                         .format(txt, node.nonterminal.name),
-                    code="E002"
                 )
             )
         return None
@@ -280,13 +280,13 @@ class ReynirCorrect(Reynir):
         ann = []
         # First, add token-level annotations
         for ix, t in enumerate(sent.tokens):
-            if t.error_code:
+            if hasattr(t, "error_code") and t.error_code:
                 ann.append(
                     Annotation(
                         start=ix,
                         end=ix + t.error_span - 1,
+                        code=t.error_code,
                         text=t.error_description,
-                        code=t.error_code
                     )
                 )
         # Then: if the sentence couldn't be parsed,
@@ -297,8 +297,8 @@ class ReynirCorrect(Reynir):
                 Annotation(
                     start=0,
                     end=len(sent.tokens)-1,
+                    code="E001",
                     text="Ekki tókst að þátta setninguna",
-                    code="E001"
                 )
             )
         else:
@@ -325,10 +325,28 @@ def check_single(sentence):
     return rc.parse_single(sentence)
 
 
-def check(text):
+def check(text, *, split_paragraphs=False):
     """ Return a generator of checked paragraphs of text,
         each being a generator of checked sentences with
         annotations """
     rc = ReynirCorrect()
-    job = rc.submit(text, parse=True)
+    # This is an asynchronous (on-demand) parse job
+    job = rc.submit(text, split_paragraphs=split_paragraphs)
     yield from job.paragraphs()
+
+
+def check_with_stats(text, *, split_paragraphs=False):
+    """ Return a dict containing parsed paragraphs as well as statistics """
+    rc = ReynirCorrect()
+    job = rc.submit(text, parse=True, split_paragraphs=split_paragraphs)
+    # Enumerating through the job's paragraphs and sentences causes them
+    # to be parsed and their statistics collected
+    paragraphs = [[sent for sent in pg] for pg in job.paragraphs()]
+    return dict(
+        paragraphs=paragraphs,
+        num_sentences=job.num_sentences,
+        num_parsed=job.num_parsed,
+        num_tokens=job.num_tokens,
+        ambiguity=job.ambiguity,
+        parse_time=job.parse_time,
+    )

@@ -24,7 +24,7 @@
 from reynir import Reynir, correct_spaces, mark_paragraphs
 from .settings import Settings
 from .errtokenizer import tokenize
-from .checker import check, check_single
+from .checker import check, check_single, check_with_stats
 
 __author__ = u"Miðeind ehf"
 
