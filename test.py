@@ -25,10 +25,9 @@ txt = (
 	"Hestinum Skjóna vantaði hamar.\n"
 	"Önnu kveið fyrir skóladeginum.\n"
 )
-txt = rc.mark_paragraphs(txt)
 
 print("\nUpphaflegur texti: '{0}'".format(txt))
-for pg in rc.check(txt):
+for pg in rc.check(txt, split_paragraphs=True):
 	for sent in pg:
 		display_annotations(sent)
 	print("---")

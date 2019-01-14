@@ -331,7 +331,7 @@ def check(text, *, split_paragraphs=False):
         annotations """
     rc = ReynirCorrect()
     # This is an asynchronous (on-demand) parse job
-    job = rc.submit(text, split_paragraphs=split_paragraphs)
+    job = rc.submit(text, parse=True, split_paragraphs=split_paragraphs)
     yield from job.paragraphs()
 
 
