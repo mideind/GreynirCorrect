@@ -40,15 +40,27 @@ def dump(tokens):
 def check_sentence(s, annotations):
     """ Check whether a given single sentence gets the
         specified annotations when checked """
-    sent = rc.check_single(s)
-    assert sent is not None
-    assert sent.tree is not None
-    assert hasattr(sent, "annotations")
-    assert len(sent.annotations) == len(annotations)
-    for a, (start, end, code) in zip(sent.annotations, annotations):
-        assert a.start == start
-        assert a.end == end
-        assert a.code == code
+
+    def check_sent(sent):
+        assert sent is not None
+        assert sent.tree is not None
+        assert hasattr(sent, "annotations")
+        assert len(sent.annotations) == len(annotations)
+        for a, (start, end, code) in zip(sent.annotations, annotations):
+            assert a.start == start
+            assert a.end == end
+            assert a.code == code
+
+    # Test check_single()
+    check_sent(rc.check_single(s))
+    # Test check()
+    for pg in rc.check(s):
+        for sent in pg:
+            check_sent(sent)
+    # Test check_with_stats()
+    for pg in rc.check_with_stats(s)["paragraphs"]:
+        for sent in pg:
+            check_sent(sent)
 
 
 def test_multiword_phrases(verbose=False):
