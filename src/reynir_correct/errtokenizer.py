@@ -667,29 +667,6 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
             at_sentence_start = False
             continue
 
-        # Check taboo words
-        if token.val:
-            # !!! TODO: This could be made more efficient if all
-            # !!! TODO: taboo word forms could be generated ahead of time
-            # !!! TODO: and checked via a set lookup
-            for m in token.val:
-                if m.stofn in TabooWords.DICT:
-                    # Taboo word
-                    suggested_word = TabooWords.DICT[m.stofn].split("_")[0]
-                    token.set_error(
-                        TabooWarning(
-                            "001",
-                            "Óviðurkvæmilegt orð, skárra væri t.d. '{0}'"
-                            .format(suggested_word)
-                        )
-                    )
-                    break
-            if token.error:
-                # Found taboo word
-                yield token
-                at_sentence_start = False
-                continue
-
         # Check rare (or nonexistent) words and see if we have a potential correction
         if not token.error and not is_immune(token) and corrector.is_rare(token.txt):
             # Yes, this is a rare one (>=95th percentile in a
@@ -741,6 +718,9 @@ def fix_capitalization(token_stream, db, token_ctor, auto_uppercase):
     def is_wrong(token):
         """ Return True if the word is wrongly capitalized """
         word = token.txt
+        if " " in word:
+            # Multi-word token: can't be listed in [capitalization_errors]
+            return False
         lower = True
         if word.islower():
             # íslendingur -> Íslendingur
@@ -808,6 +788,33 @@ def fix_capitalization(token_stream, db, token_ctor, auto_uppercase):
         if token.kind != TOK.PUNCTUATION and token.kind != TOK.ORDINAL:
             # !!! TODO: This may need to be made more intelligent
             at_sentence_start = False
+
+
+def check_taboo_words(token_stream):
+    """ Annotate taboo words with warnings """
+
+    for token in token_stream:
+
+        # Check taboo words
+        if token.kind == TOK.WORD and token.val:
+            # !!! TODO: This could be made more efficient if all
+            # !!! TODO: taboo word forms could be generated ahead of time
+            # !!! TODO: and checked via a set lookup
+            for m in token.val:
+                stofn = m.stofn.replace("-", "")
+                if stofn in TabooWords.DICT:
+                    # Taboo word
+                    suggested_word = TabooWords.DICT[stofn].split("_")[0]
+                    token.set_error(
+                        TabooWarning(
+                            "001",
+                            "Óheppilegt eða óviðurkvæmilegt orð, skárra væri t.d. '{0}'"
+                            .format(suggested_word)
+                        )
+                    )
+                    break
+
+        yield token
 
 
 class _Correct_TOK(TOK):
@@ -882,10 +889,15 @@ class CorrectionPipeline(DefaultPipeline):
         stream = lookup_unknown_words(
             self._corrector, self._token_ctor, stream, self._auto_uppercase
         )
-        # Finally, fix the capitalization
-        return fix_capitalization(
+        # Fix the capitalization
+        stream = fix_capitalization(
             stream, self._db, self._token_ctor, self._auto_uppercase
         )
+
+        # Check taboo words
+        stream = check_taboo_words(stream)
+
+        return stream
 
 
 def tokenize(text, auto_uppercase=False):

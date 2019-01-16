@@ -57,9 +57,8 @@ class Annotation:
 
     def __str__(self):
         """ Return a string representation of this annotation """
-        return (
-            "{0:03}-{1:03}: {2:6} {3}"
-            .format(self._start, self._end, self._code, self._text)
+        return "{0:03}-{1:03}: {2:6} {3}".format(
+            self._start, self._end, self._code, self._text
         )
 
     @property
@@ -89,12 +88,7 @@ class ErrorFinder(ParseForestNavigator):
         tagged as errors in the grammar, and terminals matching
         verb forms marked as errors """
 
-    _CASE_NAMES = {
-        "nf": "nefni",
-        "þf": "þol",
-        "þgf": "þágu",
-        "ef": "eignar"
-    }
+    _CASE_NAMES = {"nf": "nefni", "þf": "þol", "þgf": "þágu", "ef": "eignar"}
 
     def __init__(self, ann, sent):
         super().__init__(visit_all=True)
@@ -121,7 +115,9 @@ class ErrorFinder(ParseForestNavigator):
             tnode = self._terminal_nodes[node.start]
             verb = tnode.lemma
             subj_case = node.terminal.variant(-1)  # so_subj_op_et_þf
-            assert subj_case in {"nf", "þf", "þgf", "ef"}, "Óþekkt fall í " + node.terminal.name
+            assert subj_case in {"nf", "þf", "þgf", "ef"}, (
+                "Óþekkt fall í " + node.terminal.name
+            )
             # Check whether this verb has an entry in the VERBS_ERRORS
             # dictionary, and whether that entry then has an item for
             # the present subject case
@@ -132,16 +128,27 @@ class ErrorFinder(ParseForestNavigator):
                 # Retrieve the correct case
                 correct_case = self._CASE_NAMES[errors[subj_case]]
                 # Try to recover the verb's subject
-                # First, find the enclosing IP (inflected phrase) node, if any
                 subj = None
-                p = tnode.enclosing_tag("IP")
+                # First, check within the enclosing verb phrase
+                # (the subject may be embedded within it, as in
+                # ?'Í dag langaði Páli bróður að fara í sund')
+                p = tnode.enclosing_tag("VP")
                 if p is not None:
-                    # Found the inflected phrase:
-                    # find the NP-SUBJ node, if any
                     try:
                         subj = p.NP_SUBJ
                     except AttributeError:
                         pass
+                if subj is None:
+                    # Then, look within the enclosing IP (inflected phrase)
+                    # node, if any
+                    p = tnode.enclosing_tag("IP")
+                    if p is not None:
+                        # Found the inflected phrase:
+                        # find the NP-SUBJ node, if any
+                        try:
+                            subj = p.NP_SUBJ
+                        except AttributeError:
+                            pass
                 if subj is not None:
                     # We know what the subject is: annotate it
                     start, end = subj.span
@@ -160,7 +167,7 @@ class ErrorFinder(ParseForestNavigator):
                     self._ann.append(
                         Annotation(
                             start=node.start,
-                            end=node.end-1,
+                            end=node.end - 1,
                             code="E003",
                             text="Frumlag sagnarinnar 'að {0}' á að vera "
                                 "í {1}falli en ekki í {2}falli"
@@ -172,22 +179,25 @@ class ErrorFinder(ParseForestNavigator):
     def _visit_nonterminal(self, level, node):
         """ Entering a nonterminal node """
         if node.is_interior or node.nonterminal.is_optional:
+            # Not an interesting node
             pass
         elif node.nonterminal.has_tag("error"):
             # This node has a nonterminal that is tagged with $tag(error)
             # in the grammar file (Reynir.grammar)
             txt = correct_spaces(
-                " ".join(t.txt for t in self._tokens[node.start:node.end] if t.txt)
+                " ".join(t.txt for t in self._tokens[node.start : node.end] if t.txt)
             )
             self._ann.append(
                 # E002: Probable grammatical error
                 # !!! TODO: add further info and guidance to the text field
+                # !!! TODO: depending on which rule we're talking about
                 Annotation(
                     start=node.start,
-                    end=node.end-1,
+                    end=node.end - 1,
                     code="E002",
-                    text="'{0}' er líklega málfræðilega rangt (regla '{1}')"
-                        .format(txt, node.nonterminal.name),
+                    text="'{0}' er líklega rangt (regla {1})".format(
+                        txt, node.nonterminal.name
+                    ),
                 )
             )
         return None
@@ -219,10 +229,9 @@ class ErrorDetectionToken(BIN_Token):
     def verb_subject_matches(self, verb, subj):
         """ Returns True if the given subject type/case is allowed for this verb
             or if it is an erroneous subject which we can flag """
-        return (
-            subj in self._VERB_SUBJECTS.get(verb, set())
-            or subj in self._VERB_ERROR_SUBJECTS.get(verb, set())
-        )
+        return subj in self._VERB_SUBJECTS.get(
+            verb, set()
+        ) or subj in self._VERB_ERROR_SUBJECTS.get(verb, set())
 
 
 class ErrorDetectingParser(Fast_Parser):
@@ -296,9 +305,9 @@ class ReynirCorrect(Reynir):
                 # E001: Unable to parse sentence
                 Annotation(
                     start=0,
-                    end=len(sent.tokens)-1,
+                    end=len(sent.tokens) - 1,
                     code="E001",
-                    text="Ekki tókst að þátta setninguna",
+                    text="Málsgreinin fellur ekki að reglum",
                 )
             )
         else:
