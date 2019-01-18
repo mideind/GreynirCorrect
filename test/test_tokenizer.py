@@ -259,13 +259,13 @@ def test_capitalization_errors(verbose=False):
 
 def test_taboo_words(verbose=False):
     g = rc.tokenize(
-        "Jón sagði að hún væri algjör pussa en hún svaraði að "
+        "Jón sagði að hún væri múhameðstrúarmaður en hún svaraði að "
         "hann væri hommatittur og negri með lítinn tilla."
     )
     g = list(g)
     if verbose: dump(g)
-    assert len(g) == 22
-    errors = {7, 14, 16, 19}
+    assert len(g) == 21
+    errors = {6, 13, 15, 18}
     for ix, t in enumerate(g):
         if ix in errors:
             assert g[ix].error_code == "T001"  # Taboo word
