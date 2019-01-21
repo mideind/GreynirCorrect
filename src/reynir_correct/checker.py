@@ -4,7 +4,7 @@
 
     Spelling and grammar checking module
 
-    Copyright(C) 2018 Miðeind ehf.
+    Copyright(C) 2019 Miðeind ehf.
 
         This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -344,9 +344,14 @@ def check(text, *, split_paragraphs=False):
     yield from job.paragraphs()
 
 
-def check_with_stats(text, *, split_paragraphs=False):
-    """ Return a dict containing parsed paragraphs as well as statistics """
-    rc = ReynirCorrect()
+def check_with_custom_parser(text, *,
+    split_paragraphs=False,
+    parser_class=ReynirCorrect
+):
+    """ Return a dict containing parsed paragraphs as well as statistics,
+        using the given correction/parser class. This is a low-level
+        function; normally check_with_stats() should be used. """
+    rc = parser_class()
     job = rc.submit(text, parse=True, split_paragraphs=split_paragraphs)
     # Enumerating through the job's paragraphs and sentences causes them
     # to be parsed and their statistics collected
@@ -359,3 +364,8 @@ def check_with_stats(text, *, split_paragraphs=False):
         ambiguity=job.ambiguity,
         parse_time=job.parse_time,
     )
+
+
+def check_with_stats(text, *, split_paragraphs=False):
+    """ Return a dict containing parsed paragraphs as well as statistics """
+    return check_with_custom_parser(text, split_paragraphs=split_paragraphs)

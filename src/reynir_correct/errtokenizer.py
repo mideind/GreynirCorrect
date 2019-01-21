@@ -4,7 +4,7 @@
 
     Error-correcting tokenization layer
 
-    Copyright (C) 2018 Miðeind ehf.
+    Copyright (C) 2019 Miðeind ehf.
 
        This program is free software: you can redistribute it and/or modify
        it under the terms of the GNU General Public License as published by
@@ -853,6 +853,16 @@ class _Correct_TOK(TOK):
             ct.copy_error(token)
         return ct
 
+    @staticmethod
+    def Entity(w, token=None):
+        ct = CorrectToken(TOK.ENTITY, w, None)
+        if token is not None:
+            # This token is being constructed in reference to a previously
+            # generated token, or a list of tokens, which might have had
+            # an associated error: make sure that it is preserved
+            ct.copy_error(token)
+        return ct
+
 
 class CorrectionPipeline(DefaultPipeline):
 
@@ -867,11 +877,11 @@ class CorrectionPipeline(DefaultPipeline):
     # TOK (tokenizer.py) or _Bin_TOK (bintokenizer.py)
     _token_ctor = _Correct_TOK
 
-    def correct(self, stream):
+    def correct_tokens(self, stream):
         """ Add a correction pass just before BÍN annotation """
         return parse_errors(stream, self._db)
 
-    def lookup_unknown_words(self, stream):
+    def check_spelling(self, stream):
         """ Attempt to resolve unknown words """
         # Create a Corrector on the first invocation
         if self._corrector is None:

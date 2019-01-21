@@ -256,6 +256,21 @@ def test_capitalization_errors(verbose=False):
     assert "Finnana" in s
     assert "Finna" in s
 
+    g = rc.tokenize("Gyðingurinn sagði að Lenínisminn tröllriði öllu en Eskimóinn taldi að "
+        "það ætti fremur við um Marxismann.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert s.startswith("Gyðingurinn ")
+    assert "Lenínisminn" not in s
+    assert "lenínisminn" in s
+    assert "Eskimóinn" not in s
+    assert "eskimóinn" in s
+    # assert "Sjítinn" not in s  # !!! TODO: Ranglega 'leiðrétt' í Skítinn
+    # assert "sjítinn" in s
+    assert "Marxismann" not in s
+    assert "marxismann" in s
+
 
 def test_taboo_words(verbose=False):
     g = rc.tokenize(

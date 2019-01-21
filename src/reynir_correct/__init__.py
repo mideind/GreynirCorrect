@@ -2,7 +2,7 @@
 
     Reynir: Natural language processing for Icelandic
 
-    Copyright(C) 2018 Miðeind ehf.
+    Copyright(C) 2019 Miðeind ehf.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -23,8 +23,14 @@
 
 from reynir import Reynir, correct_spaces, mark_paragraphs
 from .settings import Settings
-from .errtokenizer import tokenize
-from .checker import check, check_single, check_with_stats
+from .errtokenizer import CorrectionPipeline, tokenize
+from .checker import (
+    ReynirCorrect,
+    check,
+    check_single,
+    check_with_stats,
+    check_with_custom_parser
+)
 
 __author__ = u"Miðeind ehf"
 
