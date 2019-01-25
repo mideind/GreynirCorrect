@@ -23,7 +23,7 @@ txt = (
 	"Páli, sem hefur verið landsliðsmaður í fótbolta í sjö ár, langaði að horfa á sjónvarpið.\n"
 	"Páli, vini mínum, langaði að horfa á sjónvarpið.\n"
 	"Hestinum Skjóna vantaði hamar.\n"
-	"Önnu kveið fyrir skóladeginum.\n"
+	"\"Önnu kveið # fyrir skóladeginum.\"\n"
 )
 
 print("\nUpphaflegur texti: '{0}'".format(txt))
