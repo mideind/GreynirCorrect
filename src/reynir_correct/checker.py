@@ -93,6 +93,11 @@ class ErrorFinder(ParseForestNavigator):
     # Dictionary of functions used to explain grammar errors
     # associated with nonterminals with error tags in the grammar
     _TEXT_FUNC = {
+        "VillaFjöldiHluti": lambda txt, variants: (
+            # Sögn sem á við 'fjöldi Evrópuríkja' á að vera í eintölu
+            "Sögn sem á við '{0}' á að vera í eintölu, ekki fleirtölu"
+            .format(txt)
+        ),
         "VillaEinnAf": lambda txt, variants: (
             # Sögn sem á við 'einn af drengjunum' á að vera í eintölu
             "Sögn sem á við '{0}' á að vera í eintölu, ekki fleirtölu"
