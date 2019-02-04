@@ -4,7 +4,8 @@
 
     Tests for ReynirCorrect module
 
-    Copyright(C) 2018 by Miðeind ehf.
+    Copyright(C) 2019 by Miðeind ehf.
+    Original author: Vilhjálmur Þorsteinsson
 
         This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -65,22 +66,45 @@ def check_sentence(s, annotations):
 
 def test_multiword_phrases(verbose=False):
     s = "Einn af drengjunum fóru í sund af gefnu tilefni."
-    check_sentence(s, ((0, 2, "E002"), (6, 8, "P_aðaf")))
+    check_sentence(s, [(0, 2, "P_NT_EinnAf"), (6, 8, "P_aðaf")])
+
+
+def test_error_finder(verbose=False):
+    """ Test errors that are found by traversing the detailed
+        parse tree in checker.py (ErrorFinder class) """
+    s = "Fjöldi þingmanna greiddu atkvæði gegn tillögunni."
+    check_sentence(s, [(0, 1, "P_NT_FjöldiHluti")])
+    s = "Jón borðaði ís þar sem að hann var svangur."
+    check_sentence(s, [(5, 5, "P_NT_Að")])
+    s = "Jón \"borðaði\" ís þar sem að hann var svangur."
+    check_sentence(s, [(7, 7, "P_NT_Að")])
+    s = "Jón borðaði ís þó hann væri svangur."
+    check_sentence(s, [(3, 3, "P_NT_ÞóAð")])
+    s = "Jón \"borðaði\" ís þó hann væri svangur."
+    check_sentence(s, [(5, 5, "P_NT_ÞóAð")])
+    s = "Jón borðaði ís jafnvel þó hann væri svangur."
+    check_sentence(s, [(3, 4, "P_NT_ÞóAð")])
+    s = "Jón \"borðaði\" ís jafnvel þó hann væri svangur."
+    check_sentence(s, [(5, 6, "P_NT_ÞóAð")])
+    s = "Jón borðaði ís þótt hann væri svangur."
+    check_sentence(s, [])
+    s = "Jón \"borðaði\" ís þótt hann væri svangur."
+    check_sentence(s, [])
 
 
 def test_impersonal_verbs(verbose=False):
     s = "Mig hlakkaði til."
-    check_sentence(s, ((0, 0, "E003"),))
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_þf_nf")])
     s = (
         "Páli, sem hefur verið landsliðsmaður í fótbolta í sjö ár, "
         "langaði að horfa á sjónvarpið."
     )
-    check_sentence(s, ((0, 11, "E003"),))
+    check_sentence(s, [(0, 11, "P_WRONG_CASE_þgf_þf")])
     s = "Önnu kveið fyrir skóladeginum."
-    check_sentence(s, ((0, 0, "E003"),))
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_nf")])
     s = "Hestinum Grímni vantaði hamar."
     # s = "Hestinum Skjóna vantaði hamar."
-    check_sentence(s, ((0, 1, "E003"),))
+    check_sentence(s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
     # s = "Ég dreymdi köttinn."
     # check_sentence(s, ((0, 0, "E003"),))
 
@@ -89,3 +113,4 @@ if __name__ == "__main__":
 
     test_multiword_prases(verbose=True)
     test_impersonal_verbs(verbose=True)
+    test_error_finder(verbose=True)

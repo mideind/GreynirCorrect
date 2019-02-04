@@ -146,19 +146,20 @@ class ErrorFinder(ParseForestNavigator):
             # tnode points to a SimpleTree instance
             tnode = self._terminal_nodes[node.start]
             verb = tnode.lemma
-            subj_case = node.terminal.variant(-1)  # so_subj_op_et_þf
-            assert subj_case in {"nf", "þf", "þgf", "ef"}, (
+            subj_case_abbr = node.terminal.variant(-1)  # so_subj_op_et_þf
+            assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
                 "Unknown case in " + node.terminal.name
             )
             # Check whether this verb has an entry in the VERBS_ERRORS
             # dictionary, and whether that entry then has an item for
             # the present subject case
             errors = VerbSubjects.VERBS_ERRORS.get(verb)
-            if errors and subj_case in errors:
+            if errors and subj_case_abbr in errors:
                 # Yes, this appears to be an erroneous subject case
-                wrong_case = self._CASE_NAMES[subj_case]
+                wrong_case = self._CASE_NAMES[subj_case_abbr]
                 # Retrieve the correct case
-                correct_case = self._CASE_NAMES[errors[subj_case]]
+                correct_case_abbr = errors[subj_case_abbr]
+                correct_case = self._CASE_NAMES[correct_case_abbr]
                 # Try to recover the verb's subject
                 subj = None
                 # First, check within the enclosing verb phrase
@@ -181,6 +182,7 @@ class ErrorFinder(ParseForestNavigator):
                             subj = p.NP_SUBJ
                         except AttributeError:
                             pass
+                code = "P_WRONG_CASE_" + subj_case_abbr + "_" + correct_case_abbr
                 if subj is not None:
                     # We know what the subject is: annotate it
                     start, end = subj.span
@@ -188,7 +190,7 @@ class ErrorFinder(ParseForestNavigator):
                         Annotation(
                             start=start,
                             end=end,
-                            code="E003",
+                            code=code,
                             text="Frumlag sagnarinnar 'að {0}' á að vera "
                                 "í {1}falli en ekki í {2}falli"
                                 .format(verb, correct_case, wrong_case),
@@ -201,7 +203,7 @@ class ErrorFinder(ParseForestNavigator):
                         Annotation(
                             start=index,
                             end=index,
-                            code="E003",
+                            code=code,
                             text="Frumlag sagnarinnar 'að {0}' á að vera "
                                 "í {1}falli en ekki í {2}falli"
                                 .format(verb, correct_case, wrong_case),
@@ -231,6 +233,9 @@ class ErrorFinder(ParseForestNavigator):
                 variants = name[ix + 1:]
                 name = name[:ix]
             text_func = self._TEXT_FUNC.get(name)
+            # The error code in this case is P_NT_ + the name of the error-tagged
+            # nonterminal, however after cutting 'Villa' from its front
+            code = "P_NT_" + (name[5:] if name.startswith("Villa") else name)
             if text_func is not None:
                 # Yes: call it with the nonterminal's spanned text as argument
                 ann_text = text_func(span_text, variants)
@@ -241,11 +246,11 @@ class ErrorFinder(ParseForestNavigator):
                     .format(span_text, node.nonterminal.name)
                 )
             self._ann.append(
-                # E002: Probable grammatical error
+                # P_NT_ + nonterminal name: Probable grammatical error
                 Annotation(
                     start=start,
                     end=end,
-                    code="E002",
+                    code=code,
                     text=ann_text,
                 )
             )

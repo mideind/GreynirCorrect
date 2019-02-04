@@ -39,7 +39,7 @@ token list.
 Status
 ******
 
-**This code is under active development and has not reached Alpha status.**
+**This code is under active development and has Alpha status.**
 
 *******
 Example
