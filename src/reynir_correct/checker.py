@@ -93,13 +93,18 @@ class ErrorFinder(ParseForestNavigator):
     # Dictionary of functions used to explain grammar errors
     # associated with nonterminals with error tags in the grammar
     _TEXT_FUNC = {
-        "VillaAð": lambda txt: (
+        "VillaEinnAf": lambda txt, variants: (
+            # Sögn sem á við 'einn af drengjunum' á að vera í eintölu
+            "Sögn sem á við '{0}' á að vera í eintölu, ekki fleirtölu"
+            .format(txt)
+        ),
+        "VillaAð": lambda txt, variants: (
             # 'að' er sennilega ofaukið
             "'{0}' er sennilega ofaukið"
             .format(txt)
         ),
-        "VillaÞóAð": lambda txt: (
-            # '[jafnvel] þó' á sennilega að vera '[jafnvel] þó að'
+        "VillaÞóAð": lambda txt, variants: (
+            # [jafnvel] þó' á sennilega að vera '[jafnvel] þó að
             "'{0}' á sennilega að vera '{0} að' (eða 'þótt')"
             .format(txt)
         ),
@@ -213,10 +218,17 @@ class ErrorFinder(ParseForestNavigator):
             )
             # See if we have a custom text function for this
             # error-tagged nonterminal
-            text_func = self._TEXT_FUNC.get(node.nonterminal.name)
+            name = node.nonterminal.name
+            variants = ""
+            if "_" in name:
+                # Separate the variants
+                ix = name.index("_")
+                variants = name[ix + 1:]
+                name = name[:ix]
+            text_func = self._TEXT_FUNC.get(name)
             if text_func is not None:
                 # Yes: call it with the nonterminal's spanned text as argument
-                ann_text = text_func(span_text)
+                ann_text = text_func(span_text, variants)
             else:
                 # No: use a default text
                 ann_text = (
