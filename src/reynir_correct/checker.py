@@ -90,6 +90,21 @@ class ErrorFinder(ParseForestNavigator):
 
     _CASE_NAMES = {"nf": "nefni", "þf": "þol", "þgf": "þágu", "ef": "eignar"}
 
+    # Dictionary of functions used to explain grammar errors
+    # associated with nonterminals with error tags in the grammar
+    _TEXT_FUNC = {
+        "VillaAð": lambda txt: (
+            # 'að' er sennilega ofaukið
+            "'{0}' er sennilega ofaukið"
+            .format(txt)
+        ),
+        "VillaÞóAð": lambda txt: (
+            # '[jafnvel] þó' á sennilega að vera '[jafnvel] þó að'
+            "'{0}' á sennilega að vera '{0} að' (eða 'þótt')"
+            .format(txt)
+        ),
+    }
+
     def __init__(self, ann, sent):
         super().__init__(visit_all=True)
         # Annotation list
@@ -100,6 +115,13 @@ class ErrorFinder(ParseForestNavigator):
         self._tokens = sent.tokens
         # Terminal node list
         self._terminal_nodes = sent.terminal_nodes
+
+    @staticmethod
+    def _node_span(node):
+        """ Return the start and end indices of the tokens
+            spanned by the given node """
+        first_token, last_token = node.token_span
+        return (first_token.index, last_token.index)
 
     def _visit_token(self, level, node):
         """ Entering a terminal/token match node """
@@ -116,7 +138,7 @@ class ErrorFinder(ParseForestNavigator):
             verb = tnode.lemma
             subj_case = node.terminal.variant(-1)  # so_subj_op_et_þf
             assert subj_case in {"nf", "þf", "þgf", "ef"}, (
-                "Óþekkt fall í " + node.terminal.name
+                "Unknown case in " + node.terminal.name
             )
             # Check whether this verb has an entry in the VERBS_ERRORS
             # dictionary, and whether that entry then has an item for
@@ -164,10 +186,11 @@ class ErrorFinder(ParseForestNavigator):
                     )
                 else:
                     # We don't seem to find the subject, so just annotate the verb
+                    index = node.token.index
                     self._ann.append(
                         Annotation(
-                            start=node.start,
-                            end=node.end - 1,
+                            start=index,
+                            end=index,
                             code="E003",
                             text="Frumlag sagnarinnar 'að {0}' á að vera "
                                 "í {1}falli en ekki í {2}falli"
@@ -184,20 +207,29 @@ class ErrorFinder(ParseForestNavigator):
         elif node.nonterminal.has_tag("error"):
             # This node has a nonterminal that is tagged with $tag(error)
             # in the grammar file (Reynir.grammar)
-            txt = correct_spaces(
-                " ".join(t.txt for t in self._tokens[node.start : node.end] if t.txt)
+            start, end = self._node_span(node)
+            span_text = correct_spaces(
+                " ".join(t.txt for t in self._tokens[start : end + 1] if t.txt)
             )
+            # See if we have a custom text function for this
+            # error-tagged nonterminal
+            text_func = self._TEXT_FUNC.get(node.nonterminal.name)
+            if text_func is not None:
+                # Yes: call it with the nonterminal's spanned text as argument
+                ann_text = text_func(span_text)
+            else:
+                # No: use a default text
+                ann_text = (
+                    "'{0}' er líklega rangt (regla {1})"
+                    .format(span_text, node.nonterminal.name)
+                )
             self._ann.append(
                 # E002: Probable grammatical error
-                # !!! TODO: add further info and guidance to the text field
-                # !!! TODO: depending on which rule we're talking about
                 Annotation(
-                    start=node.start,
-                    end=node.end - 1,
+                    start=start,
+                    end=end,
                     code="E002",
-                    text="'{0}' er líklega rangt (regla {1})".format(
-                        txt, node.nonterminal.name
-                    ),
+                    text=ann_text,
                 )
             )
         return None
@@ -209,6 +241,12 @@ class ErrorDetectionToken(BIN_Token):
         to the base class """
 
     _VERB_ERROR_SUBJECTS = VerbSubjects.VERBS_ERRORS
+
+    def __init__(self, t, original_index):
+        """ original_index is the index of this token in
+            the original token list, as submitted to the parser,
+            including not-understood tokens such as quotation marks """
+        super().__init__(t, original_index)
 
     @staticmethod
     def verb_is_strictly_impersonal(verb):
@@ -289,6 +327,9 @@ class ReynirCorrect(Reynir):
         ann = []
         # First, add token-level annotations
         for ix, t in enumerate(sent.tokens):
+            # Note: these tokens and indices are the original tokens from
+            # the submitted text, including ones that are not understood
+            # by the parser, such as quotation marks and exotic punctuation
             if hasattr(t, "error_code") and t.error_code:
                 ann.append(
                     Annotation(
