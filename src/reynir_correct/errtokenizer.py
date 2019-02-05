@@ -600,13 +600,17 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
         )
         ct = token_ctor.Word(w, m, token=token if corrected_display else None)
         if corrected_display:
-            ct.set_error(
-                SpellingError(
-                    "{0:03}".format(code),
-                    "Orðið '{0}' var leiðrétt í '{1}'"
-                        .format(token.txt, corrected_display)
+            if "." in corrected_display:
+                text = (
+                    "Skammstöfunin '{0}' var leiðrétt í '{1}'"
+                    .format(token.txt, corrected_display)
                 )
-            )
+            else:
+                text = (
+                    "Orðið '{0}' var leiðrétt í '{1}'"
+                    .format(token.txt, corrected_display)
+                )
+            ct.set_error(SpellingError("{0:03}".format(code), text))
         else:
             # In a multi-word sequence, mark the replacement
             # tokens with a boolean value so that further
