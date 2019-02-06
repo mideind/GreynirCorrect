@@ -91,7 +91,9 @@ def test_error_finder(verbose=False):
     s = "Jón \"borðaði\" ís þótt hann væri svangur."
     check_sentence(s, [])
     s = "Ég féll fyrir annað hvort fegurð hennar eða gáfum."
-    check_sentence(s, [(3, 4, "P_NT_Annaðhvort")])
+    check_sentence(s, [(3, 4, "P_NT_AnnaðHvort")])
+    s = "Ég talaði við annaðhvort barnanna."
+    check_sentence(s, [(3, 3, "P_NT_Annaðhvort")])
 
 
 def test_impersonal_verbs(verbose=False):
