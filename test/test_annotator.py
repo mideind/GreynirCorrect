@@ -94,7 +94,16 @@ def test_error_finder(verbose=False):
     check_sentence(s, [(3, 4, "P_NT_AnnaðHvort")])
     s = "Ég talaði við annaðhvort barnanna."
     check_sentence(s, [(3, 3, "P_NT_Annaðhvort")])
-
+    s = "Ég hef verið slappur frá því ég fékk sprautuna."
+    check_sentence(s, [(4, 5, "P_NT_FráÞvíAð")])
+    s = "Ég hef verið slappur allt frá því ég fékk sprautuna."
+    check_sentence(s, [(4, 6, "P_NT_FráÞvíAð")])
+    s = "Friðgeir vildi vera heima víst að Sigga yrði að vera heima."
+    check_sentence(s, [(4, 5, "P_NT_VístAð")])
+    s = "Friðgeir taldi víst að Sigga yrði að vera heima."
+    check_sentence(s, [])
+    s = "Ég er ekki meiri fáviti heldur en þú."
+    check_sentence(s, [(5, 5, "P_NT_Heldur")])
 
 def test_impersonal_verbs(verbose=False):
     s = "Mig hlakkaði til."

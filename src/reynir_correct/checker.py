@@ -93,6 +93,21 @@ class ErrorFinder(ParseForestNavigator):
     # Dictionary of functions used to explain grammar errors
     # associated with nonterminals with error tags in the grammar
     _TEXT_FUNC = {
+        "VillaHeldur": lambda txt, variants: (
+            # 'heldur' er ofaukið
+            "'{0}' er ofaukið"
+            .format(txt)
+        ),
+        "VillaVístAð": lambda txt, variants: (
+            # 'víst að' á sennilega að vera 'fyrst að'
+            "'{0}' á sennilega að vera 'fyrst að'"
+            .format(txt)
+        ),
+        "VillaFráÞvíAð": lambda txt, variants: (
+            # 'allt frá því' á sennilega að vera 'allt frá því að'
+            "'{0}' á sennilega að vera '{0} að'"
+            .format(txt)
+        ),
         "VillaAnnaðhvort": lambda txt, variants: (
             # Í stað 'annaðhvort' á sennilega að standa 'annað hvort'
             "Í stað '{0}' á að standa 'annað hvort'"
@@ -338,7 +353,10 @@ class ReynirCorrect(Reynir):
     def parser(self):
         """ Override the parent class' construction of a parser instance """
         with self._lock:
-            if ReynirCorrect._parser is None:
+            if (
+                ReynirCorrect._parser is None
+                or ReynirCorrect._parser.is_grammar_modified()[0]
+            ):
                 # Initialize a singleton instance of the parser and the reducer.
                 # Both classes are re-entrant and thread safe.
                 ReynirCorrect._parser = edp = ErrorDetectingParser()
