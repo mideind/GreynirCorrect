@@ -30,7 +30,6 @@ import os
 import math
 import re
 import time
-import threading
 
 from collections import defaultdict
 from functools import lru_cache
@@ -275,8 +274,8 @@ class Corrector:
 
     # Minimum probability of a candidate other than the original
     # word in order for it to be returned
-    _MIN_LOG_PROBABILITY = math.log(1e-4)
-    _ACCEPT_THRESHOLD = math.log(0.10)
+    _MIN_LOG_PROBABILITY = math.log(3e-7)  # About exp(-15)
+    _ACCEPT_THRESHOLD = math.log(0.05)
 
     def __init__(self, db, dictionary=None):
         # Word database
@@ -345,6 +344,15 @@ class Corrector:
 
         alphabet = self._ALPHABET
 
+        # !!! TODO: We may need a more sophisticated probability function
+        # !!! TODO: here, i.e. one with full or partial backoff to
+        # !!! TODO: bigram and unigram frequencies
+        # If the context has a frequency of 1, it doesn't occur
+        # in the trigrams database and is therefore not helping.
+        # Try cutting it down until we have something that helps.
+        while context and self.d.freq(*context) == 1:
+            context = context[1:]
+
         def known(words):
             """ Return a generator of words that are actually in the dictionary. """
             # A word is known if its lower case form is in the dictionary or
@@ -395,7 +403,7 @@ class Corrector:
             #     yield (c, P(c) + EDIT_2_FACTOR)
 
         candidates = []
-        acceptable = 0
+        # acceptable = 0
         for c, log_prob in gen_candidates(original_word, word):
             if log_prob > self._ACCEPT_THRESHOLD:
                 if c == word:
@@ -403,7 +411,7 @@ class Corrector:
                     return word
                 # This candidate is likely enough: stop iterating and return it
                 # print(f"Candidate {c} has log_prob {log_prob:.3f} > threshold")
-                acceptable += 1
+                # acceptable += 1
             # Otherwise, add to candidate list
             candidates.append((c, log_prob))
             # if acceptable >= 100:
@@ -417,7 +425,7 @@ class Corrector:
         # for i, (c, log_prob) in enumerate(sorted(candidates, key=lambda t:t[1], reverse=True)[0:5]):
         # print(f"Candidate {i+1} for {word} is {c} with log_prob {log_prob:.3f}")
         m = max(candidates, key=lambda t: t[1])
-        if m[1] < self._MIN_LOG_PROBABILITY and word in self._db:
+        if m[1] < self._MIN_LOG_PROBABILITY and (word in self._db or original_word in self._db):
             # Best candidate is very unlikely: return the original word
             # print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
             return word
