@@ -4,7 +4,7 @@
 
     Spelling correction module
 
-    Copyright (C) 2019 Miðeind ehf.
+    Copyright (C) 2018 Miðeind ehf.
 
        This program is free software: you can redistribute it and/or modify
        it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 import os
 import math
 import re
+import pickle
 import time
 import threading
 
@@ -38,10 +39,15 @@ from functools import lru_cache
 from reynir import tokenize, correct_spaces, TOK
 from reynir.bindb import BIN_Db
 
-from icegrams import Ngrams
-
 
 _PATH = os.path.dirname(__file__) or "."
+
+if __package__:
+    import pkg_resources
+    # Note: the following path should NOT use os.path.join()
+    _SPELLING_PICKLE = pkg_resources.resource_filename(__name__, "resources/spelling.pickle")
+else:
+    _SPELLING_PICKLE = os.path.abspath(os.path.join(_PATH, "resources", "spelling.pickle"))
 
 EDIT_0_FACTOR = math.log(1.0 / 1.0)
 EDIT_REPLACE_FACTOR = math.log(1.0 / 1.25)
@@ -50,6 +56,179 @@ EDIT_S_FACTOR = math.log(1.0 / 8.0)
 EDIT_1_FACTOR = math.log(1.0 / 64.0)
 # Edit distance 2 is 16 times more unlikely than 1
 EDIT_2_FACTOR = math.log(1.0 / 2048.0)
+
+
+class Dictionary:
+
+    """ Container for a frequency dictionary of words """
+
+    _lock = threading.Lock()
+
+    # Word frequency information, to be loaded from a pickle
+    # file upon the first instantiation of the Dictionary class
+
+    # All words in vocabulary, case significant
+    _words = None
+    # Word count, case not significant
+    _counts = None
+    # Word counts, sorted in descending order
+    _sorted_counts = None
+    # Total word count, case not significant
+    _total = 0
+    # Logarithm of total word count
+    _log_total = 0.0
+    # Probabilities for words already found
+    _prob_cache = dict()
+
+    # Remove these words manually from the dictionary
+    # since they occur often enough in the source text
+    # to be taken seriously if not explicitly removed
+    _REMOVE = [
+        "ad",
+        "tad",
+        "tess",
+        "thvi",
+        "thad",
+        "thess",
+        "med",
+        "eda",
+        "tho",
+        "ac",
+        "ed",
+        "da",
+        "tm",
+        "ted",
+        "se",
+        "de",
+        "le",
+        "sa",
+        "ap",
+        "am",
+        "sg",
+        "sr",
+        "sþ",
+        "afd",
+        "av",
+        "ba",
+        "okkir",
+        "tilhneygingu",
+        "ff",
+        "matarlist",
+        "þu",
+        "ut",
+        "in",
+        "min",
+        "bin",
+        "þin",
+        "sb",
+        "di",
+        "fra",
+        "þvi",
+        "hb",
+        "framundan",
+        "reynar",
+    ] + [c for c in "abcdðeéfghijklmnopqrstuúvwxyýzþö"]
+
+    def __init__(self, db=None):
+        # db is a word database. It can be any object that
+        # supports __contains__(word)
+        self._db = set() if db is None else db
+        with self._lock:
+            # Upon first instantiation, load the pickled
+            # word frequency information
+            if self._counts is None:
+                self.__class__._load()
+
+    @classmethod
+    def _load_pickle(cls):
+        """ Load the dictionary from a pickle file, if it exists """
+        try:
+            with open(_SPELLING_PICKLE, "rb") as f:
+                cls._counts = pickle.load(f)
+                cls._words = pickle.load(f)
+            # Remove known wrong words
+            for w in cls._REMOVE:
+                del cls._counts[w]
+                cls._words.discard(w)
+                cls._words.discard(w.title())
+        except (FileNotFoundError, EOFError):
+            cls._counts = dict()
+            cls._words = set()
+            return False
+        return True
+
+    @classmethod
+    def _load(cls):
+        """ Load the dictionary from a pickle """
+        cls._load_pickle()
+        # Calculate a sum total of the counts
+        cls._total = sum(cls._counts.values())
+        # Store the logarithm of the total
+        cls._log_total = math.log(cls._total)
+        # Sort the word counts in descending order
+        cls._sorted_counts = sorted(cls._counts.values(), reverse=True)
+
+    def __getitem__(self, wrd):
+        """ Return the count of the given word, assumed to be lowercase """
+        return self._counts[wrd]
+
+    def get(self, wrd):
+        """ Return the count of the given word, assumed to be lowercase """
+        return self._counts[wrd]
+
+    def __contains__(self, wrd):
+        """ Return True if the word occurs in the dictionary, assumed to be lowercase """
+        return wrd in self._counts
+
+    def __len__(self):
+        """ Get the number of distinct words in the dictionary, case significant """
+        return len(self._words)
+
+    def freq(self, wrd):
+        """ Get the frequency of the given word (assumed to be lowercase)
+            as a ratio between 0.0 and 1.0 """
+        return self._counts[wrd] / self._total
+
+    def log_freq(self, wrd):
+        """ Get the logarithm of the frequency of the given word
+            (which is assumed to be in lower case) """
+        return math.log(self._counts[wrd]) - self._log_total
+
+    def freq_1(self, wrd):
+        """ Get the frequency of the given word as a ratio between 0.0 and 1.0,
+            but give out-of-vocabulary words a count of 1 instead of 0 """
+        return self.adjusted_count(wrd) / self._total
+
+    def log_freq_1(self, wrd):
+        """ Get the logarithm of the probability of the given word, which is
+            assumed to be lower case, however assigning out-of-vocabulary
+            words a count of 1 instead of 0 """
+        try:
+            p = self._prob_cache[wrd]
+        except KeyError:
+            p = math.log(self.adjusted_count(wrd)) - self._log_total
+            self._prob_cache[wrd] = p
+        return p
+
+    @classmethod
+    @lru_cache(maxsize=10)
+    def percentile_log_freq(cls, percentile):
+        """ Return the frequency of the word at the given percentile n,
+            where n is 0..100, n=0 is the most frequent word,
+            n=100 the least frequent """
+        cts = cls._sorted_counts
+        percentile = max(0, min(percentile, 100))
+        index = (len(cts) - 1) * percentile // 100
+        cnt = cts[index]
+        return math.log(cnt) - cls._log_total
+
+    def adjusted_count(self, word):
+        """ Return the actual count of the given word (assumed to be
+            lower case) from the dictionary, plus one, or 2 if the word
+            is in the large word database, or 1 otherwise. """
+        if word in self._counts:
+            return self._counts[word] + 1
+        return 2 if word in self._db else 1
 
 
 @lru_cache(maxsize=2048)
@@ -275,16 +454,21 @@ class Corrector:
 
     # Minimum probability of a candidate other than the original
     # word in order for it to be returned
-    _MIN_LOG_PROBABILITY = math.log(1e-4)
-    _ACCEPT_THRESHOLD = math.log(0.10)
+    _MIN_LOG_PROBABILITY = math.log(3.65e-9)
 
     def __init__(self, db, dictionary=None):
         # Word database
         self._db = db
         # Word frequency dictionary
-        self.d = dictionary or Ngrams()
+        self.d = dictionary or Dictionary(self._db)
         # Function for log probability of word
-        self.p_word = self.d.logprob
+        self.p_word = self.d.log_freq
+        # Any word more common than the word at the 20th percentile
+        # is probably correct
+        self.accept_threshold = self.d.percentile_log_freq(20)
+        # Any word less common than the word at the 95th percentile is
+        # considered rare
+        self.rare_threshold = self.d.percentile_log_freq(95)
 
     @property
     def db(self):
@@ -334,7 +518,8 @@ class Corrector:
             # print(result)
             yield "".join(result)
 
-    def _correct(self, original_word, word, context):
+    @lru_cache(maxsize=4096)
+    def _correct(self, original_word, word):
         """ Find the best spelling correction for this word.
             Credits for this elegant code are due to Peter Norvig,
             cf. http://nbviewer.jupyter.org/url/norvig.com/ipython/
@@ -378,16 +563,16 @@ class Corrector:
 
         def gen_candidates(original_word, word):
             """ Generate candidates in order of generally decreasing likelihood """
-            P = self.p_word
+            P = self.d.log_freq_1
             e0 = edits0(word) | edits0(original_word)
             for c in known(e0):
-                yield (c, P(*context, c) + EDIT_0_FACTOR)
+                yield (c, P(c) + EDIT_0_FACTOR)
             for c in known(self.subs(word)):
-                yield (c, P(*context, c) + EDIT_S_FACTOR)
+                yield (c, P(c) + EDIT_S_FACTOR)
             pairs = _splits(word)
             e1 = edits1(pairs) - e0
             for c in known(e1):
-                yield (c, P(*context, c) + EDIT_1_FACTOR)
+                yield (c, P(c) + EDIT_1_FACTOR)
             # The following edit distance=2 stuff is hugely expensive
             # in terms of processor time and memory
             # e2 = edits2(pairs) - e1 - e0
@@ -397,7 +582,7 @@ class Corrector:
         candidates = []
         acceptable = 0
         for c, log_prob in gen_candidates(original_word, word):
-            if log_prob > self._ACCEPT_THRESHOLD:
+            if log_prob > self.accept_threshold:
                 if c == word:
                     # print(f"The original word {word} is above the threshold, returning it")
                     return word
@@ -448,9 +633,9 @@ class Corrector:
         wl = word.lower()
         return (wl not in self.d) or (self.p_word(wl) < self.rare_threshold)
 
-    def correct(self, word, *, context=()):
+    def correct(self, word):
         """ Correct a single word, keeping its case (lower/upper/title) intact """
-        return self._case_of(word)(self._correct(word, self._cast(word), context))
+        return self._case_of(word)(self._correct(word, self._cast(word)))
 
     def __getitem__(self, word):
         """ For the fun of it, support corrector["myword"] syntax """
@@ -466,11 +651,9 @@ class Corrector:
         for token in tokenize(text):
             if token.kind == TOK.WORD:
                 # Word: try to correct it
-                result.append(self.correct(token.txt, context=tuple(result[-2:])))
+                result.append(self.correct(token.txt))
             elif token.txt:
                 result.append(token.txt)
-            elif token.kind in {TOK.S_BEGIN, TOK.S_END}:
-                result.append("")
         return correct_spaces(" ".join(result))
 
 
