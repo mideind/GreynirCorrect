@@ -274,7 +274,7 @@ class Corrector:
 
     # Minimum probability of a candidate other than the original
     # word in order for it to be returned
-    _MIN_LOG_PROBABILITY = math.log(3e-7)  # About exp(-15)
+    _MIN_LOG_PROBABILITY = math.log(9e-8)  # About exp(-16.2)
     _ACCEPT_THRESHOLD = math.log(0.05)
 
     def __init__(self, db, dictionary=None):
@@ -283,7 +283,9 @@ class Corrector:
         # Word frequency dictionary
         self.d = dictionary or Ngrams()
         # Function for log probability of word
-        self.p_word = self.d.logprob
+        self.logprob = self.d.logprob
+        # Function for frequency of word
+        self.freq = self.d.freq
 
     @property
     def db(self):
@@ -344,15 +346,6 @@ class Corrector:
 
         alphabet = self._ALPHABET
 
-        # !!! TODO: We may need a more sophisticated probability function
-        # !!! TODO: here, i.e. one with full or partial backoff to
-        # !!! TODO: bigram and unigram frequencies
-        # If the context has a frequency of 1, it doesn't occur
-        # in the trigrams database and is therefore not helping.
-        # Try cutting it down until we have something that helps.
-        while context and self.d.freq(*context) == 1:
-            context = context[1:]
-
         def known(words):
             """ Return a generator of words that are actually in the dictionary. """
             # A word is known if its lower case form is in the dictionary or
@@ -386,16 +379,39 @@ class Corrector:
 
         def gen_candidates(original_word, word):
             """ Generate candidates in order of generally decreasing likelihood """
-            P = self.p_word
+
+            def stupid_backoff(w):
+                # !!! TODO: We may need a more sophisticated probability function
+                # !!! TODO: here, such as Kneser-Ney or Katz
+                ctx = context
+                lamb = 0.0
+                while True:
+                    if not ctx:
+                        # No context: simply return the logprob of the unigram,
+                        # multiplied with the current lambda (backoff) factor
+                        return self.logprob(w) + lamb
+                    # !!! TODO: Optimize the following
+                    fq = self.freq(*ctx, w)
+                    if fq > 1:
+                        # We have a meaningful frequency here:
+                        # return the logprob multiplied with the current lambda
+                        return self.logprob(*ctx, w) + lamb
+                    # Zero count: back off to a simpler context
+                    # and use the 'stupid backoff' to reduce the probability
+                    ctx = ctx[1:]
+                    # Multiply the prob by 0.4, i.e. add log(0.4) to the logprob
+                    lamb += math.log(0.4)
+
+            P = stupid_backoff
             e0 = edits0(word) | edits0(original_word)
             for c in known(e0):
-                yield (c, P(*context, c) + EDIT_0_FACTOR)
+                yield (c, P(c) + EDIT_0_FACTOR)
             for c in known(self.subs(word)):
-                yield (c, P(*context, c) + EDIT_S_FACTOR)
+                yield (c, P(c) + EDIT_S_FACTOR)
             pairs = _splits(word)
             e1 = edits1(pairs) - e0
             for c in known(e1):
-                yield (c, P(*context, c) + EDIT_1_FACTOR)
+                yield (c, P(c) + EDIT_1_FACTOR)
             # The following edit distance=2 stuff is hugely expensive
             # in terms of processor time and memory
             # e2 = edits2(pairs) - e1 - e0
@@ -454,7 +470,7 @@ class Corrector:
     def is_rare(self, word):
         """ Return True if the word is so rare as to be suspicious """
         wl = word.lower()
-        return (wl not in self.d) or (self.p_word(wl) < self.rare_threshold)
+        return (wl not in self.d) or (self.logprob(wl) < self.rare_threshold)
 
     def correct(self, word, *, context=()):
         """ Correct a single word, keeping its case (lower/upper/title) intact """
