@@ -6,7 +6,7 @@
 
     Setup.py
 
-    Copyright (C) 2018 Miðeind ehf.
+    Copyright (C) 2019 Miðeind ehf.
 
         This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ def read(*names, **kwargs):
 
 setup(
     name="reynir-correct",
-    version="0.3.0",
+    version="0.4.0",
     license="GNU GPLv3",
     description="A spelling and grammar corrector for Icelandic",
     long_description="{0}\n{1}".format(
@@ -101,5 +101,5 @@ setup(
     ],
     keywords=["nlp", "parser", "icelandic"],
     setup_requires=[],
-    install_requires=["reynir>=1.5.0"],
+    install_requires=["reynir>=1.5.0", "icegrams>=0.2.0"],
 )
