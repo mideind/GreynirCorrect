@@ -275,7 +275,10 @@ class Corrector:
     # Minimum probability of a candidate other than the original
     # word in order for it to be returned
     _MIN_LOG_PROBABILITY = math.log(9e-8)  # About exp(-16.2)
-    _ACCEPT_THRESHOLD = math.log(0.05)
+    # If a unigram is independently above this threshold,
+    # just assume it's OK without further checking
+    _UNIGRAM_ACCEPT_THRESHOLD = -12
+    _RARE_THRESHOLD = -16
 
     def __init__(self, db, dictionary=None):
         # Word database
@@ -418,21 +421,16 @@ class Corrector:
             # for c in known(e2):
             #     yield (c, P(c) + EDIT_2_FACTOR)
 
+        # First, if the word itself is common enough as a unigram,
+        # we don't bother checking it further and just assume it's fine
+        if self.logprob(word) > self._UNIGRAM_ACCEPT_THRESHOLD:
+            # print(f"The original word {word} is above the threshold, returning it")
+            return word
+        # Otherwise, generate replacement candidates
         candidates = []
-        # acceptable = 0
         for c, log_prob in gen_candidates(original_word, word):
-            if log_prob > self._ACCEPT_THRESHOLD:
-                if c == word:
-                    # print(f"The original word {word} is above the threshold, returning it")
-                    return word
-                # This candidate is likely enough: stop iterating and return it
-                # print(f"Candidate {c} has log_prob {log_prob:.3f} > threshold")
-                # acceptable += 1
             # Otherwise, add to candidate list
             candidates.append((c, log_prob))
-            # if acceptable >= 100:
-            #     # We already have plenty of candidates above the threshold
-            #     break
         if not candidates:
             # No candidates beside the word itself: return it
             # print(f"Candidate {word} is only candidate, returning it")
@@ -441,7 +439,10 @@ class Corrector:
         # for i, (c, log_prob) in enumerate(sorted(candidates, key=lambda t:t[1], reverse=True)[0:5]):
         # print(f"Candidate {i+1} for {word} is {c} with log_prob {log_prob:.3f}")
         m = max(candidates, key=lambda t: t[1])
-        if m[1] < self._MIN_LOG_PROBABILITY and (word in self._db or original_word in self._db):
+        if (
+            m[1] < self._MIN_LOG_PROBABILITY
+            and (word in self.d or original_word in self.d)
+        ):
             # Best candidate is very unlikely: return the original word
             # print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
             return word
@@ -470,7 +471,7 @@ class Corrector:
     def is_rare(self, word):
         """ Return True if the word is so rare as to be suspicious """
         wl = word.lower()
-        return (wl not in self.d) or (self.logprob(wl) < self.rare_threshold)
+        return self.logprob(wl) < self._RARE_THRESHOLD
 
     def correct(self, word, *, context=()):
         """ Correct a single word, keeping its case (lower/upper/title) intact """
