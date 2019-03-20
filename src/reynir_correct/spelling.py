@@ -37,7 +37,7 @@ from functools import lru_cache
 from reynir import tokenize, correct_spaces, TOK
 from reynir.bindb import BIN_Db
 
-from icegrams import Ngrams
+from icegrams import Ngrams, MAX_ORDER
 
 
 _PATH = os.path.dirname(__file__) or "."
@@ -45,9 +45,9 @@ _PATH = os.path.dirname(__file__) or "."
 EDIT_0_FACTOR = math.log(1.0 / 1.0)
 EDIT_REPLACE_FACTOR = math.log(1.0 / 1.25)
 EDIT_S_FACTOR = math.log(1.0 / 8.0)
-# Edit distance 1 is 25 times more unlikely than 0
-EDIT_1_FACTOR = math.log(1.0 / 64.0)
-# Edit distance 2 is 16 times more unlikely than 1
+# Edit distance 1 is 48 times more unlikely than 0
+EDIT_1_FACTOR = math.log(1.0 / 48.0)
+# Edit distance 2 is considerably times more unlikely than 1
 EDIT_2_FACTOR = math.log(1.0 / 2048.0)
 
 
@@ -274,21 +274,26 @@ class Corrector:
 
     # Minimum probability of a candidate other than the original
     # word in order for it to be returned
-    _MIN_LOG_PROBABILITY = math.log(9e-8)  # About exp(-16.2)
+    _MIN_LOG_PROBABILITY = -16.5
     # If a unigram is independently above this threshold,
     # just assume it's OK without further checking
-    _UNIGRAM_ACCEPT_THRESHOLD = -12
-    _RARE_THRESHOLD = -16
+    _UNIGRAM_ACCEPT_THRESHOLD = -12.0
+    _RARE_THRESHOLD = -16.5  # Approx frequency 8 in the trigrams database
+    # For uppercase words, the rarity threshold is even lower,
+    # or half the lowercase one
+    _RARE_THRESHOLD_UPPERCASE = _RARE_THRESHOLD + math.log(0.5)
+    # Minimum frequency in trigrams database to be considered a "known" word
+    _KNOWN_WORD_MIN_FREQUENCY = 3
 
     def __init__(self, db, dictionary=None):
         # Word database
         self._db = db
-        # Word frequency dictionary
-        self.d = dictionary or Ngrams()
+        # N-gram frequency dictionary
+        self.ngrams = dictionary or Ngrams()
         # Function for log probability of word
-        self.logprob = self.d.logprob
-        # Function for frequency of word
-        self.freq = self.d.freq
+        self.logprob = self.ngrams.logprob
+        # Function for (adjusted) frequency of word
+        self.freq = self.ngrams.adj_freq
 
     @property
     def db(self):
@@ -338,9 +343,9 @@ class Corrector:
             # print(result)
             yield "".join(result)
 
-    def _correct(self, original_word, word, context):
+    def _correct(self, original_word, word, context, at_sentence_start):
         """ Find the best spelling correction for this word.
-            Credits for this elegant code are due to Peter Norvig,
+            Credits for parts of this elegant code are due to Peter Norvig,
             cf. http://nbviewer.jupyter.org/url/norvig.com/ipython/
             How%20to%20Do%20Things%20with%20Words.ipynb """
 
@@ -349,11 +354,22 @@ class Corrector:
 
         alphabet = self._ALPHABET
 
+        def in_dictionary(w):
+            """ Consider a word to be in-dictionary if it occurs in
+                BÍN (potentially also in title case) or
+                frequently enough in the trigrams database """
+            if w in self._db or self.freq(w) >= self._KNOWN_WORD_MIN_FREQUENCY:
+                return True
+            wt = w.title()
+            return False if wt == w else (
+                wt in self._db or self.freq(wt) >= self._KNOWN_WORD_MIN_FREQUENCY
+            )
+
         def known(words):
             """ Return a generator of words that are actually in the dictionary. """
             # A word is known if its lower case form is in the dictionary or
             # if its title form is in the dictionary (for example 'Ísland')
-            return (w for w in words if (w in self._db or w.title() in self._db))
+            return (w for w in words if in_dictionary(w))
 
         def edits0(word):
             """ Return all strings that are zero edits away from word (i.e., just word itself). """
@@ -383,6 +399,34 @@ class Corrector:
         def gen_candidates(original_word, word):
             """ Generate candidates in order of generally decreasing likelihood """
 
+            def logprob_title(*args):
+                """ Return the log probability of an n-gram as a maximum of
+                    the log probability of the lower case n-gram and the title case
+                    n-gram, respectively """
+                ctx, w = args[:-1], args[-1]
+                return max(self.logprob(*ctx, w), self.logprob(*ctx, w.title()))
+
+            def freq_title(*args):
+                """ Return the frequency of an n-gram as a maximum of
+                    the frequency of the lower case n-gram and the title case
+                    n-gram, respectively """
+                ctx, w = args[:-1], args[-1]
+                return max(self.freq(*ctx, w), self.freq(*ctx, w.title()))
+
+            if original_word.istitle() or at_sentence_start:
+                # If we are dealing with a word that was originally in title
+                # case, such as 'Ísland', use the title case query functions
+                # that try both the title case trigrams and the lower case trigrams.
+                # The same applies even if the original word is lower case,
+                # if it is at a sentence start, because it is then probably
+                # in the wrong case and should be subject to correction as such.
+                logprob = logprob_title
+                freq = freq_title
+            else:
+                # Otherwise, just shortcut to the simple and common query functions
+                logprob = self.logprob
+                freq = self.freq
+
             def stupid_backoff(w):
                 # !!! TODO: We may need a more sophisticated probability function
                 # !!! TODO: here, such as Kneser-Ney or Katz
@@ -392,13 +436,13 @@ class Corrector:
                     if not ctx:
                         # No context: simply return the logprob of the unigram,
                         # multiplied with the current lambda (backoff) factor
-                        return self.logprob(w) + lamb
+                        return logprob(w) + lamb
                     # !!! TODO: Optimize the following
-                    fq = self.freq(*ctx, w)
+                    fq = freq(*ctx, w)
                     if fq > 1:
                         # We have a meaningful frequency here:
                         # return the logprob multiplied with the current lambda
-                        return self.logprob(*ctx, w) + lamb
+                        return logprob(*ctx, w) + lamb
                     # Zero count: back off to a simpler context
                     # and use the 'stupid backoff' to reduce the probability
                     ctx = ctx[1:]
@@ -441,7 +485,7 @@ class Corrector:
         m = max(candidates, key=lambda t: t[1])
         if (
             m[1] < self._MIN_LOG_PROBABILITY
-            and (word in self.d or original_word in self.d)
+            and (word in self.ngrams or original_word in self.ngrams)
         ):
             # Best candidate is very unlikely: return the original word
             # print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
@@ -468,14 +512,31 @@ class Corrector:
             word.lower(),
         )
 
-    def is_rare(self, word):
+    def is_rare(self, word, *, sentence_is_uppercase=False):
         """ Return True if the word is so rare as to be suspicious """
         wl = word.lower()
+        if wl != word:
+            # The word is at least partially in uppercase in the text
+            if self.logprob(word) >= self._RARE_THRESHOLD_UPPERCASE:
+                # The upper case version is not rare
+                return False
+            if word in self.db:
+                # The upper case version is in BÍN: don't consider it rare
+                return False
+            if (not sentence_is_uppercase) and word.isupper():
+                # All-uppercase words in an otherwise not uppercase
+                # sentence are probably acronyms, which we don't consider rare
+                return False
+        # Return True if the lower case version is rare
         return self.logprob(wl) < self._RARE_THRESHOLD
 
-    def correct(self, word, *, context=()):
-        """ Correct a single word, keeping its case (lower/upper/title) intact """
-        return self._case_of(word)(self._correct(word, self._cast(word), context))
+    def correct(self, word, *, context=(), at_sentence_start=False):
+        """ Correct a single word, keeping its case (lower/upper/title) intact.
+            The optional context parameter contains a tuple of preceding
+            words, used to enable a more accurate probability prediction. """
+        return self._case_of(word)(
+            self._correct(word, self._cast(word), context, at_sentence_start)
+        )
 
     def __getitem__(self, word):
         """ For the fun of it, support corrector["myword"] syntax """
@@ -485,13 +546,21 @@ class Corrector:
         """ Support "word" in corrector """
         return self._db.__contains__(word)
 
-    def correct_text(self, text):
-        """ Attempt to correct all words within a text, returning the corrected text. """
+    def correct_text(self, text, *, only_rare=False):
+        """ Attempt to correct all words within a text, returning the corrected text.
+            If only_rare is True, correction is only attempted on rare words. """
         result = []
+        look_back = -MAX_ORDER + 1
         for token in tokenize(text):
             if token.kind == TOK.WORD:
-                # Word: try to correct it
-                result.append(self.correct(token.txt, context=tuple(result[-2:])))
+                if only_rare and not self.is_rare(token.txt):
+                    # The word is not rare, so we don't attempt correction
+                    result.append(token.txt)
+                else:
+                    # Correct the word and return the result
+                    result.append(
+                        self.correct(token.txt, context=tuple(result[look_back:]))
+                    )
             elif token.txt:
                 result.append(token.txt)
             elif token.kind in {TOK.S_BEGIN, TOK.S_END}:

@@ -325,6 +325,21 @@ def test_complex(verbose=False):
     g = rc.tokenize(s)
     g = list(g)
     if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "malefnis" not in s
+    assert "málefnis" in s
+    assert "attu" not in s
+    assert "áttu" in s
+    assert "fjarlaga" not in s
+    assert "fjárlaga" in s
+    assert "kynferðsofbeldinu" not in s
+    # assert "kynferðisofbeldinu" in s  # !!! TODO: This becomes 'kynferðiofbeldinu'
+    assert "þjoðarinnar" not in s
+    assert "þjóðarinnar" in s
+    assert "raðandi" not in s
+    assert "ráðandi" in s
+    assert "örfa" not in s
+    # assert "örfá" in s  # !!! TODO: This becomes 'örva'
 
 
 if __name__ == "__main__":

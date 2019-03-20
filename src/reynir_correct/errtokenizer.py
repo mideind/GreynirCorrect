@@ -673,9 +673,11 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
 
         # Check rare (or nonexistent) words and see if we have a potential correction
         if not token.error and not is_immune(token) and corrector.is_rare(token.txt):
-            # Yes, this is a rare one (>=95th percentile in a
-            # descending frequency distribution)
-            corrected = corrector.correct(token.txt)
+            # Yes, this is a rare word that needs further attention
+            corrected = corrector.correct(
+                token.txt,
+                at_sentence_start=at_sentence_start
+            )
             if corrected != token.txt:
                 if token.txt[0].lower() == "ó" and corrected == token.txt[1:]:
                     # The correction simply removed "ó" from the start of the
