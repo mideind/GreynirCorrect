@@ -23,7 +23,7 @@
 
 from reynir import Reynir, correct_spaces, mark_paragraphs
 from .settings import Settings
-from .errtokenizer import CorrectionPipeline, tokenize
+from .errtokenizer import CorrectionPipeline, tokenize, Correct_TOK
 from .checker import (
     ReynirCorrect,
     check,

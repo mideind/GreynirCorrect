@@ -823,7 +823,7 @@ def check_taboo_words(token_stream):
         yield token
 
 
-class _Correct_TOK(TOK):
+class Correct_TOK(TOK):
 
     """ A derived class to override token construction methods
         as required to generate CorrectToken instances instead of
@@ -879,9 +879,9 @@ class CorrectionPipeline(DefaultPipeline):
         super().__init__(text, auto_uppercase)
         self._corrector = None
 
-    # Use the _Correct_TOK class to construct tokens, instead of
+    # Use the Correct_TOK class to construct tokens, instead of
     # TOK (tokenizer.py) or _Bin_TOK (bintokenizer.py)
-    _token_ctor = _Correct_TOK
+    _token_ctor = Correct_TOK
 
     def correct_tokens(self, stream):
         """ Add a correction pass just before BÍN annotation """
