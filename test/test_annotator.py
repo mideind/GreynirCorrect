@@ -105,6 +105,7 @@ def test_error_finder(verbose=False):
     s = "Ég er ekki meiri fáviti heldur en þú."
     check_sentence(s, [(5, 5, "P_NT_Heldur")])
 
+
 def test_impersonal_verbs(verbose=False):
     s = "Mig hlakkaði til."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þf_nf")])
@@ -124,6 +125,6 @@ def test_impersonal_verbs(verbose=False):
 
 if __name__ == "__main__":
 
-    test_multiword_prases(verbose=True)
+    test_multiword_phrases(verbose=True)
     test_impersonal_verbs(verbose=True)
     test_error_finder(verbose=True)
