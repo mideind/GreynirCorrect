@@ -403,15 +403,27 @@ class Corrector:
                 """ Return the log probability of an n-gram as a maximum of
                     the log probability of the lower case n-gram and the title case
                     n-gram, respectively """
-                ctx, w = args[:-1], args[-1]
-                return max(self.logprob(*ctx, w), self.logprob(*ctx, w.title()))
+                # The followin is written to be compatible with Python 3.4
+                lp1 = self.logprob(*args)
+                args = args[:-1] + (args[-1].title(),)
+                lp2 = self.logprob(*args)
+                return max(lp1, lp2)
+                # On Python >= 3.5, the following works:
+                # ctx, w = args[:-1], args[-1]
+                # return max(self.logprob(*ctx, w), self.logprob(*ctx, w.title()))
 
             def freq_title(*args):
                 """ Return the frequency of an n-gram as a maximum of
                     the frequency of the lower case n-gram and the title case
                     n-gram, respectively """
-                ctx, w = args[:-1], args[-1]
-                return max(self.freq(*ctx, w), self.freq(*ctx, w.title()))
+                # The followin is written to be compatible with Python 3.4
+                lp1 = self.freq(*args)
+                args = args[:-1] + (args[-1].title(),)
+                lp2 = self.freq(*args)
+                return max(lp1, lp2)
+                # On Python >= 3.5, the following works:
+                # ctx, w = args[:-1], args[-1]
+                # return max(self.freq(*ctx, w), self.freq(*ctx, w.title()))
 
             if original_word.istitle() or at_sentence_start:
                 # If we are dealing with a word that was originally in title
