@@ -450,11 +450,11 @@ class Corrector:
                         # multiplied with the current lambda (backoff) factor
                         return logprob(w) + lamb
                     # !!! TODO: Optimize the following
-                    fq = freq(*ctx, w)
+                    fq = freq(*(tuple(ctx) + (w,)))
                     if fq > 1:
                         # We have a meaningful frequency here:
                         # return the logprob multiplied with the current lambda
-                        return logprob(*ctx, w) + lamb
+                        return logprob(*(tuple(ctx) + (w,))) + lamb
                     # Zero count: back off to a simpler context
                     # and use the 'stupid backoff' to reduce the probability
                     ctx = ctx[1:]
