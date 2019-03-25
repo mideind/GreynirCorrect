@@ -32,13 +32,11 @@
 """
 
 import os
-import codecs
 import locale
 import threading
 
-from contextlib import contextmanager, closing
+from contextlib import contextmanager
 from collections import defaultdict
-from threading import Lock
 
 from pkg_resources import resource_stream
 
