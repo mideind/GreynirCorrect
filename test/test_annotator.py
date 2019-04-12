@@ -45,6 +45,10 @@ def check_sentence(s, annotations):
     def check_sent(sent):
         assert sent is not None
         assert sent.tree is not None
+        if not annotations:
+            # This sentence is not supposed to have any annotations
+            assert (not hasattr(sent, "annotations")) or len(sent.annotations) == 0
+            return
         assert hasattr(sent, "annotations")
         assert len(sent.annotations) == len(annotations)
         for a, (start, end, code) in zip(sent.annotations, annotations):
@@ -116,11 +120,24 @@ def test_impersonal_verbs(verbose=False):
     check_sentence(s, [(0, 11, "P_WRONG_CASE_þgf_þf")])
     s = "Önnu kveið fyrir skóladeginum."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_nf")])
+    s = "Unga fólkinu skortir aðhald."
+    check_sentence(s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
+    s = "Ég held að músinni hafi kviðið fyrir að hitta köttinn."
+    check_sentence(s, [(3, 3, "P_WRONG_CASE_þgf_þf")])
     s = "Hestinum Grímni vantaði hamar."
     # s = "Hestinum Skjóna vantaði hamar."
     check_sentence(s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
     # s = "Ég dreymdi köttinn."
     # check_sentence(s, ((0, 0, "E003"),))
+    check_sentence(
+        "Ég hlakka til að sjá nýju Aliens-myndina.",
+        [(6, 6, "U001")]
+    )
+
+
+def test_correct_sentences(verbose=False):
+    check_sentence("Pál langaði að horfa á sjónvarpið.", [])
+    check_sentence("Ég held að músin hafi kviðið fyrir að hitta köttinn.", [])
 
 
 if __name__ == "__main__":
@@ -128,3 +145,4 @@ if __name__ == "__main__":
     test_multiword_phrases(verbose=True)
     test_impersonal_verbs(verbose=True)
     test_error_finder(verbose=True)
+    test_correct_sentences(verbose=True)
