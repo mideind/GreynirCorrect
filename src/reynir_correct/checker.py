@@ -163,7 +163,7 @@ class ErrorFinder(ParseForestNavigator):
         if (
             node.terminal.category == "so"
             and node.terminal.is_subj
-            and node.terminal.has_variant("op")
+            and (node.terminal.has_variant("op") or node.terminal.has_variant("subj"))
         ):
             # Check whether the associated verb is allowed
             # with a subject in this case
