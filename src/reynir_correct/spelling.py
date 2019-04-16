@@ -510,7 +510,9 @@ class Corrector:
             for i, (c, log_prob) in enumerate(
                 sorted(candidates, key=lambda t:t[1], reverse=True)[0:5]
             ):
-                print(f"Candidate {i+1} for {word} is {c} with log_prob {log_prob:.3f}")
+                print("Candidate {0} for {1} is {2} with log_prob {3:.3f}"
+                    .format(i+1, word, c, log_prob)
+                )
         m = max(candidates, key=lambda t: t[1])
         if (
             m[1] < self._MIN_LOG_PROBABILITY
