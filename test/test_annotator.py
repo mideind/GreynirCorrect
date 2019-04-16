@@ -123,7 +123,7 @@ def test_impersonal_verbs(verbose=False):
     s = "Unga fólkinu skortir aðhald."
     check_sentence(s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
     s = "Ég held að músinni hafi kviðið fyrir að hitta köttinn."
-    check_sentence(s, [(3, 3, "P_WRONG_CASE_þgf_þf")])
+    check_sentence(s, [(3, 3, "P_WRONG_CASE_þgf_nf")])
     s = "Hestinum Grímni vantaði hamar."
     # s = "Hestinum Skjóna vantaði hamar."
     check_sentence(s, [(0, 1, "P_WRONG_CASE_þgf_þf")])

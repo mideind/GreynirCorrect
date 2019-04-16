@@ -38,6 +38,7 @@ from reynir import tokenize, correct_spaces, TOK
 from reynir.bindb import BIN_Db
 
 from icegrams import Ngrams, MAX_ORDER
+from .settings import Settings
 
 
 _PATH = os.path.dirname(__file__) or "."
@@ -49,6 +50,9 @@ EDIT_S_FACTOR = math.log(1.0 / 8.0)
 EDIT_1_FACTOR = math.log(1.0 / 48.0)
 # Edit distance 2 is considerably times more unlikely than 1
 EDIT_2_FACTOR = math.log(1.0 / 2048.0)
+
+# Parameter to use for lambda in 'stupid backoff'
+LOG_LAMBDA = math.log(0.4)
 
 
 @lru_cache(maxsize=2048)
@@ -450,20 +454,27 @@ class Corrector:
                         # multiplied with the current lambda (backoff) factor
                         return logprob(w) + lamb
                     # !!! TODO: Optimize the following
-                    fq = freq(*(tuple(ctx) + (w,)))
+                    cw = ctx + (w,)
+                    fq = freq(*cw)
                     if fq > 1:
                         # We have a meaningful frequency here:
                         # return the logprob multiplied with the current lambda
-                        return logprob(*(tuple(ctx) + (w,))) + lamb
+                        if Settings.DEBUG:
+                            print("stupid_backoff() returning logprob of '{0}' "
+                                "which is {1:.3} + {2:.3} = {3:.3}"
+                                .format(cw, logprob(*cw), lamb, logprob(*cw) + lamb)
+                            )
+                        return logprob(*cw) + lamb
                     # Zero count: back off to a simpler context
                     # and use the 'stupid backoff' to reduce the probability
                     ctx = ctx[1:]
                     # Multiply the prob by 0.4, i.e. add log(0.4) to the logprob
-                    lamb += math.log(0.4)
+                    lamb += LOG_LAMBDA
 
             P = stupid_backoff
             e0 = edits0(word) | edits0(original_word)
-            for c in known(e0):
+            # Note that we do not put the e0 set through the known() filter
+            for c in e0:  # known(e0):
                 yield (c, P(c) + EDIT_0_FACTOR)
             for c in known(self.subs(word)):
                 yield (c, P(c) + EDIT_S_FACTOR)
@@ -479,21 +490,27 @@ class Corrector:
 
         # First, if the word itself is common enough as a unigram,
         # we don't bother checking it further and just assume it's fine
-        if self.logprob(word) > self._UNIGRAM_ACCEPT_THRESHOLD:
+        log_prob = self.logprob(word)
+        if Settings.DEBUG:
+            print("Ctx {0}, word '{1}' has logprob {2:.3f}, threshold is {3:.3f}"
+                .format(context, original_word, log_prob, self._UNIGRAM_ACCEPT_THRESHOLD))
+        if log_prob > self._UNIGRAM_ACCEPT_THRESHOLD:
             # print(f"The original word {word} is above the threshold, returning it")
             return word
         # Otherwise, generate replacement candidates
         candidates = []
         for c, log_prob in gen_candidates(original_word, word):
-            # Otherwise, add to candidate list
             candidates.append((c, log_prob))
         if not candidates:
             # No candidates beside the word itself: return it
             # print(f"Candidate {word} is only candidate, returning it")
             return word
         # Return the highest probability candidate
-        # for i, (c, log_prob) in enumerate(sorted(candidates, key=lambda t:t[1], reverse=True)[0:5]):
-        # print(f"Candidate {i+1} for {word} is {c} with log_prob {log_prob:.3f}")
+        if Settings.DEBUG:
+            for i, (c, log_prob) in enumerate(
+                sorted(candidates, key=lambda t:t[1], reverse=True)[0:5]
+            ):
+                print(f"Candidate {i+1} for {word} is {c} with log_prob {log_prob:.3f}")
         m = max(candidates, key=lambda t: t[1])
         if (
             m[1] < self._MIN_LOG_PROBABILITY
