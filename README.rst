@@ -4,8 +4,8 @@ ReynirCorrect: A spelling and grammar corrector for Icelandic
 
 .. start-badges
 
-.. image:: https://travis-ci.org/vthorsteinsson/ReynirCorrect.svg?branch=master
-    :target: https://travis-ci.org/vthorsteinsson/ReynirCorrect
+.. image:: https://travis-ci.org/mideind/ReynirCorrect.svg?branch=master
+    :target: https://travis-ci.org/mideind/ReynirCorrect
 
 .. end-badges
 
@@ -105,7 +105,7 @@ To install this package::
 
 If you want to be able to edit the source, do like so (assuming you have **git** installed)::
 
-    $ git clone https://github.com/vthorsteinsson/ReynirCorrect
+    $ git clone https://github.com/mideind/ReynirCorrect
     $ cd ReynirCorrect
     $ # [ Activate your virtualenv here if you have one ]
     $ python setup.py develop
