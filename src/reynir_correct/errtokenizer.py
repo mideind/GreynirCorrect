@@ -33,7 +33,8 @@ from reynir.bintokenizer import DefaultPipeline, MatchingStream
 
 from .settings import (
     AllowedMultiples, WrongCompounds, SplitCompounds, UniqueErrors,
-    MultiwordErrors, CapitalizationErrors, TabooWords, ErrorForms
+    MultiwordErrors, CapitalizationErrors, TabooWords, ErrorForms,
+    Settings
 )
 from .spelling import Corrector
 
@@ -573,6 +574,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
         as spelling errors (character juxtaposition, deletion, insertion...) """
 
     at_sentence_start = False
+    context = tuple()
 
     # Dict of { (at sentence start, single letter token) : allowed correction }
     single_letter_corrections = {
@@ -624,7 +626,12 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
             yield token
             # A new sentence is starting
             at_sentence_start = True
+            context = tuple()
             continue
+
+        if token.txt:
+            # Maintain a context trigram, ending with the current token
+            context = (context + tuple(token.txt.split()))[-3:]
 
         if token.kind == TOK.PUNCTUATION or token.kind == TOK.ORDINAL:
             yield token
@@ -674,8 +681,13 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
         # Check rare (or nonexistent) words and see if we have a potential correction
         if not token.error and not is_immune(token) and corrector.is_rare(token.txt):
             # Yes, this is a rare word that needs further attention
+            if Settings.DEBUG:
+                print("Checking rare word '{0}'".format(token.txt))
+            # We use context[-3:-1] since the current token is the last item
+            # in the context tuple, and we want the bigram preceding it.
             corrected = corrector.correct(
                 token.txt,
+                context=context[-3:-1],
                 at_sentence_start=at_sentence_start
             )
             if corrected != token.txt:
@@ -693,6 +705,8 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                     pass
                 else:
                     # We have a better candidate: yield it
+                    if Settings.DEBUG:
+                        print("Corrected '{0}' to '{1}'".format(token.txt, corrected))
                     yield correct_word(4, token, corrected, corrected)
                     at_sentence_start = False
                     continue

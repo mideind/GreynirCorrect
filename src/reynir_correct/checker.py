@@ -309,7 +309,7 @@ class ErrorDetectionToken(BIN_Token):
         # Here, we return False because we want to catch
         # errors where verbs such as 'hlakka' are used with a
         # non-nominative subject
-        return False
+        return "BH" in form or "NH" in form
 
     def verb_subject_matches(self, verb, subj):
         """ Returns True if the given subject type/case is allowed for this verb

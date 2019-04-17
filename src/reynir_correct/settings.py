@@ -54,6 +54,8 @@ UNIQUE_ERRORS = dict()
 MW_ERRORS_SEARCH = dict()
 MW_ERRORS = dict()
 
+# A set of all strings that should be interpreted as True
+TRUE = {"true", "True", "1", "yes", "Yes"}
 
 # Magic stuff to change locale context temporarily
 
@@ -349,11 +351,11 @@ class ErrorForms:
 
 class Settings:
 
-    """ Global settings"""
+    """ Global settings """
 
     _lock = threading.Lock()
     loaded = False
-    DEBUG = False
+    DEBUG = os.environ.get("DEBUG", "").strip() in TRUE
 
     # Configuration settings from the ReynirCorrect.conf file
 
@@ -371,7 +373,7 @@ class Settings:
             val = False
         try:
             if par == "debug":
-                Settings.DEBUG = bool(val)
+                Settings.DEBUG = val in TRUE
             else:
                 raise ConfigError("Unknown configuration parameter '{0}'".format(par))
         except ValueError:
