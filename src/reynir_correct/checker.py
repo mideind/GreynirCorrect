@@ -29,12 +29,13 @@
     E001: The sentence could not be parsed
     E002: A nonterminal tagged with 'error' is present in the parse tree
     E003: An impersonal verb occurs with an incorrect subject case
+    E004: The sentence is probably not in Icelandic
 
 """
 
 from threading import Lock
 
-from reynir import Reynir, correct_spaces
+from reynir import Reynir, correct_spaces, TOK
 from reynir.binparser import BIN_Token
 from reynir.fastparser import Fast_Parser, ParseForestNavigator
 from reynir.reducer import Reducer
@@ -163,7 +164,7 @@ class ErrorFinder(ParseForestNavigator):
         if (
             node.terminal.category == "so"
             and node.terminal.is_subj
-            and (node.terminal.has_variant("op") or node.terminal.has_variant("subj"))
+            and (node.terminal.is_op or node.terminal.is_sagnb)
         ):
             # Check whether the associated verb is allowed
             # with a subject in this case
@@ -171,7 +172,7 @@ class ErrorFinder(ParseForestNavigator):
             # tnode points to a SimpleTree instance
             tnode = self._terminal_nodes[node.start]
             verb = tnode.lemma
-            subj_case_abbr = node.terminal.variant(-1)  # so_subj_op_et_þf
+            subj_case_abbr = node.terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
             assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
                 "Unknown case in " + node.terminal.name
             )
@@ -375,8 +376,17 @@ class ReynirCorrect(Reynir):
         """ Returns a list of annotations for a sentence object, containing
             spelling and grammar annotations of that sentence """
         ann = []
+        words_in_bin = 0
+        words_not_in_bin = 0
         # First, add token-level annotations
         for ix, t in enumerate(sent.tokens):
+            if t.kind == TOK.WORD:
+                if t.val:
+                    # The word has at least one meaning
+                    words_in_bin += 1
+                else:
+                    # The word has no recognized meaning
+                    words_not_in_bin += 1
             # Note: these tokens and indices are the original tokens from
             # the submitted text, including ones that are not understood
             # by the parser, such as quotation marks and exotic punctuation
@@ -392,15 +402,30 @@ class ReynirCorrect(Reynir):
         # Then: if the sentence couldn't be parsed,
         # put an annotation on it as a whole
         if sent.deep_tree is None:
-            ann.append(
-                # E001: Unable to parse sentence
-                Annotation(
-                    start=0,
-                    end=len(sent.tokens) - 1,
-                    code="E001",
-                    text="Málsgreinin fellur ekki að reglum",
+            num_words = words_in_bin + words_not_in_bin
+            if num_words > 2 and words_in_bin / num_words < 0.6:
+                # The sentence doesn't parse and contains less than 60% Icelandic
+                # words: assume it's in a foreign language and discard the
+                # token level annotations
+                ann = [
+                    # E004: The sentence is probably not in Icelandic
+                    Annotation(
+                        start=0,
+                        end=len(sent.tokens) - 1,
+                        code="E004",
+                        text="Málsgreinin er sennilega ekki á íslensku",
+                    )
+                ]
+            else:
+                ann.append(
+                    # E001: Unable to parse sentence
+                    Annotation(
+                        start=0,
+                        end=len(sent.tokens) - 1,
+                        code="E001",
+                        text="Málsgreinin fellur ekki að reglum",
+                    )
                 )
-            )
         else:
             # Successfully parsed:
             # Add error rules from the grammar

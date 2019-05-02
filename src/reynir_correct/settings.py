@@ -270,6 +270,18 @@ class TabooWords:
         TabooWords.DICT[word] = replacement
 
 
+class Suggestions:
+
+    # Dictionary structure: dict { bad_word : [ suggested_replacements ] }
+    DICT = {}
+
+    @staticmethod
+    def add(word, replacements):
+        if word in Suggestions.DICT:
+            raise ConfigError("Multiple definition of '{0}' in suggestions section".format(word))
+        Suggestions.DICT[word] = replacements
+
+
 class CapitalizationErrors:
 
     # Set of wrongly capitalized words
@@ -454,6 +466,16 @@ class Settings:
         TabooWords.add(a[0].strip(), a[1].strip())
 
     @staticmethod
+    def _handle_suggestions(s):
+        """ Handle config parameters in the suggestions section """
+        a = s.lower().split()
+        if len(a) < 2:
+            raise ConfigError("Expected bad word and at least one suggested replacement")
+        if any(w.count("_") != 1 for w in a[1:]):
+            raise ConfigError("Suggested replacements should include word category (_xx)")
+        Suggestions.add(a[0].strip(), [w.strip() for w in a[1:]])
+
+    @staticmethod
     def _handle_multiword_errors(s):
         """ Handle config parameters in the multiword_errors section """
         a = s.lower().split("$error", maxsplit=1)
@@ -502,6 +524,7 @@ class Settings:
                 "unique_errors": Settings._handle_unique_errors,
                 "capitalization_errors": Settings._handle_capitalization_errors,
                 "taboo_words": Settings._handle_taboo_words,
+                "suggestions": Settings._handle_suggestions,
                 "multiword_errors": Settings._handle_multiword_errors,
                 "error_forms": Settings._handle_error_forms,
             }
