@@ -399,33 +399,34 @@ class ReynirCorrect(Reynir):
                         text=t.error_description,
                     )
                 )
-        # Then: if the sentence couldn't be parsed,
-        # put an annotation on it as a whole
-        if sent.deep_tree is None:
-            num_words = words_in_bin + words_not_in_bin
-            if num_words > 2 and words_in_bin / num_words < 0.6:
-                # The sentence doesn't parse and contains less than 60% Icelandic
-                # words: assume it's in a foreign language and discard the
-                # token level annotations
-                ann = [
-                    # E004: The sentence is probably not in Icelandic
-                    Annotation(
-                        start=0,
-                        end=len(sent.tokens) - 1,
-                        code="E004",
-                        text="Málsgreinin er sennilega ekki á íslensku",
-                    )
-                ]
-            else:
-                ann.append(
-                    # E001: Unable to parse sentence
-                    Annotation(
-                        start=0,
-                        end=len(sent.tokens) - 1,
-                        code="E001",
-                        text="Málsgreinin fellur ekki að reglum",
-                    )
+        # Then, look at the whole sentence
+        num_words = words_in_bin + words_not_in_bin
+        if num_words > 2 and words_in_bin / num_words < 0.6:
+            # The sentence contains less than 60% Icelandic
+            # words: assume it's in a foreign language and discard the
+            # token level annotations
+            ann = [
+                # E004: The sentence is probably not in Icelandic
+                Annotation(
+                    start=0,
+                    end=len(sent.tokens) - 1,
+                    code="E004",
+                    text="Málsgreinin er sennilega ekki á íslensku",
                 )
+            ]
+        elif sent.deep_tree is None:
+            # If the sentence couldn't be parsed,
+            # put an annotation on it as a whole.
+            # In this case, we keep the token-level annotations.
+            ann.append(
+                # E001: Unable to parse sentence
+                Annotation(
+                    start=0,
+                    end=len(sent.tokens) - 1,
+                    code="E001",
+                    text="Málsgreinin fellur ekki að reglum",
+                )
+            )
         else:
             # Successfully parsed:
             # Add error rules from the grammar
