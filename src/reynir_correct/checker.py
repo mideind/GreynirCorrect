@@ -44,6 +44,11 @@ from reynir.settings import VerbSubjects
 from .errtokenizer import tokenize as tokenize_and_correct
 
 
+# The ratio of words in a sentence that must be found in BÍN
+# for it to be analyzed as an Icelandic sentence
+ICELANDIC_RATIO = 0.6
+
+
 class Annotation:
 
     """ An annotation of a span of a token list for a sentence """
@@ -401,7 +406,7 @@ class ReynirCorrect(Reynir):
                 )
         # Then, look at the whole sentence
         num_words = words_in_bin + words_not_in_bin
-        if num_words > 2 and words_in_bin / num_words < 0.6:
+        if num_words > 2 and words_in_bin / num_words < ICELANDIC_RATIO:
             # The sentence contains less than 60% Icelandic
             # words: assume it's in a foreign language and discard the
             # token level annotations

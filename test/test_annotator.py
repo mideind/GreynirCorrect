@@ -44,6 +44,12 @@ def check_sentence(s, annotations):
 
     def check_sent(sent):
         assert sent is not None
+        if sent.tree is None:
+            # If the sentence should not parse, call
+            # check_sentence with annotations=None
+            assert annotations is None
+            return
+        assert annotations is not None
         assert sent.tree is not None
         if not annotations:
             # This sentence is not supposed to have any annotations
@@ -127,16 +133,33 @@ def test_impersonal_verbs(verbose=False):
     s = "Hestinum Grímni vantaði hamar."
     # s = "Hestinum Skjóna vantaði hamar."
     check_sentence(s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
-    # s = "Ég dreymdi köttinn."
-    # check_sentence(s, ((0, 0, "E003"),))
     check_sentence(
         "Ég hlakka til að sjá nýju Aliens-myndina.",
         [(6, 6, "U001")]
+    )
+    # The following should not parse
+    s = "Ég dreymdi kettinum."
+    check_sentence(s, None)
+
+
+def test_foreign_sentences(verbose=False):
+    check_sentence(
+        "It was the best of times, it was the worst of times.",
+        [(0, 13, "E004")]
+    )
+    check_sentence(
+        "Praise the Lord.",
+        [(0, 3, "E004")]
+    )
+    check_sentence(
+        "Borðaðu Magnyl og Xanax in Rushmore.",
+        [(0, 6, "E004")]
     )
 
 
 def test_correct_sentences(verbose=False):
     check_sentence("Pál langaði að horfa á sjónvarpið.", [])
+    check_sentence("Mig dreymdi mús sem var að elta kött.", [])
     check_sentence("Ég held að músin hafi kviðið fyrir að hitta köttinn.", [])
 
 
@@ -146,3 +169,4 @@ if __name__ == "__main__":
     test_impersonal_verbs(verbose=True)
     test_error_finder(verbose=True)
     test_correct_sentences(verbose=True)
+    test_foreign_sentences(verbose=True)
