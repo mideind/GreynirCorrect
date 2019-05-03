@@ -56,20 +56,20 @@ so no grammar checking is done):
 
 Output::
 
-	Að         Orðasambandið 'Af gefnu tilefni' var leiðrétt í 'að gefnu tilefni'
-	gefnu
-	tilefni
-	fékk       Endurtekið orð ('fékk') var fellt burt
-	Daninn     Orð á að byrja á hástaf: 'daninn'
-	vilja      Orðasambandið 'vilja sýnum framgengt' var leiðrétt í 'vilja sínum framgengt'
-	sínum
-	framgengt
-	við
-	hana
-	í          Orðasambandið 'í auknu mæli' var leiðrétt í 'í auknum mæli'
-	auknum
-	mæli
-	.
+   Að         Orðasambandið 'Af gefnu tilefni' var leiðrétt í 'að gefnu tilefni'
+   gefnu
+   tilefni
+   fékk       Endurtekið orð ('fékk') var fellt burt
+   Daninn     Orð á að byrja á hástaf: 'daninn'
+   vilja      Orðasambandið 'vilja sýnum framgengt' var leiðrétt í 'vilja sínum framgengt'
+   sínum
+   framgengt
+   við
+   hana
+   í          Orðasambandið 'í auknu mæli' var leiðrétt í 'í auknum mæli'
+   auknum
+   mæli
+   .
 
 To get a list of spelling and grammar annotations for a sentence:
 
@@ -80,10 +80,10 @@ To get a list of spelling and grammar annotations for a sentence:
 
 Output::
 
-	000-004: E003   Frumlag sagnarinnar 'að langa' á að vera í þolfalli en ekki í þágufalli
+   000-004: E003  Frumlag sagnarinnar 'að langa' á að vera í þolfalli en ekki í þágufalli
 
-	                [ The subject of the verb 'að langa/to want' should be in the
-	                  accusative case, not the dative case ]
+                  [ The subject of the verb 'að langa/to want' should be in the
+                     accusative case, not the dative case ]
 
 Note that the ``annotation.start`` and ``annotation.end`` properties
 (here ``start`` is 0 and ``end`` is 4) contain the indices of the first and last

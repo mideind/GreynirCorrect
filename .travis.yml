@@ -6,7 +6,8 @@ python:
   - "3.4"
   - "3.5"
   - "3.6"
-#  - "pypy3.5"  # Has a problem with the resource directory, for some reason
+  - "3.7"
+  - "pypy3.5"
 
 install:
   # Python 3.4 seems to require pip and setuptools
@@ -14,12 +15,9 @@ install:
   # embedded resources
   - python -m pip install --upgrade pip
   - python -m pip install --upgrade setuptools
-  - cd ..
-  - git clone https://github.com/mideind/ReynirPackage
-  - cd ReynirPackage
-  - python setup.py develop
-  - cd ../ReynirCorrect
-  - python setup.py develop
+  - python -m pip install git+https://github.com/mideind/ReynirPackage#egg=reynir
+  - python -m pip install git+https://github.com/mideind/Icegrams#egg=icegrams
+  - python setup.py install
 
 script:
   - python -m pytest
