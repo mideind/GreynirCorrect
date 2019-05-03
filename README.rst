@@ -4,8 +4,8 @@ ReynirCorrect: A spelling and grammar corrector for Icelandic
 
 .. start-badges
 
-.. image:: https://travis-ci.org/mideind/ReynirCorrect.svg?branch=master
-    :target: https://travis-ci.org/mideind/ReynirCorrect
+.. image:: https://travis-ci.com/mideind/ReynirCorrect.svg?branch=master
+    :target: https://travis-ci.com/mideind/ReynirCorrect
 
 .. end-badges
 
