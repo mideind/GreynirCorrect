@@ -6,6 +6,8 @@ python:
   - "3.4"
   - "3.5"
   - "3.6"
+  - "3.7"
+  - "pypy3.5"
 #  - "pypy3.5"  # Has a problem with the resource directory, for some reason
 
 install:
