@@ -30,11 +30,16 @@ import tokenizer
 
 
 def dump(tokens):
-    print("\n{0} tokens:\n".format(len(tokens)))
+    print("\n{1}\n{0} tokens:\n"
+        .format(
+            len(tokens),
+            tokenizer.correct_spaces(" ".join(t.txt for t in tokens if t.txt))
+        )
+    )
     for token in tokens:
-        print("{0}".format(token))
         err = token.error_description
         if err:
+            print("{0}".format(token.txt))
             print("   {0}: {1}".format(token.error_code, err))
 
 
@@ -333,13 +338,14 @@ def test_complex(verbose=False):
     assert "fjarlaga" not in s
     assert "fjárlaga" in s
     assert "kynferðsofbeldinu" not in s
-    # assert "kynferðisofbeldinu" in s  # !!! TODO: This becomes 'kynferðiofbeldinu'
+    assert "kynferðisofbeldinu" in s
     assert "þjoðarinnar" not in s
     assert "þjóðarinnar" in s
-    assert "raðandi" not in s
-    assert "ráðandi" in s
+    # The following is not corrected; it only gets an annotation
+    #assert "raðandi" not in s
+    #assert "ráðandi" in s
     assert "örfa" not in s
-    # assert "örfá" in s  # !!! TODO: This becomes 'örva'
+    assert "örfá" in s
 
 
 if __name__ == "__main__":

@@ -259,6 +259,23 @@ class SpellingError(Error):
         return self._txt
 
 
+class SpellingSuggestion(Error):
+
+    """ A SpellingSuggestion is an annotation suggesting that
+        a word might be misspelled. """
+
+    # W001: Replacement suggested
+
+    def __init__(self, code, txt):
+        # Spelling suggestion codes start with "W"
+        super().__init__("W" + code)
+        self._txt = txt
+
+    @property
+    def description(self):
+        return self._txt
+
+
 class PhraseError(Error):
 
     """ A PhraseError is a wrong multiword phrase, where a word is out
@@ -593,7 +610,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
             return True
         return False
 
-    def correct_word(code, token, corrected, corrected_display):
+    def replace_word(code, token, corrected, corrected_display):
         """ Return a token for a corrected version of token_txt,
             marked with a SpellingError if corrected_display is
             a string containing the corrected word to be displayed """
@@ -619,6 +636,49 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
             # replacements will not be made
             ct.set_error(True)
         return ct
+
+    def correct_word(code, token, corrected, w, m):
+        """ Return a token for a corrected version of token_txt,
+            marked with a SpellingError if corrected_display is
+            a string containing the corrected word to be displayed """
+        ct = token_ctor.Word(w, m, token=token)
+        if "." in corrected:
+            text = (
+                "Skammstöfunin '{0}' var leiðrétt í '{1}'"
+                .format(token.txt, corrected)
+            )
+        else:
+            text = (
+                "Orðið '{0}' var leiðrétt í '{1}'"
+                .format(token.txt, corrected)
+            )
+        ct.set_error(SpellingError("{0:03}".format(code), text))
+        return ct
+
+    def suggest_word(code, token, corrected):
+        """ Mark the current token with an annotation but don't correct
+            it, as we are not confident enough of the correction """
+        text = (
+            "Orðið '{0}' gæti átt að vera '{1}'"
+            .format(token.txt, corrected)
+        )
+        token.set_error(SpellingSuggestion("{0:03}".format(code), text))
+        return token
+
+    def only_suggest(token, m):
+        """ Return True if we don't have high confidence in the proposed
+            correction, so it will be suggested instead of applied """
+        if not(token.val):
+            # The original word is not in BÍN, so we can
+            # confidently apply the correction
+            return False
+        if "-" not in token.val[0].stofn:
+            # The original word is in BÍN and not a compound word:
+            # only suggest a correction
+            return True
+        # The word is a compound word: only suggest the correction if it is compound
+        # too (or if no meaning is found for it in BÍN, which is an unlikely case)
+        return not(m) or "-" in m[0].stofn
 
     for token in token_stream:
 
@@ -659,11 +719,11 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
             corrected_display = " ".join(corrected)
             for ix, corrected_word in enumerate(corrected):
                 if ix == 0:
-                    yield correct_word(1, token, corrected_word, corrected_display)
+                    yield replace_word(1, token, corrected_word, corrected_display)
                 else:
                     # In a multi-word sequence, we only mark the first
                     # token with a SpellingError
-                    yield correct_word(1, token, corrected_word, None)
+                    yield replace_word(1, token, corrected_word, None)
                 at_sentence_start = False
             continue
 
@@ -674,7 +734,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
         # !!! TODO: Handle upper/lowercase
         if not token.val and ErrorForms.contains(token.txt):
             corrected = ErrorForms.get_correct_form(token.txt)
-            yield correct_word(2, token, corrected, corrected)
+            yield replace_word(2, token, corrected, corrected)
             at_sentence_start = False
             continue
 
@@ -691,6 +751,12 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                 at_sentence_start=at_sentence_start
             )
             if corrected != token.txt:
+                # We have a candidate correction: take a closer look at it
+                w, m = corrector.lookup_word(
+                    corrected,
+                    at_sentence_start=at_sentence_start,
+                    auto_uppercase=auto_uppercase
+                )
                 if token.txt[0].lower() == "ó" and corrected == token.txt[1:]:
                     # The correction simply removed "ó" from the start of the
                     # word: probably not a good idea
@@ -703,11 +769,20 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                 ):
                     # Only allow single-letter corrections of a->á and i->í
                     pass
+                elif only_suggest(token, m):
+                    # We have a candidate correction but the original word does
+                    # exist in BÍN, so we're not super confident: yield a suggestion
+                    if Settings.DEBUG:
+                        print("Suggested '{1}' instead of '{0}'".format(token.txt, corrected))
+                    yield suggest_word(1, token, corrected)
+                    at_sentence_start = False
+                    continue
                 else:
-                    # We have a better candidate: yield it
+                    # We have a better candidate and are confident that
+                    # it should replace the original word: yield it
                     if Settings.DEBUG:
                         print("Corrected '{0}' to '{1}'".format(token.txt, corrected))
-                    yield correct_word(4, token, corrected, corrected)
+                    yield correct_word(4, token, corrected, w, m)
                     at_sentence_start = False
                     continue
 

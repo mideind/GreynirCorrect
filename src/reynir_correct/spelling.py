@@ -304,6 +304,10 @@ class Corrector:
         """ Return the associated word database """
         return self._db
 
+    def lookup_word(self, word, *, at_sentence_start=False, auto_uppercase=False):
+        """ Look up the given word in the associated word database """
+        return self._db.lookup_word(word, at_sentence_start, auto_uppercase)
+
     def subs(self, word):
         """ Return all combinations of potential substitutions into the word. """
         # The following yields a list of tuples, for instance
