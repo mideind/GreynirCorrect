@@ -39,6 +39,11 @@ from .settings import (
 from .spelling import Corrector
 
 
+# Words that contain any letter from the following set are assumed
+# to be foreign and their spelling is not corrected, but suggestions are made
+NON_ICELANDIC_LETTERS_SET = frozenset("cwqøâãäçĉčêëîïñôõûüÿßĳ")
+
+
 def emulate_case(s, template):
     """ Return the string s but emulating the case of the template
         (lower/upper/capitalized) """
@@ -668,6 +673,10 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
     def only_suggest(token, m):
         """ Return True if we don't have high confidence in the proposed
             correction, so it will be suggested instead of applied """
+        if set(token.txt.lower()) & NON_ICELANDIC_LETTERS_SET:
+            # If the original word contains non-Icelandic letters, it is
+            # probably a foreign word and in that case we only make a suggestion
+            return True
         if not(token.val):
             # The original word is not in BÍN, so we can
             # confidently apply the correction

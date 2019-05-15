@@ -71,6 +71,24 @@ def test_correct(verbose=False):
     assert "sagði sagði" not in s
 
     g = rc.tokenize(
+        "Müller sagði að hann hefði ýtrekað þurft að ræsa cyclotroninn."
+    )
+
+    g = list(g)
+    if verbose: dump(g)
+
+    assert len(g) == 13
+    assert g[1].error_code == "U001"  # Müller
+    assert g[6].error_code == "S004"  # ýtrekað -> ítrekað
+    assert g[10].error_code == "U001"  # cyclotroninn
+
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "Müller" in s
+    assert "ítrekað" in s
+    assert "ýtrekað" not in s
+    assert "cyclotroninn" in s
+
+    g = rc.tokenize(
         "Hann borðaði alltsaman en allsekki það sem ég gaf honum. "
         "Þið hafið hafið mótið að viðstöddum fimmhundruð áhorfendum."
     )
