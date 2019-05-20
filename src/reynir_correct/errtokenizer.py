@@ -43,6 +43,12 @@ from .spelling import Corrector
 # to be foreign and their spelling is not corrected, but suggestions are made
 NON_ICELANDIC_LETTERS_SET = frozenset("cwqøâãäçĉčêëîïñôõûüÿßĳ")
 
+# Month names, incorrectly capitalized
+MONTH_NAMES_CAPITALIZED = (
+    "Janúar", "Febrúar", "Mars", "Apríl", "Maí", "Júní",
+    "Júlí", "Ágúst", "September", "Október", "Nóvember", "Desember"
+)
+
 
 def emulate_case(s, template):
     """ Return the string s but emulating the case of the template
@@ -216,6 +222,7 @@ class CapitalizationError(Error):
 
     # Z001: Word should begin with lowercase letter
     # Z002: Word should begin with uppercase letter
+    # Z003: Month name should begin with lowercase letter
 
     def __init__(self, code, txt):
         # Capitalization error codes start with "Z"
@@ -888,6 +895,39 @@ def fix_capitalization(token_stream, db, token_ctor, auto_uppercase):
                         "Orð á að byrja á hástaf: '{0}'".format(original_txt)
                     )
                 )
+        elif (
+            token.kind in {TOK.DATEREL, TOK.DATEABS}
+            and any(m in token.txt for m in MONTH_NAMES_CAPITALIZED)
+        ):
+            # There is a capitalized month name within the token: suspicuous
+            if token.txt.upper() == token.txt:
+                # ALL-CAPS: don't worry about it
+                pass
+            elif at_sentence_start and token.txt.startswith(MONTH_NAMES_CAPITALIZED):
+                # At the sentence start, it's OK to have a capitalized month name
+                pass
+            else:
+                # Wrong capitalization of month name: replace it
+                if at_sentence_start:
+                    lower = token.txt.capitalize()
+                else:
+                    lower = token.txt.lower()
+                original_txt = token.txt
+                if token.kind == TOK.DATEREL:
+                    token = token_ctor.Daterel(
+                        lower, token.val[0], token.val[1], token.val[2]
+                    )
+                else:
+                    assert token.kind == TOK.DATEABS
+                    token = token_ctor.Dateabs(
+                        lower, token.val[0], token.val[1], token.val[2]
+                    )
+                token.set_error(
+                    CapitalizationError(
+                        "003",
+                        "Í dagsetningunni '{0}' á mánaðarnafnið að byrja á lágstaf".format(original_txt)
+                    )
+                )
         yield token
         if token.kind != TOK.PUNCTUATION and token.kind != TOK.ORDINAL:
             # !!! TODO: This may need to be made more intelligent
@@ -960,6 +1000,26 @@ class Correct_TOK(TOK):
     @staticmethod
     def Entity(w, token=None):
         ct = CorrectToken(TOK.ENTITY, w, None)
+        if token is not None:
+            # This token is being constructed in reference to a previously
+            # generated token, or a list of tokens, which might have had
+            # an associated error: make sure that it is preserved
+            ct.copy_error(token)
+        return ct
+
+    @staticmethod
+    def Dateabs(w, y, m, d, token=None):
+        ct = CorrectToken(TOK.DATEABS, w, (y, m, d))
+        if token is not None:
+            # This token is being constructed in reference to a previously
+            # generated token, or a list of tokens, which might have had
+            # an associated error: make sure that it is preserved
+            ct.copy_error(token)
+        return ct
+
+    @staticmethod
+    def Daterel(w, y, m, d, token=None):
+        ct = CorrectToken(TOK.DATEREL, w, (y, m, d))
         if token is not None:
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had

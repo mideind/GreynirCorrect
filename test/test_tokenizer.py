@@ -294,6 +294,35 @@ def test_capitalization_errors(verbose=False):
     assert "Marxismann" not in s
     assert "marxismann" in s
 
+    g = rc.tokenize("30. Desember á ég afmæli en ég held upp á það 20. JÚLÍ "
+        "af því að mamma á afmæli þriðja Janúar.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "Desember" not in s
+    assert "desember" in s
+    assert "JÚLÍ" in s
+    assert "júlí" not in s
+    assert "Júlí" not in s
+    assert "Janúar" not in s
+    assert "janúar" in s
+
+    g = rc.tokenize("30. Janúar á mamma afmæli en ég á afmæli í Febrúar. "
+        "17. Ágúst kemur Ágúst í heimsókn en þriðja Júlí verður sungið fyrir okkur.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "30. Janúar" not in s
+    assert "30. janúar" in s
+    assert "Febrúar" not in s
+    assert "febrúar" in s
+    assert "17. Ágúst" not in s
+    assert "17. ágúst" in s
+    assert "kemur Ágúst" in s
+    assert "kemur ágúst" not in s
+    assert "þriðja Júlí" not in s
+    assert "þriðja júlí" in s
+
 
 def test_taboo_words(verbose=False):
     g = rc.tokenize(
