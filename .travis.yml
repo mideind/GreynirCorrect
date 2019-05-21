@@ -15,6 +15,7 @@ install:
   # embedded resources
   - python -m pip install --upgrade pip
   - python -m pip install --upgrade setuptools
+  - python -m pip install git+https://github.com/mideind/Tokenizer#egg=tokenizer
   - python -m pip install git+https://github.com/mideind/ReynirPackage#egg=reynir
   - python -m pip install git+https://github.com/mideind/Icegrams#egg=icegrams
   - python setup.py install
