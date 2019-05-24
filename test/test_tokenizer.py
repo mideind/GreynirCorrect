@@ -166,7 +166,7 @@ def test_split_compounds(verbose=False):
 
     g = rc.tokenize(
         "Ég fór bakdyra megin inn í auka herbergi og sótti uppáhalds bragðtegund af ís. "
-        "Langtíma spá gerir ráð fyrir aftaka veðri. SÉR ÍSLENSKAN BELGING MÁ FINNA VÍÐA."
+        "Langtíma spá gerir ráð fyrir aftaka veðri. AFNÁM VERÐTRYGGINGAR ER GRUNDVALLAR ATRIÐI."
     )
 
     g = list(g)
@@ -183,8 +183,8 @@ def test_split_compounds(verbose=False):
     assert "Langtímaspá" in s
     assert "aftaka veðri" not in s
     assert "aftakaveðri" in s
-    assert "SÉR ÍSLENSKAN" not in s
-    assert "SÉRÍSLENSKAN" in s
+    assert "GRUNDVALLAR ATRIÐI" not in s
+    assert "GRUNDVALLARATRIÐI" in s
 
 
 def test_unique_errors(verbose=False):
