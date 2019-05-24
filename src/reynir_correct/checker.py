@@ -44,7 +44,7 @@
 from threading import Lock
 
 from reynir import Reynir, correct_spaces, TOK
-from reynir.binparser import BIN_Token
+from reynir.binparser import BIN_Token, BIN_Grammar
 from reynir.fastparser import Fast_Parser, ParseForestNavigator
 from reynir.reducer import Reducer
 from reynir.settings import VerbSubjects
@@ -142,15 +142,29 @@ class ErrorFinder(ParseForestNavigator):
             "Sögn sem á við '{0}' á að vera í eintölu, ekki fleirtölu"
             .format(txt)
         ),
+        "VillaSem": lambda txt, variants: (
+            # 'sem' er sennilega ofaukið
+            "'{0}' er sennilega ofaukið"
+            .format(txt)
+        ),
         "VillaAð": lambda txt, variants: (
             # 'að' er sennilega ofaukið
             "'{0}' er sennilega ofaukið"
             .format(txt)
         ),
+        "VillaKomma": lambda txt, variants: (
+            "Komma er sennilega óþörf"
+        ),
         "VillaÞóAð": lambda txt, variants: (
             # [jafnvel] þó' á sennilega að vera '[jafnvel] þó að
             "'{0}' á sennilega að vera '{0} að' (eða 'þótt')"
             .format(txt)
+        ),
+        "VillaFsMeðFallstjórn": lambda txt, variants: (
+            # Forsetningin z á að stýra x-falli en ekki y-falli
+            "Forsetningin '{0}' á að stýra {1}falli"
+            # !!! TBD: Handle multi-word prepositions
+            .format(txt.split()[0], ErrorFinder._CASE_NAMES[variants])
         ),
     }
 
@@ -333,10 +347,36 @@ class ErrorDetectionToken(BIN_Token):
         ) or subj in self._VERB_ERROR_SUBJECTS.get(verb, set())
 
 
+class ErrorDetectingGrammar(BIN_Grammar):
+
+    """ A subclass of BIN_Grammar that causes conditional sections in the
+        Reynir.grammar file, demarcated using
+        $if(include_errors)...$endif(include_errors),
+        to be included in the grammar as it is read and parsed """
+
+    def __init__(self):
+        super().__init__()
+        # Enable the 'include_errors' condition
+        self.set_conditions({"include_errors"})
+
+
 class ErrorDetectingParser(Fast_Parser):
 
     """ A subclass of Fast_Parser that modifies its behavior to
         include grammar error detection rules in the parsing process """
+
+    _GRAMMAR_BINARY_FILE = Fast_Parser._GRAMMAR_FILE + ".error.bin"
+
+    # Keep a separate grammar class instance and time stamp for
+    # ErrorDetectingParser. This Python sleight-of-hand overrides
+    # class attributes that are defined in BIN_Parser, see binparser.py.
+    _grammar_ts = None
+    _grammar = None
+    _grammar_class = ErrorDetectingGrammar
+
+    # Also keep separate class instances of the C grammar and its timestamp
+    _c_grammar = None
+    _c_grammar_ts = None
 
     @staticmethod
     def _create_wrapped_token(t, ix):
