@@ -30,8 +30,9 @@ Full grammar analysis
 ---------------------
 
 ReynirCorrect can also analyze text grammatically by attempting to parse
-it, after token-level correction, using Reynir's context-free grammar for
-Icelandic. The analysis returns a set of annotations (errors and suggestions)
+it, after token-level correction. The parsing is done according to Reynir's
+context-free grammar for Icelandic, augmented with additional production rules for common
+grammatical errors. The analysis returns a set of annotations (errors and suggestions)
 that apply to spans (consecutive tokens) within sentences in the resulting
 token list.
 
@@ -39,7 +40,11 @@ token list.
 Status
 ******
 
-**This code is under active development and has Alpha status.**
+This code is under development and has early Beta status. It will eventually
+become the foundation of a spelling and grammar checker that will be open
+to the public on the `Greynir.is <https://greynir.is>`_ website.
+Of course it will also be available as an open-source Python package
+that can be installed using ``pip``.
 
 *******
 Example
