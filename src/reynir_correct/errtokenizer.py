@@ -680,6 +680,10 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
     def only_suggest(token, m):
         """ Return True if we don't have high confidence in the proposed
             correction, so it will be suggested instead of applied """
+        if 2 <= len(token.txt) <= 4 and token.txt.isupper():
+            # This is a 2 to 4-letter all-uppercase word:
+            # it may be an unknown abbreviation, which we should not force-correct
+            return True
         if set(token.txt.lower()) & NON_ICELANDIC_LETTERS_SET:
             # If the original word contains non-Icelandic letters, it is
             # probably a foreign word and in that case we only make a suggestion
@@ -755,7 +759,11 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
             continue
 
         # Check rare (or nonexistent) words and see if we have a potential correction
-        if not token.error and not is_immune(token) and corrector.is_rare(token.txt):
+        if (
+            not token.error and
+            not is_immune(token) and
+            (not token.val or corrector.is_rare(token.txt))
+        ):
             # Yes, this is a rare word that needs further attention
             if Settings.DEBUG:
                 print("Checking rare word '{0}'".format(token.txt))
