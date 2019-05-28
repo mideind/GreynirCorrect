@@ -155,6 +155,9 @@ class ErrorFinder(ParseForestNavigator):
         "VillaKomma": lambda txt, variants: (
             "Komma er sennilega óþörf"
         ),
+        "VillaNé": lambda txt, variants: (
+            "'né' á sennilega að vera 'eða'"
+        ),
         "VillaÞóAð": lambda txt, variants: (
             # [jafnvel] þó' á sennilega að vera '[jafnvel] þó að
             "'{0}' á sennilega að vera '{0} að' (eða 'þótt')"

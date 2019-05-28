@@ -758,12 +758,11 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
             at_sentence_start = False
             continue
 
+        if is_immune(token):
+            # Nothing more to do
+            pass
         # Check rare (or nonexistent) words and see if we have a potential correction
-        if (
-            not token.error and
-            not is_immune(token) and
-            (not token.val or corrector.is_rare(token.txt))
-        ):
+        elif not token.val or corrector.is_rare(token.txt):
             # Yes, this is a rare word that needs further attention
             if Settings.DEBUG:
                 print("Checking rare word '{0}'".format(token.txt))
