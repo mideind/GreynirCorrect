@@ -104,73 +104,6 @@ class ErrorFinder(ParseForestNavigator):
 
     _CASE_NAMES = {"nf": "nefni", "þf": "þol", "þgf": "þágu", "ef": "eignar"}
 
-    # Dictionary of functions used to explain grammar errors
-    # associated with nonterminals with error tags in the grammar
-    _TEXT_FUNC = {
-        "VillaHeldur": lambda txt, variants: (
-            # 'heldur' er ofaukið
-            "'{0}' er ofaukið"
-            .format(txt)
-        ),
-        "VillaVístAð": lambda txt, variants: (
-            # 'víst að' á sennilega að vera 'fyrst að'
-            "'{0}' á sennilega að vera 'fyrst að'"
-            .format(txt)
-        ),
-        "VillaFráÞvíAð": lambda txt, variants: (
-            # 'allt frá því' á sennilega að vera 'allt frá því að'
-            "'{0}' á sennilega að vera '{0} að'"
-            .format(txt)
-        ),
-        "VillaAnnaðhvort": lambda txt, variants: (
-            # Í stað 'annaðhvort' á sennilega að standa 'annað hvort'
-            "Í stað '{0}' á að standa 'annað hvort'"
-            .format(txt)
-        ),
-        "VillaAnnaðHvort": lambda txt, variants: (
-            # Í stað 'annað hvort' á sennilega að standa 'annaðhvort'
-            "Í stað '{0}' á að standa 'annaðhvort'"
-            .format(txt)
-        ),
-        "VillaFjöldiHluti": lambda txt, variants: (
-            # Sögn sem á við 'fjöldi Evrópuríkja' á að vera í eintölu
-            "Sögn sem á við '{0}' á að vera í eintölu, ekki fleirtölu"
-            .format(txt)
-        ),
-        "VillaEinnAf": lambda txt, variants: (
-            # Sögn sem á við 'einn af drengjunum' á að vera í eintölu
-            "Sögn sem á við '{0}' á að vera í eintölu, ekki fleirtölu"
-            .format(txt)
-        ),
-        "VillaSem": lambda txt, variants: (
-            # 'sem' er sennilega ofaukið
-            "'{0}' er sennilega ofaukið"
-            .format(txt)
-        ),
-        "VillaAð": lambda txt, variants: (
-            # 'að' er sennilega ofaukið
-            "'{0}' er sennilega ofaukið"
-            .format(txt)
-        ),
-        "VillaKomma": lambda txt, variants: (
-            "Komma er sennilega óþörf"
-        ),
-        "VillaNé": lambda txt, variants: (
-            "'né' á sennilega að vera 'eða'"
-        ),
-        "VillaÞóAð": lambda txt, variants: (
-            # [jafnvel] þó' á sennilega að vera '[jafnvel] þó að
-            "'{0}' á sennilega að vera '{0} að' (eða 'þótt')"
-            .format(txt)
-        ),
-        "VillaFsMeðFallstjórn": lambda txt, variants: (
-            # Forsetningin z á að stýra x-falli en ekki y-falli
-            "Forsetningin '{0}' á að stýra {1}falli"
-            # !!! TBD: Handle multi-word prepositions
-            .format(txt.split()[0], ErrorFinder._CASE_NAMES[variants])
-        ),
-    }
-
     def __init__(self, ann, sent):
         super().__init__(visit_all=True)
         # Annotation list
@@ -189,12 +122,109 @@ class ErrorFinder(ParseForestNavigator):
         first_token, last_token = node.token_span
         return (first_token.index, last_token.index)
 
+    def _node_text(self, node):
+        """ Return the text within the span of the node """
+
+        def text(t):
+            """ If the token t is a word token, return a lower case
+                version of its text, unless we have a reason to keep
+                the original case, i.e. if it is a lemma that is upper case
+                in BÍN """
+            if t.kind != TOK.WORD:
+                # Not a word token: keep the original text
+                return t.txt
+            if len(t.txt) > 1 and t.txt.isupper():
+                # All uppercase: keep it that way
+                return t.txt
+            if t.val and any(m.stofn[0].isupper() for m in t.val):
+                # There is an uppercase lemma for this word in BÍN:
+                # keep the original form
+                return t.txt
+            # No uppercase lemma in BÍN: return a lower case copy
+            return t.txt.lower()
+
+        start, end = self._node_span(node)
+        return correct_spaces(
+            " ".join(text(t) for t in self._tokens[start : end + 1] if t.txt)
+        )
+
+    # Functions used to explain grammar errors associated with
+    # nonterminals with error tags in the grammar
+
+    def VillaHeldur(self, txt, variants, node):
+        # 'heldur' er ofaukið
+        return "'{0}' er ofaukið".format(txt)
+
+    def VillaVístAð(self, txt, variants, node):
+        # 'víst að' á sennilega að vera 'fyrst að'
+        return "'{0}' á sennilega að vera 'fyrst að'".format(txt)
+
+    def VillaFráÞvíAð(self, txt, variants, node):
+        # 'allt frá því' á sennilega að vera 'allt frá því að'
+        return "'{0}' á sennilega að vera '{0} að'".format(txt)
+
+    def VillaAnnaðhvort(self, txt, variants, node):
+        # Í stað 'annaðhvort' á sennilega að standa 'annað hvort'
+        return "Í stað '{0}' á að standa 'annað hvort'".format(txt)
+
+    def VillaAnnaðHvort(self, txt, variants, node):
+        # Í stað 'annað hvort' á sennilega að standa 'annaðhvort'
+        return "Í stað '{0}' á að standa 'annaðhvort'".format(txt)
+
+    def VillaFjöldiHluti(self, txt, variants, node):
+        # Sögn sem á við 'fjöldi Evrópuríkja' á að vera í eintölu
+        return "Sögn sem á við '{0}' á að vera í eintölu, ekki fleirtölu".format(txt)
+
+    def VillaEinnAf(self, txt, variants, node):
+        # Sögn sem á við 'einn af drengjunum' á að vera í eintölu
+        return "Sögn sem á við '{0}' á að vera í eintölu, ekki fleirtölu".format(txt)
+
+    def VillaSem(self, txt, variants, node):
+        # 'sem' er sennilega ofaukið
+        return "'{0}' er sennilega ofaukið".format(txt)
+
+    def VillaAð(self, txt, variants, node):
+        # 'að' er sennilega ofaukið
+        return "'{0}' er sennilega ofaukið".format(txt)
+
+    def VillaKomma(self, txt, variants, node):
+        return "Komma er sennilega óþörf"
+
+    def VillaNé(self, txt, variants, node):
+        return "'né' á sennilega að vera 'eða'"
+
+    def VillaÞóAð(self, txt, variants, node):
+        # [jafnvel] þó' á sennilega að vera '[jafnvel] þó að
+        return "'{0}' á sennilega að vera '{0} að' (eða 'þótt')".format(txt)
+
+    def VillaÍTölu(self, txt, variants, node):
+        # Sögn á að vera í sömu tölu og frumlag
+        children = list(node.enum_child_nodes())
+        assert len(children) == 2
+        subject = self._node_text(children[0])
+        # verb_phrase = self._node_text(children[1])
+        number = "eintölu" if "et" in variants else "fleirtölu"
+        # Annotate the verb phrase
+        start, end = self._node_span(children[1])
+        return (
+            "Sögn á að vera í {1} eins og frumlagið '{0}'".format(subject, number),
+            start, end
+        )
+
+    def VillaFsMeðFallstjórn(self, txt, variants, node):
+        # Forsetningin z á að stýra x-falli en ekki y-falli
+        # !!! TBD: Handle multi-word prepositions
+        return (
+            "Forsetningin '{0}' á að stýra {1}falli"
+            .format(txt.split()[0], ErrorFinder._CASE_NAMES[variants])
+        )
+
     def _visit_token(self, level, node):
         """ Entering a terminal/token match node """
         if (
             node.terminal.category == "so"
             and node.terminal.is_subj
-            and (node.terminal.is_op or node.terminal.is_sagnb)
+            and (node.terminal.is_op or node.terminal.is_sagnb or node.terminal.is_nh)
         ):
             # Check whether the associated verb is allowed
             # with a subject in this case
@@ -276,9 +306,7 @@ class ErrorFinder(ParseForestNavigator):
             # This node has a nonterminal that is tagged with $tag(error)
             # in the grammar file (Reynir.grammar)
             start, end = self._node_span(node)
-            span_text = correct_spaces(
-                " ".join(t.txt for t in self._tokens[start : end + 1] if t.txt)
-            )
+            span_text = self._node_text(node)
             # See if we have a custom text function for this
             # error-tagged nonterminal
             name = node.nonterminal.name
@@ -288,13 +316,20 @@ class ErrorFinder(ParseForestNavigator):
                 ix = name.index("_")
                 variants = name[ix + 1:]
                 name = name[:ix]
-            text_func = self._TEXT_FUNC.get(name)
+            # Find the text function by dynamic dispatch
+            text_func = getattr(self, name)
             # The error code in this case is P_NT_ + the name of the error-tagged
             # nonterminal, however after cutting 'Villa' from its front
             code = "P_NT_" + (name[5:] if name.startswith("Villa") else name)
             if text_func is not None:
                 # Yes: call it with the nonterminal's spanned text as argument
-                ann_text = text_func(span_text, variants)
+                ann = text_func(span_text, variants, node)
+                if isinstance(ann, str):
+                    ann_text = ann
+                elif isinstance(ann, tuple):
+                    ann_text, start, end = ann
+                else:
+                    assert False, "Text function {0} returns illegal type".format(name)
             else:
                 # No: use a default text
                 ann_text = (
