@@ -119,11 +119,25 @@ def test_error_finder(verbose=False):
 def test_impersonal_verbs(verbose=False):
     s = "Mig hlakkaði til."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þf_nf")])
+    s = "Mér hlakkaði til."
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_nf")])
+    # s = "Ég dreymdi köttinn."
+    # check_sentence(s, [(0, 0, "P_WRONG_CASE_nf_þf")])
+    s = "Mér dreymdi köttinn."
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])
+    # The following should not parse
+    s = "Ég dreymdi kettinum."
+    check_sentence(s, None)
     s = (
         "Páli, sem hefur verið landsliðsmaður í fótbolta í sjö ár, "
         "langaði að horfa á sjónvarpið."
     )
     check_sentence(s, [(0, 11, "P_WRONG_CASE_þgf_þf")])
+    s = (
+        "Pál, sem hefur verið landsliðsmaður í fótbolta í sjö ár, "
+        "langaði að horfa á sjónvarpið."
+    )
+    check_sentence(s, [])
     s = "Pál kveið fyrir skóladeginum."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þf_nf")])
     s = "Páli kveið fyrir skóladeginum."
@@ -139,9 +153,6 @@ def test_impersonal_verbs(verbose=False):
         "Ég hlakka til að sjá nýju Aliens-myndina.",
         [(6, 6, "U001")]
     )
-    # The following should not parse
-    s = "Ég dreymdi kettinum."
-    check_sentence(s, None)
 
 
 def test_foreign_sentences(verbose=False):
