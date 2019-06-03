@@ -124,7 +124,9 @@ def test_impersonal_verbs(verbose=False):
         "langaði að horfa á sjónvarpið."
     )
     check_sentence(s, [(0, 11, "P_WRONG_CASE_þgf_þf")])
-    s = "Önnu kveið fyrir skóladeginum."
+    s = "Pál kveið fyrir skóladeginum."
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_þf_nf")])
+    s = "Páli kveið fyrir skóladeginum."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_nf")])
     s = "Unga fólkinu skortir aðhald."
     check_sentence(s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
@@ -157,6 +159,21 @@ def test_foreign_sentences(verbose=False):
     )
 
 
+def test_number(verbose=False):
+    check_sentence(
+        "Vinnuvika sjómanna eru 7 heilir dagar.",
+        [(2, 5, "P_NT_ÍTölu")]
+    )
+    check_sentence(
+        "Hjón borðar matinn sinn.",
+        [(1, 3, "P_NT_ÍTölu")]
+    )
+    check_sentence(
+        "Ég borðum matinn minn.",
+        [(1, 3, "P_NT_ÍTölu")]
+    )
+
+
 def test_correct_sentences(verbose=False):
     check_sentence("Pál langaði að horfa á sjónvarpið.", [])
     check_sentence("Mig dreymdi mús sem var að elta kött.", [])
@@ -170,3 +187,4 @@ if __name__ == "__main__":
     test_error_finder(verbose=True)
     test_correct_sentences(verbose=True)
     test_foreign_sentences(verbose=True)
+    test_number(verbose=True)
