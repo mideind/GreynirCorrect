@@ -317,7 +317,7 @@ class ErrorFinder(ParseForestNavigator):
                 variants = name[ix + 1:]
                 name = name[:ix]
             # Find the text function by dynamic dispatch
-            text_func = getattr(self, name)
+            text_func = getattr(self, name, None)
             # The error code in this case is P_NT_ + the name of the error-tagged
             # nonterminal, however after cutting 'Villa' from its front
             code = "P_NT_" + (name[5:] if name.startswith("Villa") else name)
