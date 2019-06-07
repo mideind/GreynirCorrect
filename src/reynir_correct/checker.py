@@ -219,12 +219,21 @@ class ErrorFinder(ParseForestNavigator):
             .format(txt.split()[0], ErrorFinder._CASE_NAMES[variants])
         )
 
+    def VillaEndingIR(self, txt, variants, node):
+        # 'læknirinn' á sennilega að vera 'lækninn'
+        # !!! TODO: We need the ability to look up different cases for a
+        # !!! TODO: particular stem in BÍN - this is presently not possible
+        # In this case, we need the accusative form
+        # of the token in self._tokens[node.start]
+        return "'{0}' á sennilega að vera í þolfalli í stað nefnifalls".format(txt)
+
     def _visit_token(self, level, node):
         """ Entering a terminal/token match node """
+        terminal = node.terminal
         if (
-            node.terminal.category == "so"
-            and node.terminal.is_subj
-            and (node.terminal.is_op or node.terminal.is_sagnb or node.terminal.is_nh)
+            terminal.category == "so"
+            and terminal.is_subj
+            and (terminal.is_op or terminal.is_sagnb or terminal.is_nh)
         ):
             # Check whether the associated verb is allowed
             # with a subject in this case
@@ -232,9 +241,9 @@ class ErrorFinder(ParseForestNavigator):
             # tnode points to a SimpleTree instance
             tnode = self._terminal_nodes[node.start]
             verb = tnode.lemma
-            subj_case_abbr = node.terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
+            subj_case_abbr = terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
             assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
-                "Unknown case in " + node.terminal.name
+                "Unknown case in " + terminal.name
             )
             # Check whether this verb has an entry in the VERBS_ERRORS
             # dictionary, and whether that entry then has an item for
