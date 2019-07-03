@@ -227,6 +227,14 @@ class ErrorFinder(ParseForestNavigator):
         # of the token in self._tokens[node.start]
         return "'{0}' á sennilega að vera í þolfalli í stað nefnifalls".format(txt)
 
+    def VillaEndingANA(self, txt, variants, node):
+        # 'þingflokkana' á sennilega að vera 'þingflokkanna'
+        # !!! TODO: We need the ability to look up different cases for a
+        # !!! TODO: particular stem in BÍN - this is presently not possible
+        # In this case, we need the possessive form
+        # of the token in self._tokens[node.start]
+        return "'{0}' á sennilega að vera í eignarfalli í stað þolfalls".format(txt)
+
     def _visit_token(self, level, node):
         """ Entering a terminal/token match node """
         terminal = node.terminal
