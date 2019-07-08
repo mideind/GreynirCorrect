@@ -218,9 +218,21 @@ def test_unique_errors(verbose=False):
     assert "deyji" not in s
     assert "deyi" in s
     assert "einhversslags" not in s
-    assert "einhvers konar" in s
+    assert "einhvers lags" in s
     assert g[10].val[0].stofn == "einhver"
-    assert g[11].val[0].stofn == "konar"
+    assert g[11].val[0].stofn == "lag"
+
+    g = rc.tokenize("Hann er einhverskonar asni en það er a.m.k rétt.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "a.m.k " not in s
+    assert "a. m. k " not in s
+    assert "a. m. k. " in s
+    assert "einhverskonar" not in s
+    assert "einhvers konar" in s
+    assert g[3].val[0].stofn == "einhver"
+    assert g[4].val[0].stofn == "konar"
 
 
 def test_error_forms(verbose=False):
