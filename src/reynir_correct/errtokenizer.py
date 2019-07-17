@@ -1040,8 +1040,8 @@ class CorrectionPipeline(DefaultPipeline):
     """ Override the default tokenization pipeline defined in binparser.py
         in ReynirPackage, adding a correction phase """
 
-    def __init__(self, text, auto_uppercase=False):
-        super().__init__(text, auto_uppercase)
+    def __init__(self, text, **options):
+        super().__init__(text, **options)
         self._corrector = None
 
     # Use the Correct_TOK class to construct tokens, instead of
@@ -1081,9 +1081,9 @@ class CorrectionPipeline(DefaultPipeline):
         return stream
 
 
-def tokenize(text, auto_uppercase=False):
+def tokenize(text, **options):
     """ Tokenize text using the correction pipeline, overriding a part
         of the default tokenization pipeline """
-    pipeline = CorrectionPipeline(text, auto_uppercase)
+    pipeline = CorrectionPipeline(text, **options)
     return pipeline.tokenize()
 
