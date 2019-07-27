@@ -48,6 +48,7 @@ from reynir.binparser import BIN_Token, BIN_Grammar
 from reynir.fastparser import Fast_Parser, ParseForestNavigator
 from reynir.reducer import Reducer
 from reynir.settings import VerbSubjects
+from reynir.matcher import SimpleTree
 
 from .errtokenizer import tokenize as tokenize_and_correct
 
@@ -122,6 +123,13 @@ class ErrorFinder(ParseForestNavigator):
         first_token, last_token = node.token_span
         return (first_token.index, last_token.index)
 
+    def _simple_tree(self, node):
+        """ Return a SimpleTree instance spanning the deep tree
+            of which node is the root """
+        first, last = self._node_span(node)
+        toklist = self._tokens[first : last + 1]
+        return SimpleTree.from_deep_tree(node, toklist)
+
     def _node_text(self, node):
         """ Return the text within the span of the node """
 
@@ -143,9 +151,9 @@ class ErrorFinder(ParseForestNavigator):
             # No uppercase lemma in BÍN: return a lower case copy
             return t.txt.lower()
 
-        start, end = self._node_span(node)
+        first, last = self._node_span(node)
         return correct_spaces(
-            " ".join(text(t) for t in self._tokens[start : end + 1] if t.txt)
+            " ".join(text(t) for t in self._tokens[first : last + 1] if t.txt)
         )
 
     # Functions used to explain grammar errors associated with
@@ -219,6 +227,14 @@ class ErrorFinder(ParseForestNavigator):
             .format(txt.split()[0], ErrorFinder._CASE_NAMES[variants])
         )
 
+    def SvigaInnihaldNl(self, txt, variants, node):
+        """ Explanatory noun phrase in a different case than the noun phrase
+            that it explains """
+        return (
+            "'{0}' gæti átt að vera í {1}falli"
+            .format(txt, ErrorFinder._CASE_NAMES[variants])
+        )
+
     def VillaEndingIR(self, txt, variants, node):
         # 'læknirinn' á sennilega að vera 'lækninn'
         # !!! TODO: We need the ability to look up different cases for a
@@ -268,7 +284,7 @@ class ErrorFinder(ParseForestNavigator):
                 # First, check within the enclosing verb phrase
                 # (the subject may be embedded within it, as in
                 # ?'Í dag langaði Páli bróður að fara í sund')
-                p = tnode.enclosing_tag("VP")
+                p = tnode.enclosing_tag("VP").enclosing_tag("VP")
                 if p is not None:
                     try:
                         subj = p.NP_SUBJ
@@ -289,14 +305,23 @@ class ErrorFinder(ParseForestNavigator):
                 if subj is not None:
                     # We know what the subject is: annotate it
                     start, end = subj.span
+                    cast_functions = {
+                        "nf": SimpleTree.nominative_np,
+                        "þf": SimpleTree.accusative_np,
+                        "þgf": SimpleTree.dative_np,
+                        "ef": SimpleTree.possessive_np
+                    }
+                    correct_np = correct_spaces(
+                        cast_functions[correct_case_abbr].fget(subj)
+                    )
                     self._ann.append(
                         Annotation(
                             start=start,
                             end=end,
                             code=code,
                             text="Frumlag sagnarinnar 'að {0}' á að vera "
-                                "í {1}falli en ekki í {2}falli"
-                                .format(verb, correct_case, wrong_case),
+                                "í {1}falli en ekki í {2}falli. Réttara væri: '{3}'"
+                                .format(verb, correct_case, wrong_case, correct_np),
                         )
                     )
                 else:
