@@ -161,7 +161,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaHeldur(self, txt, variants, node):
         # 'heldur' er ofaukið
-        return "'{0}' er ofaukið".format(txt)
+        return "'{0}' er sennilega ofaukið".format(txt)
 
     def VillaVístAð(self, txt, variants, node):
         # 'víst að' á sennilega að vera 'fyrst að'
@@ -173,33 +173,33 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaAnnaðhvort(self, txt, variants, node):
         # Í stað 'annaðhvort' á sennilega að standa 'annað hvort'
-        return "Í stað '{0}' á að standa 'annað hvort'".format(txt)
+        return "Í stað '{0}' á sennilega að standa 'annað hvort'".format(txt)
 
     def VillaAnnaðHvort(self, txt, variants, node):
         # Í stað 'annað hvort' á sennilega að standa 'annaðhvort'
-        return "Í stað '{0}' á að standa 'annaðhvort'".format(txt)
+        return "Í stað '{0}' á sennilega að standa 'annaðhvort'".format(txt)
 
     def VillaFjöldiHluti(self, txt, variants, node):
         # Sögn sem á við 'fjöldi Evrópuríkja' á að vera í eintölu
-        return "Sögn sem á við '{0}' á að vera í eintölu, ekki fleirtölu".format(txt)
+        return "Sögn sem á við '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(txt)
 
     def VillaEinnAf(self, txt, variants, node):
         # Sögn sem á við 'einn af drengjunum' á að vera í eintölu
-        return "Sögn sem á við '{0}' á að vera í eintölu, ekki fleirtölu".format(txt)
+        return "Sögn sem á við '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(txt)
 
     def VillaSem(self, txt, variants, node):
         # 'sem' er sennilega ofaukið
-        return "'{0}' er sennilega ofaukið".format(txt)
+        return "'{0}' er að öllum líkindum ofaukið".format(txt)
 
     def VillaAð(self, txt, variants, node):
         # 'að' er sennilega ofaukið
-        return "'{0}' er sennilega ofaukið".format(txt)
+        return "'{0}' er að öllum líkindum ofaukið".format(txt)
 
     def VillaKomma(self, txt, variants, node):
-        return "Komma er sennilega óþörf"
+        return "Komma er líklega óþörf"
 
     def VillaNé(self, txt, variants, node):
-        return "'né' á sennilega að vera 'eða'"
+        return "'né' gæti átt að vera 'eða'"
 
     def VillaÞóAð(self, txt, variants, node):
         # [jafnvel] þó' á sennilega að vera '[jafnvel] þó að
@@ -215,17 +215,48 @@ class ErrorFinder(ParseForestNavigator):
         # Annotate the verb phrase
         start, end = self._node_span(children[1])
         return (
-            "Sögn á að vera í {1} eins og frumlagið '{0}'".format(subject, number),
+            "Sögn á sennilega að vera í {1} eins og frumlagið '{0}'".format(subject, number),
             start, end
         )
 
     def VillaFsMeðFallstjórn(self, txt, variants, node):
         # Forsetningin z á að stýra x-falli en ekki y-falli
         # !!! TBD: Handle multi-word prepositions
-        return (
-            "Forsetningin '{0}' á að stýra {1}falli"
-            .format(txt.split()[0], ErrorFinder._CASE_NAMES[variants])
-        )
+        tnode = self._terminal_nodes[node.start]
+        p = tnode.enclosing_tag("PP")
+        subj = None
+        if p is not None:
+            try:
+                subj = p.NP
+            except AttributeError:
+                pass
+        if subj:
+            start, end = subj.span
+            cast_functions = {
+                "nf": SimpleTree.nominative_np,
+                "þf": SimpleTree.accusative_np,
+                "þgf": SimpleTree.dative_np,
+                "ef": SimpleTree.possessive_np
+            }
+            correct_np = correct_spaces(
+                cast_functions[variants].fget(subj)
+            )
+            return (
+                "Á sennilega að vera '{0} {2}' (forsetningin '{0}' stýrir {1}falli)."
+                .format(
+                    txt.split()[0],
+                    ErrorFinder._CASE_NAMES[variants],
+                    correct_np
+                )
+            )
+        else:
+            return (
+                "Forsetningin '{0}' stýrir {1}falli."
+                .format(
+                    txt.split()[0],
+                    ErrorFinder._CASE_NAMES[variants],
+                )
+            )
 
     def SvigaInnihaldNl(self, txt, variants, node):
         """ Explanatory noun phrase in a different case than the noun phrase
@@ -237,19 +268,25 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaEndingIR(self, txt, variants, node):
         # 'læknirinn' á sennilega að vera 'lækninn'
-        # !!! TODO: We need the ability to look up different cases for a
-        # !!! TODO: particular stem in BÍN - this is presently not possible
         # In this case, we need the accusative form
         # of the token in self._tokens[node.start]
-        return "'{0}' á sennilega að vera í þolfalli í stað nefnifalls".format(txt)
+        tnode = self._terminal_nodes[node.start]
+        correct_np = tnode.accusative_np
+        return (
+            "Á sennilega að vera '{1}' (í þolfalli í stað nefnifalls)"
+            .format(txt, correct_np)
+        )
 
     def VillaEndingANA(self, txt, variants, node):
         # 'þingflokkana' á sennilega að vera 'þingflokkanna'
-        # !!! TODO: We need the ability to look up different cases for a
-        # !!! TODO: particular stem in BÍN - this is presently not possible
         # In this case, we need the possessive form
         # of the token in self._tokens[node.start]
-        return "'{0}' á sennilega að vera í eignarfalli í stað þolfalls".format(txt)
+        tnode = self._terminal_nodes[node.start]
+        correct_np = tnode.possessive_np
+        return (
+            "Á sennilega að vera '{1}' (í eignarfalli í stað þolfalls)"
+            .format(txt, correct_np)
+        )
 
     def _visit_token(self, level, node):
         """ Entering a terminal/token match node """
@@ -319,8 +356,8 @@ class ErrorFinder(ParseForestNavigator):
                             start=start,
                             end=end,
                             code=code,
-                            text="Frumlag sagnarinnar 'að {0}' á að vera "
-                                "í {1}falli en ekki í {2}falli. Réttara væri: '{3}'"
+                            text="Á líklega að vera '{3}' (frumlag sagnarinnar 'að {0}' á að vera "
+                                "í {1}falli en ekki í {2}falli)."
                                 .format(verb, correct_case, wrong_case, correct_np),
                         )
                     )
