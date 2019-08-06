@@ -62,18 +62,25 @@ class Annotation:
 
     """ An annotation of a span of a token list for a sentence """
 
-    def __init__(self, *, start, end, code, text):
+    def __init__(self, *, start, end, code, text, suggest=None):
         assert isinstance(start, int)
         assert isinstance(end, int)
         self._start = start
         self._end = end
         self._code = code
         self._text = text
+        # If suggest is given, it is a suggested correction,
+        # i.e. text that would replace the start..end token span.
+        # The correction is in the form of token text joined by
+        # " " spaces, so correct_spaces() should be applied to
+        # it before displaying it.
+        self._suggest = suggest
 
     def __str__(self):
         """ Return a string representation of this annotation """
-        return "{0:03}-{1:03}: {2:6} {3}".format(
-            self._start, self._end, self._code, self._text
+        return "{0:03}-{1:03}: {2:6} {3}{4}".format(
+            self._start, self._end, self._code, self._text,
+            "" if self._suggest is None else " / [" + self._suggest + "]"
         )
 
     @property
@@ -95,6 +102,11 @@ class Annotation:
     def text(self):
         """ A description of the annotation """
         return self._text
+
+    @property
+    def suggest(self):
+        """ A suggested correction for the token span """
+        return self._suggest
 
 
 class ErrorFinder(ParseForestNavigator):
@@ -161,23 +173,38 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaHeldur(self, txt, variants, node):
         # 'heldur' er ofaukið
-        return "'{0}' er sennilega ofaukið".format(txt)
+        return (
+            "'{0}' er sennilega ofaukið".format(txt),
+            ""
+        )
 
     def VillaVístAð(self, txt, variants, node):
         # 'víst að' á sennilega að vera 'fyrst að'
-        return "'{0}' á sennilega að vera 'fyrst að'".format(txt)
+        return (
+            "'{0}' á sennilega að vera 'fyrst að'".format(txt),
+            "fyrst að"
+        )
 
     def VillaFráÞvíAð(self, txt, variants, node):
         # 'allt frá því' á sennilega að vera 'allt frá því að'
-        return "'{0}' á sennilega að vera '{0} að'".format(txt)
+        return (
+            "'{0}' á sennilega að vera '{0} að'".format(txt),
+            "{0} að".format(txt)
+        )
 
     def VillaAnnaðhvort(self, txt, variants, node):
         # Í stað 'annaðhvort' á sennilega að standa 'annað hvort'
-        return "Í stað '{0}' á sennilega að standa 'annað hvort'".format(txt)
+        return (
+            "Í stað '{0}' á sennilega að standa 'annað hvort'".format(txt),
+            "annað hvort"
+        )
 
     def VillaAnnaðHvort(self, txt, variants, node):
         # Í stað 'annað hvort' á sennilega að standa 'annaðhvort'
-        return "Í stað '{0}' á sennilega að standa 'annaðhvort'".format(txt)
+        return (
+            "Í stað '{0}' á sennilega að standa 'annaðhvort'".format(txt),
+            "annaðhvort"
+        )
 
     def VillaFjöldiHluti(self, txt, variants, node):
         # Sögn sem á við 'fjöldi Evrópuríkja' á að vera í eintölu
@@ -189,21 +216,37 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaSem(self, txt, variants, node):
         # 'sem' er sennilega ofaukið
-        return "'{0}' er að öllum líkindum ofaukið".format(txt)
+        return (
+            "'{0}' er að öllum líkindum ofaukið".format(txt),
+            ""
+        )
 
     def VillaAð(self, txt, variants, node):
         # 'að' er sennilega ofaukið
-        return "'{0}' er að öllum líkindum ofaukið".format(txt)
+        return (
+            "'{0}' er að öllum líkindum ofaukið".format(txt),
+            ""
+        )
 
     def VillaKomma(self, txt, variants, node):
-        return "Komma er líklega óþörf"
+        return (
+            "Komma er líklega óþörf",
+            ""
+        )
 
     def VillaNé(self, txt, variants, node):
-        return "'né' gæti átt að vera 'eða'"
+        return (
+            "'né' gæti átt að vera 'eða'",
+            "eða"
+        )
 
     def VillaÞóAð(self, txt, variants, node):
         # [jafnvel] þó' á sennilega að vera '[jafnvel] þó að
-        return "'{0}' á sennilega að vera '{0} að' (eða 'þótt')".format(txt)
+        suggestion = "{0} að".format(txt)
+        return (
+            "'{0}' á sennilega að vera '{1}' (eða 'þótt')".format(txt, suggestion),
+            suggestion
+        )
 
     def VillaÍTölu(self, txt, variants, node):
         # Sögn á að vera í sömu tölu og frumlag
@@ -216,12 +259,11 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self._node_span(children[1])
         return (
             "Sögn á sennilega að vera í {1} eins og frumlagið '{0}'".format(subject, number),
-            start, end
+            start, end, None
         )
 
     def VillaFsMeðFallstjórn(self, txt, variants, node):
         # Forsetningin z á að stýra x-falli en ekki y-falli
-        # !!! TBD: Handle multi-word prepositions
         tnode = self._terminal_nodes[node.start]
         p = tnode.enclosing_tag("PP")
         subj = None
@@ -238,25 +280,26 @@ class ErrorFinder(ParseForestNavigator):
                 "þgf": SimpleTree.dative_np,
                 "ef": SimpleTree.possessive_np
             }
-            correct_np = correct_spaces(
-                cast_functions[variants].fget(subj)
-            )
+            preposition = p.P.text
+            suggestion = preposition + " " + cast_functions[variants].fget(subj)
+            correct_np = correct_spaces(suggestion)
             return (
-                "Á sennilega að vera '{0} {2}' (forsetningin '{0}' stýrir {1}falli)."
+                "Á sennilega að vera '{2}' (forsetningin '{0}' stýrir {1}falli)."
                 .format(
-                    txt.split()[0],
+                    preposition,
                     ErrorFinder._CASE_NAMES[variants],
                     correct_np
-                )
+                ),
+                suggestion
             )
-        else:
-            return (
-                "Forsetningin '{0}' stýrir {1}falli."
-                .format(
-                    txt.split()[0],
-                    ErrorFinder._CASE_NAMES[variants],
-                )
+        # In this case, there's no suggested correction
+        return (
+            "Forsetningin '{0}' stýrir {1}falli."
+            .format(
+                txt.split()[0],
+                ErrorFinder._CASE_NAMES[variants],
             )
+        )
 
     def SvigaInnihaldNl(self, txt, variants, node):
         """ Explanatory noun phrase in a different case than the noun phrase
@@ -271,10 +314,12 @@ class ErrorFinder(ParseForestNavigator):
         # In this case, we need the accusative form
         # of the token in self._tokens[node.start]
         tnode = self._terminal_nodes[node.start]
-        correct_np = tnode.accusative_np
+        suggestion = tnode.accusative_np
+        correct_np = correct_spaces(suggestion)
         return (
-            "Á sennilega að vera '{1}' (í þolfalli í stað nefnifalls)"
-            .format(txt, correct_np)
+            "Á sennilega að vera '{1}'"
+            .format(txt, correct_np),
+            suggestion
         )
 
     def VillaEndingANA(self, txt, variants, node):
@@ -282,10 +327,12 @@ class ErrorFinder(ParseForestNavigator):
         # In this case, we need the possessive form
         # of the token in self._tokens[node.start]
         tnode = self._terminal_nodes[node.start]
-        correct_np = tnode.possessive_np
+        suggestion = tnode.possessive_np
+        correct_np = correct_spaces(suggestion)
         return (
-            "Á sennilega að vera '{1}' (í eignarfalli í stað þolfalls)"
-            .format(txt, correct_np)
+            "Á sennilega að vera '{1}'"
+            .format(txt, correct_np),
+            suggestion
         )
 
     def _visit_token(self, level, node):
@@ -348,9 +395,8 @@ class ErrorFinder(ParseForestNavigator):
                         "þgf": SimpleTree.dative_np,
                         "ef": SimpleTree.possessive_np
                     }
-                    correct_np = correct_spaces(
-                        cast_functions[correct_case_abbr].fget(subj)
-                    )
+                    suggestion = cast_functions[correct_case_abbr].fget(subj)
+                    correct_np = correct_spaces(suggestion)
                     # Skip the annotation if it suggests the same text as the
                     # original one; this can happen if the word forms for two
                     # cases are identical
@@ -363,10 +409,12 @@ class ErrorFinder(ParseForestNavigator):
                                 text="Á líklega að vera '{3}' (frumlag sagnarinnar 'að {0}' á að vera "
                                     "í {1}falli en ekki í {2}falli)."
                                     .format(verb, correct_case, wrong_case, correct_np),
+                                suggest=suggestion
                             )
                         )
                 else:
-                    # We don't seem to find the subject, so just annotate the verb
+                    # We don't seem to find the subject, so just annotate the verb.
+                    # In this case, there's no suggested correction.
                     index = node.token.index
                     self._ann.append(
                         Annotation(
@@ -388,6 +436,7 @@ class ErrorFinder(ParseForestNavigator):
         elif node.nonterminal.has_tag("error"):
             # This node has a nonterminal that is tagged with $tag(error)
             # in the grammar file (Reynir.grammar)
+            suggestion = None
             start, end = self._node_span(node)
             span_text = self._node_text(node)
             # See if we have a custom text function for this
@@ -410,7 +459,10 @@ class ErrorFinder(ParseForestNavigator):
                 if isinstance(ann, str):
                     ann_text = ann
                 elif isinstance(ann, tuple):
-                    ann_text, start, end = ann
+                    if len(ann) == 2:
+                        ann_text, suggestion = ann
+                    else:
+                        ann_text, start, end, suggestion = ann
                 else:
                     assert False, "Text function {0} returns illegal type".format(name)
             else:
@@ -420,12 +472,13 @@ class ErrorFinder(ParseForestNavigator):
                     .format(span_text, node.nonterminal.name)
                 )
             self._ann.append(
-                # P_NT_ + nonterminal name: Probable grammatical error
+                # P_NT_ + nonterminal name: Probable grammatical error.
                 Annotation(
                     start=start,
                     end=end,
                     code=code,
                     text=ann_text,
+                    suggest=suggestion
                 )
             )
         return None

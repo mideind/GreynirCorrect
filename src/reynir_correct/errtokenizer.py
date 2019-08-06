@@ -121,7 +121,7 @@ class CorrectToken:
             if coalesce and other.error_span > 1:
                 # The original token had an associated error
                 # spanning more than one token; now we're creating
-                # a single token out of then span
+                # a single token out of the span
                 # ('fimm hundruð' -> number token), so we reset
                 # the span to one token
                 self._err.set_span(1)
@@ -136,17 +136,22 @@ class CorrectToken:
     @property
     def error_description(self):
         """ Return the description of an error associated with this token, if any """
-        return self._err.description if hasattr(self._err, "description") else ""
+        return getattr(self._err, "description", "")
 
     @property
     def error_code(self):
         """ Return the code of an error associated with this token, if any """
-        return self._err.code if hasattr(self._err, "code") else ""
+        return getattr(self._err, "code", "")
+
+    @property
+    def error_suggestion(self):
+        """ Return the text of a suggested replacement of this token, if any """
+        return getattr(self._err, "suggestion", None)
 
     @property
     def error_span(self):
         """ Return the number of tokens affected by this error """
-        return self._err.span if hasattr(self._err, "span") else 1
+        return getattr(self._err, "span", 1)
 
 
 class Error:
@@ -278,14 +283,19 @@ class SpellingSuggestion(Error):
 
     # W001: Replacement suggested
 
-    def __init__(self, code, txt):
+    def __init__(self, code, txt, suggest):
         # Spelling suggestion codes start with "W"
         super().__init__("W" + code)
         self._txt = txt
+        self._suggest = suggest
 
     @property
     def description(self):
         return self._txt
+
+    @property
+    def suggestion(self):
+        return self._suggest
 
 
 class PhraseError(Error):
@@ -674,7 +684,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
             "Orðið '{0}' gæti átt að vera '{1}'"
             .format(token.txt, corrected)
         )
-        token.set_error(SpellingSuggestion("{0:03}".format(code), text))
+        token.set_error(SpellingSuggestion("{0:03}".format(code), text, corrected))
         return token
 
     def only_suggest(token, m):
