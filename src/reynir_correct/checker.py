@@ -351,16 +351,20 @@ class ErrorFinder(ParseForestNavigator):
                     correct_np = correct_spaces(
                         cast_functions[correct_case_abbr].fget(subj)
                     )
-                    self._ann.append(
-                        Annotation(
-                            start=start,
-                            end=end,
-                            code=code,
-                            text="Á líklega að vera '{3}' (frumlag sagnarinnar 'að {0}' á að vera "
-                                "í {1}falli en ekki í {2}falli)."
-                                .format(verb, correct_case, wrong_case, correct_np),
+                    # Skip the annotation if it suggests the same text as the
+                    # original one; this can happen if the word forms for two
+                    # cases are identical
+                    if subj.tidy_text != correct_np:
+                        self._ann.append(
+                            Annotation(
+                                start=start,
+                                end=end,
+                                code=code,
+                                text="Á líklega að vera '{3}' (frumlag sagnarinnar 'að {0}' á að vera "
+                                    "í {1}falli en ekki í {2}falli)."
+                                    .format(verb, correct_case, wrong_case, correct_np),
+                            )
                         )
-                    )
                 else:
                     # We don't seem to find the subject, so just annotate the verb
                     index = node.token.index
