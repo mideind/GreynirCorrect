@@ -278,7 +278,7 @@ class ErrorFinder(ParseForestNavigator):
                 "nf": SimpleTree.nominative_np,
                 "þf": SimpleTree.accusative_np,
                 "þgf": SimpleTree.dative_np,
-                "ef": SimpleTree.possessive_np
+                "ef": SimpleTree.genitive_np
             }
             preposition = p.P.text
             suggestion = preposition + " " + cast_functions[variants].fget(subj)
@@ -324,10 +324,10 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaEndingANA(self, txt, variants, node):
         # 'þingflokkana' á sennilega að vera 'þingflokkanna'
-        # In this case, we need the possessive form
+        # In this case, we need the genitive form
         # of the token in self._tokens[node.start]
         tnode = self._terminal_nodes[node.start]
-        suggestion = tnode.possessive_np
+        suggestion = tnode.genitive_np
         correct_np = correct_spaces(suggestion)
         return (
             "Á sennilega að vera '{1}'"
@@ -393,7 +393,7 @@ class ErrorFinder(ParseForestNavigator):
                         "nf": SimpleTree.nominative_np,
                         "þf": SimpleTree.accusative_np,
                         "þgf": SimpleTree.dative_np,
-                        "ef": SimpleTree.possessive_np
+                        "ef": SimpleTree.genitive_np
                     }
                     suggestion = cast_functions[correct_case_abbr].fget(subj)
                     correct_np = correct_spaces(suggestion)
