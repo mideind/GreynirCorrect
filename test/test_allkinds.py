@@ -1,0 +1,872 @@
+"""
+
+    test_allkinds.py
+
+    Tests for ReynirCorrect module
+
+    Copyright(C) 2019 by Miðeind ehf.
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+    This module tests both the token-level error detection and correction
+    and the sentence-level annotation functionality of ReynirCorrect.
+
+"""
+
+# Run with 'pytest -v' for verbose mode
+
+import reynir_correct as rc
+import tokenizer
+
+# tests for errtokenizer.py
+
+def dump(tokens):
+    print("\n{0} tokens:\n".format(len(tokens)))
+    for token in tokens:
+        print("{0}".format(token))
+        err = token.error_description
+        if err:
+            print("   {0}: {1}".format(token.error_code, err))
+
+def test_punctuation(verbose=False):
+    # Quotation marks
+    g = rc.tokenize("Hann var kallaður ,,pottormur\" og var \"hrekkjusvín\".")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "„pottormur“" in s
+    assert "„hrekkjusvín“" in s
+
+    # Ellipsis
+    g = rc.tokenize("Ég veit ekki...")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "..." not in s
+    assert "…" in s
+
+def test_multiple_spaces(verbose=False):
+    pass
+    g = rc.tokenize("Hér         er langt bil.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "Hér er" in s
+    assert "  " not in s
+
+def test_doubling(verbose=False):
+    """ Test words that are erroneously written twice ore more often"""
+    # Simple instance
+    g = rc.tokenize("Ég hélt mér mér fast í sætið.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "hélt mér fast" in s
+    assert "mér mér" not in s
+
+    assert len(g) == 9
+    assert g[3].error_code == "C001"    # mér
+    
+    # Test many instances in same sentence
+    g = rc.tokenize("Potturinn kom ekki ekki í ljós ljós fyrr en en í dag dag.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+   
+    assert "kom ekki í" in s
+    assert "ekki ekki" not in s
+    assert "í ljós fyrr" in s
+    assert "ljós ljós" not in s
+    assert "fyrr en í" in s
+    assert "en en" not in s
+    assert "í dag." in s
+    assert "dag dag" not in s
+
+    assert len(g) == 12
+    
+    errors = {3, 5, 7, 9}
+    for ix, t in enumerate(g):
+        if ix in errors:
+            assert g[ix].error_code == "C001"  # ekki, ljós, en, dag
+        else:
+            assert not g[ix].error_code
+
+    # Test examples with a comma between. This should be accepted.
+    g = rc.tokenize("Lífið, sem er flokkar, flokkar potta.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert len(g) == 11
+    assert "flokkar, flokkar" in s
+    assert not g[4].error_code
+
+    # Another example with a comma between. This should be accepted.
+    g = rc.tokenize("Lífið er svaka, svaka gaman.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert len(g) == 9
+    assert "svaka, svaka" in s
+    assert not g[3].error_code
+
+    # Test whether lowercase instance following uppercase instance is corrected    
+    # First, these are separate words and should be accepted. 
+    # 'í í' should be pointed out but not corrected, as 'í í' can occur, 
+    # for instance as a particle and then a preposition.
+    g = rc.tokenize("Finnur finnur gull í í Tálknafirði.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert len(g) == 9
+    assert "Finnur finnur" in s
+    assert not "Finnur gull" in s
+    #assert g[4].error_code == "W001"    # TODO útfæra
+
+    # Same example except now the common noun is capitalized in the beginning,
+    # followed by the proper noun. This should be accepted.
+    g = rc.tokenize("Finnur Finnur gull í Tálknafirði?")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert len(g) == 8    # TODO útfæra að þetta er ekki leiðrétt
+    # assert "Finnur Finnur" in s
+
+    # Here are separate words, as Gaukur is a proper noun. This should be accepted.
+    g = rc.tokenize("Gaukur gaukur slasaðist í slysinu.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert len(g) == 8
+    assert "Gaukur gaukur" in s         # TODO þetta á líklega frekar heima í checker.py, ath. hvort þetta er bæði sérnafn og samnafn og þannig.
+    assert "Gaukur slasaðist" not in s
+
+    # Here the first word is just an uppercase version of the following common noun. This should be corrected.
+    g = rc.tokenize("Slysið slysið átti sér stað í gærkvöldi.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert len(g) == 9            # TODO útfæra þetta í checker.py, þarf að hafa upplýsingar um meanings.
+    # assert "Slysið átti" in s
+
+    # 'heldur' is allowed to appear more than once in a row. This should be accepted.
+    g = rc.tokenize("Kvikan heldur heldur mikið í jörðina.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert len(g) == 9
+    assert "Kvikan heldur heldur mikið" in s
+    assert "Kvikan heldur mikið" not in s
+
+    # Testing multiple words in a row. This should be corrected.
+    g = rc.tokenize("Það er stanslaust fjör fjör fjör fjör fjör fjör fjör fjör í sveitinni.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert len(g) == 9
+    assert "stanslaust fjör í" in s
+    assert "fjör fjör" not in s
+    assert g[4].error_code == "C001"
+
+    # 'á' has different meanings here, 'á á' should be accepted
+    # 'en en' should not be accepted
+    g = rc.tokenize("Ég á á sem heitir Lína langsokkur en en en hún kann ekki að jarma.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert len(g) == 16
+    assert "á á" in s
+    assert "Ég á sem" not in s
+    assert "langsokkur en hún" in s
+    assert "en en" not in s
+    assert g[8].error_code == "C001"
+
+    # 'gegn' has different meanings hera, should be accepted
+    g = rc.tokenize("Hún var gegn gegn Svíum í úrslitaleiknum.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert len(g) == 10
+    assert "var gegn gegn Svíum" in s
+    assert "var gegn Svíum" not in s
+
+def test_wrong_compounds(verbose=False):
+    g = rc.tokenize("Fötin koma í margskonar litum og fara afturábak afþvíað annarstaðar eru fjögurhundruð mikilsháttar hestar.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert len(g) == 23
+    assert "margs konar" in s
+    assert "aftur á bak" in s
+    assert "af því að" in s
+    assert "annars staðar" in s
+    assert "fjögur hundruð" in s
+    assert "mikils háttar" in s
+    errors = {4, 9, 12, 15, 17, 18}
+    for ix, t in enumerate(g):
+        if ix in errors:
+            assert g[ix].error_code == "C002"  # margs konar, aftur á bak, af því að, annars staðar, fjögur hundruð, mikils háttar
+        else:
+            assert not g[ix].error_code
+
+    g = rc.tokenize("Rólan fór niðrá torg og svo ofan í níuhundruð samskonar seinnihluta.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "niður á" in s
+    assert "níu hundruð" in s
+    assert "sams konar" in s
+    assert "seinni hluta" in s
+    errors = {3, 10, 11, 13}
+    for ix, t in enumerate(g):
+        if ix in errors:
+            assert g[ix].error_code == "C002"  # niður á, níu hundruð, sams konar, seinni hluta
+        else:
+            assert not g[ix].error_code
+
+
+def test_split_compounds(verbose=False):
+    g = rc.tokenize("Aðal inngangur að auka herbergi er gagn stæður öðrum gangi.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert len(g) == 10
+    assert "Aðalinngangur" in s
+    assert "Aðal inngangur" not in s
+    assert "aukaherbergi" in s
+    assert "auka herbergi" not in s
+    assert "gagnstæður" in s
+    assert "gagn stæður" not in s
+    errors = {1, 3, 5}
+    for ix, t in enumerate(g):
+        if ix in errors:
+            assert g[ix].error_code == "C003"  # Aðalinngangur, aukaherbergi, gagnstæður
+        else:
+            assert not g[ix].error_code
+
+
+    g = rc.tokenize("Myndar drengurinn er hálf undarlegur kvenna megin.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert len(g) == 7
+    assert "Myndardrengurinn" in s
+    assert "Myndar drengurinn" not in s
+    assert "hálfundarlegur" in s
+    assert "hálf undarlegur" not in s
+    assert "kvennamegin" in s
+    assert "kvenna megin" not in s
+    errors = {1, 3, 4}
+    for ix, t in enumerate(g):
+        if ix in errors:
+            assert g[ix].error_code == "C003"  # Myndardrengurinn, hálfundarlegur, kvennamegin
+        else:
+            assert not g[ix].error_code
+
+
+def test_spelling_errors(verbose=False):
+
+    # Nonsense words, not unique errors
+    g = rc.tokenize("Alla sýna lífdaga hljóp hún allt kvað fætur toga af ástæðulausu.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "Alla sína lífdaga" in s
+    assert "allt hvað fætur" in s
+    assert "toga að ástæðulausu" in s
+    # TODO fæ villukóðana á fyrsta orðið í fasta frasanum en ætti að fá á villuorðið sjálft.
+    assert g[1].error_code == "P_yi"    # sína
+    assert g[6].error_code == "P_khv"  # hvað
+    assert g[10].error_code == "P_aðaf" # að
+
+    g = rc.tokenize("Kvað sem á bjátar lifir en í glæðunum.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "Hvað sem" in s
+    assert "lifir enn í" in s
+    # TODO villan kemur í fyrsta orðið í fasta frasanum en ætti að fá á villuorðið sjálft.
+    assert g[1].error_code == "P_khv"   # Hvað
+    assert g[5].error_code == "P_n"   # enn
+
+
+    g = rc.tokenize("Karlinn gekk niðrá höfn um fjögurleitið.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "niður á höfn" in s
+    assert "fjögurleytið" in s
+    assert g[3].error_code == "C002"
+    # assert g[7].error_code == "P_yi"   # TODO greinist sem S004 eins og er, þetta er inni í þekktum villum en á eftir að útfæra meðhöndlun. Vil þá S003, eða jafnvel S005.
+
+    g = rc.tokenize("Það var leiðilegt en þæginlegt að koma tímalega á áfangastað.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    #assert "leiðinlegt" in s   # TODO er þetta ekki í þekktu villunum sem á eftir að koma inn?
+    #assert "þægilegt" in s     # TODO sama
+    #assert "tímanlega" in s     # TODO sama
+    # assert g[3].error_code == S003  # TODO eftir, gæti verið S005
+    # assert g[5].error_code == S003  # TODO eftir, gæti verið S005
+    # assert g[8].error_code == S003  # TODO eftir, gæti verið S005
+
+def test_wrong_abbreviations(verbose=False):
+    # TODO vil fá A001
+
+    g = rc.tokenize("Karlinn datt þ.á.m. í amk. fimm polla.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "þ. á m." in s  # TODO ekki gert rétt eins og er, þarf að bæta við þekktar villur. Get búið til sérfall í errtokenizer.py, verið með lítið safn í ReynirCorrect.conf.
+    # assert "þ.á.m." not in s
+    #assert "a.m.k." in s    # TODO býr þetta til og S001, en setur aukapunkt og býr til nýja setningu eftir þetta!
+    assert "amk." not in s
+    # assert g[3].error_code == "A001"      # TODO eftir að útfæra
+    # assert g[7].error_code == "A001"      # TODO eftir að útfæra
+
+    g = rc.tokenize("Eftir ca 10 mínútur datt hann í pollinn.")
+    g = list(g)
+    if verbose: dump(g)
+    # assert "ca." in s     # TODO eftir að bæta við algengar villur
+    # assert "ca " not in s
+    # assert g[2].error_code == "A001"      # TODO eftir að útfæra
+
+    g = rc.tokenize("Forsetinn ofl. gengu út um dyrnar.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "o.fl." in s       # TODO býr þetta til en setur aukapunkt aftan við!
+    # assert "ofl." not in s
+    # assert g[2].error_code == "A001"      # TODO eftir að útfæra
+
+def test_capitalization(verbose=False):
+    g = rc.tokenize("Einn Aríi, Búddisti, Eskimói, Gyðingur, sjálfstæðismaður, múslími og sjíti gengu inn á bar.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "aríi" in s        # TODO virkar ekki
+    assert "búddisti" in s
+    assert "eskimói" in s
+    assert "gyðingur" in s
+    # assert "Sjálfstæðismaður" in s    # TODO leiðréttist ekki
+    # assert "Múslími" in s     # Leiðréttist ekki
+    # assert "Sjíti" in s       # TODO leiðréttist í sjíta. Þarf að láta einræðanlegar villur gera þetta og svo ekkert stoppa það
+    # assert "nóvember" in s
+    # assert g[2].error_code == "Z001"  # aríi, TODO passar ekki
+    assert g[4].error_code == "Z001"  # búddisti
+    assert g[6].error_code == "Z001"  # eskimói
+    assert g[8].error_code == "Z001"    # gyðingur
+    # assert g[10].error_code == "Z002"   # Sjálfstæðismaður, leiðréttist ekki
+    # assert g[12].error_code == "Z002"   # Múslími, TODO leiðréttist ekki
+    # assert g[14].error_code == "Z002"     # sjíti; TODO leiðréttist ekki 
+
+    g = rc.tokenize("Á íslandi búa íslendingar og í danmörku búa Danskir danir í Nóvember.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "Íslandi" in s
+    assert "Íslendingar" in s
+    assert "Danmörku" in s
+    assert "danskir" in s
+    assert "Danir" in s
+    assert "nóvember" in s
+    assert "Nóvember" not in s
+    assert g[2].error_code == "Z002"    # Íslandi
+    assert g[4].error_code == "Z002"    # Íslendingar
+    assert g[7].error_code == "Z002"    # Danmörku
+    assert g[9].error_code == "Z001"    # danskir
+    assert g[10].error_code == "Z002"   # Danir
+    assert g[12].error_code == "Z003"   # nóvember
+
+def test_inflectional_errors(verbose=False):
+    # beygingarvillur
+    # sama og test_error_forms í test_tokenizer.py
+    g = rc.tokenize("Tréið gekk til rekstar rúmmsins.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "Tréð" in s
+    assert "rekstrar" in s
+    assert "rúmsins" in s
+    # assert g[1].error_code == "B001"    # tréð, TODO eftir að útfæra
+    # assert g[4].error_code == "B001"    # rekstrar, TODO eftir að útfæra
+    # assert g[5].error_code == "B001"    # rúmsins, TODO eftir að útfæra
+
+    g = rc.tokenize("Þér finndist víðfermt í árverkni.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "fyndist" in s
+    # assert "víðfeðmt" in s     # TODO ekki komið inn
+    assert "árvekni" in s
+    # assert g[2].error_code == "B001"    # fyndist, TODO eftir að útfæra
+    # assert g[3].error_code == "B001"    # víðfeðmt, TODO eftir að útfæra
+    # assert g[5].error_code == "B001"    # árvekni, TODO eftir að útfæra
+
+    g = rc.tokenize("Ein kúin kom aldrei til baka vegna eldingunnar.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "kýrin" in s        # TODO eftir að setja inn
+    # assert "eldingarinnar" in s    # TODO eftir að setja inn
+    # assert g[2].error_code == "B001"    # kýrin, TODO eftir að útfæra
+    # assert g[8].error_code == "B001"    # eldingarinnar, TODO eftir að útfæra
+
+    g = rc.tokenize("Lítum til áttunda áratugsins til upplýsingu.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "áratugarins" in s
+    # assert "upplýsingar" in s      # TODO eftir að setja inn
+    # assert g[4].error_code == "B001"    # áratugarins, TODO eftir að útfæra
+    # assert g[6].error_code == "B001"    # upplýsingar, TODO eftir að útfæra
+
+    g = rc.tokenize("Nánar tiltekið árins 1978, fjóru og hálfu ári fyrir byltinguna.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "ársins" in s
+    assert "fjórum" in s
+    # assert g[3].error_code == "B001"    # ársins, TODO eftir að útfæra
+    # assert g[5].error_code == "B001"    # fjórum, TODO eftir að útfæra
+
+    g = rc.tokenize("Frumkvöðullinn aldist upp í litlu sjávarþorpi án föðurs og ýmsra þæginda.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "ólst upp" in s
+    assert "föður" in s
+    assert "ýmissa" in s
+    # assert g[2].error_code == "B001"    # ólst, TODO eftir að útfæra
+    # assert g[8].error_code == "B001"    # föður, TODO eftir að útfæra
+    # assert g[10].error_code == "B001"   # ýmissa, TODO eftir að útfæra
+
+    g = rc.tokenize("Friðsælari leið hefði verið að hundruðir leituðu í geiminum að kílómeter af féinu vegna ástandins.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    #assert "Friðsælli" in s        # TODO eftir að setja inn
+    assert "hundruð" in s
+    assert "geimnum" in s
+    #assert "kílómetra" in s    # TODO eftir að setja inn
+    assert "fénu" in s
+    assert "ástandsins" in s
+    # assert g[1].error_code == "B001"      # friðsælli, TODO eftir að útfæra
+    # assert g[6].error_code == "B001"      # hundruð, TODO eftir að útfæra
+    # assert g[9].error_code == "B001"      # geimnum, TODO eftir að útfæra
+    # assert g[11].error_code == "B001"     # kílómetra, TODO eftir að útfæra
+    # assert g[13].error_code == "B001"     # fénu, TODO eftir að útfæra
+    # assert g[15].error_code == "B001"     # ástandsins, TODO eftir að útfæra
+
+    g = rc.tokenize("Loks gekk hann til Selfosss tuttugusta dag samningins.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "Selfoss" in s
+    assert "tuttugasta" in s
+    assert "samningsins" in s
+    # assert g[5].error_code == "B001"        # Selfoss, TODO eftir að útfæra
+    # assert g[6].error_code == "B001"        # tuttugasta, TODO eftir að útfæra
+    # assert g[8].error_code == "B001"        # samningsins, TODO eftir að útfæra
+
+def test_compounding_errors(verbose=False):
+    # M001: Rangur fyrri hluti í samsetningu    (heyrna-laus, náms-skrá)
+    # M002: Stakir fyrri hlutar í setningu      (all kaldur, )
+    # M003: Stakir seinni hlutar í setningu     (græn keri, arf beri, barn dómur)
+    # M004: Rangt orð finnst í samsetningu      (trukkalessa, kúardella)
+
+    g = rc.tokenize("Kvenngormar ótalmargra fjölnotahesta eru feyknaskemmtilegir.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "Kvengormar" in s
+    #assert "ótal margra" in s      # TODO eftir að höndla
+    #assert "ótalmargra" not in s
+    assert "fjölnota hesta" in s
+    assert "fjölnotahesta" not in s
+    #assert "feykna skemmtilegir" in s    # TODO eftir að höndla
+    #assert "feyknaskemmtilegir" not in s
+    # assert g[1].error_code == "M001"    # Kvengormar, TODO eftir að útfæra
+    # assert g[2].error_code == "M004"    # ótal margra, TODO eftir að útfæra
+    # assert g[3].error_code == "M004"    # fjölnota hesta, TODO eftir að útfæra
+    # assert g[5].error_code == "M001"    # feiknaskemmtilegir, TODO eftir að útfæra
+
+    g = rc.tokenize("Loftlagsmál eru alhliðavandamál fyrir fyrnaupptekna skráningastarfsmenn.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    #assert "Loftlagsmál" in s  # TODO eftir að höndla
+    assert "alhliða vandamál" in s
+    assert "alhliðavandamál" not in s
+    assert "firnaupptekna" in s
+    assert "fyrnaupptekna" not in s
+    assert "skráningarstarfsmenn" in s
+    assert "skráningastarfsmenn" not in s
+    # assert g[1].error_code == "M001"  # Loftslagsmál, TODO eftir að útfæra
+    # assert g[3].error_code == "M004"  # alhliða vandamál, TODO eftir að útfæra
+    # assert g[5].error_code == "M001"  # firnaupptekna, TODO eftir að útfæra
+    # assert g[6].error_code == "M004"  # skráningarstarfsmenn, TODO eftir að útfæra
+
+    g = rc.tokenize("Drengurinn var all kaldur þegar hann fannst hjá arf berunum.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "allkaldur" in s           # TODO eftir að útfæra
+    # assert "arfberunum" in s          # TODO eftir að útfæra
+    # assert g[3].error_code == "M002"  # allkaldur, TODO eftir að útfæra
+    # assert g[8].error_code == "M003"  # arfberunum, TODO eftir að útfæra
+
+def test_homophones(verbose=False):
+    # ruglingsmengin
+    g = rc.tokenize("Vefurinn bíður uppá bestu fréttir miðlana.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "Vefurinn býður" in s  # TODO eftir að útfæra
+    # assert "Vefurinn bíður" not in s  # TODO eftir að útfæra
+    assert "upp á" in s
+    assert "uppá" not in s
+    # assert "fréttir miðlanna" in s  # TODO eftir að útfæra
+    # assert "fréttir miðlana" not in s # TODO eftir að útfæra
+    # assert g[2].error_code == "S001"  # TODO eftir að ákveða villukóða
+    assert g[3].error_code == "C002"
+    # assert g[7].error_code == "S005"  # TODO eftir að útfæra
+
+    g = rc.tokenize("Hann heyrði lágvært kvísl í myrkrinu.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    #assert "hvísl" in s    # TODO eftir að útfæra
+    # assert "kvísl" not in s   # TODO eftir að útfæra
+    # assert g[4].error_code == "S005"  # TODO eftir að útfæra villukóða
+
+    g = rc.tokenize("Kirtillinn flæktist fyrir fótum hennar í fermingunni.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "Kyrtillinn" in s  # TODO eftir að útfæra
+    # assert "Kirtillinn" not in s  # TODO eftir að útfæra
+    # assert g[0].error_code == "S006"  # TODO eftir að útfæra
+
+    g = rc.tokenize("Tímanum líkur á því að kvatt er til þess að kvika ekki frá sinni stöðu.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "lýkur" in s    # TODO eftir að útfæra
+    # assert "líkur" not in s   # TODO eftir að útfæra
+    # assert "hvatt" in s    # TODO eftir að útfæra
+    # assert "kvatt" not in s   # TODO eftir að útfæra
+    # assert "hvika" in s    # TODO eftir að útfæra
+    # assert "kvika" not in s
+    # assert g[2].error_code == "S006"
+    # assert g[6].error_code == "S006"
+    # assert g[11].error_code == "S006"
+
+    g = rc.tokenize("Við rímum húsið til að leifa eldinum ekki að hvelja fólkið.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "rýmum" in s    # TODO eftir að útfæra
+    # assert "rímum" not in s
+    # assert "leyfa" in s    # TODO eftir að útfæra
+    # assert "leifa" not in s
+    # assert "kvelja" in s   # TODO eftir að útfæra
+    # assert "hvelja" not in s
+    # assert g[2].error_code == "S006"
+    # assert g[6].error_code == "S006"
+    # assert g[10].error_code == "S006"
+
+def test_inquiry_verb_forms(verbose=False):
+    # athuga hvort eintöluform séu til staðar?
+    # athuga hvort fleirtala sé leiðrétt
+    g = rc.tokenize("Þegar þið hafið hrært deigið setjiði það í ofninn.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "setjið " in s      # TODO eftir að útfæra
+    # assert "setjið þið" in s   # TODO eftir að útfæra
+    # assert g[6].error_code == "Q001"   # TODO eftir að útfæra villukóða
+
+    g = rc.tokenize("Eftir að kakan kemur úr ofninum náiði í kremið.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "náið þið" in s    # TODO eftir að útfæra, spelling.py virðist taka á þessu
+    # assert "náiði" not in s     # TODO eftir að útfæra
+    # assert g[7].error_code == "Q001"    # TODO eftir að útfæra villukóða
+
+def test_taboo_words(verbose=False):
+    # Simple test
+    g = rc.tokenize("Júðarnir og hommatittirnir hoppuðu ásamt halanegrunum.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert g[1].error_code == "T001"    # TODO eftir að útfæra
+    # assert g[3].error_code == "T001"    # TODO eftir að útfæra
+    # assert g[6].error_code == "T001"    # TODO eftir að útfæra
+
+    # Should not be allowed in compounds
+    g = rc.tokenize("Merartussan henti mér af kuntubaki.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert g[1].error_code == "T001"    # TODO eftir að útfæra
+    # assert g[5].error_code == "T001"    # TODO eftir að útfæra
+
+def test_wrong_whitespace(verbose=False):
+    g = rc.tokenize("Þetta var gert ti lað vekja hrútinn.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "til að" in s      # TODO eftir að bæta við
+    # assert "ti lað" not in s  # TODO eftir að bæta við
+
+def test_unique_errors(verbose=False):
+    # algengar unique villur; 
+    g = rc.tokenize("Fomaður fór til fljúgjandi augnæknis í liltu andyri Svíþjóðar.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "Formaður" in s
+    assert "Fomaður" not in s
+    assert "fljúgandi" in s
+    assert "fljúgjandi" not in s
+    assert "augnlæknis" in s
+    assert "augnæknis" not in s
+    assert "litlu" in s
+    assert "liltu" not in s
+    assert "anddyri" in s
+    assert "andyri" not in s
+    #assert g[1].error_code == "S001"   # TODO virkar ekki
+    assert g[4].error_code == "S001"
+    assert g[5].error_code == "S001"
+    assert g[7].error_code == "S001"
+    assert g[8].error_code == "S001"
+
+    g = rc.tokenize("Mér tóskt að fá áfarm ókeipis ríkistjórn.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "tókst" in s
+    assert "tóskt" not in s
+    assert "áfram" in s
+    assert "áfarm" not in s
+    assert "ókeypis" in s
+    assert "ókeipis" not in s
+    # assert "ríkisstjórn" in s     # TODO eftir að útfæra
+    # assert "ríkistjórn" in s      # TODO eftir að útfæra
+    assert g[2].error_code == "S001"
+    assert g[5].error_code == "S001"
+    assert g[6].error_code == "S001"
+    # assert g[7].error_code == "S001"      # TODO eftir að útfæra
+
+def test_correct_words(verbose=False):
+    # Athuga hvort hér greinist nokkuð villa
+    g = rc.tokenize("Ég fann nokkurs konar skógardverg ofan í skúffunni en David Schwimmer vissi allt um mannætuapana.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert s == "Ég fann nokkurs konar skógardverg ofan í skúffunni en David Schwimmer vissi allt um mannætuapana."
+    for w in g:
+        assert not w.error_code
+
+    g = rc.tokenize("Ökumaður bílaleigubíls komst í hann krappan á Grandanum í Reykjavík skömmu fyrir klukkan 11 í dag.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert s == "Ökumaður bílaleigubíls komst í hann krappan á Grandanum í Reykjavík skömmu fyrir klukkan 11 í dag."
+    for w in g:
+        assert not w.error_code
+
+    g = rc.tokenize("Þá telur hann kjarasamninga stuðla að stöðugleika sem einnig undirbyggi frekari stýrivaxtalækkanir.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert s == "Þá telur hann kjarasamninga stuðla að stöðugleika sem einnig undirbyggi frekari stýrivaxtalækkanir."
+    for w in g:
+        assert not w.error_code
+
+# Tests for checker.py
+
+def check_sentence(s, annotations):
+    """ Check whether a given single sentence gets the
+        specified annotations when checked """
+
+    def check_sent(sent):
+        assert sent is not None
+        if sent.tree is None:
+            # If the sentence should not parse, call
+            # check_sentence with annotations=None
+            assert annotations is None
+            return
+        assert annotations is not None
+        assert sent.tree is not None
+        if not annotations:
+            # This sentence is not supposed to have any annotations
+            assert (not hasattr(sent, "annotations")) or len(sent.annotations) == 0
+            return
+        assert hasattr(sent, "annotations")
+        assert len(sent.annotations) == len(annotations)
+        for a, (start, end, code) in zip(sent.annotations, annotations):
+            assert a.start == start
+            assert a.end == end
+            assert a.code == code
+
+    # Test check_single()
+    check_sent(rc.check_single(s))
+    # Test check()
+    for pg in rc.check(s):
+        for sent in pg:
+            check_sent(sent)
+    # Test check_with_stats()
+    for pg in rc.check_with_stats(s)["paragraphs"]:
+        for sent in pg:
+            check_sent(sent)
+
+def test_phrases(verbose=False):
+    # orðasambönd
+    s = "Kirkjuna bar við himinn þegar við komum þar um morguninn."
+    check_sentence(s, [2, 3, "P_PP_CASE_nf_þf"])    # TODO þarf líklega að breyta til. Eftir að útfæra?
+
+def test_agreement(verbose=False):
+    # Beygingarsamræmi
+    # fjöldi X gerðu... P_NT_FjöldiHluti
+    # einn af X gerðu
+
+    # Sambeyging / rétt orðmynd notuð
+    s = "Ég fór frá Jón Páli um miðnætti."
+    #check_sentence(s, [3, 5, "P_NT_X"])        # TODO Fæ ekki þáttun á setninguna
+    s = "Hann hélt utan um dóttir sína."
+    #check_sentence(s, [4, 5, "P_NT_Fall"])
+    s = "Barnið var með kaldar fingur en heitar fætur."
+    # check_sentence(s, [])
+    s = "Miklar umræður eiga sér stað innan verkalýðsfélagsins Eflingu."
+    # check_sentence(s, [])
+    s = "Fyrirtækið er rekið með fimm prósent halla en verðið er sjö prósent lægra."
+    # check_sentence(s, [])
+    s = "Stúlkan kom ásamt fleirum konum í bæinn."
+    # check_sentence(s, [])
+    s = "Þetta er einhvert mesta óheillaráð sem ég hef heyrt."
+    # check_sentence(s, [])
+    s = "Hún heyrði einhvað frá háaloftinu."
+    # check_sentence(s, [])
+
+    # Tala og kyn
+    s = "Fleiri en einn slasaðist í árekstrinum."
+    # check_sentence(s, [])
+    s = "Hann er einn þeirra sem slasaðist í árekstrinum."
+    # check_sentence(s, [])
+    s = "Minnihluti starfsmanna samþykktu samninginn."
+    # check_sentence(s, [])
+    s = "Helmingur landsmanna horfðu á barnaefnið."
+    # check_sentence(s, [])
+    s = "Foreldrar hans voru skildir."
+    # check_sentence(s, [])
+    s = "Stúlkan varð ekki var við hávaðann."
+    # check_sentence(s, [])
+    s = "Hér eru tuttugu og ein appelsínur."
+    # check_sentence(s, [])
+
+    # Sagnir
+    s = "Konuna vantar að kaupa rúðusköfu."
+    # check_sentence(s, [])
+    s = "Mér kvíðir fyrir að byrja í skólanum."
+    # check_sentence(s, [])
+    s = "Ég dreymi um skjaldbökur sem synda um hafið."
+    # check_sentence(s, [])
+    s = "Feimni drengurinn hélt sig til hlés þar til þolinmæðin þraut."
+    # check_sentence(s, [])
+    s = "Kúrekinn hafði upp á kúnum á sléttunni."
+    # check_sentence(s, [])
+    s = "Maðurinn dáðist af málverkinu."
+    # check_sentence(s, [])
+    s = "Barnið á hættu á að detta í brunninn."
+    # check_sentence(s, [])
+    s = "Hetjan á heiður að björguninni."
+    # check_sentence(s, [])
+    s = "Ferðaólkið fór erlendis að leita lamba."
+    # check_sentence(s, [])
+    s = "Túlkurinn gaf í skin að mælandi hefði misskilið túlkinn."
+    # check_sentence(s, [])
+
+def test_hvor_annar(verbose=False):
+    pass
+    s = "Drengirnir héldu fast utan um hvorn annan."
+    # check_sentence(s, [])
+    s = "Hringirnir voru í hvorum öðrum."
+    # check_sentence(s, [])
+
+def test_phrasing(verbose=False):
+    pass
+    s = "Ég vill ekki gera mál úr þessu."
+    s = "Konur vilja í auknu mæli koma að sjúkraflutningum."
+    s = "Ég veit ekki hvort að ég komi í kvöld."
+    s = "Meðan veislunni stendur verður frítt áfengi í boði."
+def test_munu(verbose=False):
+    s = "Ég mun aldrei gleyma þessu."
+    s = "Hundurinn mun verða vinur minn að eilífu."
+
+def test_vera(verbose=False):
+    # vera að + so.nh.
+    s = "Ég er ekki að skilja þetta."
+    s = "Ég var að fara út með ruslið þegar ég fékk símtalið."
+    s = "Hún er að skrifa vel."
+
+def test_nhm(verbose=False):
+    s = "Ég ætla fara í búð."
+    s = "Hún ætlar að fara lesa um skjaldbökur."
+
+def test_new_passive(verbose=False):
+    s = "Það var gert grein fyrir stöðu mála."
+    s = "Lagt verður áhersla á að skoða reikningana."
+    s = "Það verður lagt áherslu á að skoða reikningana."   
+
+def test_complex_sentences(verbose=False):
+    s = "Drengurinn dreif sig inn þegar hann heyrði í bjöllunni af því að hann vildi sjá hvort það væri kominn nýr kennari en sem betur fer var gamli kennarinn á sínum stað svo að hann settist niður í rólegheitum og tók upp bækurnar."
+    s = "Tromman sem var í skápnum sem hafði brotnað í óveðrinu sem var daginn sem þau keyptu kexið sem var ónýtt þegar þau komu úr búðinni sem þau keyptu það í hafði skekkst."
+
+
+def test_tense_mood(verbose=False):
+    s = "Hann kemur ef hann geti."
+    s = "Hún kemur ef það sé gott veður."
+    s = "Hún segir að veðrir var gott í dag."
+    s = "Hann sagði að veðrið er gott í dag."
+
+
+def test_noun_style(verbose=False):
+    # nafnorðastíll
+    pass
+
+def test_missing_word(verbose=False):
+    pass
+
+def test_foreign_sentences(verbose=False):
+    pass
+
+def test_conjunctions(verbose=False):
+    pass
+
+def test_impersonal_verbs(verbose=False):
+    # einfaldar, og hafa langt á milli
+    pass
+
+def test_number_agreement(verbose=False):
+    # P_NT_ÍTölu
+    pass
+
+def test_correct_sentences(verbose=False):
+    pass
+
+if __name__ == "__main__":
+    pass
