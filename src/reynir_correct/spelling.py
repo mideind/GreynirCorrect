@@ -264,6 +264,10 @@ class Corrector:
         # ("d", ["ð"]),
         # ljóslestur
         # ("c", ["æ", "é"]),
+        # beygingarendingar
+        ("ananna", ["anna", "ana"]),
+        ("ana", ["anna"]),
+        ("anna", ["ana"]),
     ]
 
     _SUBSTITUTE = defaultdict(set)
