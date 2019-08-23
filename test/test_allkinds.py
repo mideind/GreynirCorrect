@@ -235,7 +235,6 @@ def test_wrong_compounds(verbose=False):
         else:
             assert not g[ix].error_code
 
-
 def test_split_compounds(verbose=False):
     g = rc.tokenize("Aðal inngangur að auka herbergi er gagn stæður öðrum gangi.")
     g = list(g)
@@ -273,7 +272,6 @@ def test_split_compounds(verbose=False):
             assert g[ix].error_code == "C003"  # Myndardrengurinn, hálfundarlegur, kvennamegin
         else:
             assert not g[ix].error_code
-
 
 def test_spelling_errors(verbose=False):
 
@@ -719,10 +717,11 @@ def check_sentence(s, annotations):
         assert hasattr(sent, "annotations")
         assert len(sent.annotations) == len(annotations)
         for a, (start, end, code) in zip(sent.annotations, annotations):
+            print("{} {} {}".format(a.start, a.end, a.code))    # TODO taka út þegar búin að aflúsa prófanirnar
             assert a.start == start
             assert a.end == end
             assert a.code == code
-
+    print(s)
     # Test check_single()
     check_sent(rc.check_single(s))
     # Test check()
@@ -737,136 +736,196 @@ def check_sentence(s, annotations):
 def test_phrases(verbose=False):
     # orðasambönd
     s = "Kirkjuna bar við himinn þegar við komum þar um morguninn."
-    check_sentence(s, [2, 3, "P_PP_CASE_nf_þf"])    # TODO þarf líklega að breyta til. Eftir að útfæra?
+    check_sentence(s, [(2, 9, "P_NT_FsMeðFallstjórn")])    # TODO Verbs.conf ætti að dekka þetta -- útfæra goggunarröð?
 
-def test_agreement(verbose=False):
+def test_NP_agreement(verbose=False):
     # Beygingarsamræmi
     # fjöldi X gerðu... P_NT_FjöldiHluti
     # einn af X gerðu
 
     # Sambeyging / rétt orðmynd notuð
-    s = "Ég fór frá Jón Páli um miðnætti."
-    #check_sentence(s, [3, 5, "P_NT_X"])        # TODO Fæ ekki þáttun á setninguna
+    s = "Ég fór frá Pétur Páli um miðnætti."
+    #check_sentence(s, [(3, 5, "P_NT_X")])        # TODO Fæ ekki villu, 'Pétur Páli' er sameinað í nafn áður en fallið er tékkað virðist vera.
     s = "Hann hélt utan um dóttir sína."
-    #check_sentence(s, [4, 5, "P_NT_Fall"])
+    check_sentence(s, [(3, 4, "P_NT_FsMeðFallstjórn")])
     s = "Barnið var með kaldar fingur en heitar fætur."
-    # check_sentence(s, [])
+    # check_sentence(s, [(4, 6, "P_NT_KynInnanNafnliðar"), (6, 8, "P_NT_Fall")])     # TODO villurnar greinast ekki, vantar líklega reglur.
     s = "Miklar umræður eiga sér stað innan verkalýðsfélagsins Eflingu."
-    # check_sentence(s, [])
+    check_sentence(s, [(5, 7, "P_NT_FsMeðFallstjórn")])      # TODO  FsMeFallstjórn greinir villu, en nær ekki yfir Eflingu, eitthvað skrýtið á ferðinni! Vil fá reglu sem heitir FallInnanNafnliðar og á að ná yfir 5, 8.
     s = "Fyrirtækið er rekið með fimm prósent halla en verðið er sjö prósent lægra."
-    # check_sentence(s, [])
+    # check_sentence(s, [(5, 7, "P_NT_Prósent"), (11, 13, "P_NT_Prósent")])     # TODO hvorug villan greinist. Vil reglu sem heitir Prósent... eða eitthvað í þá áttina. Ath. hvort það sé nokkuð regla sem heitir það núna.
     s = "Stúlkan kom ásamt fleirum konum í bæinn."
-    # check_sentence(s, [])
+    # check_sentence(s, [(3, 5, "P_NT_Fleirum")])           # TODO villan greinist ekki, eftir að höndla
     s = "Þetta er einhvert mesta óheillaráð sem ég hef heyrt."
-    # check_sentence(s, [])
+    # check_sentence(s, [(2, 2, "P_NT_Einhver")])     # TODO villan greinist sem S001, viljum við höndla þetta sem beygingarsamræmisvillu frekar? Þetta er ósamhengisháð.
     s = "Hún heyrði einhvað frá háaloftinu."
-    # check_sentence(s, [])
+    #check_sentence(s, [(2, 2, "P_NT_Einhver")])        # TODO villan greinist sem S001, viljum við höndla þetta frekar sem beygingarsamræmisvillu? Þetta er ósamhengisháð.
 
-    # Tala og kyn
+def test_number_agreement(verbose=False):
+    # Tala
     s = "Fleiri en einn slasaðist í árekstrinum."
-    # check_sentence(s, [])
+    check_sentence(s, [(3, 5, "P_NT_ÍTölu")])           # TODO virkar en ég skil ekki lengdina, af hverju er 'í' haft með? Hvað er ÍTölu að gera?
     s = "Hann er einn þeirra sem slasaðist í árekstrinum."
-    # check_sentence(s, [])
+    # check_sentence(s, [(5, 6, "P_NT_Þeirra")])        # TODO engin villa finnst.
     s = "Minnihluti starfsmanna samþykktu samninginn."
-    # check_sentence(s, [])
+    check_sentence(s, [(0, 1, "P_NT_FjöldiHluti")])     # TODO villan greinist, en ætti að vera staðsett á sögninni til að hægt sé að leiðrétta hana... Hvernig er þetta leiðrétt? Er bara ábending?
     s = "Helmingur landsmanna horfðu á barnaefnið."
-    # check_sentence(s, [])
-    s = "Foreldrar hans voru skildir."
-    # check_sentence(s, [])
-    s = "Stúlkan varð ekki var við hávaðann."
-    # check_sentence(s, [])
+    check_sentence(s, [(0, 1, "P_NT_FjöldiHluti")])     # TODO villan greinist en ætti að vera staðsett á sögninni svo hægt sé að leiðrétta hana. Skoða hvernig/hvort villan er leiðrétt.
     s = "Hér eru tuttugu og ein appelsínur."
-    # check_sentence(s, [])
+    # check_sentence(s, [()])
 
+def test_gender_agreement(verbose=False):
+    # Kyn
+    s = "Foreldrar hans voru skildir."
+    # check_sentence(s, [(4, 5, "P_NT_Foreldrar")])     # TODO þetta mætir afgangi en væri gott að koma inn.
+    s = "Stúlkan varð ekki var við hávaðann."
+    # check_sentence(s, [(3, 4, "P_NT_SagnfyllingKyn")])    # TODO fæ enga villu, eftir að útfæra.
+
+def test_verb_agreement(verbose=False):
     # Sagnir
-    s = "Konuna vantar að kaupa rúðusköfu."
-    # check_sentence(s, [])
+    s = "Konunni vantar að kaupa rúðusköfu."
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])      # TODO virkar vel, en skil ekki lengdina. Af hverju er það ekki 0, 1? Hvernig birtist þetta í viðmótinu?
     s = "Mér kvíðir fyrir að byrja í skólanum."
-    # check_sentence(s, [])
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_nf")])      # TODO virkar, en athuga lengdina, og hvernig þetta er leiðrétt í viðmóti. Er sögninni líka breytt?
     s = "Ég dreymi um skjaldbökur sem synda um hafið."
-    # check_sentence(s, [])
+    # check_sentence(s, [(0, 0, "P_WRONG_CASE_nf_þf")])       # TODO villan greinist ekki! Ath. líka lengdina.
     s = "Feimni drengurinn hélt sig til hlés þar til þolinmæðin þraut."
-    # check_sentence(s, [])
+    # check_sentence(s, [(3, 3, "P_WRONG_CASE_þf_þgf"), (8, 8, "P_WRONG_CASE_nf_þf")])      # Engin villa greinist; er þetta í Verbs.conf?
     s = "Kúrekinn hafði upp á kúnum á sléttunni."
-    # check_sentence(s, [])
+    # check_sentence(s, [(2, 2, "P_WRONG_PARTICLE_uppi")])    # TODO greinist ekki, þetta á algerlega eftir að útfæra betur þegar þetta er komið inn í Verbs.conf. Þetta er líklega ekki réttur villukóði.
     s = "Maðurinn dáðist af málverkinu."
-    # check_sentence(s, [])
+    # check_sentence(s, [(2, 2, "P_WRONG_PP_að")])      # Engin villa greinist. Eftir að útfæra, þetta er líklega ekki réttur villukóði.
     s = "Barnið á hættu á að detta í brunninn."
-    # check_sentence(s, [])
+    # check_sentence(s, [(1, 1, "P_WRONG_FORM")])       # TODO erfitt að eiga við, líklega ekki réttur villukóði, bæta við Verbs.conf.
     s = "Hetjan á heiður að björguninni."
-    # check_sentence(s, [])
-    s = "Ferðaólkið fór erlendis að leita lamba."
-    # check_sentence(s, [])
+    # check_sentence(s, [(3, 4, "P_WRONG_PP_af")])      # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
+    s = "Ferðafólkið fór erlendis að leita lamba."
+    # check_sentence(s, [(2, 3, "P_WRONG_PARTICLE_til_útlanda")])       # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
     s = "Túlkurinn gaf í skin að mælandi hefði misskilið túlkinn."
-    # check_sentence(s, [])
+    # check_sentence(s, [(2, 4, "P_WRONG_PP_í_skyn")])      # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
 
 def test_hvor_annar(verbose=False):
-    pass
     s = "Drengirnir héldu fast utan um hvorn annan."
-    # check_sentence(s, [])
+    #check_sentence(s, [(3, 7, "P_NT_HvorAnnar")])      # TODO engin villa greinist; eftir að útfæra villureglu
     s = "Hringirnir voru í hvorum öðrum."
-    # check_sentence(s, [])
+    #check_sentence(s, [(2, 5, "P_NT_HvorAnnar")])      # TODO engin villa greinist; eftir að útfæra villureglu
 
 def test_phrasing(verbose=False):
-    pass
     s = "Ég vill ekki gera mál úr þessu."
+    check_sentence(s, [(0, 1, "P_wrong_person")])       # TODO þetta virkar, en skoða lengdina.
     s = "Konur vilja í auknu mæli koma að sjúkraflutningum."
+    check_sentence(s, [(2, 4, "P_wrong_gender")])       # TODO á kannski að greina þetta öðruvísi? Fastur frasi? Skoða líka lengdina.
     s = "Ég veit ekki hvort að ég komi í kvöld."
+    check_sentence(s, [(4, 4, "P_NT_Að")])              
     s = "Meðan veislunni stendur verður frítt áfengi í boði."
+    # check_sentence(s, [(0, 3, "P_NT_MeðanStendur")])      # TODO engin villa finnst
+
 def test_munu(verbose=False):
     s = "Ég mun aldrei gleyma þessu."
+    #check_sentence(s, [(1, 1, "P_NT_Munu")])
     s = "Hundurinn mun verða vinur minn að eilífu."
+    #check_sentence(s, [(1, 1, "P_NT_Munu")])
 
 def test_vera(verbose=False):
     # vera að + so.nh.
     s = "Ég er ekki að skilja þetta."
+    #check_sentence(s, [(1, 6, "P_NT_VeraAð")])     # TODO villan greinist ekki, eftir að útfæra
     s = "Ég var að fara út með ruslið þegar ég fékk símtalið."
+    #check_sentence(s, [(1, 11, "P_NT_VeraAð")])    # TODO villan greinist ekki, eftir að útfæra
     s = "Hún er að skrifa vel."
+    # check_sentence(s, [(1, 6, "P_NT_VeraAð")])    # TODO villan greinist ekki, eftir að útfæra
 
 def test_nhm(verbose=False):
     s = "Ég ætla fara í búð."
+    # check_sentence(s, [(2, 3, "P_Að")])        # TODO villan greinist ekki, eftir að útfæra. Ætti að vera í Verbs.conf
     s = "Hún ætlar að fara lesa um skjaldbökur."
+    # check_sentence(s, [(3, 4, "P_Að")])        # TODO villan greinist ekki, eftir að útfæra. Ætti að vera í Verbs.conf
 
 def test_new_passive(verbose=False):
     s = "Það var gert grein fyrir stöðu mála."
+    # check_sentence(s, [(2, 2, "P_NT_NýjaÞolmynd")])         # TODO villan greinist ekki, eftir að útfæra villureglu
     s = "Lagt verður áhersla á að skoða reikningana."
+    #check_sentence(s, [(0, 0, "P_NT_NýjaÞolmynd")])         # TODO villan greinist ekki, eftir að útfæra villureglu
     s = "Það verður lagt áherslu á að skoða reikningana."   
+    # check_sentence(s, [(2, 4, "P_NT_NýjaÞolmynd")])         # TODO villan greinist ekki, eftir að útfæra villureglu
 
 def test_complex_sentences(verbose=False):
     s = "Drengurinn dreif sig inn þegar hann heyrði í bjöllunni af því að hann vildi sjá hvort það væri kominn nýr kennari en sem betur fer var gamli kennarinn á sínum stað svo að hann settist niður í rólegheitum og tók upp bækurnar."
+    # check_sentence(s, [0, 0, "P_COMPLEX"])      # TODO eftir að útfæra
     s = "Tromman sem var í skápnum sem hafði brotnað í óveðrinu sem var daginn sem þau keyptu kexið sem var ónýtt þegar þau komu úr búðinni sem þau keyptu það í hafði skekkst."
-
+    # check_sentence(s, [0, 0, "P_COMPLEX"])      # TODO eftir að útfæra
 
 def test_tense_mood(verbose=False):
     s = "Hann kemur ef hann geti."
+    # check_sentence(s, [(2, 5, "P_NT_TíðHáttur")])     # TODO villan finnst ekki, eftir að útfæra
     s = "Hún kemur ef það sé gott veður."
-    s = "Hún segir að veðrir var gott í dag."
+    # check_sentence(s, [(2, 7, "P_NT_TíðHáttur")])     # TODO villan finnst ekki, eftir að útfæra
+    s = "Hún segir að veðrið var gott í dag."
+    # check_sentence(s, [(1, 8, "P_NT_TíðHáttur")])     # TODO villan finnst ekki, eftir að útfæra
     s = "Hann sagði að veðrið er gott í dag."
-
+    # check_sentence(s, [(1, 8, "P_NT_TíðHáttur")])     # TODO villan finnst ekki, eftir að útfæra
 
 def test_noun_style(verbose=False):
     # nafnorðastíll
-    pass
+    s = "Stofnunin framkvæmdi könnun á aðstæðum á vinnustað."
+    # check_sentence(s, [(1, 3, "P_Nafnorðastíll")])        # TODO greinist ekki, eftir að útfæra -- þetta gæti virkað vel í Verbs.conf!
 
 def test_missing_word(verbose=False):
-    pass
+    s = "Það er mjög mikilvægt þið lesið þennan póst."
+    # check_sentence(s, [(4, 4, "P_NT_Að")])    # TODO engin villa finnst, eftir að útfæra
+    s = "Það mjög mikilvægt að þið lesið þennan póst."
+    #check_sentence(s, [(1, 1, "P_NT_SögnVantar")])     # TODO engin villa finnst, eftir að útfæra
 
 def test_foreign_sentences(verbose=False):
-    pass
+    s = "Brooks Koepka lék hringinn á þremur undir pari og er því líkt og Thomas og Schauffele á tíu höggum undir pari. "
+    check_sentence(s, [(0, 0, "U001"), (1, 1, "U001"), (15, 15, "U001")])
+    s = "If you asked people to try to picture hunting for truffles, the expensive subterranean fungi, many would no doubt imagine men with dogs going through woodlands in France or Italy."
+    # check_sentence(s, [(0, 33, "E004")])      # TODO þetta virðist ekki virka; strandar á því að setningin greinist ekki!
+    s = "Rock and roll er skemmtilegt."
+    check_sentence(s, [(0, 5, "E004")])
 
 def test_conjunctions(verbose=False):
-    pass
+    s = "Ef að pósturinn kemur ekki á morgun missi ég vitið."
+    check_sentence(s, [(1, 1, "P_NT_Að")])
+    s = "Hafsteinn vissi svarið þótt að hann segði það ekki upphátt."
+    check_sentence(s, [(4, 4, "P_NT_Að")])
+    s = "Hafsteinn vissi svarið þó hann segði það ekki upphátt."
+    check_sentence(s, [(3, 3, "P_NT_ÞóAð")])
+    s = "Ég kem á hátíðina víst að pabbi þinn kemst ekki."
+    # check_sentence(s, [(4, 5, "P_NT_VístAð")])            # TODO engin villa finnst! Var ekki búið að útfæra þetta?
+    s = "Ég kem á hátíðina fyrst að pabbi þinn kemst ekki."
+    check_sentence(s, [(5, 5, "P_NT_Að")])
+    s = "Hatturinn passar á höfuðið nema að það sé eyrnaband undir honum."
+    check_sentence(s, [(5, 5, "P_NT_Að")])
+    s = "Hún grét þegar að báturinn sást ekki lengur."
+    check_sentence(s, [(3, 3, "P_NT_Að")])
+    s = "Hún hélt andliti á meðan að hann horfði til hennar."
+    check_sentence(s, [(4, 4, "P_NT_Að")])
+    s = "Annaðhvort ferðu í buxurnar núna."
+    # check_sentence(s, [(5, 5, "P_NT_AnnaðhvortEða")])     # TODO engin villa finnst, eftir að útfæra
+    s = "Hvorki hatturinn passaði á höfuðið."
+    # check_sentence(s, [(0, 0, "P_NT_HvorkiNé")])          # TODO engin villa finnst, eftir að útfæra
 
 def test_impersonal_verbs(verbose=False):
     # einfaldar, og hafa langt á milli
-    pass
-
-def test_number_agreement(verbose=False):
-    # P_NT_ÍTölu
-    pass
+    s = "Ég dreymdi að það væri hundur í fiskabúrinu mínu."
+    # check_sentence(s, [(0, 0, "P_SUBJ_CASE_nf_þf")])            # TODO setningin fær ekki þáttun. Þetta er inni í Verbs.conf, af hverju er þetta ekki höndlað?
+    s = "Hestinum dreymdi að það væri hundur í fiskabúrinu."
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])    
+    s  = "Mér klæjar undan áburðinum."
+    # check_sentence(s, [(0, 0, "P_SUBJ_CASE_þgf_þf")])           # TODO villa greinist ekki... eftir að útfæra?
+    s = "Hann sagði að konan hefði misminnt að potturinn væri með loki."
+    # check_sentence(s, [(0, 0, "P_SUBJ_CASE")])                # TODO villa greinist ekki, eftir að útfæra?
+    s = "Bréfberinn spurði hvort hún vantaði fleiri frímerki."
+    # check_sentence(s, [(0, 0, "P_SUBJ_CASE")])                # TODO villa greinist ekki, eftir að útfæra?
 
 def test_correct_sentences(verbose=False):
-    pass
-
+    s = "Ráðist var í úttektina vegna ábendinga sem bárust embættinu frá notendum þjónustunnar. "
+    check_sentence(s, [])
+    s = "Upp úr krafsinu hafði maðurinn samtals 51 pakka af kjúklingabringum og 9,2 kíló að auki."
+    check_sentence(s, [])
+    s = "Á göngudeild gigtar á Landspítalanum sé tilvísunum forgangsraðað og er meðalbiðtími innan marka."
+    check_sentence(s, [])
+    
 if __name__ == "__main__":
     pass
