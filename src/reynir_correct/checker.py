@@ -273,7 +273,6 @@ class ErrorFinder(ParseForestNavigator):
             except AttributeError:
                 pass
         if subj:
-            start, end = subj.span
             cast_functions = {
                 "nf": SimpleTree.nominative_np,
                 "þf": SimpleTree.accusative_np,
@@ -318,7 +317,7 @@ class ErrorFinder(ParseForestNavigator):
         correct_np = correct_spaces(suggestion)
         return (
             "Á sennilega að vera '{1}'"
-            .format(txt, correct_np),
+            .format(correct_np),
             suggestion
         )
 
@@ -331,11 +330,11 @@ class ErrorFinder(ParseForestNavigator):
         correct_np = correct_spaces(suggestion)
         return (
             "Á sennilega að vera '{1}'"
-            .format(txt, correct_np),
+            .format(correct_np),
             suggestion
         )
 
-    def _visit_token(self, level, node):
+    def visit_token(self, level, node):
         """ Entering a terminal/token match node """
         terminal = node.terminal
         if (
@@ -428,7 +427,7 @@ class ErrorFinder(ParseForestNavigator):
                     )
         return None
 
-    def _visit_nonterminal(self, level, node):
+    def visit_nonterminal(self, level, node):
         """ Entering a nonterminal node """
         if node.is_interior or node.nonterminal.is_optional:
             # Not an interesting node

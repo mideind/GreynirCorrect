@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# DOCX file for testing, if open
+~$Errors.docx
+
 # IDEs and editors
 .idea/
 .vscode/
