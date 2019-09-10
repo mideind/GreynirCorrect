@@ -304,8 +304,7 @@ class CapitalizationErrors:
             assert word.istitle()
             CapitalizationErrors.SET_REV.add(word.lower())
 
-
-class ErrorForms:
+class OwForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
     DICT = dict()
@@ -314,30 +313,30 @@ class ErrorForms:
     def contains(word):
         """ Check whether the word form is in the error forms dictionary,
             either in its original casing or in a lower case form """
-        d = ErrorForms.DICT
+        d = OwForms.DICT
         if word.islower():
             return word in d
         return word in d or word.lower() in d
 
     @staticmethod
     def add(wrong_form, meaning):
-        ErrorForms.DICT[wrong_form] = meaning
+        OwForms.DICT[wrong_form] = meaning
 
     @staticmethod
     def get_lemma(wrong_form):
-        return ErrorForms.DICT[wrong_form][0]
+        return OwForms.DICT[wrong_form][0]
 
     @staticmethod
     def get_correct_form(wrong_form):
         """ Return a corrected form of the given word, attempting
             to emulate the lower/upper/title case of the word """
         # First, try the original casing of the wrong form
-        c = ErrorForms.DICT.get(wrong_form)
+        c = OwForms.DICT.get(wrong_form)
         if c is not None:
             # Found it: we're done
             return c[1]
         # Lookup a lower case version
-        c = ErrorForms.DICT.get(wrong_form.lower())
+        c = OwForms.DICT.get(wrong_form.lower())
         if c is None:
             # Not found: can't correct
             return wrong_form
@@ -350,15 +349,125 @@ class ErrorForms:
 
     @staticmethod
     def get_id(wrong_form):
-        return ErrorForms.DICT[wrong_form][2]
+        return OwForms.DICT[wrong_form][2]
 
     @staticmethod
     def get_category(wrong_form):
-        return ErrorForms.DICT[wrong_form][3]
+        return OwForms.DICT[wrong_form][3]
 
     @staticmethod
     def get_tag(wrong_form):
-        return ErrorForms.DICT[wrong_form][4]
+        return OwForms.DICT[wrong_form][4]
+
+class CIDErrorForms:
+
+    # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
+    DICT = dict()
+
+    @staticmethod
+    def contains(word):
+        """ Check whether the word form is in the error forms dictionary,
+            either in its original casing or in a lower case form """
+        d = CIDErrorForms.DICT
+        if word.islower():
+            return word in d
+        return word in d or word.lower() in d
+
+    @staticmethod
+    def add(wrong_form, meaning):
+        CIDErrorForms.DICT[wrong_form] = meaning
+
+    @staticmethod
+    def get_lemma(wrong_form):
+        return CIDErrorForms.DICT[wrong_form][0]
+
+    @staticmethod
+    def get_correct_form(wrong_form):
+        """ Return a corrected form of the given word, attempting
+            to emulate the lower/upper/title case of the word """
+        # First, try the original casing of the wrong form
+        c = CIDErrorForms.DICT.get(wrong_form)
+        if c is not None:
+            # Found it: we're done
+            return c[1]
+        # Lookup a lower case version
+        c = CIDErrorForms.DICT.get(wrong_form.lower())
+        if c is None:
+            # Not found: can't correct
+            return wrong_form
+        c = c[1]
+        if wrong_form.istitle():
+            return c.title()
+        if wrong_form.isupper():
+            return c.upper()
+        return c
+
+    @staticmethod
+    def get_id(wrong_form):
+        return CIDErrorForms.DICT[wrong_form][2]
+
+    @staticmethod
+    def get_category(wrong_form):
+        return CIDErrorForms.DICT[wrong_form][3]
+
+    @staticmethod
+    def get_tag(wrong_form):
+        return CIDErrorForms.DICT[wrong_form][4]
+
+class CDErrorForms:
+
+    # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
+    DICT = dict()
+
+    @staticmethod
+    def contains(word):
+        """ Check whether the word form is in the error forms dictionary,
+            either in its original casing or in a lower case form """
+        d = CDErrorForms.DICT
+        if word.islower():
+            return word in d
+        return word in d or word.lower() in d
+
+    @staticmethod
+    def add(wrong_form, meaning):
+        CDErrorForms.DICT[wrong_form] = meaning
+
+    @staticmethod
+    def get_lemma(wrong_form):
+        return CDErrorForms.DICT[wrong_form][0]
+
+    @staticmethod
+    def get_correct_form(wrong_form):
+        """ Return a corrected form of the given word, attempting
+            to emulate the lower/upper/title case of the word """
+        # First, try the original casing of the wrong form
+        c = CDErrorForms.DICT.get(wrong_form)
+        if c is not None:
+            # Found it: we're done
+            return c[1]
+        # Lookup a lower case version
+        c = CDErrorForms.DICT.get(wrong_form.lower())
+        if c is None:
+            # Not found: can't correct
+            return wrong_form
+        c = c[1]
+        if wrong_form.istitle():
+            return c.title()
+        if wrong_form.isupper():
+            return c.upper()
+        return c
+
+    @staticmethod
+    def get_id(wrong_form):
+        return CDErrorForms.DICT[wrong_form][2]
+
+    @staticmethod
+    def get_category(wrong_form):
+        return CDErrorForms.DICT[wrong_form][3]
+
+    @staticmethod
+    def get_tag(wrong_form):
+        return CDErrorForms.DICT[wrong_form][4]
 
 
 class Settings:
@@ -492,8 +601,8 @@ class Settings:
         MultiwordErrors.add(phrase, error[1:-1])
 
     @staticmethod
-    def _handle_error_forms(s):
-        """ Handle config parameters in the error_forms section """
+    def _handle_ow_forms(s):
+        """ Handle config parameters in the ow_forms section """
         split = s.strip().split(";")
         if len(split) != 6:
             raise ConfigError("Expected wrong form;lemma;correct form;id;category;tag")
@@ -505,8 +614,28 @@ class Settings:
             split[4].strip(),  # Category (ordfl)
             split[5].strip(),  # Tag (beyging)
         )
-        ErrorForms.add(wrong_form, meaning)
+        OwForms.add(wrong_form, meaning)
 
+    @staticmethod
+    def _handle_error_forms(s):
+        """ Handle config parameters in the error_forms section """
+        split = s.strip().split(";")
+        if len(split) != 7:
+            raise ConfigError("Expected wrong form;lemma;correct form;id;category;tag;errortype")
+        wrong_form = split[0].strip()
+        meaning = (
+            split[1].strip(),  # Lemma (stofn)
+            split[2].strip(),  # Correct form (ordmynd)
+            split[3].strip(),  # Id (utg)
+            split[4].strip(),  # Category (ordfl)
+            split[5].strip(),  # Tag (beyging)
+        )
+        if "cid" in split[6].strip():
+            CIDErrorForms.add(wrong_form, meaning)  # context-independent errors
+        elif "cd" in split[6].strip():
+            CDErrorForms.add(wrong_form, meaning)   # context-dependent errors
+        else:
+            raise ConfigError("Wrong error type given, expected cid or cd")
     @staticmethod
     def read(fname):
         """ Read configuration file """
@@ -526,6 +655,7 @@ class Settings:
                 "taboo_words": Settings._handle_taboo_words,
                 "suggestions": Settings._handle_suggestions,
                 "multiword_errors": Settings._handle_multiword_errors,
+                "ow_forms": Settings._handle_ow_forms,
                 "error_forms": Settings._handle_error_forms,
             }
             handler = None  # Current section handler
