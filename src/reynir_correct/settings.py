@@ -469,6 +469,22 @@ class CDErrorForms:
     def get_tag(wrong_form):
         return CDErrorForms.DICT[wrong_form][4]
 
+class Morphemes:
+
+    # dict { morpheme : [ preferred PoS ] }
+    BOUND_DICT = {}
+    # dict { morpheme : [ excluded PoS ] }
+    FREE_DICT = {}
+
+    @staticmethod
+    def add(morph, boundlist, freelist):
+        if boundlist:
+            Morphemes.BOUND_DICT[morph] = boundlist
+        else:
+            raise ConfigError("A definition of allowed PoS is necessary with morphemes")
+        # The freelist may be empty
+        Morphemes.FREE_DICT[morph] = freelist
+
 
 class Settings:
 
@@ -636,6 +652,33 @@ class Settings:
             CDErrorForms.add(wrong_form, meaning)   # context-dependent errors
         else:
             raise ConfigError("Wrong error type given, expected cid or cd")
+
+    @staticmethod
+    def _handle_morphemes(s):
+        """ Process the contents of the [morphemes] section """
+        freelist = []
+        boundlist = []
+        spl = s.split()
+        if len(spl) < 2:
+            raise ConfigError(
+                "Expected at least a prefix and an attachment specification"
+            )
+        m = spl[0]
+        for pos in spl[1:]:
+            if pos:
+                if pos.startswith("+"):
+                    boundlist.append(pos[1:])
+                elif pos.startswith("-"):
+                    freelist.append(pos[1:])
+                else:
+                    raise ConfigError(
+                        "Attachment specification should start with '+' or '-'"
+                    )
+        Morphemes.add(m, boundlist, freelist)
+
+
+
+
     @staticmethod
     def read(fname):
         """ Read configuration file """
@@ -655,6 +698,7 @@ class Settings:
                 "taboo_words": Settings._handle_taboo_words,
                 "suggestions": Settings._handle_suggestions,
                 "multiword_errors": Settings._handle_multiword_errors,
+                "morphemes": Settings._handle_morphemes,
                 "ow_forms": Settings._handle_ow_forms,
                 "error_forms": Settings._handle_error_forms,
             }

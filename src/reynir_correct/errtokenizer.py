@@ -180,6 +180,7 @@ class CompoundError(Error):
     # C001: Duplicated word removed. Should be corrected.
     # C002: Wrongly compounded words split up. Should be corrected.
     # C003: Wrongly split compounds united. Should be corrected.
+    # C004: Duplicated word marked as a possible error. Should be pointed out but not deleted.
 
     def __init__(self, code, txt, span=1):
         # Compound error codes start with "C"
@@ -380,20 +381,53 @@ def parse_errors(token_stream, db):
                 token.txt
                 and next_token.txt
                 and token.txt == next_token.txt
-                and token.txt.lower() not in AllowedMultiples.SET
                 and token.kind == TOK.WORD
             ):
-                # Step to next token
-                next_token = CorrectToken.word(token.txt)
-                print("Fann C001 í parse_errors: {}".format(token.txt))
+                if token.txt.lower() in AllowedMultiples.SET:
+                    print("Fann C004 (tilvik 1) í parse_errors: {}".format(next_token.txt.lower()))
+                    next_token.set_error(
+                        CompoundError(
+                            "004",
+                            "Getur verið að '{0}' sé endurtekið orð sem þarf að fella í burtu?".format(next_token.txt)
+                        )
+                    )
+                    yield token
+                    token = next_token
+                    continue
+                else:
+                    # Step to next token
+                    next_token = CorrectToken.word(token.txt)
+                    print("Fann C001 í parse_errors: {}".format(token.txt))
+                    next_token.set_error(
+                        CompoundError(
+                            "001",
+                            "Endurtekið orð ('{0}') var fellt burt".format(token.txt)
+                        )
+                    )
+                    token = next_token
+                    continue
+
+            # Word duplication with different cases
+            # Only provide a suggestion
+            # No need to check AllowedMultiples
+            if (
+                token.txt
+                and next_token.txt
+                and token.txt.lower() == next_token.txt.lower()
+                and token.kind == TOK.WORD
+            ):
+                # Set possible error on next token
+                print("Fann C004 (tilvik 2) í parse_errors: {}".format(next_token.txt.lower()))
                 next_token.set_error(
                     CompoundError(
-                        "001",
-                        "Endurtekið orð ('{0}') var fellt burt".format(token.txt)
+                        "004",
+                        "Getur verið að '{0}' sé endurtekið orð sem þarf að fella í burtu?".format(next_token.txt)
                     )
                 )
+                yield token
                 token = next_token
                 continue
+
 
             # Splitting wrongly compounded words
             if token.txt and token.txt.lower() in WrongCompounds.DICT:
@@ -600,7 +634,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase):
                 corrected, at_sentence_start, auto_uppercase
             )
             t1 = token_ctor.Word(w, m, token=token)
-            print("Fann C002 í parse_errors: {}".format(token.txt))
+            print("Fann C004 í parse_errors: {}".format(token.txt))
             t1.set_error(
                 CompoundError(
                     "004",
@@ -929,7 +963,7 @@ def fix_capitalization(token_stream, db, token_ctor, auto_uppercase):
             token.kind in {TOK.DATEREL, TOK.DATEABS}
             and any(m in token.txt for m in MONTH_NAMES_CAPITALIZED)
         ):
-            # There is a capitalized month name within the token: suspicuous
+            # There is a capitalized month name within the token: suspicious
             if token.txt.upper() == token.txt:
                 # ALL-CAPS: don't worry about it
                 pass

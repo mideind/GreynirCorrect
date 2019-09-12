@@ -104,8 +104,7 @@ def test_doubling(verbose=False):
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
-    # assert len(g) == 9            # TODO útfæra þetta í checker.py, þarf að hafa upplýsingar um meanings.
-    # assert "Slysið átti" in s
+    assert g[2].error_code == "C004"    # slysið, bara uppástunga, ekki leiðrétt
 
     # Testing multiple words in a row. This should be corrected.
     g = rc.tokenize("Það er stanslaust fjör fjör fjör fjör fjör fjör fjör fjör í sveitinni.")
@@ -128,7 +127,8 @@ def test_doubling(verbose=False):
     assert "Ég á sem" not in s
     assert "langsokkur en hún" in s
     assert "en en" not in s
-    assert g[8].error_code == "C001"
+    assert g[3].error_code == "C004"    # á
+    assert g[8].error_code == "C001"    # en
 
 def test_accepted_doubling(verbose=False):
     # Test examples with a comma between. This should be accepted.
@@ -150,7 +150,7 @@ def test_accepted_doubling(verbose=False):
     assert not g[3].error_code
 
     # Test whether lowercase instance following uppercase instance is corrected    
-    # First, these are separate words and should be accepted. 
+    # First, these are separate words and should be accepted but possible error pointed out. 
     # 'í í' should be pointed out but not corrected, as 'í í' can occur, 
     # for instance as a particle and then a preposition.
     g = rc.tokenize("Finnur finnur gull í í Tálknafirði.")
@@ -160,7 +160,7 @@ def test_accepted_doubling(verbose=False):
     assert len(g) == 9
     assert "Finnur finnur" in s
     assert not "Finnur gull" in s
-    #assert g[4].error_code == "W001"    # TODO útfæra
+    assert g[5].error_code == "C004"    # TODO útfæra
 
     # Same example except now the common noun is capitalized in the beginning,
     # followed by the proper noun. This should be accepted.
@@ -269,6 +269,7 @@ def test_split_compounds(verbose=False):
             assert g[ix].error_code == "C003"  # Myndardrengurinn, hálfundarlegur, kvennamegin
         else:
             assert not g[ix].error_code
+
 
 def test_unique_context_independent_errors(verbose=False):
     # Known, unique, context independent spelling errors - S001
@@ -699,6 +700,15 @@ def test_single_first_parts(verbose=False):
     # assert "for vinnunni" not in s    # TODO virkar ekki
     # assert g[4].error_code == "M002"  # TODO Eftir að útfæra
     # assert g[6].error_code == "M002"  # TODO Eftir að útfæra
+
+    g = rc.tokenize("Hér er afbragðs matur fyrir allsherjar gesti í langtíma gistingu.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "afbragðsmatur" in s
+    # assert "allsherjargesti" in s
+    # assert "langtímagistingu" in s
+
 
 def test_single_last_parts(verbose=False):
     # M003: Stakir seinni hlutar í setningu     (græn keri, arf beri, barn dómur)
