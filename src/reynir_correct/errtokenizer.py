@@ -625,7 +625,7 @@ WRONG_FORMERS = {
     "fjárfestinga": "fjárfestingar",
     "forvarna": "forvarnar",
     "fyrna": "firna",
-    "griðar": "griða"       # griðarstaður
+    "griðar": "griða",       # griðarstaður
     "heyrna": "heyrnar",
     "kvartana": "kvörtunar",
     "kvenn": "kven",
