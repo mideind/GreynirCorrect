@@ -34,7 +34,7 @@ from reynir.bintokenizer import DefaultPipeline, MatchingStream
 from .settings import (
     AllowedMultiples, WrongCompounds, SplitCompounds, UniqueErrors,
     MultiwordErrors, CapitalizationErrors, TabooWords, CDErrorForms,
-    CIDErrorForms, OwForms, Settings
+    CIDErrorForms, OwForms, Morphemes, Settings
 )
 from .spelling import Corrector
 
@@ -48,7 +48,14 @@ MONTH_NAMES_CAPITALIZED = (
     "Janúar", "Febrúar", "Mars", "Apríl", "Maí", "Júní",
     "Júlí", "Ágúst", "September", "Október", "Nóvember", "Desember"
 )
-
+POS = {
+    "lo": "lýsingarorð",
+    "ao": "atviksorð",
+    "kk": "nafnorð",
+    "hk": "nafnorð",
+    "kvk": "nafnorð",
+    "so": "sagnorð",
+}
 
 def emulate_case(s, template):
     """ Return the string s but emulating the case of the template
@@ -181,6 +188,7 @@ class CompoundError(Error):
     # C002: Wrongly compounded words split up. Should be corrected.
     # C003: Wrongly split compounds united. Should be corrected.
     # C004: Duplicated word marked as a possible error. Should be pointed out but not deleted.
+    # C005: Possible split compound, depends on meaning/PoS chosen by parser.
 
     def __init__(self, code, txt, span=1):
         # Compound error codes start with "C"
@@ -369,6 +377,7 @@ def parse_errors(token_stream, db):
         # have a match
         return any(m.stofn.replace("-", "") in next_stems for m in meanings)
 
+
     token = None
     try:
         # Maintain a one-token lookahead
@@ -428,7 +437,6 @@ def parse_errors(token_stream, db):
                 token = next_token
                 continue
 
-
             # Splitting wrongly compounded words
             if token.txt and token.txt.lower() in WrongCompounds.DICT:
                 correct_phrase = list(WrongCompounds.DICT[token.txt.lower()])
@@ -457,19 +465,73 @@ def parse_errors(token_stream, db):
                 continue
 
             # Unite wrongly split compounds
-            if is_split_compound(token, next_token):
-                first_txt = token.txt
-                token = CorrectToken.word(token.txt + next_token.txt)
-                print("Fann C003 í parse_errors: {}".format(token.txt))
-                token.set_error(
-                    CompoundError(
-                        "003",
-                        "Orðin '{0} {1}' voru sameinuð í eitt"
-                        .format(first_txt, next_token.txt)
+            # Or suggest uniting them
+            if token.txt and (token.txt.lower() in SplitCompounds.DICT or token.txt.lower in Morphemes.BOUND_DICT):
+                if token.txt is None or next_token.txt is None or next_token.txt.istitle():
+                    # If the latter part is in title case, we don't see it
+                    # as a part of a split compound
+                    continue
+                if next_token.txt.isupper() and not token.txt.isupper():
+                    # Don't allow a combination of an all-upper-case
+                    # latter part with anythin but an all-upper-case former part
+                    continue
+                if token.txt.isupper() and not next_token.txt.isupper():
+                    # ...and vice versa
+                    continue
+                _, meanings = db.lookup_word(next_token.txt.lower(), at_sentence_start=False)
+                if not meanings:
+                    continue
+                next_stems = SplitCompounds.DICT.get(token.txt.lower())
+                if not next_stems:
+                    continue
+                if any(m.stofn.replace("-", "") in next_stems for m in meanings):
+                    first_txt = token.txt
+                    token = CorrectToken.word(token.txt + next_token.txt)
+                    print("Fann C003 í parse_errors: {}".format(token.txt))
+                    token.set_error(
+                        CompoundError(
+                            "003",
+                            "Orðin '{0} {1}' voru sameinuð í eitt."
+                            .format(first_txt, next_token.txt)
+                        )
                     )
-                )
-                continue
-
+                    continue
+                next_pos = Morphemes.BOUND_DICT.get(token.txt.lower())
+                if not next_pos:
+                    continue
+                poses = set([ m.ordfl for m in meanings if m.ordfl in next_pos])
+                notposes = set([ m.ordfl for m in meanings if m.ordfl not in next_pos])
+                if not notposes:
+                    # No other PoS available, most likely a compound error
+                    first_txt = token.txt
+                    token = CorrectToken.word(token.txt + next_token.txt)
+                    print("Fann C003 í parse_errors: {}".format(token.txt))
+                    token.set_error(
+                        CompoundError(
+                            "003",
+                            "Orðin '{0} {1}' voru sameinuð í eitt."
+                            .format(first_txt, next_token.txt)
+                        )
+                    )
+                    continue                    
+                if poses:
+                    transposes = list(POS[c] for c in poses)
+                    if len(transposes) == 1:
+                        tp = "".join(transposes)
+                    else:
+                        tp = ", ".join(transposes[:-1])
+                        tp = tp+" eða "+transposes[-1]
+                    print("Fann C005 í parse_errors: {}".format(token.txt))
+                    token.set_error(
+                        CompoundError(
+                            "005",
+                            "Ef '{0}' er {1} á að sameina það '{2}'."
+                            .format(token.txt, tp, next_token.txt)
+                        )
+                    )
+                    yield token
+                    token = next_token
+                    continue
             # Yield the current token and advance to the lookahead
             yield token
             token = next_token
@@ -550,22 +612,32 @@ def handle_multiword_errors(token_stream, db, token_ctor):
 NOT_FORMERS = frozenset(("allra", "alhliða", "fjölnota", "margnota", "ótal"))
 
 # Illegal prefixes that will be substituted
+# Attn.: Make sure these errors are available as a prefix to begin with!
 WRONG_FORMERS = {
+    "akríl": "akrýl",
+    "akstur": "aksturs",
     "athugana": "athugunar",
+    "dísel": "dísil",
+    "eyrnar": "eyrna",
     "ferminga": "fermingar",
     "feykna": "feikna",
-    "fyrna": "firna",
     "fjarskiptar": "fjarskipta",
     "fjárfestinga": "fjárfestingar",
     "forvarna": "forvarnar",
+    "fyrna": "firna",
+    "griðar": "griða"       # griðarstaður
     "heyrna": "heyrnar",
     "kvartana": "kvörtunar",
     "kvenn": "kven",
     "loftlags": "loftslags",
+    "Lundúnar": "Lundúna",
+    "næringa": "næringar",
     "pantana": "pöntunar",
     "ráðninga": "ráðningar",
     "skráninga": "skráningar",
+    "Vestfjarðar": "Vestfjarða",
     "ábendinga": "ábendingar",
+    "öldungar": "öldunga",
 }
 
 

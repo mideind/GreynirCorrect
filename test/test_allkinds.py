@@ -677,38 +677,40 @@ def test_wrong_first_parts(verbose=False):
     # assert g[6].error_code == "M001"    # TODO fæ C002
 
 def test_single_first_parts(verbose=False):
-    # M002: Stakir fyrri hlutar í setningu      (all kaldur, )
-
+    # C003: Stakir fyrri hlutar í setningu sem alveg viss um      (all kaldur, )
+    # C005: Mögulega stakir fyrri hlutar en ekki viss, uppástunga um sameiningu
     g = rc.tokenize("Hann var all kaldur þegar hann fannst enda var hann hálf ber.")
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
-    # assert "allkaldur" in s           # TODO virkar ekki; gerir all að U001
+    # assert "allkaldur" in s           # Sameina ekki, því 'kaldur' gæti verið no.
     # assert "all kaldur" not in s
-    # assert "hálfber" in s             # TODO virkar ekki
-    # assert "hálf ber" not in s
-    # assert g[3].error_code == "M002"  # TODO eftir að útfæra villukóða
-    # assert g[10].error_code == "M002" # TODO eftir að útfæra villukóða
+    assert "hálfber" in s             # TODO virkar ekki
+    assert "hálf ber" not in s
+    assert g[3].error_code == "C005" 
+    assert g[10].error_code == "C003"
 
     g = rc.tokenize("Hún setti honum afar kosti í for vinnunni.")
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
-    # assert "afarkosti" in s           # TODO virkar ekki
-    # assert "afar kosti" in s          # TODO virkar ekki
-    # assert "forvinnunni" in s         # TODO virkar ekki
-    # assert "for vinnunni" not in s    # TODO virkar ekki
-    # assert g[4].error_code == "M002"  # TODO Eftir að útfæra
-    # assert g[6].error_code == "M002"  # TODO Eftir að útfæra
+    assert "afarkosti" in s
+    assert "afar kosti" in s
+    assert "forvinnunni" in s
+    assert "for vinnunni" not in s
+    assert g[4].error_code == "C003" 
+    assert g[6].error_code == "C003" 
 
     g = rc.tokenize("Hér er afbragðs matur fyrir allsherjar gesti í langtíma gistingu.")
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
-    # assert "afbragðsmatur" in s
-    # assert "allsherjargesti" in s
-    # assert "langtímagistingu" in s
-
+    assert "afbragðsmatur" in s
+    assert "allsherjargesti" in s
+    assert "langtímagistingu" in s
+    assert g[3].error_code == "C003"
+    assert g[5].error_code == "C003"
+    assert g[7].error_code == "C003"
 
 def test_single_last_parts(verbose=False):
     # M003: Stakir seinni hlutar í setningu     (græn keri, arf beri, barn dómur)
