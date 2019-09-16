@@ -3,7 +3,7 @@
 
     Settings module
 
-    Copyright (c) 2018 Miðeind ehf.
+    Copyright (c) 2019 Miðeind ehf.
 
        This program is free software: you can redistribute it and/or modify
        it under the terms of the GNU General Public License as published by
@@ -304,6 +304,7 @@ class CapitalizationErrors:
             assert word.istitle()
             CapitalizationErrors.SET_REV.add(word.lower())
 
+
 class OwForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
@@ -358,6 +359,7 @@ class OwForms:
     @staticmethod
     def get_tag(wrong_form):
         return OwForms.DICT[wrong_form][4]
+
 
 class CIDErrorForms:
 
@@ -414,6 +416,7 @@ class CIDErrorForms:
     def get_tag(wrong_form):
         return CIDErrorForms.DICT[wrong_form][4]
 
+
 class CDErrorForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
@@ -469,6 +472,7 @@ class CDErrorForms:
     def get_tag(wrong_form):
         return CDErrorForms.DICT[wrong_form][4]
 
+
 class Morphemes:
 
     # dict { morpheme : [ preferred PoS ] }
@@ -478,10 +482,9 @@ class Morphemes:
 
     @staticmethod
     def add(morph, boundlist, freelist):
-        if boundlist:
-            Morphemes.BOUND_DICT[morph] = boundlist
-        else:
+        if not boundlist:
             raise ConfigError("A definition of allowed PoS is necessary with morphemes")
+        Morphemes.BOUND_DICT[morph] = boundlist
         # The freelist may be empty
         Morphemes.FREE_DICT[morph] = freelist
 
@@ -623,9 +626,16 @@ class Settings:
         if len(split) != 6:
             raise ConfigError("Expected wrong form;lemma;correct form;id;category;tag")
         wrong_form = split[0].strip()
+        correct_form = split[2].strip()
+        if wrong_form == correct_form:
+            return
+            # !!! TODO: Should do this:
+            raise ConfigError(
+                "Wrong form identical to correct form for '{0}'".format(wrong_form)
+            )
         meaning = (
             split[1].strip(),  # Lemma (stofn)
-            split[2].strip(),  # Correct form (ordmynd)
+            correct_form,      # Correct form (ordmynd)
             split[3].strip(),  # Id (utg)
             split[4].strip(),  # Category (ordfl)
             split[5].strip(),  # Tag (beyging)
@@ -639,19 +649,27 @@ class Settings:
         if len(split) != 7:
             raise ConfigError("Expected wrong form;lemma;correct form;id;category;tag;errortype")
         wrong_form = split[0].strip()
+        correct_form = split[2].strip()
+        if wrong_form == correct_form:
+            return
+            # !!! TODO: Should do this:
+            raise ConfigError(
+                "Wrong form identical to correct form for '{0}'".format(wrong_form)
+            )
         meaning = (
             split[1].strip(),  # Lemma (stofn)
-            split[2].strip(),  # Correct form (ordmynd)
+            correct_form,      # Correct form (ordmynd)
             split[3].strip(),  # Id (utg)
             split[4].strip(),  # Category (ordfl)
             split[5].strip(),  # Tag (beyging)
         )
-        if "cid" in split[6].strip():
+        etype = split[6].strip()
+        if etype == "cid":
             CIDErrorForms.add(wrong_form, meaning)  # context-independent errors
-        elif "cd" in split[6].strip():
+        elif etype == "cd":
             CDErrorForms.add(wrong_form, meaning)   # context-dependent errors
         else:
-            raise ConfigError("Wrong error type given, expected cid or cd")
+            raise ConfigError("Wrong error type given, expected 'cid' or 'cd'")
 
     @staticmethod
     def _handle_morphemes(s):
@@ -675,9 +693,6 @@ class Settings:
                         "Attachment specification should start with '+' or '-'"
                     )
         Morphemes.add(m, boundlist, freelist)
-
-
-
 
     @staticmethod
     def read(fname):
