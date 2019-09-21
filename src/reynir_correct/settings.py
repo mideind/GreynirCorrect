@@ -371,7 +371,7 @@ class CIDErrorForms:
         """ Check whether the word form is in the error forms dictionary,
             either in its original casing or in a lower case form """
         d = CIDErrorForms.DICT
-        if word.islower():
+        if word.islower():      # TODO isn't this if-clause unnecessary?
             return word in d
         return word in d or word.lower() in d
 
@@ -488,6 +488,22 @@ class Morphemes:
         # The freelist may be empty
         Morphemes.FREE_DICT[morph] = freelist
 
+class AbbrevErrors:
+    # Dictionary structure: dict { wrong_abbrev : right_abbrev }
+    DOTDICT = {}    # Ends with a period
+    NOTDICT = {}    # Doesn't end with a period
+
+    @staticmethod
+    def add(wrong, right):
+        if wrong in AbbrevErrors.DOTDICT or wrong in AbbrevErrors.NOTDICT:
+            raise ConfigError("Multiple definition of '{0}' in abbrev_errors section".format(wrong))
+        if wrong[-1] == ".":
+            AbbrevErrors.DOTDICT[wrong] = right
+        else:
+            AbbrevErrors.NOTDICT[wrong] = right
+    @staticmethod
+    def contains(word):
+        return word in AbbrevErrors.DICT or word.lower() in AbbrevErrors.DICT
 
 class Settings:
 
@@ -695,6 +711,15 @@ class Settings:
         Morphemes.add(m, boundlist, freelist)
 
     @staticmethod
+    def _handle_abbrev_errors(s):
+        split = s.strip().split(", ")
+        if len(split) != 2:
+            raise ConfigError("Expected error and correction")
+        wrong_form = split[0].strip()
+        correct_form = split[1].strip()
+        AbbrevErrors.add(wrong_form, correct_form)
+
+    @staticmethod
     def read(fname):
         """ Read configuration file """
 
@@ -714,6 +739,7 @@ class Settings:
                 "suggestions": Settings._handle_suggestions,
                 "multiword_errors": Settings._handle_multiword_errors,
                 "morphemes": Settings._handle_morphemes,
+                "abbrev_errors": Settings._handle_abbrev_errors,
                 "ow_forms": Settings._handle_ow_forms,
                 "error_forms": Settings._handle_error_forms,
             }

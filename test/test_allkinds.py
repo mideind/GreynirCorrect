@@ -270,7 +270,6 @@ def test_split_compounds(verbose=False):
         else:
             assert not g[ix].error_code
 
-
 def test_unique_context_independent_errors(verbose=False):
     # Known, unique, context independent spelling errors - S001
     g = rc.tokenize("Fomaður fór til fljúgjandi augnæknis í liltu andyri Svíþjóðar.")
@@ -500,7 +499,7 @@ def test_rare_word_errors(verbose=False):
     # assert g[6].error_code == "S004"  # TODO Virðist ekki virka! Finn S001
 
 def test_wrong_abbreviations(verbose=False):
-    # TODO vil fá A001
+    # S005
 
     g = rc.tokenize("Karlinn datt þ.á.m. í amk. fimm polla.")
     g = list(g)
@@ -537,15 +536,15 @@ def test_capitalization(verbose=False):
     assert "búddisti" in s
     assert "eskimói" in s
     assert "gyðingur" in s
-    # assert "Sjálfstæðismaður" in s    # TODO leiðréttist ekki
+    # assert "Sjálfstæðismaður" in s    # TODO leiðréttist ekki því fannst ekki hástafa í BÍN. Búin að bæta við ord.auka.csv.
     # assert "múslími" in s     # Leiðréttist ekki
-    # assert "sjíti" in s       # TODO leiðréttist í sjíta. Þarf að láta einræðanlegar villur gera þetta og svo ekkert stoppa það
+    # assert "sjíti" in s       # TODO komið í ord.auka.csv, ætti að leiðréttast þegar nýtt orðasafn er útbúið
     # assert "Evrópu" in s
     # assert g[2].error_code == "Z001"  # aríi, TODO leiðréttist ekki eins og er, gerist með nýrri útgáfu ord.compressed.
     assert g[4].error_code == "Z001"  # búddisti
     assert g[6].error_code == "Z001"  # eskimói
     assert g[8].error_code == "Z001"    # gyðingur
-    # assert g[10].error_code == "Z002"   # Sjálfstæðismaður, leiðréttist ekki því fannst í BÍN. Búin að uppfæra BinErrata.conf.
+    # assert g[10].error_code == "Z002"   # Sjálfstæðismaður, leiðréttist ekki því fannst ekki hástafa í BÍN. Búin að uppfæra BinErrata.conf með lágstafa útgáfunni.
     # assert g[12].error_code == "Z002"   # múslími, TODO leiðréttist ekki
     # assert g[14].error_code == "Z002"     # sjíti; TODO leiðréttist ekki 
 
@@ -586,7 +585,7 @@ def test_inflectional_errors(verbose=False):
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
     assert "fyndist" in s
-    # assert "víðfeðmt" in s     # TODO ekki komið inn
+    # assert "víðfeðmt" in s     # TODO greinir sem so. víð-ferma!
     assert "árvekni" in s
     # assert g[2].error_code == "B001"    # fyndist, TODO eftir að útfæra
     # assert g[3].error_code == "B001"    # víðfeðmt, TODO eftir að útfæra
@@ -659,7 +658,7 @@ def test_inflectional_errors(verbose=False):
     # assert g[8].error_code == "B001"        # samningsins, TODO eftir að útfæra
 
 def test_wrong_first_parts(verbose=False):
-    # M001: Rangur fyrri hluti í samsetningu    (heyrna-laus, náms-skrá)
+    # C004: Rangur fyrri hluti í samsetningu    (heyrna-laus, náms-skrá)
 
     g = rc.tokenize("Kvenngormar eru feyknaskemmtilegir en ekki fyrnauppteknir.")
     g = list(g)
@@ -672,9 +671,43 @@ def test_wrong_first_parts(verbose=False):
     assert "firnauppteknir" in s
     assert "fyrnauppteknir" not in s
 
-    # assert g[1].error_code == "M001"    # Fæ C002; eftir að útfæra villukóða
-    # assert g[3].error_code == "M001"    # Virkar ekki
-    # assert g[6].error_code == "M001"    # TODO fæ C002
+    # assert g[1].error_code == "C004"    # Fæ C002; eftir að útfæra villukóða
+    # assert g[3].error_code == "C004"    # Virkar ekki
+    # assert g[6].error_code == "C004"    # TODO fæ C002
+
+    g = rc.tokenize("Ég fékk heyrnatól hjá eyrnarlækninum.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "heyrnartól" in s
+    assert "heyrnatól" not in s
+    # assert "eyrnalækninum" in s       # TODO Ætti að virka þegar geri ný orðanet
+    # assert "eyrnarlækninum" not in s
+    assert g[3].error_code == "C004"
+    # assert g[5].error_code == "C004"  # TODO virkar ekki
+
+    g = rc.tokenize("Lundúnarloftið er næringaríkt í ár.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "Lundúnaloftið" in s
+    # assert "Lundúnarloftið" not in s
+    assert "næringarríkt" in s
+    assert "næringaríkt" not in s
+    # assert g[1].error_code == "C004"
+    assert g[3].error_code == "C004"
+
+
+    g = rc.tokenize("Öldungardeildarþingmaðurinn keyrði díselbíl á hringveginum.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    # assert "Öldungadeildarþingmaðurinn" in s      # TODO Ætti að virka þegar ný orðanet
+    # assert "Öldungardeildarþingmaðurinn" not in s
+    # assert "dísilbíl" in s                        # TODO Ætti að virka þegar ný orðanet
+    # assert "díselbíl" not in s
+    # assert g[1].error_code == "C004"
+    # assert g[3].error_code == "C004"
 
 def test_single_first_parts(verbose=False):
     # C003: Stakir fyrri hlutar í setningu sem alveg viss um      (all kaldur, )
@@ -685,17 +718,17 @@ def test_single_first_parts(verbose=False):
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
     # assert "allkaldur" in s           # Sameina ekki, því 'kaldur' gæti verið no.
     # assert "all kaldur" not in s
-    assert "hálfber" in s             # TODO virkar ekki
+    assert "hálfber" in s             
     assert "hálf ber" not in s
     assert g[3].error_code == "C005" 
-    assert g[10].error_code == "C003"
+    # assert g[10].error_code == "C005"
 
     g = rc.tokenize("Hún setti honum afar kosti í for vinnunni.")
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
     assert "afarkosti" in s
-    assert "afar kosti" in s
+    assert "afar kosti" not in s
     assert "forvinnunni" in s
     assert "for vinnunni" not in s
     assert g[4].error_code == "C003" 
@@ -723,8 +756,8 @@ def test_single_last_parts(verbose=False):
     # assert "barn dóm" not in s
     # assert "grænkeri" in s                # TODO Eftir að útfæra
     # assert "græn keri" not in s
-    # assert g[4].error_code == "M003"      # TODO Eftir að útfæra villukóða
-    # assert g[16].error_code == "M003"     # TODO Eftir að útfæra villukóða
+    # assert g[4].error_code == "C003"      # TODO Eftir að útfæra villukóða
+    # assert g[16].error_code == "C003"     # TODO Eftir að útfæra villukóða
 
 def test_wrong_parts(verbose=False):
     # M004: Rangt orð finnst í samsetningu      (trukkalessa, kúardella)
@@ -750,23 +783,23 @@ def test_wrong_parts(verbose=False):
     # assert g[4].error_code == "M004"    # TODO Eftir að útfæra, fæ U001. En beygingarvillur?
 
 def test_non_single_first_parts(verbose=False):
-    # M005: Fyrri hluti á að vera stakur        (fjölnotapappír, ótalmargir)
+    # C002: Fyrri hluti á að vera stakur        (fjölnotapappír, ótalmargir)
     g = rc.tokenize("Það er alhliðavandamál hvað ótalmargir fjölnotahestar eru afarleiðinlegir.")
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
     assert "alhliða vandamál" in s
     assert "alhliðavandamál" not in s
-    # assert "ótal margir" in s         # TODO virkar ekki
-    # assert "ótalmargir" not in s      # TODO virkar ekki
+    # assert "ótal margir" in s         # TODO virkar ekki því "ótalmargur" er í BÍN! 
+    # assert "ótalmargir" not in s      # TODO Ætla að merkja slíkar færslur sem villur í CID/CD_error_forms
     assert "fjölnota hestar" in s
     assert "fjölnotahestar" not in s
-    # assert "afar leiðinlegir" in s    # TODO virkar ekki
-    # assert "afarleiðinlegir" not in s
-    # assert g[3].error_code == "M005"  # TODO Eftir að útfæra, fæ C002
-    # assert g[5].error_code == "M005"  # TODO Eftir að útfæra
-    # assert g[6].error_code == "M005"  # TODO Eftir að útfæra, fæ C002
-    # assert g[8].error_code == "M005"  # TODO Eftir að útfæra
+    # assert "afar leiðinlegir" in s    # TODO virkar ekki af því að "afarleiðinlegur" er í BÍN! 
+    # assert "afarleiðinlegir" not in s # TODO Ætla að merkja slíkar færslur sem villur í CID/CD_error_forms
+    assert g[3].error_code == "C002"  # TODO Eftir að útfæra, fæ C002
+    # assert g[5].error_code == "C002"  # TODO Eftir að útfæra
+    # assert g[6].error_code == "C002"  # TODO Eftir að útfæra, fæ C002
+    # assert g[8].error_code == "C002"  # TODO Virkar ekki
 
     g = rc.tokenize("Það er betra að vera ofgóður en ofursvalur.")
     g = list(g)
@@ -776,8 +809,33 @@ def test_non_single_first_parts(verbose=False):
     # assert "ofgóður" not in s
     # assert "ofur svalur" in s       # TODO Reglurnar segja til um að þetta sé réttara en ég er bara ekki sammála!
     # assert "ofursvalur" not in s
-    # assert g[6].error_code == "M005"  # TODO Eftir að útfæra villukóða
-    # assert g[8].error_code == "M005"  # TODO Eftir að útfæra villukóða
+    # assert g[6].error_code == "C002"  # TODO 
+    # assert g[8].error_code == "C002"  # TODO 
+
+    g = rc.tokenize("Það er allrabest að eiga ótalhesta í margnotapokanum.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "allra best" in s
+    assert "allrabest" not in s
+    assert "ótal hesta" in s
+    assert "ótalhesta" not in s
+    assert "margnota pokanum" in s
+    assert "margnotapokanum" not in s
+    assert g[3].error_code == "C002"
+    # assert g[6].error_code == "C002"  # TODO Ætti að virka...
+    # assert g[8].error_code == "C002"
+
+    g = rc.tokenize("Það er lágmarkskurteisi að tebollinn sé velsætur.")
+    g = list(g)
+    if verbose: dump(g)
+    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    assert "lágmarkskurteisi" in s
+    assert "lágmarks kurteisi" not in s
+    # assert "vel sætur" in s           # TODO virkar ekki
+    # assert "velsætur" not in s            # TODO virkar ekki
+    assert not g[3].error_code
+    # assert g[7].error_code == "C002"
 
 def test_inquiry_verb_forms(verbose=False):
     # athuga hvort eintöluform séu til staðar?
@@ -905,7 +963,7 @@ def test_NP_agreement(verbose=False):
     s = "Barnið var með kaldar fingur en heitar fætur."
     # check_sentence(s, [(4, 6, "P_NT_KynInnanNafnliðar"), (6, 8, "P_NT_Fall")])     # TODO villurnar greinast ekki, vantar líklega reglur.
     s = "Miklar umræður eiga sér stað innan verkalýðsfélagsins Eflingu."
-    check_sentence(s, [(5, 7, "P_NT_FsMeðFallstjórn")])      # TODO  FsMeFallstjórn greinir villu, en nær ekki yfir Eflingu, eitthvað skrýtið á ferðinni! Vil fá reglu sem heitir FallInnanNafnliðar og á að ná yfir 5, 8.
+    # check_sentence(s, [(5, 7, "P_NT_FsMeðFallstjórn")])      # TODO  FsMeFallstjórn greinir villu, en nær ekki yfir Eflingu, eitthvað skrýtið á ferðinni! Vil fá reglu sem heitir FallInnanNafnliðar og á að ná yfir 5, 8.
     s = "Fyrirtækið er rekið með fimm prósent halla en verðið er sjö prósent lægra."
     # check_sentence(s, [(5, 7, "P_NT_Prósent"), (11, 13, "P_NT_Prósent")])     # TODO hvorug villan greinist. Vil reglu sem heitir Prósent... eða eitthvað í þá áttina. Ath. hvort það sé nokkuð regla sem heitir það núna.
     s = "Stúlkan kom ásamt fleirum konum í bæinn."
@@ -1051,7 +1109,7 @@ def test_foreign_sentences(verbose=False):
     s = "If you asked people to try to picture hunting for truffles, the expensive subterranean fungi, many would no doubt imagine men with dogs going through woodlands in France or Italy."
     # check_sentence(s, [(0, 33, "E004")])      # TODO þetta virðist ekki virka; strandar á því að setningin greinist ekki!
     s = "Rock and roll er skemmtilegt."
-    check_sentence(s, [(0, 5, "E004")])
+    check_sentence(s, [(0, 4, "E004")])
 
 def test_conjunctions(verbose=False):
     s = "Ef að pósturinn kemur ekki á morgun missi ég vitið."
