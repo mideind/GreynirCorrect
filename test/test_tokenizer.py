@@ -165,8 +165,9 @@ def test_split_compounds(verbose=False):
     """ Check split_compounds """
 
     g = rc.tokenize(
-        "Ég fór bakdyra megin inn í auka herbergi og sótti uppáhalds bragðtegund af ís. "
-        "Langtíma spá gerir ráð fyrir aftaka veðri. AFNÁM VERÐTRYGGINGAR ER GRUNDVALLAR ATRIÐI."
+        "Ég fór bakdyra megin inn í auka herbergi og sótti uppáhalds bragðtegund "
+        "af ís. Langtíma spá gerir ráð fyrir aftaka veðri. AFNÁM VERÐTRYGGINGAR "
+        "ER GRUNDVALLAR ATRIÐI."
     )
 
     g = list(g)
@@ -260,7 +261,8 @@ def test_capitalization_errors(verbose=False):
     """ Check capitalization_errors """
 
     g = rc.tokenize(
-        "Íslenskir menn drápu Danska menn og Gyðinga í evrópu gegn mótmælum Eistneskra sjálfstæðismanna."
+        "Íslenskir menn drápu Danska menn og Gyðinga í evrópu gegn mótmælum "
+        "Eistneskra sjálfstæðismanna."
     )
 
     g = list(g)
@@ -280,7 +282,10 @@ def test_capitalization_errors(verbose=False):
     # assert "sjálfstæðismanna" not in s
     # assert "Sjálfstæðismanna" in s
 
-    g = rc.tokenize("finnar finna Finna hvar sem þeir leita en finnarnir fóru og hittu finnana.")
+    g = rc.tokenize(
+        "finnar finna Finna hvar sem þeir leita en finnarnir fóru "
+        "og hittu finnana."
+    )
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
@@ -291,8 +296,10 @@ def test_capitalization_errors(verbose=False):
     assert "Finnana" in s
     assert "Finna" in s
 
-    g = rc.tokenize("Gyðingurinn sagði að Lenínisminn tröllriði öllu en Eskimóinn taldi að "
-        "það ætti fremur við um Marxismann.")
+    g = rc.tokenize(
+        "Gyðingurinn sagði að Lenínisminn tröllriði öllu en Eskimóinn taldi að "
+        "það ætti fremur við um Marxismann."
+    )
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
@@ -306,8 +313,10 @@ def test_capitalization_errors(verbose=False):
     assert "Marxismann" not in s
     assert "marxismann" in s
 
-    g = rc.tokenize("30. Desember á ég afmæli en ég held upp á það 20. JÚLÍ "
-        "af því að mamma á afmæli þriðja Janúar.")
+    g = rc.tokenize(
+        "30. Desember á ég afmæli en ég held upp á það 20. JÚLÍ "
+        "af því að mamma á afmæli þriðja Janúar."
+    )
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
@@ -319,8 +328,10 @@ def test_capitalization_errors(verbose=False):
     assert "Janúar" not in s
     assert "janúar" in s
 
-    g = rc.tokenize("30. Janúar á mamma afmæli en ég á afmæli í Febrúar. "
-        "17. Ágúst kemur Ágúst í heimsókn en þriðja Júlí verður sungið fyrir okkur.")
+    g = rc.tokenize(
+        "30. Janúar á mamma afmæli en ég á afmæli í Febrúar. "
+        "17. Ágúst kemur Ágúst í heimsókn en þriðja Júlí verður sungið fyrir okkur."
+    )
     g = list(g)
     if verbose: dump(g)
     s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
@@ -345,7 +356,7 @@ def test_taboo_words(verbose=False):
     if verbose: dump(g)
     assert len(g) == 21
     errors = {6, 13, 15, 18}
-    for ix, t in enumerate(g):
+    for ix, _ in enumerate(g):
         if ix in errors:
             assert g[ix].error_code == "T001"  # Taboo word
         else:
