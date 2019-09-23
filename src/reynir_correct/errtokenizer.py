@@ -528,7 +528,7 @@ def parse_errors(token_stream, db):
                 if any(m.stofn.replace("-", "") in next_stems for m in meanings):
                     first_txt = token.txt
                     token = CorrectToken.word(token.txt + next_token.txt)
-                    # print("Fann C003 í parse_errors: {}".format(token.txt))
+                    print("Fann C003 í parse_errors_1: {}".format(token.txt))
                     token.set_error(
                         CompoundError(
                             "003",
@@ -542,19 +542,21 @@ def parse_errors(token_stream, db):
                     continue
                 next_pos = Morphemes.BOUND_DICT.get(token.txt.lower())
                 if not next_pos:
-                    # !!! TODO: Probably missing yield token, token = next_token here
                     yield token
                     token = next_token
                     continue
                 poses = set([m.ordfl for m in meanings if m.ordfl in next_pos])
                 notposes = set([m.ordfl for m in meanings if m.ordfl not in next_pos])
                 if not poses:
+                    # Stop searching
+                    yield token
+                    token = next_token
                     continue
                 if not notposes:
                     # No other PoS available, most likely a compound error
                     first_txt = token.txt
                     token = CorrectToken.word(token.txt + next_token.txt)
-                    # print("Fann C003 í parse_errors: {}".format(token.txt))
+                    print("Fann C003 í parse_errors_2: {}".format(token.txt))
                     token.set_error(
                         CompoundError(
                             "003",
