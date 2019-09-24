@@ -316,7 +316,7 @@ class ErrorFinder(ParseForestNavigator):
         suggestion = tnode.accusative_np
         correct_np = correct_spaces(suggestion)
         return (
-            "Á sennilega að vera '{1}'"
+            "Á sennilega að vera '{0}'"
             .format(correct_np),
             suggestion
         )
@@ -329,7 +329,7 @@ class ErrorFinder(ParseForestNavigator):
         suggestion = tnode.genitive_np
         correct_np = correct_spaces(suggestion)
         return (
-            "Á sennilega að vera '{1}'"
+            "Á sennilega að vera '{0}'"
             .format(correct_np),
             suggestion
         )
