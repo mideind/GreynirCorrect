@@ -667,8 +667,7 @@ class Settings:
         wrong_form = split[0].strip()
         correct_form = split[2].strip()
         if wrong_form == correct_form:
-            return
-            # !!! TODO: Should do this:
+            print(s)
             raise ConfigError(
                 "Wrong form identical to correct form for '{0}'".format(wrong_form)
             )

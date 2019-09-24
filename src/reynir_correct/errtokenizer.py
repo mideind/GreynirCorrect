@@ -528,7 +528,7 @@ def parse_errors(token_stream, db):
                 if any(m.stofn.replace("-", "") in next_stems for m in meanings):
                     first_txt = token.txt
                     token = CorrectToken.word(token.txt + next_token.txt)
-                    print("Fann C003 í parse_errors_1: {}".format(token.txt))
+                    # print("Fann C003 í parse_errors_1: {}".format(token.txt))
                     token.set_error(
                         CompoundError(
                             "003",
@@ -556,7 +556,7 @@ def parse_errors(token_stream, db):
                     # No other PoS available, most likely a compound error
                     first_txt = token.txt
                     token = CorrectToken.word(token.txt + next_token.txt)
-                    print("Fann C003 í parse_errors_2: {}".format(token.txt))
+                    # print("Fann C003 í parse_errors_2: {}".format(token.txt))
                     token.set_error(
                         CompoundError(
                             "003",
