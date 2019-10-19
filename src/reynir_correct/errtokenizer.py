@@ -1060,6 +1060,9 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, on
             # Yes, this is a rare word that needs further attention
             if only_ci:
                 # Don't want to correct
+                token.set_error(
+                    UnknownWordError("001", "Óþekkt orð: '{0}'".format(token.txt))
+                )
                 yield token
                 at_sentence_start = False
                 continue
@@ -1359,6 +1362,7 @@ class CorrectionPipeline(DefaultPipeline):
     _token_ctor = Correct_TOK
 
     # TODO STILLING Tilbúið til að vera í staðinn sent inn í CorrectionPipeline.
+    # True : leiðréttir bara ósamhengisháðar (context independent) villur
     _only_ci = False
 
     def correct_tokens(self, stream):
