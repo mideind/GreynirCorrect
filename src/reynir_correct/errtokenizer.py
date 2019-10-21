@@ -1288,6 +1288,7 @@ class CorrectionPipeline(DefaultPipeline):
     def correct_tokens(self, stream):
         """ Add a correction pass just before BÍN annotation """
         return parse_errors(stream, self._db)
+
     def check_spelling(self, stream):
         """ Attempt to resolve unknown words """
         # Create a Corrector on the first invocation
