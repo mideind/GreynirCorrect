@@ -48,7 +48,6 @@ from .settings import (
 )
 from .spelling import Corrector
 
-
 # Words that contain any letter from the following set are assumed
 # to be foreign and their spelling is not corrected, but suggestions are made
 NON_ICELANDIC_LETTERS_SET = frozenset("cwqøâãäçĉčêëîïñôõûüÿßĳ")
@@ -78,7 +77,6 @@ POS = {
     "kvk": "nafnorð",
     "so": "sagnorð",
 }
-
 
 def emulate_case(s, template):
     """ Return the string s but emulating the case of the template
@@ -359,7 +357,7 @@ class PhraseError(Error):
         self._span = span
 
 
-def parse_errors(token_stream, db):
+def parse_errors(token_stream, db, only_ci):
 
     """ This tokenization phase is done before BÍN annotation
         and before static phrases are identified. It finds duplicated words,
@@ -410,12 +408,15 @@ def parse_errors(token_stream, db):
             next_token = get()
             # Make the lookahead checks we're interested in
             # Word duplication (note that word case must also match)
+            # TODO STILLING - hér er bara samhengisháð leiðrétting
             if (
-                token.txt
+                not only_ci
+                and token.txt
                 and next_token.txt
                 and token.txt == next_token.txt
                 and token.kind == TOK.WORD
             ):
+                # TODO STILLING - hér er bara uppástunga, skiptir ekki máli fyrir ósh. málrýni
                 if token.txt.lower() in AllowedMultiples.SET:
                     print("Fann C004 (tilvik 1) í parse_errors: {}"
                         .format(next_token.txt.lower()))
@@ -445,8 +446,10 @@ def parse_errors(token_stream, db):
             # Word duplication with different cases
             # Only provide a suggestion
             # No need to check AllowedMultiples
+            # TODO STILLING - hér er samhengisháð leiðrétting
             if (
-                token.txt
+                not only_ci
+                and token.txt
                 and next_token.txt
                 and token.txt.lower() == next_token.txt.lower()
                 and token.kind == TOK.WORD
@@ -466,6 +469,7 @@ def parse_errors(token_stream, db):
                 continue
 
             # Splitting wrongly compounded words
+            # TODO STILLING - hér er ósamhengisháð leiðrétting!
             if token.txt and token.txt.lower() in WrongCompounds.DICT:
                 correct_phrase = list(WrongCompounds.DICT[token.txt.lower()])
                 # Make the split phrase emulate the case of
@@ -492,11 +496,31 @@ def parse_errors(token_stream, db):
                 token = next_token
                 continue
 
+            # TODO STILLING - hér er samhengisháð leiðrétting
+            # TODO STILLING - ath. þó að e-ð af orðhlutunum í Morphemes.BOUND_DICT geta ekki staðið sjálfstæð
+            # TODO STILLING - þá þarf að merkja þá orðhluta sem villu ef ósh. leiðrétting er valin.
             # Unite wrongly split compounds, or at least suggest uniting them
             if token.txt and (
                 token.txt.lower() in SplitCompounds.DICT
                 or token.txt.lower() in Morphemes.BOUND_DICT
             ):
+                if only_ci:
+                    if token.txt.lower() in SplitCompounds.DICT:
+                        # Don't want to correct
+                        yield token
+                        token = next_token
+                        continue
+                    if token.txt.lower() in Morphemes.BOUND_DICT:
+                        # Only want to mark as an error, can't fix in CI-mode.
+                        token.set_error(
+                            SpellingError(
+                                "007",
+                                "Orðhlutinn '{0}' á ekki að standa stakur".format(token.txt),
+                            )
+                        )
+                    yield token
+                    token = next_token
+                    continue
                 if not next_token.txt or next_token.txt.istitle():
                     # If the latter part is in title case, we don't see it
                     # as a part of a split compound
@@ -567,6 +591,8 @@ def parse_errors(token_stream, db):
                     )
                     # !!! TODO: Probably missing yield token, token = get() here
                     continue
+                # TODO STILLING - Hér er bara uppástunga, skiptir ekki máli f. ósh. málrýni.
+                # Erum búin að koma í veg fyrir að komast hingað ofar
                 if poses:
                     transposes = list(POS[c] for c in poses)
                     if len(transposes) == 1:
@@ -665,37 +691,43 @@ def handle_multiword_errors(token_stream, db, token_ctor):
 # Attn.: Make sure these errors are available as a prefix
 NOT_FORMERS = frozenset(("allra", "alhliða", "fjölnota", "margnota", "ótal"))
 
-# Illegal prefixes that will be substituted
+# Tradition says these word parts should rather be used
+# Using them results in a context-dependent error
 # Attn.: Make sure these errors are available as a prefix
 WRONG_FORMERS = {
-    "akríl": "akrýl",
     "akstur": "aksturs",
     "athugana": "athugunar",
-    "dísel": "dísil",
-    "eyrnar": "eyrna",
     "ferminga": "fermingar",
-    "feykna": "feikna",
-    "fjarskiptar": "fjarskipta",
     "fjárfestinga": "fjárfestingar",
     "forvarna": "forvarnar",
-    "fyrna": "firna",
-    "griðar": "griða",  # griðarstaður
     "heyrna": "heyrnar",
     "kvartana": "kvörtunar",
-    "kvenn": "kven",
     "loftlags": "loftslags",
-    "Lundúnar": "Lundúna",
     "næringa": "næringar",
     "pantana": "pöntunar",
     "ráðninga": "ráðningar",
     "skráninga": "skráningar",
     "Vestfjarðar": "Vestfjarða",
     "ábendinga": "ábendingar",
-    "öldungar": "öldunga",
 }
 
 
-def fix_compound_words(token_stream, db, token_ctor, auto_uppercase):
+# Using these word parts results in a context-independent error
+# Attn.: Make sure these errors are available as a prefix
+WRONG_FORMERS_CI = {
+    "akríl": "akrýl",
+    "dísel": "dísil",
+    "eyrnar": "eyrna",
+    "feykna": "feikna",
+    "fjarskiptar": "fjarskipta",
+    "fyrna": "firna",
+    "griðar": "griða",  # griðarstaður
+    "kvenn": "kven",
+    "Lundúnar": "Lundúna",
+    "öldungar": "öldunga",
+}
+
+def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
     """ Fix incorrectly compounded words """
 
     at_sentence_start = False
@@ -703,36 +735,32 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase):
     for token in token_stream:
         #print(token.txt)
         if token.kind == TOK.S_BEGIN:
-            #print("\t4. Hingað: {}".format(token.txt))
             yield token
             at_sentence_start = True
             continue
 
         if token.kind == TOK.PUNCTUATION or token.kind == TOK.ORDINAL:
-            #print("\t5. Hingað: {}".format(token.txt))
             yield token
             # Don't modify at_sentence_start in this case
             continue
 
         if token.kind != TOK.WORD or not token.val or "-" not in token.val[0].stofn:
             # Not a compound word
-            #print("\t6. Hingað: {}".format(token.txt))
             yield token
             at_sentence_start = False
             continue
 
         # Compound word
         cw = token.val[0].stofn.split("-")
-        #print("\t1. Hingað: {}".format(token.txt))
         # Special case for the prefix "ótal" which the compounder
         # splits into ó-tal
         if len(cw) >= 3 and cw[0] == "ó" and cw[1] == "tal":
             cw = ["ótal"] + cw[2:]
 
+        # TODO STILLING - hér er ósamhengisháð leiðrétting!
         if cw[0] in NOT_FORMERS:
             # Prefix is invalid as such; should be split
             # into two words
-            #print("\t2. Hingað: {}".format(token.txt))
             prefix = emulate_case(cw[0], token.txt)
             w, m = db.lookup_word(prefix, at_sentence_start, auto_uppercase)
             t1 = token_ctor.Word(w, m, token=token)
@@ -748,9 +776,9 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase):
             w, m = db.lookup_word(suffix, at_sentence_start, auto_uppercase)
             token = token_ctor.Word(w, m, token=token)
 
+        # TODO STILLING - hér er ósamhengisháð leiðrétting!
         elif cw[0] in Morphemes.FREE_DICT:
             # Check which PoS, attachment depends on that
-            #print("\t3. Hingað: {}".format(token.txt))
             at_sentence_start = False
             suffix = token.txt[len(cw[0]):]
             freepos = Morphemes.FREE_DICT.get(cw[0])
@@ -783,9 +811,13 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase):
                 yield t2
                 continue
             else:
+                # TODO STILLING - hér er bara uppástunga.
                 # Other possibilities but want to mark as a possible error
                 # Often just weird forms in BÍN left
                 # print("Fann C005 í parse_errors: {}".format(token.txt))
+                if only_ci:
+                    yield token
+                    continue
                 transposes = list(POS[c] for c in poses)
                 if len(transposes) == 1:
                     tp = transposes[0]
@@ -801,8 +833,31 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase):
                 )
                 yield token
                 continue
+        # TODO STILLING - hér er ósamhengisháð leiðrétting, en það er spurning hvort allt hér teljist endilega villa.
+        # TODO STILLING - viljum ekki endilega leiðrétta "byggingaregla", þó að venjan leyfi hitt frekar.
+        # TODO STILLING - Þarf að fara í gegnum WRONG_FORMERS, mætti skipta upp í
+        # TODO STILLING - ALWAYS_WRONG_FORMERS og MOSTLY_WRONG_FORMERS eða eitthvað þannig?
+        # TODO STILLING - fyrra alltaf leiðrétt, en seinna bara ábending?
 
-        elif cw[0] in WRONG_FORMERS:
+        # TODO STILLING - Athuga hvort hér ætti að hafa ólík villuskilaboð fyrir WRONG_FORMERS og WRONG_FORMERS_CI?
+        elif cw[0] in WRONG_FORMERS_CI:
+            correct_former = WRONG_FORMERS_CI[cw[0]]
+            corrected = correct_former + token.txt[len(cw[0]) :]
+            corrected = emulate_case(corrected, token.txt)
+            w, m = db.lookup_word(corrected, at_sentence_start, auto_uppercase)
+            t1 = token_ctor.Word(w, m, token=token)
+            print("Fann C004 í parse_errors: {}".format(token.txt))
+            t1.set_error(
+                CompoundError(
+                    "004",
+                    "Samsetta orðinu '{0}' var breytt í '{1}'".format(
+                        token.txt, corrected
+                    ),
+                )
+            )
+            token = t1
+
+        elif not only_ci and cw[0] in WRONG_FORMERS:
             # Splice a correct front onto the word
             # ('feyknaglaður' -> 'feiknaglaður')
             correct_former = WRONG_FORMERS[cw[0]]
@@ -820,12 +875,12 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase):
                 )
             )
             token = t1
-
+        # TODO Bæta inn leiðréttingu út frá seinni orðhlutum?
         yield token
         at_sentence_start = False
 
 
-def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
+def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, only_ci):
     """ Try to identify unknown words in the token stream, for instance
         as spelling errors (character juxtaposition, deletion, insertion...) """
 
@@ -952,6 +1007,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
         # BÍN annotations via the compounder
         # Examples: 'kvenær' -> 'hvenær', 'starfssemi' -> 'starfsemi'
         # !!! TODO: Handle upper/lowercase
+        # TODO STILLING - hér er ósamhengisháð leiðrétting!
         if token.txt in UniqueErrors.DICT:
             # Note: corrected is a tuple
             corrected = UniqueErrors.DICT[token.txt]
@@ -966,17 +1022,17 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                     yield replace_word(1, token, corrected_word, None)
                 at_sentence_start = False
             continue
-
+        
+        # TODO STILLING - þetta er ósamhengisháð leiðrétting!
         if not token.val and token.txt in AbbrevErrors.DOTDICT:
             # Ends in a period, start with checking these
-            print("Leið 1, fann {}".format(token))
             corrected_word = AbbrevErrors.DOTDICT[token.txt]
             yield replace_word(7, token, corrected_word, corrected_word)
             continue
 
+        # TODO STILLING - hér er ósamhengisháð leiðrétting!
         if not token.val and token.txt in AbbrevErrors.NOTDICT:
             # No period at end of error, checking after other version
-            print("Leið 2, fann {}".format(token))
             corrected_word = AbbrevErrors.NOTDICT[token.txt]
             yield replace_word(7, token, corrected_word, corrected_word)
             continue
@@ -986,6 +1042,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
         # !!! TODO: case (for instance, 'á' as a nominative of 'ær').
         # !!! TODO: We are not handling those here.
         # !!! TODO: Handle upper/lowercase
+        # TODO STILLING - hér er ósamhengisháð leiðrétting!        
         if not token.val and CIDErrorForms.contains(token.txt):
             corrected = CIDErrorForms.get_correct_form(token.txt)
             print("Leiðrétt: {}".format(token.txt))
@@ -997,8 +1054,18 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
             # Nothing more to do
             pass
         # Check rare (or nonexistent) words and see if we have a potential correction
+        # TODO STILLING - hér er samhengisháð leiðrétting af því að við notum þrenndir!
+        # TODO STILLING - og líka því skoðum líka sjaldgæf orð.
         elif not token.val or corrector.is_rare(token.txt):
             # Yes, this is a rare word that needs further attention
+            if only_ci:
+                # Don't want to correct
+                token.set_error(
+                    UnknownWordError("001", "Óþekkt orð: '{0}'".format(token.txt))
+                )
+                yield token
+                at_sentence_start = False
+                continue
             if Settings.DEBUG:
                 print("Checking rare word '{0}'".format(token.txt))
             # We use context[-3:-1] since the current token is the last item
@@ -1022,6 +1089,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                 ):
                     # Only allow single-letter corrections of a->á and i->í
                     pass
+                # TODO STILLING - þetta er bara uppástunga
                 elif only_suggest(token, m):
                     # We have a candidate correction but the original word does
                     # exist in BÍN, so we're not super confident: yield a suggestion
@@ -1044,6 +1112,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
                     continue
 
         # Check for completely unknown and uncorrectable words
+        # TODO STILLING - hér er ósamhengisháð leiðrétting!
         if not token.val:
             # No annotation and not able to correct:
             # mark the token as an unknown word
@@ -1061,11 +1130,12 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase):
         at_sentence_start = False
 
 
-def fix_capitalization(token_stream, db, token_ctor, auto_uppercase):
+def fix_capitalization(token_stream, db, token_ctor, auto_uppercase, only_ci):
     """ Annotate tokens with errors if they are capitalized incorrectly """
 
     stems = CapitalizationErrors.SET_REV
-
+    # TODO STILLING - hér er blanda. Orð sem eiga alltaf að vera hástafa en birtast lágstafa eru ósh.,
+    # TODO STILLING - orð sem eiga alltaf að vera lágstafa nema í byrjun setningar eru sh. leiðrétting.
     def is_wrong(token):
         """ Return True if the word is wrongly capitalized """
         word = token.txt
@@ -1112,7 +1182,10 @@ def fix_capitalization(token_stream, db, token_ctor, auto_uppercase):
         # !!! if token.error is not None
         if token.kind == TOK.WORD and is_wrong(token):
             if token.txt.istitle():
-                if not at_sentence_start:
+                if only_ci:
+                    # Don't want to correct
+                    pass
+                elif not at_sentence_start:
                     print("Fann Z001 í parse_errors: {}".format(token.txt))
                     original_txt = token.txt
                     w, m = db.lookup_word(
@@ -1146,6 +1219,9 @@ def fix_capitalization(token_stream, db, token_ctor, auto_uppercase):
                 pass
             elif at_sentence_start and token.txt.startswith(MONTH_NAMES_CAPITALIZED):
                 # At the sentence start, it's OK to have a capitalized month name
+                pass
+            elif only_ci:
+                # Don't want to correct
                 pass
             else:
                 # Wrong capitalization of month name: replace it
@@ -1181,7 +1257,7 @@ def check_taboo_words(token_stream):
     """ Annotate taboo words with warnings """
 
     for token in token_stream:
-
+        # TODO STILLING - hér er ósamhengisháð leiðrétting EN er bara uppástunga.
         # Check taboo words
         if token.kind == TOK.WORD and token.val:
             # !!! TODO: This could be made more efficient if all
@@ -1274,7 +1350,7 @@ class Correct_TOK(TOK):
 
 class CorrectionPipeline(DefaultPipeline):
 
-    """ Override the default tokenization pipeline defined in binparser.py
+    """ Override the default tokenization pipeline defined in bintokenizer.py
         in ReynirPackage, adding a correction phase """
 
     def __init__(self, text, **options):
@@ -1285,9 +1361,13 @@ class CorrectionPipeline(DefaultPipeline):
     # TOK (tokenizer.py) or _Bin_TOK (bintokenizer.py)
     _token_ctor = Correct_TOK
 
+    # TODO STILLING Tilbúið til að vera í staðinn sent inn í CorrectionPipeline.
+    # True : leiðréttir bara ósamhengisháðar (context independent) villur
+    _only_ci = False
+
     def correct_tokens(self, stream):
         """ Add a correction pass just before BÍN annotation """
-        return parse_errors(stream, self._db)
+        return parse_errors(stream, self._db, self._only_ci)
 
     def check_spelling(self, stream):
         """ Attempt to resolve unknown words """
@@ -1297,21 +1377,24 @@ class CorrectionPipeline(DefaultPipeline):
 
         # Fix compound words
         stream = fix_compound_words(
-            stream, self._db, self._token_ctor, self._auto_uppercase
+            stream, self._db, self._token_ctor, self._auto_uppercase, self._only_ci
         )
+        # TODO STILLING - hér er bara samhengisháð leiðrétting
         # Fix multiword error phrases
-        stream = handle_multiword_errors(stream, self._db, self._token_ctor)
+        if not self._only_ci:
+            stream = handle_multiword_errors(stream, self._db, self._token_ctor)
         # Fix the capitalization
         stream = fix_capitalization(
-            stream, self._db, self._token_ctor, self._auto_uppercase
+            stream, self._db, self._token_ctor, self._auto_uppercase, self._only_ci
         )
         # Fix single-word errors
         stream = lookup_unknown_words(
-            self._corrector, self._token_ctor, stream, self._auto_uppercase
+            self._corrector, self._token_ctor, stream, self._auto_uppercase, self._only_ci
         )
 
         # Check taboo words
-        stream = check_taboo_words(stream)
+        if not self._only_ci:
+            stream = check_taboo_words(stream)
 
         return stream
 
