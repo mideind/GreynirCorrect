@@ -418,8 +418,8 @@ def parse_errors(token_stream, db, only_ci):
             ):
                 # TODO STILLING - hér er bara uppástunga, skiptir ekki máli fyrir ósh. málrýni
                 if token.txt.lower() in AllowedMultiples.SET:
-                    print("Fann C004 (tilvik 1) í parse_errors: {}"
-                        .format(next_token.txt.lower()))
+                    # print("Fann C004 (tilvik 1) í parse_errors: {}"
+                    #     .format(next_token.txt.lower()))
                     next_token.set_error(
                         CompoundError(
                             "004",
@@ -433,7 +433,7 @@ def parse_errors(token_stream, db, only_ci):
                 else:
                     # Step to next token
                     next_token = CorrectToken.word(token.txt)
-                    print("Fann C001 í parse_errors: {}".format(token.txt))
+                    # print("Fann C001 í parse_errors: {}".format(token.txt))
                     next_token.set_error(
                         CompoundError(
                             "001",
@@ -764,7 +764,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
             prefix = emulate_case(cw[0], token.txt)
             w, m = db.lookup_word(prefix, at_sentence_start, auto_uppercase)
             t1 = token_ctor.Word(w, m, token=token)
-            print("Fann C002 í parse_errors: {}".format(token.txt))
+            # print("Fann C002 í parse_errors: {}".format(token.txt))
             t1.set_error(
                 CompoundError(
                     "002", "Orðinu '{0}' var skipt upp".format(token.txt), span=2
@@ -798,7 +798,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
                 )
                 prefix = emulate_case(cw[0], token.txt)
                 t1 = token_ctor.Word(w1, meanings1, token=token)
-                print("Fann C002 í parse_errors: {}".format(token.txt))
+                # print("Fann C002 í parse_errors: {}".format(token.txt))
                 t1.set_error(
                     CompoundError(
                         "002",
@@ -823,7 +823,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
                     tp = transposes[0]
                 else:
                     tp = ", ".join(transposes[:-1]) + " eða " + transposes[-1]
-                print("Fann C005 í parse_errors: {}".format(token.txt))
+                # print("Fann C005 í parse_errors: {}".format(token.txt))
                 token.set_error(
                     CompoundError(
                         "005",
@@ -846,7 +846,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
             corrected = emulate_case(corrected, token.txt)
             w, m = db.lookup_word(corrected, at_sentence_start, auto_uppercase)
             t1 = token_ctor.Word(w, m, token=token)
-            print("Fann C004 í parse_errors: {}".format(token.txt))
+            # print("Fann C004 í parse_errors: {}".format(token.txt))
             t1.set_error(
                 CompoundError(
                     "004",
@@ -865,7 +865,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
             corrected = emulate_case(corrected, token.txt)
             w, m = db.lookup_word(corrected, at_sentence_start, auto_uppercase)
             t1 = token_ctor.Word(w, m, token=token)
-            print("Fann C004 í parse_errors: {}".format(token.txt))
+            # print("Fann C004 í parse_errors: {}".format(token.txt))
             t1.set_error(
                 CompoundError(
                     "004",
@@ -920,8 +920,8 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, on
                     token.txt, corrected_display
                 )
             ct.set_error(SpellingError("{0:03}".format(code), text))
-            print("Fann S00{} í parse_errors: {}".format(code, token.txt))
-            print("Breyti {} í {}".format(token.txt, corrected))
+            # print("Fann S00{} í parse_errors: {}".format(code, token.txt))
+            # print("Breyti {} í {}".format(token.txt, corrected))
         else:
             # In a multi-word sequence, mark the replacement
             # tokens with a boolean value so that further
@@ -1045,7 +1045,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, on
         # TODO STILLING - hér er ósamhengisháð leiðrétting!        
         if not token.val and CIDErrorForms.contains(token.txt):
             corrected = CIDErrorForms.get_correct_form(token.txt)
-            print("Leiðrétt: {}".format(token.txt))
+            # print("Leiðrétt: {}".format(token.txt))
             yield replace_word(2, token, corrected, corrected)
             at_sentence_start = False
             continue
@@ -1156,7 +1156,6 @@ def fix_capitalization(token_stream, db, token_ctor, auto_uppercase, only_ci):
             # don't bother
             return False
         meanings = db.meanings(rev_word) or []
-
         # If we don't find any of the stems of the "corrected"
         # meanings in the corrected error set (SET_REV),
         # the word was correctly capitalized
@@ -1186,7 +1185,7 @@ def fix_capitalization(token_stream, db, token_ctor, auto_uppercase, only_ci):
                     # Don't want to correct
                     pass
                 elif not at_sentence_start:
-                    print("Fann Z001 í parse_errors: {}".format(token.txt))
+                    # print("Fann Z001 í parse_errors: {}".format(token.txt))
                     original_txt = token.txt
                     w, m = db.lookup_word(
                         token.txt.lower(), at_sentence_start, auto_uppercase
@@ -1204,7 +1203,7 @@ def fix_capitalization(token_stream, db, token_ctor, auto_uppercase, only_ci):
                     token.txt.title(), at_sentence_start, auto_uppercase
                 )
                 token = token_ctor.Word(w, m, token=token)
-                print("Fann Z002 í parse_errors: {}".format(token.txt))
+                # print("Fann Z002 í parse_errors: {}".format(token.txt))
                 token.set_error(
                     CapitalizationError(
                         "002", "Orð á að byrja á hástaf: '{0}'".format(original_txt)
@@ -1239,7 +1238,7 @@ def fix_capitalization(token_stream, db, token_ctor, auto_uppercase, only_ci):
                     token = token_ctor.Dateabs(
                         lower, token.val[0], token.val[1], token.val[2]
                     )
-                print("Fann Z003 í parse_errors: {}".format(token.txt))
+                # print("Fann Z003 í parse_errors: {}".format(token.txt))
                 token.set_error(
                     CapitalizationError(
                         "003",
@@ -1356,14 +1355,12 @@ class CorrectionPipeline(DefaultPipeline):
     def __init__(self, text, **options):
         super().__init__(text, **options)
         self._corrector = None
+        # If only_ci is True, we only correct context-independent errors
+        self._only_ci = options.pop("only_ci", False)
 
     # Use the Correct_TOK class to construct tokens, instead of
     # TOK (tokenizer.py) or _Bin_TOK (bintokenizer.py)
     _token_ctor = Correct_TOK
-
-    # TODO STILLING Tilbúið til að vera í staðinn sent inn í CorrectionPipeline.
-    # True : leiðréttir bara ósamhengisháðar (context independent) villur
-    _only_ci = False
 
     def correct_tokens(self, stream):
         """ Add a correction pass just before BÍN annotation """
@@ -1374,29 +1371,32 @@ class CorrectionPipeline(DefaultPipeline):
         # Create a Corrector on the first invocation
         if self._corrector is None:
             self._corrector = Corrector(self._db)
-
         # Fix compound words
         stream = fix_compound_words(
-            stream, self._db, self._token_ctor, self._auto_uppercase, self._only_ci
+            stream, self._db, self._token_ctor,
+            self._auto_uppercase, self._only_ci,
         )
-        # TODO STILLING - hér er bara samhengisháð leiðrétting
         # Fix multiword error phrases
         if not self._only_ci:
-            stream = handle_multiword_errors(stream, self._db, self._token_ctor)
-        # Fix the capitalization
+            stream = handle_multiword_errors(
+                stream, self._db,
+                self._token_ctor
+            )
+        # Fix capitalization
         stream = fix_capitalization(
-            stream, self._db, self._token_ctor, self._auto_uppercase, self._only_ci
+            stream, self._db, self._token_ctor,
+            self._auto_uppercase, self._only_ci,
         )
         # Fix single-word errors
         stream = lookup_unknown_words(
-            self._corrector, self._token_ctor, stream, self._auto_uppercase, self._only_ci
+            self._corrector, self._token_ctor, stream,
+            self._auto_uppercase, self._only_ci,
         )
-
         # Check taboo words
         if not self._only_ci:
             stream = check_taboo_words(stream)
-
         return stream
+
 
 def tokenize(text, **options):
     """ Tokenize text using the correction pipeline, overriding a part
