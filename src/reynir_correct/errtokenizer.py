@@ -198,6 +198,23 @@ class Error:
         """ Should be overridden """
         raise NotImplementedError
 
+class PunctuationError(Error):
+    """ A PunctuationError is an error where punctuation is wrong """
+    # N001: Wrong quotation marks
+    # N002: Three periods should be an ellipsis
+
+    def __init__(self, code, txt):
+        # Punctuation error codes start with "N"
+        super().__init__("C" + code)
+        self._txt = txt
+
+    @property
+    def description(self):
+        return self._txt
+
+    @property
+    def set_span(self, span):
+        self._span = span
 
 class CompoundError(Error):
 
@@ -612,6 +629,24 @@ def parse_errors(token_stream, db, only_ci):
                     token = next_token
                     continue
 
+            if (
+                token.kind == TOK.PUNCTUATION
+                and token.txt != token.val[1]
+            ):
+                if token.val[1] in "„“":
+                    token.set_error(
+                        PunctuationError(
+                            "001",
+                            "Gæsalappirnar {0} ættu að vera {1}".format(token.txt, token.val[1])
+                        )
+                    )
+                elif token.val[1] in "…":
+                    token.set_error(
+                        PunctuationError(
+                            "002",
+                            "Þrír punktar '{0}' ættu að vera þrípunktur '{1}'".format(token.txt, token.val[1])
+                        )
+                    )
             # Yield the current token and advance to the lookahead
             yield token
             token = next_token
