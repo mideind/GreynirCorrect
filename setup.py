@@ -41,8 +41,8 @@ from setuptools import find_packages
 from setuptools import setup
 
 
-if sys.version_info < (3, 4):
-    print("ReynirCorrect requires Python >= 3.4")
+if sys.version_info < (3, 5):
+    print("ReynirCorrect requires Python >= 3.5")
     sys.exit(1)
 
 
@@ -58,7 +58,7 @@ def read(*names, **kwargs):
 
 setup(
     name="reynir-correct",
-    version="0.7.0",
+    version="0.8.0",
     license="GNU GPLv3",
     description="A spelling and grammar corrector for Icelandic",
     long_description="{0}\n{1}".format(
@@ -69,7 +69,7 @@ setup(
             .sub(":[a-z]+:`~?(.*?)`", r"``\1``", read("CHANGELOG.rst")),
     ),
     author="Miðeind ehf",
-    author_email="vt@extrada.com",
+    author_email="mideind@mideind.is",
     url="https://github.com/mideind/ReynirCorrect",
     packages=find_packages("src"),
     package_dir={"": "src"},
@@ -101,5 +101,5 @@ setup(
     ],
     keywords=["nlp", "parser", "icelandic"],
     setup_requires=[],
-    install_requires=["reynir>=1.8.0", "icegrams>=0.3.0"],
+    install_requires=["reynir>=2.0.0", "icegrams>=0.3.0"],
 )

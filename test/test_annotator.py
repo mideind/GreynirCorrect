@@ -87,19 +87,19 @@ def test_error_finder(verbose=False):
     s = "Jón borðaði ís þar sem að hann var svangur."
     check_sentence(s, [(5, 5, "P_NT_Að")])
     s = "Jón \"borðaði\" ís þar sem að hann var svangur."
-    check_sentence(s, [(7, 7, "P_NT_Að")])
+    check_sentence(s, [(1, 1, "C001"), (3, 3, "C001"), (7, 7, "P_NT_Að")])
     s = "Jón borðaði ís þó hann væri svangur."
     check_sentence(s, [(3, 3, "P_NT_ÞóAð")])
     s = "Jón \"borðaði\" ís þó hann væri svangur."
-    check_sentence(s, [(5, 5, "P_NT_ÞóAð")])
+    check_sentence(s, [(1, 1, "C001"), (3, 3, "C001"), (5, 5, "P_NT_ÞóAð")])
     s = "Jón borðaði ís jafnvel þó hann væri svangur."
     check_sentence(s, [(3, 4, "P_NT_ÞóAð")])
     s = "Jón \"borðaði\" ís jafnvel þó hann væri svangur."
-    check_sentence(s, [(5, 6, "P_NT_ÞóAð")])
+    check_sentence(s, [(1, 1, "C001"), (3, 3, "C001"), (5, 6, "P_NT_ÞóAð")])
     s = "Jón borðaði ís þótt hann væri svangur."
     check_sentence(s, [])
     s = "Jón \"borðaði\" ís þótt hann væri svangur."
-    check_sentence(s, [])
+    check_sentence(s, [(1, 1, "C001"), (3, 3, "C001")])
     s = "Ég féll fyrir annað hvort fegurð hennar eða gáfum."
     check_sentence(s, [(3, 4, "P_NT_AnnaðHvort")])
     s = "Ég talaði við annaðhvort barnanna."
@@ -149,10 +149,7 @@ def test_impersonal_verbs(verbose=False):
     s = "Hestinum Grímni vantaði hamar."
     # s = "Hestinum Skjóna vantaði hamar."
     check_sentence(s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
-    check_sentence(
-        "Ég hlakka til að sjá nýju Aliens-myndina.",
-        [(6, 6, "U001")]
-    )
+    check_sentence("Ég hlakka til að sjá nýju Aliens-myndina.", [])
 
 
 def test_foreign_sentences(verbose=False):
