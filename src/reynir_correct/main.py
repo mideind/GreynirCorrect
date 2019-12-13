@@ -35,6 +35,7 @@ from functools import partial
 
 from .errtokenizer import TOK, tokenize
 
+
 # File types for UTF-8 encoded text files
 ReadFile = argparse.FileType('r', encoding="utf-8")
 WriteFile = argparse.FileType('w', encoding="utf-8")

@@ -31,10 +31,10 @@ Full grammar analysis
 
 ReynirCorrect can also analyze text grammatically by attempting to parse
 it, after token-level correction. The parsing is done according to Reynir's
-context-free grammar for Icelandic, augmented with additional production rules for common
-grammatical errors. The analysis returns a set of annotations (errors and suggestions)
-that apply to spans (consecutive tokens) within sentences in the resulting
-token list.
+context-free grammar for Icelandic, augmented with additional production
+rules for common grammatical errors. The analysis returns a set of annotations
+(errors and suggestions) that apply to spans (consecutive tokens) within
+sentences in the resulting token list.
 
 ******
 Status
@@ -50,8 +50,8 @@ that can be installed using ``pip``.
 Example
 *******
 
-To tokenize text with token-level correction (the text is not parsed in this case,
-so no grammar checking is done):
+To tokenize text with token-level correction (the text is not parsed
+in this case, so no grammar checking is done):
 
 >>> from reynir_correct import tokenize
 >>> g = tokenize("Af gefnu tilefni fékk fékk daninn vilja sýnum "
@@ -91,8 +91,8 @@ Output::
                      accusative case, not the dative case ]
 
 Note that the ``annotation.start`` and ``annotation.end`` properties
-(here ``start`` is 0 and ``end`` is 4) contain the indices of the first and last
-tokens to which the annotation applies. ``E003`` is an error code.
+(here ``start`` is 0 and ``end`` is 4) contain the indices of the first
+and last tokens to which the annotation applies. ``E003`` is an error code.
 
 *************
 Prerequisites
@@ -108,7 +108,8 @@ To install this package::
 
     $ pip3 install reynir-correct   # or pip install reynir-correct if Python3 is your default
 
-If you want to be able to edit the source, do like so (assuming you have **git** installed)::
+If you want to be able to edit the source, do like so
+(assuming you have **git** installed)::
 
     $ git clone https://github.com/mideind/ReynirCorrect
     $ cd ReynirCorrect
@@ -121,8 +122,9 @@ The package source code is now in ``ReynirCorrect/src/reynir_correct``.
 Tests
 *****
 
-To run the built-in tests, install `pytest <https://docs.pytest.org/en/latest/>`_, ``cd`` to your
-``ReynirCorrect`` subdirectory (and optionally activate your virtualenv), then run::
+To run the built-in tests, install `pytest <https://docs.pytest.org/en/latest/>`_,
+``cd`` to your ``ReynirCorrect`` subdirectory (and optionally activate your
+virtualenv), then run::
 
     $ python -m pytest
 
