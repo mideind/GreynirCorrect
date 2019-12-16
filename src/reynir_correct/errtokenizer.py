@@ -78,6 +78,7 @@ POS = {
     "so": "sagnorð",
 }
 
+
 def emulate_case(s, template):
     """ Return the string s but emulating the case of the template
         (lower/upper/capitalized) """
@@ -186,8 +187,11 @@ class Error:
     """ Base class for spelling and grammar errors, warnings and recommendations.
         An Error has a code and can provide a description of itself. """
 
-    def __init__(self, code):
-        self._code = code
+    def __init__(self, code, is_warning=False):
+        # Note that if is_warning is True, "/w" is appended to
+        # the error code. This causes the Greynir UI to display
+        # a warning annotation instead of an error annotation.
+        self._code = code + ("/w" if is_warning else "")
 
     @property
     def code(self):
@@ -198,14 +202,17 @@ class Error:
         """ Should be overridden """
         raise NotImplementedError
 
+
 class PunctuationError(Error):
+
     """ A PunctuationError is an error where punctuation is wrong """
+
     # N001: Wrong quotation marks
     # N002: Three periods should be an ellipsis
 
     def __init__(self, code, txt):
         # Punctuation error codes start with "N"
-        super().__init__("C" + code)
+        super().__init__("N" + code)
         self._txt = txt
 
     @property
@@ -215,6 +222,7 @@ class PunctuationError(Error):
     @property
     def set_span(self, span):
         self._span = span
+
 
 class CompoundError(Error):
 
@@ -227,10 +235,13 @@ class CompoundError(Error):
     # C004: Duplicated word marked as a possible error.
     #       Should be pointed out but not deleted.
     # C005: Possible split compound, depends on meaning/PoS chosen by parser.
+    # C006: A part of a word compound word is wrong.
 
     def __init__(self, code, txt, span=1):
         # Compound error codes start with "C"
-        super().__init__("C" + code)
+        # We consider C004 to be a warning, not an error
+        is_warning = code == "004"
+        super().__init__("C" + code, is_warning=is_warning)
         self._txt = txt
         self._span = span
 
@@ -295,7 +306,7 @@ class TabooWarning(Error):
 
     def __init__(self, code, txt):
         # Taboo word warnings start with "T"
-        super().__init__("T" + code)
+        super().__init__("T" + code, is_warning=True)
         self._txt = txt
 
     @property
@@ -334,7 +345,7 @@ class SpellingSuggestion(Error):
 
     def __init__(self, code, txt, suggest):
         # Spelling suggestion codes start with "W"
-        super().__init__("W" + code)
+        super().__init__("W" + code, is_warning=True)
         self._txt = txt
         self._suggest = suggest
 
@@ -354,10 +365,10 @@ class PhraseError(Error):
 
     # P_xxx: Phrase error codes
 
-    def __init__(self, code, txt, span):
+    def __init__(self, code, txt, span, is_warning=False):
         # Phrase error codes start with "P", and are followed by
         # a string indicating the type of error, i.e. YI for y/i, etc.
-        super().__init__("P_" + code)
+        super().__init__("P_" + code, is_warning=is_warning)
         self._txt = txt
         self._span = span
 
@@ -440,8 +451,7 @@ def parse_errors(token_stream, db, only_ci):
                     next_token.set_error(
                         CompoundError(
                             "004",
-                            "Getur verið að '{0}' sé endurtekið orð "
-                            "sem þarf að fella í burtu?".format(next_token.txt),
+                            "'{0}' er að öllum líkindum ofaukið".format(next_token.txt),
                         )
                     )
                     yield token
@@ -477,8 +487,7 @@ def parse_errors(token_stream, db, only_ci):
                 next_token.set_error(
                     CompoundError(
                         "004",
-                        "Getur verið að '{0}' sé endurtekið orð "
-                        "sem þarf að fella í burtu?".format(next_token.txt),
+                        "'{0}' er að öllum líkindum ofaukið".format(next_token.txt),
                     )
                 )
                 yield token
@@ -532,7 +541,8 @@ def parse_errors(token_stream, db, only_ci):
                         token.set_error(
                             SpellingError(
                                 "007",
-                                "Orðhlutinn '{0}' á ekki að standa stakur".format(token.txt),
+                                "Orðhlutinn '{0}' á ekki að standa stakur"
+                                .format(token.txt),
                             )
                         )
                     yield token
@@ -573,7 +583,7 @@ def parse_errors(token_stream, db, only_ci):
                     token.set_error(
                         CompoundError(
                             "003",
-                            "Orðin '{0} {1}' voru sameinuð í eitt.".format(
+                            "Orðin '{0} {1}' voru sameinuð í eitt".format(
                                 first_txt, next_token.txt
                             ),
                         )
@@ -586,8 +596,8 @@ def parse_errors(token_stream, db, only_ci):
                     yield token
                     token = next_token
                     continue
-                poses = set([m.ordfl for m in meanings if m.ordfl in next_pos])
-                notposes = set([m.ordfl for m in meanings if m.ordfl not in next_pos])
+                poses = set(m.ordfl for m in meanings if m.ordfl in next_pos)
+                notposes = set(m.ordfl for m in meanings if m.ordfl not in next_pos)
                 if not poses:
                     # Stop searching
                     yield token
@@ -601,7 +611,7 @@ def parse_errors(token_stream, db, only_ci):
                     token.set_error(
                         CompoundError(
                             "003",
-                            "Orðin '{0} {1}' voru sameinuð í eitt.".format(
+                            "Orðin '{0} {1}' voru sameinuð í eitt".format(
                                 first_txt, next_token.txt
                             ),
                         )
@@ -611,7 +621,7 @@ def parse_errors(token_stream, db, only_ci):
                 # TODO STILLING - Hér er bara uppástunga, skiptir ekki máli f. ósh. málrýni.
                 # Erum búin að koma í veg fyrir að komast hingað ofar
                 if poses:
-                    transposes = list(POS[c] for c in poses)
+                    transposes = list(set(POS[c] for c in poses))
                     if len(transposes) == 1:
                         tp = transposes[0]
                     else:
@@ -620,7 +630,7 @@ def parse_errors(token_stream, db, only_ci):
                     token.set_error(
                         CompoundError(
                             "005",
-                            "Ef '{0}' er {1} á að sameina það '{2}'.".format(
+                            "Ef '{0}' er {1} á að sameina það '{2}'".format(
                                 token.txt, tp, next_token.txt
                             ),
                         )
@@ -637,16 +647,18 @@ def parse_errors(token_stream, db, only_ci):
                     token.set_error(
                         PunctuationError(
                             "001",
-                            "Gæsalappirnar {0} ættu að vera {1}".format(token.txt, token.val[1])
+                            "Gæsalappirnar {0} ættu að vera {1}"
+                            .format(token.txt, token.val[1])
                         )
                     )
-                elif token.val[1] in "…":
-                    token.set_error(
-                        PunctuationError(
-                            "002",
-                            "Þrír punktar '{0}' ættu að vera þrípunktur '{1}'".format(token.txt, token.val[1])
-                        )
-                    )
+                # elif token.val[1] in "…":
+                #     token.set_error(
+                #         PunctuationError(
+                #             "002",
+                #             "Þrír punktar '{0}' ættu að vera þrípunktur '{1}'"
+                #             .format(token.txt, token.val[1])
+                #         )
+                #     )
             # Yield the current token and advance to the lookahead
             yield token
             token = next_token
@@ -745,7 +757,6 @@ WRONG_FORMERS = {
     "Vestfjarðar": "Vestfjarða",
     "ábendinga": "ábendingar",
 }
-
 
 # Using these word parts results in a context-independent error
 # Attn.: Make sure these errors are available as a prefix
@@ -853,7 +864,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
                 if only_ci:
                     yield token
                     continue
-                transposes = list(POS[c] for c in poses)
+                transposes = list(set(POS[c] for c in poses))
                 if len(transposes) == 1:
                     tp = transposes[0]
                 else:
@@ -862,7 +873,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
                 token.set_error(
                     CompoundError(
                         "005",
-                        "Ef {0} er {1} á að skipta orðinu upp.".format(token.txt, tp),
+                        "Ef '{0}' er {1} á að skipta orðinu upp".format(token.txt, tp),
                         span=2
                     )
                 )
@@ -881,10 +892,10 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
             corrected = emulate_case(corrected, token.txt)
             w, m = db.lookup_word(corrected, at_sentence_start, auto_uppercase)
             t1 = token_ctor.Word(w, m, token=token)
-            # print("Fann C004 í parse_errors: {}".format(token.txt))
+            # print("Fann C006 í parse_errors: {}".format(token.txt))
             t1.set_error(
                 CompoundError(
-                    "004",
+                    "006",
                     "Samsetta orðinu '{0}' var breytt í '{1}'".format(
                         token.txt, corrected
                     ),
@@ -900,10 +911,10 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
             corrected = emulate_case(corrected, token.txt)
             w, m = db.lookup_word(corrected, at_sentence_start, auto_uppercase)
             t1 = token_ctor.Word(w, m, token=token)
-            # print("Fann C004 í parse_errors: {}".format(token.txt))
+            # print("Fann C006 í parse_errors: {}".format(token.txt))
             t1.set_error(
                 CompoundError(
-                    "004",
+                    "006",
                     "Samsetta orðinu '{0}' var breytt í '{1}'".format(
                         token.txt, corrected
                     ),
@@ -1406,13 +1417,14 @@ class CorrectionPipeline(DefaultPipeline):
         # Create a Corrector on the first invocation
         if self._corrector is None:
             self._corrector = Corrector(self._db)
+        only_ci = self._only_ci
         # Fix compound words
         stream = fix_compound_words(
             stream, self._db, self._token_ctor,
-            self._auto_uppercase, self._only_ci,
+            self._auto_uppercase, only_ci
         )
         # Fix multiword error phrases
-        if not self._only_ci:
+        if not only_ci:
             stream = handle_multiword_errors(
                 stream, self._db,
                 self._token_ctor
@@ -1420,15 +1432,15 @@ class CorrectionPipeline(DefaultPipeline):
         # Fix capitalization
         stream = fix_capitalization(
             stream, self._db, self._token_ctor,
-            self._auto_uppercase, self._only_ci,
+            self._auto_uppercase, only_ci
         )
         # Fix single-word errors
         stream = lookup_unknown_words(
             self._corrector, self._token_ctor, stream,
-            self._auto_uppercase, self._only_ci,
+            self._auto_uppercase, only_ci
         )
         # Check taboo words
-        if not self._only_ci:
+        if not only_ci:
             stream = check_taboo_words(stream)
         return stream
 

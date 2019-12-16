@@ -62,11 +62,13 @@ class Annotation:
 
     """ An annotation of a span of a token list for a sentence """
 
-    def __init__(self, *, start, end, code, text, suggest=None):
+    def __init__(self, *, start, end, code, text, suggest=None, is_warning=False):
         assert isinstance(start, int)
         assert isinstance(end, int)
         self._start = start
         self._end = end
+        if is_warning and not code.endswith("/w"):
+            code += "/w"
         self._code = code
         self._text = text
         # If suggest is given, it is a suggested correction,
@@ -477,7 +479,8 @@ class ErrorFinder(ParseForestNavigator):
                     end=end,
                     code=code,
                     text=ann_text,
-                    suggest=suggestion
+                    suggest=suggestion,
+                    is_warning=code in {"P_NT_Að", "P_NT_Komma"}
                 )
             )
         return None
