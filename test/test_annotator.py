@@ -85,21 +85,21 @@ def test_error_finder(verbose=False):
     s = "Fjöldi þingmanna greiddu atkvæði gegn tillögunni."
     check_sentence(s, [(0, 1, "P_NT_FjöldiHluti")])
     s = "Jón borðaði ís þar sem að hann var svangur."
-    check_sentence(s, [(5, 5, "P_NT_Að")])
+    check_sentence(s, [(5, 5, "P_NT_Að/w")])
     s = "Jón \"borðaði\" ís þar sem að hann var svangur."
-    check_sentence(s, [(1, 1, "C001"), (3, 3, "C001"), (7, 7, "P_NT_Að")])
+    check_sentence(s, [(1, 1, "N001"), (3, 3, "N001"), (7, 7, "P_NT_Að/w")])
     s = "Jón borðaði ís þó hann væri svangur."
     check_sentence(s, [(3, 3, "P_NT_ÞóAð")])
     s = "Jón \"borðaði\" ís þó hann væri svangur."
-    check_sentence(s, [(1, 1, "C001"), (3, 3, "C001"), (5, 5, "P_NT_ÞóAð")])
+    check_sentence(s, [(1, 1, "N001"), (3, 3, "N001"), (5, 5, "P_NT_ÞóAð")])
     s = "Jón borðaði ís jafnvel þó hann væri svangur."
     check_sentence(s, [(3, 4, "P_NT_ÞóAð")])
     s = "Jón \"borðaði\" ís jafnvel þó hann væri svangur."
-    check_sentence(s, [(1, 1, "C001"), (3, 3, "C001"), (5, 6, "P_NT_ÞóAð")])
+    check_sentence(s, [(1, 1, "N001"), (3, 3, "N001"), (5, 6, "P_NT_ÞóAð")])
     s = "Jón borðaði ís þótt hann væri svangur."
     check_sentence(s, [])
     s = "Jón \"borðaði\" ís þótt hann væri svangur."
-    check_sentence(s, [(1, 1, "C001"), (3, 3, "C001")])
+    check_sentence(s, [(1, 1, "N001"), (3, 3, "N001")])
     s = "Ég féll fyrir annað hvort fegurð hennar eða gáfum."
     check_sentence(s, [(3, 4, "P_NT_AnnaðHvort")])
     s = "Ég talaði við annaðhvort barnanna."

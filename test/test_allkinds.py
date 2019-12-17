@@ -108,7 +108,7 @@ def test_doubling(verbose=False):
     g = list(g)
     if verbose: dump(g)
     s = normalize(g)
-    assert g[2].error_code == "C004"    # slysið, bara uppástunga, ekki leiðrétt
+    assert g[2].error_code == "C004/w"    # slysið, bara uppástunga, ekki leiðrétt
 
     # Testing multiple words in a row. This should be corrected.
     g = rc.tokenize("Það er stanslaust fjör fjör fjör fjör fjör fjör fjör fjör í sveitinni.")
@@ -131,7 +131,7 @@ def test_doubling(verbose=False):
     assert "Ég á sem" not in s
     assert "langsokkur en hún" in s
     assert "en en" not in s
-    assert g[3].error_code == "C004"    # á
+    assert g[3].error_code == "C004/w"    # á
     assert g[8].error_code == "C001"    # en
 
 def test_accepted_doubling(verbose=False):
@@ -164,7 +164,7 @@ def test_accepted_doubling(verbose=False):
     assert len(g) == 9
     assert "Finnur finnur" in s
     assert not "Finnur gull" in s
-    assert g[5].error_code == "C004"    # TODO útfæra
+    assert g[5].error_code == "C004/w"    # TODO útfæra
 
     # Same example except now the common noun is capitalized in the beginning,
     # followed by the proper noun. This should be accepted.
@@ -227,7 +227,7 @@ def test_wrong_compounds(verbose=False):
             assert not g[ix].error_code
 
     g = rc.tokenize(
-        "Rólan fór niðrá torg og svo ofan í níuhundruð samskonar seinnihluta."
+        "Vagninn fór niðrá torg og svo ofan í níuhundruð samskonar seinnihluta."
     )
     g = list(g)
     if verbose: dump(g)
@@ -552,21 +552,21 @@ def test_capitalization(verbose=False):
     g = list(g)
     if verbose: dump(g)
     s = normalize(g)
-    # assert "aríi" in s        # TODO leiðréttist ekki því að Aríi var til staðar. Búin að laga í BinErrata.conf, svo verður ekki vandamál þegar næsta útgáfa ord.compressed kemur.
+    assert "aríi" in s
     assert "búddisti" in s
     assert "eskimói" in s
     assert "gyðingur" in s
-    # assert "Sjálfstæðismaður" in s    # TODO leiðréttist ekki því fannst ekki hástafa í BÍN. Búin að bæta við ord.auka.csv.
-    # assert "múslími" in s     # Leiðréttist ekki
-    # assert "sjíti" in s       # TODO komið í ord.auka.csv, ætti að leiðréttast þegar nýtt orðasafn er útbúið
-    # assert "Evrópu" in s
-    # assert g[2].error_code == "Z001"  # aríi, TODO leiðréttist ekki eins og er, gerist með nýrri útgáfu ord.compressed.
+    assert "Sjálfstæðismaður" in s
+    assert "múslími" in s
+    assert "sjíti" in s
+    assert "Evrópu" in s
+    assert g[2].error_code == "Z001"  # aríi
     assert g[4].error_code == "Z001"  # búddisti
     assert g[6].error_code == "Z001"  # eskimói
-    assert g[8].error_code == "Z001"    # gyðingur
-    # assert g[10].error_code == "Z002"   # Sjálfstæðismaður, leiðréttist ekki því fannst ekki hástafa í BÍN. Búin að uppfæra BinErrata.conf með lágstafa útgáfunni.
-    # assert g[12].error_code == "Z002"   # múslími, TODO leiðréttist ekki
-    # assert g[14].error_code == "Z002"     # sjíti; TODO leiðréttist ekki 
+    assert g[8].error_code == "Z001"  # gyðingur
+    assert g[10].error_code == "Z002" # Sjálfstæðismaður
+    assert g[12].error_code == "Z001" # múslími
+    assert g[14].error_code == "Z001" # sjíti
 
     g = rc.tokenize(
         "Á íslandi búa íslendingar og í danmörku búa Danskir danir í Nóvember."
@@ -710,8 +710,8 @@ def test_wrong_first_parts(verbose=False):
     assert "heyrnatól" not in s
     # assert "eyrnalækninum" in s       # TODO Ætti að virka þegar geri ný orðanet
     # assert "eyrnarlækninum" not in s
-    assert g[3].error_code == "C004"
-    # assert g[5].error_code == "C004"  # TODO virkar ekki
+    assert g[3].error_code == "C006"
+    # assert g[5].error_code == "C006"  # TODO virkar ekki
 
     g = rc.tokenize("Lundúnarloftið er næringaríkt í ár.")
     g = list(g)
@@ -721,8 +721,8 @@ def test_wrong_first_parts(verbose=False):
     # assert "Lundúnarloftið" not in s
     assert "næringarríkt" in s
     assert "næringaríkt" not in s
-    # assert g[1].error_code == "C004"
-    assert g[3].error_code == "C004"
+    # assert g[1].error_code == "C006"
+    assert g[3].error_code == "C006"
 
 
     g = rc.tokenize("Öldungardeildarþingmaðurinn keyrði díselbíl á hringveginum.")
@@ -733,8 +733,8 @@ def test_wrong_first_parts(verbose=False):
     # assert "Öldungardeildarþingmaðurinn" not in s
     # assert "dísilbíl" in s                        # TODO Ætti að virka þegar ný orðanet
     # assert "díselbíl" not in s
-    # assert g[1].error_code == "C004"
-    # assert g[3].error_code == "C004"
+    # assert g[1].error_code == "C006"
+    # assert g[3].error_code == "C006"
 
 def test_single_first_parts(verbose=False):
     # C003: Stakir fyrri hlutar í setningu sem alveg viss um      (all kaldur, )
@@ -1077,7 +1077,7 @@ def test_phrasing(verbose=False):
     s = "Konur vilja í auknu mæli koma að sjúkraflutningum."
     check_sentence(s, [(2, 4, "P_wrong_gender")])       # TODO á kannski að greina þetta öðruvísi? Fastur frasi? Skoða líka lengdina.
     s = "Ég veit ekki hvort að ég komi í kvöld."
-    check_sentence(s, [(4, 4, "P_NT_Að")])              
+    check_sentence(s, [(4, 4, "P_NT_Að/w")])              
     s = "Meðan veislunni stendur verður frítt áfengi í boði."
     # check_sentence(s, [(0, 3, "P_NT_MeðanStendur")])      # TODO engin villa finnst
 
@@ -1174,25 +1174,25 @@ def test_foreign_sentences(verbose=False):
     )
     # check_sentence(s, [(0, 33, "E004")])      # TODO þetta virðist ekki virka; strandar á því að setningin greinist ekki!
     s = "Rock and roll er skemmtilegt."
-    check_sentence(s, [(0, 4, "E004")])
+    check_sentence(s, [(0, 5, "E004")])
 
 def test_conjunctions(verbose=False):
     s = "Ef að pósturinn kemur ekki á morgun missi ég vitið."
-    check_sentence(s, [(1, 1, "P_NT_Að")])
+    check_sentence(s, [(1, 1, "P_NT_Að/w")])
     s = "Hafsteinn vissi svarið þótt að hann segði það ekki upphátt."
-    check_sentence(s, [(4, 4, "P_NT_Að")])
+    check_sentence(s, [(4, 4, "P_NT_Að/w")])
     s = "Hafsteinn vissi svarið þó hann segði það ekki upphátt."
     check_sentence(s, [(3, 3, "P_NT_ÞóAð")])
     s = "Ég kem á hátíðina víst að pabbi þinn kemst ekki."
     # check_sentence(s, [(4, 5, "P_NT_VístAð")])            # TODO engin villa finnst! Var ekki búið að útfæra þetta?
     s = "Ég kem á hátíðina fyrst að pabbi þinn kemst ekki."
-    check_sentence(s, [(5, 5, "P_NT_Að")])
+    check_sentence(s, [(5, 5, "P_NT_Að/w")])
     s = "Hatturinn passar á höfuðið nema að það sé eyrnaband undir honum."
-    check_sentence(s, [(5, 5, "P_NT_Að")])
+    check_sentence(s, [(5, 5, "P_NT_Að/w")])
     s = "Hún grét þegar að báturinn sást ekki lengur."
-    check_sentence(s, [(3, 3, "P_NT_Að")])
+    check_sentence(s, [(3, 3, "P_NT_Að/w")])
     s = "Hún hélt andliti á meðan að hann horfði til hennar."
-    check_sentence(s, [(4, 4, "P_NT_Að")])
+    check_sentence(s, [(4, 4, "P_NT_Að/w")])
     s = "Annaðhvort ferðu í buxurnar núna."
     # check_sentence(s, [(5, 5, "P_NT_AnnaðhvortEða")])     # TODO engin villa finnst, eftir að útfæra
     s = "Hvorki hatturinn passaði á höfuðið."

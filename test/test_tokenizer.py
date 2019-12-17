@@ -358,7 +358,7 @@ def test_taboo_words(verbose=False):
     errors = {6, 13, 15, 18}
     for ix, _ in enumerate(g):
         if ix in errors:
-            assert g[ix].error_code == "T001"  # Taboo word
+            assert g[ix].error_code == "T001/w"  # Taboo word
         else:
             assert not g[ix].error_code
 

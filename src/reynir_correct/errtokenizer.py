@@ -429,11 +429,16 @@ def parse_errors(token_stream, db, only_ci):
         return any(m.stofn.replace("-", "") in next_stems for m in meanings)
 
     token = None
+
     try:
+
         # Maintain a one-token lookahead
         token = get()
+
         while True:
+
             next_token = get()
+
             # Make the lookahead checks we're interested in
             # Word duplication (note that word case must also match)
             # TODO STILLING - hér er bara samhengisháð leiðrétting
@@ -575,6 +580,8 @@ def parse_errors(token_stream, db, only_ci):
                 )
                 if not meanings:
                     # The latter part is not in BÍN
+                    yield token
+                    token = next_token
                     continue
                 if any(m.stofn.replace("-", "") in next_stems for m in meanings):
                     first_txt = token.txt
@@ -616,7 +623,8 @@ def parse_errors(token_stream, db, only_ci):
                             ),
                         )
                     )
-                    # !!! TODO: Probably missing yield token, token = get() here
+                    yield token
+                    token = get()
                     continue
                 # TODO STILLING - Hér er bara uppástunga, skiptir ekki máli f. ósh. málrýni.
                 # Erum búin að koma í veg fyrir að komast hingað ofar
@@ -659,6 +667,7 @@ def parse_errors(token_stream, db, only_ci):
                 #             .format(token.txt, token.val[1])
                 #         )
                 #     )
+
             # Yield the current token and advance to the lookahead
             yield token
             token = next_token
@@ -779,7 +788,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
     at_sentence_start = False
 
     for token in token_stream:
-        #print(token.txt)
+
         if token.kind == TOK.S_BEGIN:
             yield token
             at_sentence_start = True
@@ -831,11 +840,11 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
             w2, meanings2 = db.lookup_word(
                 suffix, at_sentence_start, auto_uppercase
             )
-            poses = set([ m.ordfl for m in meanings2 if m.ordfl in freepos])
+            poses = set(m.ordfl for m in meanings2 if m.ordfl in freepos)
             if not poses:
                 yield token
                 continue
-            notposes = set([ m.ordfl for m in meanings2 if m.ordfl not in freepos])
+            notposes = set(m.ordfl for m in meanings2 if m.ordfl not in freepos)
             if not notposes:
                 # No other PoS available, we found an error
                 w1, meanings1 = db.lookup_word(
@@ -853,32 +862,27 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
                     )
                 )
                 yield t1
-                t2 = token_ctor.Word(w2, meanings2, token=token)
-                yield t2
-                continue
+                token = token_ctor.Word(w2, meanings2, token=token)
             else:
                 # TODO STILLING - hér er bara uppástunga.
                 # Other possibilities but want to mark as a possible error
                 # Often just weird forms in BÍN left
                 # print("Fann C005 í parse_errors: {}".format(token.txt))
-                if only_ci:
-                    yield token
-                    continue
-                transposes = list(set(POS[c] for c in poses))
-                if len(transposes) == 1:
-                    tp = transposes[0]
-                else:
-                    tp = ", ".join(transposes[:-1]) + " eða " + transposes[-1]
-                # print("Fann C005 í parse_errors: {}".format(token.txt))
-                token.set_error(
-                    CompoundError(
-                        "005",
-                        "Ef '{0}' er {1} á að skipta orðinu upp".format(token.txt, tp),
-                        span=2
+                if not only_ci:
+                    transposes = list(set(POS[c] for c in poses))
+                    if len(transposes) == 1:
+                        tp = transposes[0]
+                    else:
+                        tp = ", ".join(transposes[:-1]) + " eða " + transposes[-1]
+                    # print("Fann C005 í parse_errors: {}".format(token.txt))
+                    token.set_error(
+                        CompoundError(
+                            "005",
+                            "Ef '{0}' er {1} á að skipta orðinu upp".format(token.txt, tp),
+                            span=2
+                        )
                     )
-                )
-                yield token
-                continue
+
         # TODO STILLING - hér er ósamhengisháð leiðrétting, en það er spurning hvort allt hér teljist endilega villa.
         # TODO STILLING - viljum ekki endilega leiðrétta "byggingaregla", þó að venjan leyfi hitt frekar.
         # TODO STILLING - Þarf að fara í gegnum WRONG_FORMERS, mætti skipta upp í
@@ -921,6 +925,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
                 )
             )
             token = t1
+
         # TODO Bæta inn leiðréttingu út frá seinni orðhlutum?
         yield token
         at_sentence_start = False
@@ -1062,11 +1067,11 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, on
             for ix, corrected_word in enumerate(corrected):
                 if ix == 0:
                     yield replace_word(1, token, corrected_word, corrected_display)
+                    at_sentence_start = False
                 else:
                     # In a multi-word sequence, we only mark the first
                     # token with a SpellingError
                     yield replace_word(1, token, corrected_word, None)
-                at_sentence_start = False
             continue
         
         # TODO STILLING - þetta er ósamhengisháð leiðrétting!
