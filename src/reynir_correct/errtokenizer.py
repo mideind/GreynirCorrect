@@ -43,10 +43,11 @@ from .settings import (
     CIDErrorForms,
     OwForms,
     Morphemes,
-    AbbrevErrors,
     Settings,
 )
 from .spelling import Corrector
+
+from tokenizer import Abbreviations
 
 # Words that contain any letter from the following set are assumed
 # to be foreign and their spelling is not corrected, but suggestions are made
@@ -209,6 +210,7 @@ class PunctuationError(Error):
 
     # N001: Wrong quotation marks
     # N002: Three periods should be an ellipsis
+    # N003: Informal combination of punctuation (??!!)
 
     def __init__(self, code, txt):
         # Punctuation error codes start with "N"
@@ -323,7 +325,7 @@ class SpellingError(Error):
     # S002: Errors handled by spelling.py. Corrections should possibly
     #       only be suggested.
     # S003: Erroneously formed word forms picked up by ErrorForms.
-    #       Should be corrected. !!! TODO split up by nature.
+    #       Should be corrected.
     # S004: Rare word, a more common one has been substituted.
 
     def __init__(self, code, txt):
@@ -429,16 +431,11 @@ def parse_errors(token_stream, db, only_ci):
         return any(m.stofn.replace("-", "") in next_stems for m in meanings)
 
     token = None
-
     try:
-
         # Maintain a one-token lookahead
         token = get()
-
         while True:
-
             next_token = get()
-
             # Make the lookahead checks we're interested in
             # Word duplication (note that word case must also match)
             # TODO STILLING - hér er bara samhengisháð leiðrétting
@@ -652,6 +649,8 @@ def parse_errors(token_stream, db, only_ci):
                 and token.txt != token.val[1]
             ):
                 if token.val[1] in "„“":
+                    # TODO Could add normalize_quotation_marks as a parameter,
+                    # should normalize automatically if chosen
                     token.set_error(
                         PunctuationError(
                             "001",
@@ -659,15 +658,40 @@ def parse_errors(token_stream, db, only_ci):
                             .format(token.txt, token.val[1])
                         )
                     )
-                # elif token.val[1] in "…":
-                #     token.set_error(
-                #         PunctuationError(
-                #             "002",
-                #             "Þrír punktar '{0}' ættu að vera þrípunktur '{1}'"
-                #             .format(token.txt, token.val[1])
-                #         )
-                #     )
+                elif token.val[1] in "…":
+                    if token.txt == "..":
+                        # Assume user meant to write a single period
+                        # Doesn't happen with current tokenizer behaviour
+                        token.set_error(
+                            PunctuationError(
+                                "002",
+                                "Ætlaðirðu að skrifa einn punkt?"
+                            )
+                        )
+                    elif len(token.txt) > 3: 
+                        # Informal, should be standardized to an ellipsis
 
+                        token.set_error(
+                            PunctuationError(
+                                "002",
+                                "Óformlegt, ætti að vera þrípunktur, '{}'".format(token.val[1])
+                            )
+                        )
+                    else: 
+                        # Three periods found, used as an ellipsis
+                        # Not pointed out,, allowed as-is
+                        # TODO could add normalize_ellipsis as a parameter here
+                        pass
+
+
+                elif token.val[1] in "?!":
+                    # Changed automatically, pointed out as informal
+                    token.set_error(
+                        PunctuationError(
+                            "003",
+                            "'{0}' er óformlegt, breytt í '{1}'".format(token.txt, token.val[1])
+                        )
+                    )
             # Yield the current token and advance to the lookahead
             yield token
             token = next_token
@@ -788,7 +812,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
     at_sentence_start = False
 
     for token in token_stream:
-
+        #print(token.txt)
         if token.kind == TOK.S_BEGIN:
             yield token
             at_sentence_start = True
@@ -840,11 +864,11 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
             w2, meanings2 = db.lookup_word(
                 suffix, at_sentence_start, auto_uppercase
             )
-            poses = set(m.ordfl for m in meanings2 if m.ordfl in freepos)
+            poses = set([ m.ordfl for m in meanings2 if m.ordfl in freepos])
             if not poses:
                 yield token
                 continue
-            notposes = set(m.ordfl for m in meanings2 if m.ordfl not in freepos)
+            notposes = set([ m.ordfl for m in meanings2 if m.ordfl not in freepos])
             if not notposes:
                 # No other PoS available, we found an error
                 w1, meanings1 = db.lookup_word(
@@ -862,7 +886,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
                     )
                 )
                 yield t1
-                token = token_ctor.Word(w2, meanings2, token=token)
+                t2 = token_ctor.Word(w2, meanings2, token=token)
             else:
                 # TODO STILLING - hér er bara uppástunga.
                 # Other possibilities but want to mark as a possible error
@@ -925,7 +949,6 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
                 )
             )
             token = t1
-
         # TODO Bæta inn leiðréttingu út frá seinni orðhlutum?
         yield token
         at_sentence_start = False
@@ -953,13 +976,30 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, on
             # This is probably an abbreviation, having a single meaning
             # and no declension information
             return True
+        if token.txt.isupper():
+            # Should not correct all uppercase words
+            return True
         return False
 
-    def replace_word(code, token, corrected, corrected_display):
+    def replace_word(code, token, corrected, corrected_display, abbmean=None):
         """ Return a token for a corrected version of token_txt,
             marked with a SpellingError if corrected_display is
             a string containing the corrected word to be displayed """
-        w, m = corrector.db.lookup_word(corrected, at_sentence_start, auto_uppercase)
+        if abbmean and type(abbmean) is list:
+            # An abbreviation, possibly containing many meanings
+            xlist = list()
+            for each in abbmean:
+                x = map(BIN_MEANING._make, each)
+                xlist.extend(x)
+            w = corrected
+            _, m = db.lookup_word(token.txt, at_sentence_start, auto_uppercase)
+            if m:
+                # Wrong form of abbreviation without dots is also a valid word
+                # Add that meaning to meaning list
+                xlist.extend(m)
+                m = xlist
+        else:
+            w, m = corrector.db.lookup_word(corrected, at_sentence_start, auto_uppercase)
         ct = token_ctor.Word(w, m, token=token if corrected_display else None)
         if corrected_display:
             if "." in corrected_display:
@@ -1074,18 +1114,28 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, on
                     yield replace_word(1, token, corrected_word, None)
             continue
         
-        # TODO STILLING - þetta er ósamhengisháð leiðrétting!
-        if not token.val and token.txt in AbbrevErrors.DOTDICT:
-            # Ends in a period, start with checking these
-            corrected_word = AbbrevErrors.DOTDICT[token.txt]
-            yield replace_word(7, token, corrected_word, corrected_word)
+        # Check wrong abbreviations
+        if not token.val and token.txt in Abbreviations.WRONGSINGLES:
+            # Only one period in original abbreviation, missing here
+            corrected_word = Abbreviations.WRONGSINGLES[token.txt][0]
+            abbmean = Abbreviations.get_meaning(corrected_word)
+            #print("FANN DÓT11111!")
+            #print("{} → {}".format(token.txt, corrected_word))
+            #print(abbmean)
+            yield replace_word(7, token, corrected_word, corrected_word, abbmean=abbmean)
             continue
 
-        # TODO STILLING - hér er ósamhengisháð leiðrétting!
-        if not token.val and token.txt in AbbrevErrors.NOTDICT:
-            # No period at end of error, checking after other version
-            corrected_word = AbbrevErrors.NOTDICT[token.txt]
-            yield replace_word(7, token, corrected_word, corrected_word)
+        # TODO STILLING - þetta er ósamhengisháð leiðrétting!
+        if not token.val and token.txt in Abbreviations.WRONGDOTS:
+            # Multiple periods in original, some subset missing here
+            # TODO might have multiple possible meanings
+            # Decide what to do in those cases
+            corrected_word = Abbreviations.WRONGDOTS[token.txt]
+            abbmean = Abbreviations.get_meaning(corrected_word)
+            #print("FANN DÓT222222!")
+            #print("{} → {}".format(token.txt, corrected_word))
+            #print(type(abbmean))
+            yield replace_word(7, token, corrected_word, corrected_word, abbmean=abbmean)
             continue
 
         # Check wrong word forms, i.e. those that do not exist in BÍN
