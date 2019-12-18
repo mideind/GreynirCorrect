@@ -812,7 +812,6 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
     at_sentence_start = False
 
     for token in token_stream:
-        #print(token.txt)
         if token.kind == TOK.S_BEGIN:
             yield token
             at_sentence_start = True
@@ -864,11 +863,11 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
             w2, meanings2 = db.lookup_word(
                 suffix, at_sentence_start, auto_uppercase
             )
-            poses = set([ m.ordfl for m in meanings2 if m.ordfl in freepos])
+            poses = set(m.ordfl for m in meanings2 if m.ordfl in freepos)
             if not poses:
                 yield token
                 continue
-            notposes = set([ m.ordfl for m in meanings2 if m.ordfl not in freepos])
+            notposes = set(m.ordfl for m in meanings2 if m.ordfl not in freepos)
             if not notposes:
                 # No other PoS available, we found an error
                 w1, meanings1 = db.lookup_word(
@@ -886,7 +885,7 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
                     )
                 )
                 yield t1
-                t2 = token_ctor.Word(w2, meanings2, token=token)
+                token = token_ctor.Word(w2, meanings2, token=token)
             else:
                 # TODO STILLING - hér er bara uppástunga.
                 # Other possibilities but want to mark as a possible error
@@ -1119,9 +1118,6 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, on
             # Only one period in original abbreviation, missing here
             corrected_word = Abbreviations.WRONGSINGLES[token.txt][0]
             abbmean = Abbreviations.get_meaning(corrected_word)
-            #print("FANN DÓT11111!")
-            #print("{} → {}".format(token.txt, corrected_word))
-            #print(abbmean)
             yield replace_word(7, token, corrected_word, corrected_word, abbmean=abbmean)
             continue
 
@@ -1132,9 +1128,6 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, on
             # Decide what to do in those cases
             corrected_word = Abbreviations.WRONGDOTS[token.txt]
             abbmean = Abbreviations.get_meaning(corrected_word)
-            #print("FANN DÓT222222!")
-            #print("{} → {}".format(token.txt, corrected_word))
-            #print(type(abbmean))
             yield replace_word(7, token, corrected_word, corrected_word, abbmean=abbmean)
             continue
 
@@ -1171,6 +1164,7 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, on
                 print("Checking rare word '{0}'".format(token.txt))
             # We use context[-3:-1] since the current token is the last item
             # in the context tuple, and we want the bigram preceding it.
+            # TODO Consider limiting to words under 15 characters
             corrected = corrector.correct(
                 token.txt, context=context[-3:-1], at_sentence_start=at_sentence_start
             )
