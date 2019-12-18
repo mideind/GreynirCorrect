@@ -28,6 +28,7 @@
 
 from collections import defaultdict
 
+from tokenizer import Abbreviations
 from reynir import TOK
 from reynir.bintokenizer import DefaultPipeline, MatchingStream
 
@@ -47,7 +48,6 @@ from .settings import (
 )
 from .spelling import Corrector
 
-from tokenizer import Abbreviations
 
 # Words that contain any letter from the following set are assumed
 # to be foreign and their spelling is not corrected, but suggestions are made
@@ -77,6 +77,14 @@ POS = {
     "hk": "nafnorð",
     "kvk": "nafnorð",
     "so": "sagnorð",
+}
+
+# Dict of { (at sentence start, single letter token) : allowed correction }
+SINGLE_LETTER_CORRECTIONS = {
+    (False, "a"): "á",
+    (False, "i"): "í",
+    (True, "A"): "Á",
+    (True, "I"): "Í",
 }
 
 
@@ -203,6 +211,12 @@ class Error:
         """ Should be overridden """
         raise NotImplementedError
 
+    def __str__(self):
+        return "{0}: {1}".format(self.code, self.description)
+
+    def to_dict(self):
+        return { "code": self.code, "descr": self.description }
+
 
 class PunctuationError(Error):
 
@@ -212,10 +226,11 @@ class PunctuationError(Error):
     # N002: Three periods should be an ellipsis
     # N003: Informal combination of punctuation (??!!)
 
-    def __init__(self, code, txt):
+    def __init__(self, code, txt, span=1):
         # Punctuation error codes start with "N"
         super().__init__("N" + code)
         self._txt = txt
+        self._span = span
 
     @property
     def description(self):
@@ -359,6 +374,11 @@ class SpellingSuggestion(Error):
     def suggestion(self):
         return self._suggest
 
+    def to_dict(self):
+        d = super().to_dict()
+        d["suggest"] = self.suggestion
+        return d
+
 
 class PhraseError(Error):
 
@@ -431,11 +451,16 @@ def parse_errors(token_stream, db, only_ci):
         return any(m.stofn.replace("-", "") in next_stems for m in meanings)
 
     token = None
+
     try:
+
         # Maintain a one-token lookahead
         token = get()
+
         while True:
+
             next_token = get()
+
             # Make the lookahead checks we're interested in
             # Word duplication (note that word case must also match)
             # TODO STILLING - hér er bara samhengisháð leiðrétting
@@ -658,7 +683,7 @@ def parse_errors(token_stream, db, only_ci):
                             .format(token.txt, token.val[1])
                         )
                     )
-                elif token.val[1] in "…":
+                elif token.val[1] == "…":
                     if token.txt == "..":
                         # Assume user meant to write a single period
                         # Doesn't happen with current tokenizer behaviour
@@ -670,28 +695,27 @@ def parse_errors(token_stream, db, only_ci):
                         )
                     elif len(token.txt) > 3: 
                         # Informal, should be standardized to an ellipsis
-
                         token.set_error(
                             PunctuationError(
                                 "002",
-                                "Óformlegt, ætti að vera þrípunktur, '{}'".format(token.val[1])
+                                "Óformlegt; gæti átt að vera þrípunktur (…)"
                             )
                         )
                     else: 
                         # Three periods found, used as an ellipsis
-                        # Not pointed out,, allowed as-is
+                        # Not pointed out, allowed as-is
                         # TODO could add normalize_ellipsis as a parameter here
                         pass
-
-
-                elif token.val[1] in "?!":
+                elif token.val[1] == "?!":
                     # Changed automatically, pointed out as informal
                     token.set_error(
                         PunctuationError(
                             "003",
-                            "'{0}' er óformlegt, breytt í '{1}'".format(token.txt, token.val[1])
+                            "'{0}' er óformlegt, breytt í '{1}'"
+                            .format(token.txt, token.val[1])
                         )
                     )
+
             # Yield the current token and advance to the lookahead
             yield token
             token = next_token
@@ -901,7 +925,8 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
                     token.set_error(
                         CompoundError(
                             "005",
-                            "Ef '{0}' er {1} á að skipta orðinu upp".format(token.txt, tp),
+                            "Ef '{0}' er {1} á að skipta orðinu upp"
+                            .format(token.txt, tp),
                             span=2
                         )
                     )
@@ -953,20 +978,15 @@ def fix_compound_words(token_stream, db, token_ctor, auto_uppercase, only_ci):
         at_sentence_start = False
 
 
-def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, only_ci):
+def lookup_unknown_words(
+    corrector, token_ctor, token_stream,
+    auto_uppercase, only_ci, apply_suggestions
+):
     """ Try to identify unknown words in the token stream, for instance
         as spelling errors (character juxtaposition, deletion, insertion...) """
 
     at_sentence_start = False
     context = tuple()
-
-    # Dict of { (at sentence start, single letter token) : allowed correction }
-    single_letter_corrections = {
-        (False, "a"): "á",
-        (False, "i"): "í",
-        (True, "A"): "Á",
-        (True, "I"): "Í",
-    }
 
     def is_immune(token):
         """ Return True if the token should definitely not be
@@ -1145,8 +1165,10 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, on
             continue
 
         if is_immune(token) or token.error:
+
             # Nothing more to do
             pass
+
         # Check rare (or nonexistent) words and see if we have a potential correction
         # TODO STILLING - hér er samhengisháð leiðrétting af því að við notum þrenndir!
         # TODO STILLING - og líka því skoðum líka sjaldgæf orð.
@@ -1179,13 +1201,16 @@ def lookup_unknown_words(corrector, token_ctor, token_stream, auto_uppercase, on
                     # The correction simply removed "ó" from the start of the
                     # word: probably not a good idea
                     pass
-                elif len(token.txt) == 1 and corrected != single_letter_corrections.get(
-                    (at_sentence_start, token.txt)
+                elif (
+                    len(token.txt) == 1 and
+                    corrected != SINGLE_LETTER_CORRECTIONS.get(
+                        (at_sentence_start, token.txt)
+                    )
                 ):
                     # Only allow single-letter corrections of a->á and i->í
                     pass
                 # TODO STILLING - þetta er bara uppástunga
-                elif only_suggest(token, m):
+                elif not apply_suggestions and only_suggest(token, m):
                     # We have a candidate correction but the original word does
                     # exist in BÍN, so we're not super confident: yield a suggestion
                     if Settings.DEBUG:
@@ -1452,6 +1477,9 @@ class CorrectionPipeline(DefaultPipeline):
         self._corrector = None
         # If only_ci is True, we only correct context-independent errors
         self._only_ci = options.pop("only_ci", False)
+        # If apply_suggestions is True, we are aggressive in modifying
+        # tokens with suggested corrections, i.e. not just suggesting them
+        self._apply_suggestions = options.pop("apply_suggestions", False)
 
     # Use the Correct_TOK class to construct tokens, instead of
     # TOK (tokenizer.py) or _Bin_TOK (bintokenizer.py)
@@ -1486,7 +1514,7 @@ class CorrectionPipeline(DefaultPipeline):
         # Fix single-word errors
         stream = lookup_unknown_words(
             self._corrector, self._token_ctor, stream,
-            self._auto_uppercase, only_ci
+            self._auto_uppercase, only_ci, self._apply_suggestions
         )
         # Check taboo words
         if not only_ci:
