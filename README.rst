@@ -46,24 +46,11 @@ to the public on the `Greynir.is <https://greynir.is>`_ website.
 Of course it will also be available as an open-source Python package
 that can be installed using ``pip``.
 
-***************************
-Deep vs. shallow correction
-***************************
-ReynirCorrect can do both deep and shallow correction.
-
-*Deep* correction shows both the proposed corrections (if they are available), 
-and error messages to guide the user.
-
-*Shallow* correction corrects the input file automatically but doesn't give any error messages 
-or information about the errors. Only clear errors are corrected at this stage. 
-No grammar errors are corrected.
-
-
 *******
 Example
 *******
 
-To tokenize text with deep token-level correction (the text is not parsed
+To tokenize text with token-level correction (the text is not parsed
 in this case, so no grammar checking is done):
 
 >>> from reynir_correct import tokenize
@@ -130,67 +117,6 @@ If you want to be able to edit the source, do like so
     $ python setup.py develop
 
 The package source code is now in ``ReynirCorrect/src/reynir_correct``.
-
-
-*********************
-The command line tool
-*********************
-After installation, the corrector can be invoked directly from the command line:
-
-.. code-block:: console
-
-    $ correct input.txt output.txt
-
-Input and output files are encoded in UTF-8. If the files are not
-given explicitly, ``stdin`` and ``stdout`` are used for input and output,
-respectively.
-
-Empty lines in the input are treated as sentence boundaries.
-
-By default, the output consists of one sentence per line, where each
-line ends with a single newline character (ASCII LF, ``chr(10)``, ``"\n"``).
-Within each line, tokens are separated by spaces.
-
-The following (mutually exclusive) options can be specified
-on the command line:
-
-+-------------------+---------------------------------------------------+
-| | ``--csv``       | Deep tokenization. Output token objects in CSV    |
-|                   | format, one per line. Sentences are separated by  |
-|                   | lines containing ``0,"",""``                      |
-+-------------------+---------------------------------------------------+
-| | ``--json``      | Deep tokenization. Output token objects in JSON   |
-|                   | format, one per line.                             |
-+-------------------+---------------------------------------------------+
-| | ``--normalize`` | Normalize punctuation, causing e.g. quotes to be  |
-|                   | output in Icelandic form and hyphens to be        |
-|                   | regularized. This option is only applicable to    |
-|                   | shallow tokenization.                             |
-+-------------------+---------------------------------------------------+
-
-Type ``correct -h`` to get a short help message.
-
-*******
-Example
-*******
-.. code-block:: console
-  $ echo "Atvinuleysi jókst um 3%" | correct
-  Atvinnuleysi jókst um 3%
-
-  $ echo "Barnið vil grænann lit" | correct --csv
-  6,"Barnið",""
-  6,"vil",""
-  6,"grænan",""
-  6,"lit",""
-  0,"",""
-
-  $ echo "Pakkin er fyrir hestin" | correct --json
-  {"k":"BEGIN SENT"}
-  {"k":"WORD","t":"Pakkinn"}
-  {"k":"WORD","t":"er"}
-  {"k":"WORD","t":"fyrir"}
-  {"k":"WORD","t":"hestinn"}
-  {"k":"END SENT"}
 
 *****
 Tests
