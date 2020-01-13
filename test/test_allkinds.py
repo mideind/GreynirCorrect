@@ -97,7 +97,7 @@ def test_doubling(verbose=False):
     assert "dag dag" not in s
     assert len(g) == 12
     errors = {3, 5, 7, 9}
-    for ix, t in enumerate(g):
+    for ix in range(len(g)):
         if ix in errors:
             assert g[ix].error_code == "C001"  # ekki, ljós, en, dag
         else:
@@ -220,7 +220,7 @@ def test_wrong_compounds(verbose=False):
     assert "fjögur hundruð" in s
     assert "mikils háttar" in s
     errors = {4, 9, 12, 15, 17, 18}
-    for ix, t in enumerate(g):
+    for ix in range(len(g)):
         if ix in errors:
             assert g[ix].error_code == "C002"  # margs konar, aftur á bak, af því að, annars staðar, fjögur hundruð, mikils háttar
         else:
@@ -256,7 +256,7 @@ def test_split_compounds(verbose=False):
     assert "gagnstæður" in s
     assert "gagn stæður" not in s
     errors = {1, 3, 5}
-    for ix, t in enumerate(g):
+    for ix in range(len(g)):
         if ix in errors:
             assert g[ix].error_code == "C003"  # Aðalinngangur, aukaherbergi, gagnstæður
         else:
@@ -485,7 +485,7 @@ def test_paradigm_spelling_errors(verbose=False):
     # assert "einskins" not in s
 
     errors = {3, 8, 10, 11, 16, 17, 22}
-    #for ix, t in enumerate(g):                 # TODO virkar ekki, eftir að útfæra villukóðann og skipta villunum upp eftir eðli 
+    #for ix in range(len(g)):                 # TODO virkar ekki, eftir að útfæra villukóðann og skipta villunum upp eftir eðli 
     #    if ix in errors:                       # TODO þarf þá að uppfæra dæmin.
     #        assert g[ix].error_code == "S007"  # fjagra, janframt, ýmissra, annara, síðastu, kúinni, einskins
     #    else:
