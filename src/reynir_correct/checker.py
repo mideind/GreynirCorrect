@@ -4,7 +4,7 @@
 
     Spelling and grammar checking module
 
-    Copyright(C) 2019 Miðeind ehf.
+    Copyright (C) 2020 Miðeind ehf.
 
         This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -339,95 +339,126 @@ class ErrorFinder(ParseForestNavigator):
     def visit_token(self, level, node):
         """ Entering a terminal/token match node """
         terminal = node.terminal
-        if (
-            terminal.category == "so"
-            and terminal.is_subj
-            and (terminal.is_op or terminal.is_sagnb or terminal.is_nh)
-        ):
-            # Check whether the associated verb is allowed
-            # with a subject in this case
-            # node points to a fastparser.Node instance
-            # tnode points to a SimpleTree instance
+        if terminal.category != "so":
+            # Currently we only need to check verb terminals
+            return
+        if not terminal.is_subj:
+            # Check whether we had to match an impersonal verb
+            # with this terminal
             tnode = self._terminal_nodes[node.start]
             verb = tnode.lemma
-            subj_case_abbr = terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
-            assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
-                "Unknown case in " + terminal.name
-            )
-            # Check whether this verb has an entry in the VERBS_ERRORS
-            # dictionary, and whether that entry then has an item for
-            # the present subject case
+            # Check whether the verb is present in the VERBS_ERRORS
+            # dictionary, with an 'nf' entry mapping to another case,
+            # and if so, annotate an error
             errors = VerbSubjects.VERBS_ERRORS.get(verb)
-            if errors and subj_case_abbr in errors:
-                # Yes, this appears to be an erroneous subject case
-                wrong_case = self._CASE_NAMES[subj_case_abbr]
+            if errors and "nf" in errors:
+                # We are using an impersonal verb as a normal verb,
+                # i.e. with a subject in nominative case:
+                # annotate an error
+                index = node.token.index
                 # Retrieve the correct case
-                correct_case_abbr = errors[subj_case_abbr]
+                correct_case_abbr = errors["nf"]
                 correct_case = self._CASE_NAMES[correct_case_abbr]
-                # Try to recover the verb's subject
-                subj = None
-                # First, check within the enclosing verb phrase
-                # (the subject may be embedded within it, as in
-                # ?'Í dag langaði Páli bróður að fara í sund')
-                p = tnode.enclosing_tag("VP").enclosing_tag("VP")
+                code = "P_WRONG_CASE_nf_" + correct_case_abbr
+                # !!! TODO: Better annotation here, with the corrected subject
+                # !!! (and in fact the corrected verb as well,
+                # !!!'ég dreymi þig' -> 'mig dreymir þig)
+                self._ann.append(
+                    Annotation(
+                        start=index,
+                        end=index,
+                        code=code,
+                        text="Sögnin 'að {0}' er ópersónuleg og ætti "
+                            "að standa með frumlagi í {1}falli í stað nefnifalls"
+                            .format(verb, correct_case),
+                    )
+                )
+            return
+        if not (terminal.is_op or terminal.is_sagnb or terminal.is_nh):
+            return
+        # Check whether the associated verb is allowed
+        # with a subject in this case
+        # node points to a fastparser.Node instance
+        # tnode points to a SimpleTree instance
+        tnode = self._terminal_nodes[node.start]
+        verb = tnode.lemma
+        subj_case_abbr = terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
+        assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
+            "Unknown case in " + terminal.name
+        )
+        # Check whether this verb has an entry in the VERBS_ERRORS
+        # dictionary, and whether that entry then has an item for
+        # the present subject case
+        errors = VerbSubjects.VERBS_ERRORS.get(verb)
+        if errors and subj_case_abbr in errors:
+            # Yes, this appears to be an erroneous subject case
+            wrong_case = self._CASE_NAMES[subj_case_abbr]
+            # Retrieve the correct case
+            correct_case_abbr = errors[subj_case_abbr]
+            correct_case = self._CASE_NAMES[correct_case_abbr]
+            # Try to recover the verb's subject
+            subj = None
+            # First, check within the enclosing verb phrase
+            # (the subject may be embedded within it, as in
+            # ?'Í dag langaði Páli bróður að fara í sund')
+            p = tnode.enclosing_tag("VP").enclosing_tag("VP")
+            if p is not None:
+                try:
+                    subj = p.NP_SUBJ
+                except AttributeError:
+                    pass
+            if subj is None:
+                # Then, look within the enclosing IP (inflected phrase)
+                # node, if any
+                p = tnode.enclosing_tag("IP")
                 if p is not None:
+                    # Found the inflected phrase:
+                    # find the NP-SUBJ node, if any
                     try:
                         subj = p.NP_SUBJ
                     except AttributeError:
                         pass
-                if subj is None:
-                    # Then, look within the enclosing IP (inflected phrase)
-                    # node, if any
-                    p = tnode.enclosing_tag("IP")
-                    if p is not None:
-                        # Found the inflected phrase:
-                        # find the NP-SUBJ node, if any
-                        try:
-                            subj = p.NP_SUBJ
-                        except AttributeError:
-                            pass
-                code = "P_WRONG_CASE_" + subj_case_abbr + "_" + correct_case_abbr
-                if subj is not None:
-                    # We know what the subject is: annotate it
-                    start, end = subj.span
-                    cast_functions = {
-                        "nf": SimpleTree.nominative_np,
-                        "þf": SimpleTree.accusative_np,
-                        "þgf": SimpleTree.dative_np,
-                        "ef": SimpleTree.genitive_np
-                    }
-                    suggestion = cast_functions[correct_case_abbr].fget(subj)
-                    correct_np = correct_spaces(suggestion)
-                    # Skip the annotation if it suggests the same text as the
-                    # original one; this can happen if the word forms for two
-                    # cases are identical
-                    if subj.tidy_text != correct_np:
-                        self._ann.append(
-                            Annotation(
-                                start=start,
-                                end=end,
-                                code=code,
-                                text="Á líklega að vera '{3}' (frumlag sagnarinnar 'að {0}' á að vera "
-                                    "í {1}falli en ekki í {2}falli)."
-                                    .format(verb, correct_case, wrong_case, correct_np),
-                                suggest=suggestion
-                            )
-                        )
-                else:
-                    # We don't seem to find the subject, so just annotate the verb.
-                    # In this case, there's no suggested correction.
-                    index = node.token.index
+            code = "P_WRONG_CASE_" + subj_case_abbr + "_" + correct_case_abbr
+            if subj is not None:
+                # We know what the subject is: annotate it
+                start, end = subj.span
+                cast_functions = {
+                    "nf": SimpleTree.nominative_np,
+                    "þf": SimpleTree.accusative_np,
+                    "þgf": SimpleTree.dative_np,
+                    "ef": SimpleTree.genitive_np
+                }
+                suggestion = cast_functions[correct_case_abbr].fget(subj)
+                correct_np = correct_spaces(suggestion)
+                # Skip the annotation if it suggests the same text as the
+                # original one; this can happen if the word forms for two
+                # cases are identical
+                if subj.tidy_text != correct_np:
                     self._ann.append(
                         Annotation(
-                            start=index,
-                            end=index,
+                            start=start,
+                            end=end,
                             code=code,
-                            text="Frumlag sagnarinnar 'að {0}' á að vera "
-                                "í {1}falli en ekki í {2}falli"
-                                .format(verb, correct_case, wrong_case),
+                            text="Á líklega að vera '{3}' (frumlag sagnarinnar 'að {0}' á að vera "
+                                "í {1}falli en ekki í {2}falli)."
+                                .format(verb, correct_case, wrong_case, correct_np),
+                            suggest=suggestion
                         )
                     )
-        return None
+            else:
+                # We don't seem to find the subject, so just annotate the verb.
+                # In this case, there's no suggested correction.
+                index = node.token.index
+                self._ann.append(
+                    Annotation(
+                        start=index,
+                        end=index,
+                        code=code,
+                        text="Frumlag sagnarinnar 'að {0}' á að vera "
+                            "í {1}falli en ekki í {2}falli"
+                            .format(verb, correct_case, wrong_case),
+                    )
+                )
 
     def visit_nonterminal(self, level, node):
         """ Entering a nonterminal node """
@@ -500,20 +531,36 @@ class ErrorDetectionToken(BIN_Token):
         super().__init__(t, original_index)
 
     @staticmethod
-    def verb_is_strictly_impersonal(verb):
-        """ Return True if the given verb is strictly impersonal,
-            i.e. never appears with a nominative subject """
-        # Here, we return False because we want to catch errors
-        # where impersonal verbs are used with a nominative subject
+    def verb_is_strictly_impersonal(verb, form):
+        """ Return True if the given verb should not be allowed to match
+            with a normal (non _op) verb terminal """
+        if "OP" in form and not VerbSubjects.is_strictly_impersonal(verb):
+            # We have a normal terminal, but an impersonal verb form. However,
+            # that verb is not marked with an error correction from nominative
+            # case to another case. We thus return True to prevent token-terminal
+            # matching, since we don't have this specified as a verb error.
+            return True
+        # For normal terminals and impersonal verbs, we allow the match to
+        # proceed if we have a specified error correction from a nominative
+        # subject case to a different subject case.
+        # Example: 'Tröllskessan dagaði uppi' where 'daga' is an impersonal verb
+        # having a specified correction from nominative to accusative case.
         return False
 
     @staticmethod
     def verb_cannot_be_impersonal(verb, form):
         """ Return True if this verb cannot match an so_xxx_op terminal. """
-        # Here, we return False because we want to catch
-        # errors where verbs such as 'hlakka' are used with a
-        # non-nominative subject
+        # We have a relaxed condition here because we want to catch
+        # verbs being used impersonally that shouldn't be. So we don't
+        # check for "OP" (impersonal) in the form, but we're not so relaxed
+        # that we accept "BH" (imperative) or "NH" (infinitive) forms.
         return "BH" in form or "NH" in form
+
+    # Variants that must be present in the verb form if they
+    # are present in the terminal. We cut away the "op"
+    # element of the tuple, since we want to allow impersonal
+    # verbs to appear as normal verbs.
+    _RESTRICTIVE_VARIANTS = ("sagnb", "lhþt", "bh")
 
     def verb_subject_matches(self, verb, subj):
         """ Returns True if the given subject type/case is allowed for this verb

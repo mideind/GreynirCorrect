@@ -4,7 +4,7 @@
 
     Error-correcting tokenization layer
 
-    Copyright (C) 2019 Miðeind ehf.
+    Copyright (C) 2020 Miðeind ehf.
 
        This program is free software: you can redistribute it and/or modify
        it under the terms of the GNU General Public License as published by
@@ -85,6 +85,35 @@ SINGLE_LETTER_CORRECTIONS = {
     (False, "i"): "í",
     (True, "A"): "Á",
     (True, "I"): "Í",
+}
+
+# Correction of abbreviations
+# !!! TODO: Move this to a config file
+WRONG_ABBREVS = {
+    "amk.": "a.m.k.",
+    "Amk.": "A.m.k.",
+    "a.m.k": "a.m.k.",
+    "A.m.k": "A.m.k.",
+    "etv.": "e.t.v.",
+    "Etv.": "E.t.v.",
+    "eþh.": "e.þ.h.",
+    "ofl." : "o.fl.",
+    "mtt.": "m.t.t.",
+    "Mtt.": "M.t.t.",
+    "n.k.": "nk.",
+    "omfl.": "o.m.fl.",
+    "osfrv.": "o.s.frv.",
+    "oþh.": "o.þ.h.",
+    "t.d": "t.d.",
+    "T.d": "T.d.",
+    "uþb.": "u.þ.b.",
+    "Uþb.": "U.þ.b.",
+    "þ.á.m.": "þ. á m.",
+    "Þ.á.m.": "Þ. á m.",
+    "þeas.": "þ.e.a.s.",
+    "Þeas.": "Þ.e.a.s.",
+    "þmt.": "þ.m.t.",
+    "ca": "ca.",
 }
 
 
@@ -314,6 +343,23 @@ class CapitalizationError(Error):
         return self._txt
 
 
+class AbbreviationError(Error):
+
+    """ An AbbreviationError is an error where an abbreviation
+        is not spelled out, punctuated or spaced correctly. """
+
+    # A001: Abbreviation corrected
+
+    def __init__(self, code, txt):
+        # Abbreviation error codes start with "A"
+        super().__init__("A" + code)
+        self._txt = txt
+
+    @property
+    def description(self):
+        return self._txt
+
+
 class TabooWarning(Error):
 
     """ A TabooWarning marks a word that is vulgar or not appropriate
@@ -418,6 +464,7 @@ def parse_errors(token_stream, db, only_ci):
             in a CorrectToken instance """
         return CorrectToken.from_token(next(token_stream))
 
+    # pylint: disable=unused-variable
     def is_split_compound(token, next_token):
         """ Check whether the combination of the given token and the next
             token forms a split compound. Note that the latter part of
@@ -462,6 +509,27 @@ def parse_errors(token_stream, db, only_ci):
             next_token = get()
 
             # Make the lookahead checks we're interested in
+
+            # Check wrong abbreviations
+            if (
+                not only_ci
+                and token.kind == TOK.WORD
+                and token.val
+                and token.txt in WRONG_ABBREVS
+            ):
+                original = token.txt
+                token = CorrectToken.word(WRONG_ABBREVS[token.txt], token.val)
+                token.set_error(
+                    AbbreviationError(
+                        "001",
+                        "Skammstöfunin '{0}' var leiðrétt í '{1}'"
+                        .format(original, token.txt)
+                    )
+                )
+                yield token
+                token = next_token
+                continue
+
             # Word duplication (note that word case must also match)
             # TODO STILLING - hér er bara samhengisháð leiðrétting
             if (

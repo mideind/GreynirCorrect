@@ -4,7 +4,7 @@
 
     Spelling correction module
 
-    Copyright (C) 2019 Miðeind ehf.
+    Copyright (C) 2020 Miðeind ehf.
 
        This program is free software: you can redistribute it and/or modify
        it under the terms of the GNU General Public License as published by
@@ -399,6 +399,7 @@ class Corrector:
             result |= {a + c + b                for (a, b) in pairs for c in alphabet}
             return result
 
+        # pylint: disable=unused-variable
         def edits2(pairs):
             """ Return all strings that are two edits away from this word. """
 
