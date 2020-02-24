@@ -1248,7 +1248,7 @@ def test_conjunctions(verbose=False):
 
 def test_impersonal_verbs(verbose=False):
     s = "Ég dreymdi að það væri hundur í fiskabúrinu mínu."
-    check_sentence(s, [(0, 0, "P_SUBJ_CASE_nf_þf")])            # TODO setningin fær ekki þáttun. Þetta er inni í Verbs.conf, af hverju er þetta ekki höndlað?
+    check_sentence(s, [(1, 1, "P_WRONG_CASE_nf_þf")])            # TODO setningin fær ekki þáttun. Þetta er inni í Verbs.conf, af hverju er þetta ekki höndlað?
     s = "Hestinum dreymdi að það væri hundur í fiskabúrinu."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])    
     s  = "Mér klæjar undan áburðinum."
@@ -1263,7 +1263,7 @@ def test_impersonal_verbs(verbose=False):
     )
     check_sentence(s, [(0, 2, "P_WRONG_CASE_þgf_nf")])          # TODO greinist, en skoða lengdina.
     s = "Tröllskessan dagaði uppi."
-    check_sentence(s, [(0, 0, "P_SUBJ_CASE")])        # TODO villa greinist ekki; eftir að útfæra? Setja í Verbs.conf?
+    check_sentence(s, [(1, 1, "P_WRONG_CASE_nf_þf")])        # TODO villa greinist ekki; eftir að útfæra? Setja í Verbs.conf?
     s = "Báturinn rak á land."
     # check_sentence(s, [(0, 0, "P_SUBJ_CASE")])        # TODO villa greinist ekki; eftir að útfæra? Setja í Verbs.conf?
 
