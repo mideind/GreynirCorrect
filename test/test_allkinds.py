@@ -1075,7 +1075,7 @@ def test_verb_agreement(verbose=False):
     s = "Mér kvíðir fyrir að byrja í skólanum."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_nf")])      # TODO virkar, en athuga lengdina, og hvernig þetta er leiðrétt í viðmóti. Er sögninni líka breytt?
     s = "Ég dreymi um skjaldbökur sem synda um hafið."
-    # check_sentence(s, [(0, 0, "P_WRONG_CASE_nf_þf")])     # TODO villan greinist ekki! Ath. líka lengdina.
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_nf_þf")])       # TODO villan greinist ekki! Ath. líka lengdina.
     s = "Feimni drengurinn hélt sig til hlés þar til þolinmæðin þraut."
     # check_sentence(s, [(3, 3, "P_WRONG_CASE_þf_þgf"), (8, 8, "P_WRONG_CASE_nf_þf")])      # Engin villa greinist; er þetta í Verbs.conf?
     s = "Kúrekinn hafði upp á kúnum á sléttunni."
@@ -1248,24 +1248,24 @@ def test_conjunctions(verbose=False):
 
 def test_impersonal_verbs(verbose=False):
     s = "Ég dreymdi að það væri hundur í fiskabúrinu mínu."
-    check_sentence(s, [(1, 1, "P_WRONG_CASE_nf_þf")])            # TODO setningin fær ekki þáttun. Þetta er inni í Verbs.conf, af hverju er þetta ekki höndlað?
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_nf_þf")])
     s = "Hestinum dreymdi að það væri hundur í fiskabúrinu."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])    
     s  = "Mér klæjar undan áburðinum."
-    check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])           # TODO villa greinist ekki... eftir að útfæra?
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])
     s = "Hann sagði að konan hefði misminnt að potturinn væri með loki."
-    # check_sentence(s, [(0, 0, "P_SUBJ_CASE")])                # TODO villa greinist ekki, eftir að útfæra?
+    check_sentence(s, [(3, 3, "P_WRONG_CASE_nf_þf")])
     s = "Bréfberinn spurði hvort Páli vantaði fleiri frímerki."
-    check_sentence(s, [(3, 3, "P_WRONG_CASE_þgf_þf")])                # TODO villa greinist ekki, eftir að útfæra?
+    check_sentence(s, [(3, 3, "P_WRONG_CASE_þgf_þf")])
     s = (
         "Lögfræðingnum sem ég fékk til þess að verja mig í jarðaberjastuldarmálinu "
         "hlakkaði til að losna við mig."
     )
-    check_sentence(s, [(0, 2, "P_WRONG_CASE_þgf_nf")])          # TODO greinist, en skoða lengdina.
+    check_sentence(s, [(0, 2, "P_WRONG_CASE_þgf_nf")])          # TODO greinist, en spanið gæti verið réttara.
     s = "Tröllskessan dagaði uppi."
-    check_sentence(s, [(1, 1, "P_WRONG_CASE_nf_þf")])        # TODO villa greinist ekki; eftir að útfæra? Setja í Verbs.conf?
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_nf_þf")])
     s = "Báturinn rak á land."
-    # check_sentence(s, [(0, 0, "P_SUBJ_CASE")])        # TODO villa greinist ekki; eftir að útfæra? Setja í Verbs.conf?
+    # check_sentence(s, [(0, 0, "P_SUBJ_CASE")])        # TODO erfitt að ráða við þar sem 'rak' er líka persónuleg sögn
 
 
 def test_correct_sentences(verbose=False):
