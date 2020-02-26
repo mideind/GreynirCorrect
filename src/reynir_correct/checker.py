@@ -45,7 +45,7 @@ from threading import Lock
 
 from reynir import Reynir, correct_spaces, TOK
 from reynir.binparser import BIN_Token, BIN_Grammar
-from reynir.fastparser import Fast_Parser, ParseForestNavigator
+from reynir.fastparser import Fast_Parser, ParseForestNavigator, ffi
 from reynir.reducer import Reducer
 from reynir.settings import VerbSubjects
 from reynir.matcher import SimpleTree
@@ -57,12 +57,17 @@ from .errtokenizer import tokenize as tokenize_and_correct
 # for it to be analyzed as an Icelandic sentence
 ICELANDIC_RATIO = 0.6
 
+# Case name prefixes
+_CASE_NAMES = {"nf": "nefni", "þf": "þol", "þgf": "þágu", "ef": "eignar"}
+
 
 class Annotation:
 
     """ An annotation of a span of a token list for a sentence """
 
-    def __init__(self, *, start, end, code, text, suggest=None, is_warning=False):
+    def __init__(
+        self, *, start, end, code, text, detail=None, suggest=None, is_warning=False
+    ):
         assert isinstance(start, int)
         assert isinstance(end, int)
         self._start = start
@@ -70,7 +75,13 @@ class Annotation:
         if is_warning and not code.endswith("/w"):
             code += "/w"
         self._code = code
+        # text is a short, straight-to-the-point human-readable description
+        # of the error
         self._text = text
+        # detail is a more detailed human-readable description of the error,
+        # containing further explanations, eventually using grammatical terms,
+        # and possibly links to further reference material (within <a>...</a> tags)
+        self._detail = detail
         # If suggest is given, it is a suggested correction,
         # i.e. text that would replace the start..end token span.
         # The correction is in the form of token text joined by
@@ -98,6 +109,7 @@ class Annotation:
     @property
     def code(self):
         """ A code for the annotation type, usually an error or warning code """
+        # If the code ends with "/w", it is a warning
         return self._code
 
     @property
@@ -106,8 +118,15 @@ class Annotation:
         return self._text
 
     @property
+    def detail(self):
+        """ A detailed description of the annotation, possibly including
+            links within <a>...</a> tags """
+        return self._detail
+
+    @property
     def suggest(self):
-        """ A suggested correction for the token span """
+        """ A suggested correction for the token span, as a text string
+            containing tokens delimited by spaces """
         return self._suggest
 
 
@@ -116,8 +135,6 @@ class ErrorFinder(ParseForestNavigator):
     """ Utility class to find nonterminals in parse trees that are
         tagged as errors in the grammar, and terminals matching
         verb forms marked as errors """
-
-    _CASE_NAMES = {"nf": "nefni", "þf": "þol", "þgf": "þágu", "ef": "eignar"}
 
     def __init__(self, ann, sent):
         super().__init__(visit_all=True)
@@ -175,79 +192,109 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaHeldur(self, txt, variants, node):
         # 'heldur' er ofaukið
-        return (
-            "'{0}' er sennilega ofaukið".format(txt),
-            ""
+        # !!! TODO: Add suggestion here by replacing
+        # !!! 'heldur en' with 'en'
+        return dict(
+            text="'{0}' er sennilega ofaukið".format(txt),
+            detail="'Jón hefur aðra sögu að segja en Páll' nægir, "
+                "ekki þarf að nota 'heldur' í þessu samhengi."
         )
 
     def VillaVístAð(self, txt, variants, node):
         # 'víst að' á sennilega að vera 'fyrst að'
-        return (
-            "'{0}' á sennilega að vera 'fyrst að'".format(txt),
-            "fyrst að"
+        return dict(
+            text="'{0}' á sennilega að vera 'fyrst að'".format(txt),
+            detail="Rétt er að nota 'fyrst að' fremur en 'víst að' "
+                " til að tengja saman atburð og forsendu.",
+            suggestion="fyrst að"
         )
 
     def VillaFráÞvíAð(self, txt, variants, node):
         # 'allt frá því' á sennilega að vera 'allt frá því að'
-        return (
-            "'{0}' á sennilega að vera '{0} að'".format(txt),
-            "{0} að".format(txt)
+        return dict(
+            text="'{0}' á sennilega að vera '{0} að'".format(txt),
+            detail="Rétt er að nota samtenginuna 'að' í þessu samhengi, "
+                "til dæmis 'allt frá því að Anna hóf námið'.",
+            suggestion="{0} að".format(txt)
         )
 
     def VillaAnnaðhvort(self, txt, variants, node):
         # Í stað 'annaðhvort' á sennilega að standa 'annað hvort'
-        return (
-            "Í stað '{0}' á sennilega að standa 'annað hvort'".format(txt),
-            "annað hvort"
+        return dict(
+            text="Í stað '{0}' á sennilega að standa 'annað hvort'".format(txt),
+            detail="Rita á 'annað hvort' þegar um er að ræða fornöfn, til dæmis "
+                "'annað hvort systkinanna'. Rita á 'annaðhvort' í samtengingu, "
+                "til dæmis 'Annaðhvort fer ég út eða þú'.",
+            suggestion="annað hvort"
         )
 
     def VillaAnnaðHvort(self, txt, variants, node):
         # Í stað 'annað hvort' á sennilega að standa 'annaðhvort'
-        return (
-            "Í stað '{0}' á sennilega að standa 'annaðhvort'".format(txt),
-            "annaðhvort"
+        return dict(
+            text="Í stað '{0}' á sennilega að standa 'annaðhvort'".format(txt),
+            detail="Rita á 'annaðhvort' í samtengingu, til dæmis "
+                "'Annaðhvort fer ég út eða þú'. "
+                "Rita á 'annað hvort' í tveimur orðum þegar um er að ræða fornöfn, "
+                "til dæmis 'annað hvort systkinanna'.",
+            suggestion="annaðhvort"
         )
 
     def VillaFjöldiHluti(self, txt, variants, node):
         # Sögn sem á við 'fjöldi Evrópuríkja' á að vera í eintölu
-        return "Sögn sem á við '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(txt)
+        # !!! TODO: Better to annotate the verb itself, not the subject
+        return (
+            "Sögn sem á við '{0}' á sennilega að vera í eintölu, ekki fleirtölu"
+            .format(txt)
+        )
 
     def VillaEinnAf(self, txt, variants, node):
         # Sögn sem á við 'einn af drengjunum' á að vera í eintölu
-        return "Sögn sem á við '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(txt)
+        # !!! TODO: Better to annotate the verb itself, not the subject
+        return (
+            "Sögn sem á við '{0}' á sennilega að vera í eintölu, ekki fleirtölu"
+            .format(txt)
+        )
 
     def VillaSem(self, txt, variants, node):
         # 'sem' er sennilega ofaukið
-        return (
-            "'{0}' er að öllum líkindum ofaukið".format(txt),
-            ""
+        return dict(
+            text="'{0}' er að öllum líkindum ofaukið".format(txt),
+            detail="Yfirleitt er óþarfi að skrifa 'sem og'; 'og' nægir.",
+            suggestion=""
         )
 
     def VillaAð(self, txt, variants, node):
         # 'að' er sennilega ofaukið
-        return (
-            "'{0}' er að öllum líkindum ofaukið".format(txt),
-            ""
+        return dict(
+            text="'{0}' er að öllum líkindum ofaukið".format(txt),
+            detail="'að' er yfirleitt ofaukið í samtengingum á "
+                "borð við 'áður en að', 'síðan að', 'enda þótt að' o.s.frv.",
+            suggestion=""
         )
 
     def VillaKomma(self, txt, variants, node):
-        return (
-            "Komma er líklega óþörf",
-            ""
+        return dict(
+            text="Komma er líklega óþörf",
+            detail="Kommu er yfirleitt ofaukið milli frumlags og umsagnar, "
+                "milli forsendu og meginsetningar "
+                "('Áður en ég fer, má sækja tölvuna') o.s.frv.",
+            suggestion=""
         )
 
     def VillaNé(self, txt, variants, node):
-        return (
-            "'né' gæti átt að vera 'eða'",
-            "eða"
+        return dict(
+            text="'né' gæti átt að vera 'eða'",
+            suggestion="eða"
         )
 
     def VillaÞóAð(self, txt, variants, node):
         # [jafnvel] þó' á sennilega að vera '[jafnvel] þó að
         suggestion = "{0} að".format(txt)
-        return (
-            "'{0}' á sennilega að vera '{1}' (eða 'þótt')".format(txt, suggestion),
-            suggestion
+        return dict(
+            text="'{0}' á sennilega að vera '{1}' (eða 'þótt')".format(txt, suggestion),
+            detail="Réttara er að nota samtenginguna 'að' í samhengi á borð við "
+                "'jafnvel þó að von sé á sólskini'.",
+            suggestion=suggestion
         )
 
     def VillaÍTölu(self, txt, variants, node):
@@ -259,9 +306,11 @@ class ErrorFinder(ParseForestNavigator):
         number = "eintölu" if "et" in variants else "fleirtölu"
         # Annotate the verb phrase
         start, end = self._node_span(children[1])
-        return (
-            "Sögn á sennilega að vera í {1} eins og frumlagið '{0}'".format(subject, number),
-            start, end, None
+        return dict(
+            text="Sögn á sennilega að vera í {1} eins og frumlagið '{0}'"
+                .format(subject, number),
+            start=start,
+            end=end
         )
 
     def VillaFsMeðFallstjórn(self, txt, variants, node):
@@ -284,22 +333,19 @@ class ErrorFinder(ParseForestNavigator):
             preposition = p.P.text
             suggestion = preposition + " " + cast_functions[variants].fget(subj)
             correct_np = correct_spaces(suggestion)
-            return (
-                "Á sennilega að vera '{2}' (forsetningin '{0}' stýrir {1}falli)."
-                .format(
-                    preposition,
-                    ErrorFinder._CASE_NAMES[variants],
-                    correct_np
-                ),
-                suggestion
+            return dict(
+                text="Á sennilega að vera '{0}'".format(correct_np),
+                detail="Forsetningin '{0}' stýrir {1}falli."
+                    .format(
+                        preposition,
+                        _CASE_NAMES[variants],
+                    ),
+                suggestion=suggestion
             )
         # In this case, there's no suggested correction
-        return (
-            "Forsetningin '{0}' stýrir {1}falli."
-            .format(
-                txt.split()[0],
-                ErrorFinder._CASE_NAMES[variants],
-            )
+        return dict(
+            text="Forsetningin '{0}' stýrir {1}falli."
+                .format(txt.split()[0], _CASE_NAMES[variants]),
         )
 
     def SvigaInnihaldNl(self, txt, variants, node):
@@ -307,7 +353,7 @@ class ErrorFinder(ParseForestNavigator):
             that it explains """
         return (
             "'{0}' gæti átt að vera í {1}falli"
-            .format(txt, ErrorFinder._CASE_NAMES[variants])
+            .format(txt, _CASE_NAMES[variants])
         )
 
     def VillaEndingIR(self, txt, variants, node):
@@ -317,10 +363,12 @@ class ErrorFinder(ParseForestNavigator):
         tnode = self._terminal_nodes[node.start]
         suggestion = tnode.accusative_np
         correct_np = correct_spaces(suggestion)
-        return (
-            "Á sennilega að vera '{0}'"
-            .format(correct_np),
-            suggestion
+        return dict(
+            text="Á sennilega að vera '{0}'".format(correct_np),
+            detail="Orð á borð við 'læknir' og 'kælir' eru "
+                "rituð 'lækninn' og 'kælinn' í þolfalli með greini, "
+                "ekki 'læknirinn' eða 'kælirinn'.",
+            suggestion=suggestion
         )
 
     def VillaEndingANA(self, txt, variants, node):
@@ -330,10 +378,12 @@ class ErrorFinder(ParseForestNavigator):
         tnode = self._terminal_nodes[node.start]
         suggestion = tnode.genitive_np
         correct_np = correct_spaces(suggestion)
-        return (
-            "Á sennilega að vera '{0}'"
-            .format(correct_np),
-            suggestion
+        return dict(
+            text="Á sennilega að vera '{0}'".format(correct_np),
+            detail="Orð á borð við 'flokkur' eru rituð "
+                "'flokkanna' í eignarfalli fleirtölu, "
+                "ekki 'flokkana'.",
+            suggestion=suggestion
         )
 
     @staticmethod
@@ -382,9 +432,11 @@ class ErrorFinder(ParseForestNavigator):
         verb = tnode.lemma
 
         def annotate_wrong_subject_case(subj_case_abbr, correct_case_abbr):
-            wrong_case = self._CASE_NAMES[subj_case_abbr]
+            """ Create an annotation that describes a verb having a subject
+                in the wrong case """
+            wrong_case = _CASE_NAMES[subj_case_abbr]
             # Retrieve the correct case
-            correct_case = self._CASE_NAMES[correct_case_abbr]
+            correct_case = _CASE_NAMES[correct_case_abbr]
             # Try to recover the verb's subject
             subj = self.find_verb_subject(tnode)
             code = "P_WRONG_CASE_" + subj_case_abbr + "_" + correct_case_abbr
@@ -402,9 +454,11 @@ class ErrorFinder(ParseForestNavigator):
                             start=start,
                             end=end,
                             code=code,
-                            text="Á líklega að vera '{3}' (frumlag sagnarinnar 'að {0}' á að vera "
-                                "í {1}falli en ekki í {2}falli)."
-                                .format(verb, correct_case, wrong_case, correct_np),
+                            text="Á líklega að vera '{0}'".format(correct_np),
+                            detail="Sögnin 'að {0}' er ópersónuleg. "
+                                "Frumlag hennar á að vera "
+                                "í {1}falli í stað {2}falls."
+                                .format(verb, correct_case, wrong_case),
                             suggest=suggestion
                         )
                     )
@@ -417,8 +471,12 @@ class ErrorFinder(ParseForestNavigator):
                         start=index,
                         end=index,
                         code=code,
-                        text="Frumlag sagnarinnar 'að {0}' á að vera "
-                            "í {1}falli en ekki í {2}falli"
+                        text="Frumlag sagnarinnar 'að {0}' "
+                            "á að vera í {1}falli"
+                            .format(verb, correct_case),
+                        detail="Sögnin 'að {0}' er ópersónuleg. "
+                            "Frumlag hennar á að vera "
+                            "í {1}falli í stað {2}falls."
                             .format(verb, correct_case, wrong_case),
                     )
                 )
@@ -460,56 +518,64 @@ class ErrorFinder(ParseForestNavigator):
         """ Entering a nonterminal node """
         if node.is_interior or node.nonterminal.is_optional:
             # Not an interesting node
-            pass
-        elif node.nonterminal.has_tag("error"):
-            # This node has a nonterminal that is tagged with $tag(error)
-            # in the grammar file (Reynir.grammar)
-            suggestion = None
-            start, end = self._node_span(node)
-            span_text = self._node_text(node)
-            # See if we have a custom text function for this
-            # error-tagged nonterminal
-            name = node.nonterminal.name
-            variants = ""
-            if "_" in name:
-                # Separate the variants
-                ix = name.index("_")
-                variants = name[ix + 1:]
-                name = name[:ix]
-            # Find the text function by dynamic dispatch
-            text_func = getattr(self, name, None)
-            # The error code in this case is P_NT_ + the name of the error-tagged
-            # nonterminal, however after cutting 'Villa' from its front
-            code = "P_NT_" + (name[5:] if name.startswith("Villa") else name)
-            if text_func is not None:
-                # Yes: call it with the nonterminal's spanned text as argument
-                ann = text_func(span_text, variants, node)
-                if isinstance(ann, str):
-                    ann_text = ann
-                elif isinstance(ann, tuple):
-                    if len(ann) == 2:
-                        ann_text, suggestion = ann
-                    else:
-                        ann_text, start, end, suggestion = ann
+            return None
+        if not node.nonterminal.has_tag("error"):
+            return None
+        # This node has a nonterminal that is tagged with $tag(error)
+        # in the grammar file (Reynir.grammar)
+        suggestion = None
+        ann_text = None
+        ann_detail = None
+        start, end = self._node_span(node)
+        span_text = self._node_text(node)
+        # See if we have a custom text function for this
+        # error-tagged nonterminal
+        name = node.nonterminal.name
+        variants = ""
+        if "_" in name:
+            # Separate the variants
+            ix = name.index("_")
+            variants = name[ix + 1:]
+            name = name[:ix]
+        # Find the text function by dynamic dispatch
+        text_func = getattr(self, name, None)
+        # The error code in this case is P_NT_ + the name of the error-tagged
+        # nonterminal, however after cutting 'Villa' from its front
+        code = "P_NT_" + (name[5:] if name.startswith("Villa") else name)
+        if text_func is not None:
+            # Yes: call it with the nonterminal's spanned text as argument
+            ann = text_func(span_text, variants, node)
+            if isinstance(ann, str):
+                ann_text = ann
+            elif isinstance(ann, tuple):
+                if len(ann) == 2:
+                    ann_text, suggestion = ann
                 else:
-                    assert False, "Text function {0} returns illegal type".format(name)
+                    ann_text, start, end, suggestion = ann
+            elif isinstance(ann, dict):
+                ann_text = ann.get("text")
+                ann_detail = ann.get("detail")
+                suggestion = ann.get("suggestion")
+                start = ann.get("start", start)
+                end = ann.get("end", end)
             else:
-                # No: use a default text
-                ann_text = (
-                    "'{0}' er líklega rangt (regla {1})"
-                    .format(span_text, node.nonterminal.name)
-                )
-            self._ann.append(
-                # P_NT_ + nonterminal name: Probable grammatical error.
-                Annotation(
-                    start=start,
-                    end=end,
-                    code=code,
-                    text=ann_text,
-                    suggest=suggestion,
-                    is_warning=code in {"P_NT_Að", "P_NT_Komma"}
-                )
+                assert False, "Text function {0} returns illegal type".format(name)
+        else:
+            # No: use a default text
+            ann_text = "'{0}' er líklega rangt".format(span_text)
+            ann_detail = "Regla {0}".format(node.nonterminal.name)
+        self._ann.append(
+            # P_NT_ + nonterminal name: Probable grammatical error.
+            Annotation(
+                start=start,
+                end=end,
+                code=code,
+                text=ann_text,
+                detail=ann_detail,
+                suggest=suggestion,
+                is_warning=code in {"P_NT_Að", "P_NT_Komma"}
             )
+        )
         return None
 
 
@@ -594,7 +660,7 @@ class ErrorDetectingParser(Fast_Parser):
     _grammar_class = ErrorDetectingGrammar
 
     # Also keep separate class instances of the C grammar and its timestamp
-    _c_grammar = None
+    _c_grammar = ffi.NULL
     _c_grammar_ts = None
 
     @staticmethod
@@ -684,12 +750,20 @@ class ReynirCorrect(Reynir):
                     end=len(sent.tokens) - 1,
                     code="E004",
                     text="Málsgreinin er sennilega ekki á íslensku",
+                    detail="{0:.0f}% orða í henni finnast ekki í íslenskri orðabók"
+                        .format(words_not_in_bin/num_words * 100.0)
                 )
             ]
         elif sent.deep_tree is None:
             # If the sentence couldn't be parsed,
             # put an annotation on it as a whole.
             # In this case, we keep the token-level annotations.
+            err_index = sent.err_index
+            start = max(0, err_index - 1)
+            end = min(len(sent.tokens), err_index + 2)
+            toktext = correct_spaces(
+                " ".join(t.txt for t in sent.tokens[start:end] if t.txt)
+            )
             ann.append(
                 # E001: Unable to parse sentence
                 Annotation(
@@ -697,6 +771,8 @@ class ReynirCorrect(Reynir):
                     end=len(sent.tokens) - 1,
                     code="E001",
                     text="Málsgreinin fellur ekki að reglum",
+                    detail="Þáttun brást í kring um {0}. tóka ('{1}')"
+                        .format(err_index + 1, toktext)
                 )
             )
         else:
