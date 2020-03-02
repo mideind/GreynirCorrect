@@ -26,26 +26,26 @@
 
     Potential test sentences:
 
-        'Tillaga formanna þingflokkana var rædd í gær, eftir að frumvarpið var sett í kælir.'
-        'Manninum á verkstæðinu vantaði hamar.'
-        'Það var auðséð að henni langaði að fara til sólarlanda.'
-        'Mitt í hamaganginum hlakkaði Jónasi til að fá sér kakó.'
-        'Jón hefur aðra sögu að segja heldur en Páll.'
-        'Ég hætti við að fara víst að Sigga var veik.'
-        'Víst að Sigga var veik hætti ég við að fara.'
-        'Frá því ég sá hana fyrst var ég ástfanginn.'
-        'Annað hvort er þetta della eða þetta virkar vel. Annaðhvort systkinanna mun örugglega greiða mér.'
-        'Fjöldi Evrópuríkja hafa mótmælt áformum Breta. Ég var viss um að fjöldi stuðningsmanna Liverpool myndu fagna.'
-        'Einn af drengjunum voru komnir með flensu, meðan einn af læknunum þurftu að fara heim.'
-        'Allt Viðreisnarfólk, sem og Píratar, tóku þátt í atkvæðagreiðslunni.'
-        'Ég gekk frá skrifborðinu, áður en að ég ók bílnum heim. Ég hef verið frískur síðan að ég tók fúkkalyfið.'
-        'Meðan að tölvan er í viðgerð, get ég lítið unnið.'
-        'Mér var ekki sama um þetta, jafnvel þó hjúkrunarfræðingurinn reyndi að hughreysta mig.'
-        'Þó veðrið væri vont, gátum við þvegið bílinn.'
-        'Hundurinn hans Páls fóru í bað í gær.'
-        'Allir kettirnir í götunni var að elta mýs.'
-        'Samhliða leiksýningin talaði ég við Páll um vandamálið.'
-        'Ég las síðustu bók Guðrúnar (sú sem ég minntist á við þig) og fannst hún býsna góð.'
+        Tillaga formanna þingflokkana var rædd í gær, eftir að frumvarpið var sett í kælir.
+        Manninum á verkstæðinu vantaði hamar.
+        Það var auðséð að henni langaði að fara til sólarlanda.
+        Mitt í hamaganginum hlakkaði Jónasi til að fá sér kakó.
+        Jón hefur aðra sögu að segja heldur en Páll.
+        Ég hætti við að fara víst að Sigga var veik.
+        Víst að Sigga var veik hætti ég við að fara.
+        Frá því ég sá hana fyrst var ég ástfanginn.
+        Annað hvort er þetta della eða þetta virkar vel. Annaðhvort systkinanna mun örugglega greiða mér.
+        Fjöldi Evrópuríkja hafa mótmælt áformum Breta. Ég var viss um að fjöldi stuðningsmanna Liverpool myndu fagna.
+        Einn af drengjunum voru komnir með flensu, meðan einn af læknunum þurftu að fara heim.
+        Allt Viðreisnarfólk, sem og Píratar, tóku þátt í atkvæðagreiðslunni.
+        Ég gekk frá skrifborðinu, áður en að ég ók bílnum heim. Ég hef verið frískur síðan að ég tók fúkkalyfið.
+        Meðan að tölvan er í viðgerð, get ég lítið unnið.
+        Mér var ekki sama um þetta, jafnvel þó hjúkrunarfræðingurinn reyndi að hughreysta mig.
+        Þó veðrið væri vont, gátum við þvegið bílinn.
+        Hundurinn hans Páls fóru í bað í gær.
+        Allir kettirnir í götunni var að elta mýs.
+        Samhliða leiksýningin talaði ég við Páll um vandamálið.
+        Ég las síðustu bók Guðrúnar (sú sem ég minntist á við þig) og fannst hún býsna góð.
 
 """
 
@@ -110,14 +110,14 @@ def check_sentence(rc, s, annotations):
 
 def test_multiword_phrases(rc):
     s = "Einn af drengjunum fóru í sund af gefnu tilefni."
-    check_sentence(rc, s, [(0, 2, "P_NT_EinnAf"), (6, 8, "P_aðaf")])
+    check_sentence(rc, s, [(3, 3, "P_NT_EinnAf"), (6, 8, "P_aðaf")])
 
 
 def test_error_finder(rc):
     """ Test errors that are found by traversing the detailed
         parse tree in checker.py (ErrorFinder class) """
     s = "Fjöldi þingmanna greiddu atkvæði gegn tillögunni."
-    check_sentence(rc, s, [(0, 1, "P_NT_FjöldiHluti")])
+    check_sentence(rc, s, [(2, 2, "P_NT_FjöldiHluti")])
     s = "Jón borðaði ís þar sem að hann var svangur."
     check_sentence(rc, s, [(5, 5, "P_NT_Að/w")])
     s = "Jón \"borðaði\" ís þar sem að hann var svangur."
@@ -147,7 +147,7 @@ def test_error_finder(rc):
     s = "Friðgeir taldi víst að Sigga yrði að vera heima."
     check_sentence(rc, s, [])
     s = "Ég er ekki meiri fáviti heldur en þú."
-    check_sentence(rc, s, [(5, 5, "P_NT_Heldur")])
+    check_sentence(rc, s, [(5, 5, "P_NT_Heldur/w")])
 
 
 def test_impersonal_verbs(rc):
@@ -155,8 +155,8 @@ def test_impersonal_verbs(rc):
     check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_þf_nf")])
     s = "Mér hlakkaði til."
     check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_þgf_nf")])
-    # s = "Ég dreymdi köttinn."
-    # check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_nf_þf")])
+    s = "Ég dreymdi köttinn."
+    check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_nf_þf")])
     s = "Mér dreymdi köttinn."
     check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_þgf_þf")])
     # The following should not parse

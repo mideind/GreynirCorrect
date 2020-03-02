@@ -1,6 +1,6 @@
 """
 
-    Reynir: Natural language processing for Icelandic
+    Greynir: Natural language processing for Icelandic
 
     Spelling and grammar checking module
 
@@ -136,6 +136,13 @@ class ErrorFinder(ParseForestNavigator):
         tagged as errors in the grammar, and terminals matching
         verb forms marked as errors """
 
+    _CAST_FUNCTIONS = {
+        "nf": SimpleTree.nominative_np,
+        "þf": SimpleTree.accusative_np,
+        "þgf": SimpleTree.dative_np,
+        "ef": SimpleTree.genitive_np
+    }
+
     def __init__(self, ann, sent):
         super().__init__(visit_all=True)
         # Annotation list
@@ -159,7 +166,7 @@ class ErrorFinder(ParseForestNavigator):
             of which node is the root """
         first, last = self._node_span(node)
         toklist = self._tokens[first : last + 1]
-        return SimpleTree.from_deep_tree(node, toklist)
+        return SimpleTree.from_deep_tree(node, toklist, first_token_index=first)
 
     def _node_text(self, node):
         """ Return the text within the span of the node """
@@ -190,14 +197,13 @@ class ErrorFinder(ParseForestNavigator):
     # Functions used to explain grammar errors associated with
     # nonterminals with error tags in the grammar
 
-    def VillaHeldur(self, txt, variants, node):
+    def AðvörunHeldur(self, txt, variants, node):
         # 'heldur' er ofaukið
         # !!! TODO: Add suggestion here by replacing
         # !!! 'heldur en' with 'en'
         return dict(
             text="'{0}' er sennilega ofaukið".format(txt),
-            detail="'Jón hefur aðra sögu að segja en Páll' nægir, "
-                "ekki þarf að nota 'heldur' í þessu samhengi."
+            detail="Yfirleitt nægir að nota 'en' í þessu samhengi."
         )
 
     def VillaVístAð(self, txt, variants, node):
@@ -239,45 +245,76 @@ class ErrorFinder(ParseForestNavigator):
             suggestion="annaðhvort"
         )
 
-    def VillaFjöldiHluti(self, txt, variants, node):
-        # Sögn sem á við 'fjöldi Evrópuríkja' á að vera í eintölu
-        # !!! TODO: Better to annotate the verb itself, not the subject
+    def singular_error(self, txt, variants, node, detail):
+        """ Annotate a mismatch between singular and plural
+            in subject vs. verb """
+        tnode = self._terminal_nodes[node.start]
+        # Find the enclosing inflected phrase
+        p = tnode.enclosing_tag("IP")
+        verb = None
+        if p is not None:
+            try:
+                # Found it: try to locate the main verb
+                verb = p.VP.VP
+            except AttributeError:
+                try:
+                    verb = p.VP
+                except AttributeError:
+                    pass
+        if verb is not None:
+            start, end = verb.span
+            return dict(
+                text="Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu"
+                    .format(verb.tidy_text),
+                detail=detail,
+                start=start,
+                end=end,
+            )
         return (
             "Sögn sem á við '{0}' á sennilega að vera í eintölu, ekki fleirtölu"
             .format(txt)
+        )
+
+    def VillaFjöldiHluti(self, txt, variants, node):
+        # Sögn sem á við 'fjöldi Evrópuríkja' á að vera í eintölu
+        return self.singular_error(
+            txt, variants, node,
+            "Nafnliðurinn '{0}' er í eintölu "
+            "og með honum á því að vera sögn í eintölu.".format(txt)
         )
 
     def VillaEinnAf(self, txt, variants, node):
         # Sögn sem á við 'einn af drengjunum' á að vera í eintölu
-        # !!! TODO: Better to annotate the verb itself, not the subject
-        return (
-            "Sögn sem á við '{0}' á sennilega að vera í eintölu, ekki fleirtölu"
-            .format(txt)
+        return self.singular_error(
+            txt, variants, node,
+            "Nafnliðurinn '{0}' er í eintölu "
+            "og með honum á því að vera sögn í eintölu.".format(txt)
         )
 
-    def VillaSem(self, txt, variants, node):
+    def AðvörunSem(self, txt, variants, node):
         # 'sem' er sennilega ofaukið
         return dict(
             text="'{0}' er að öllum líkindum ofaukið".format(txt),
-            detail="Yfirleitt er óþarfi að skrifa 'sem og'; 'og' nægir.",
-            suggestion=""
+            detail="Oft fer betur á að rita 'og', 'og einnig' eða 'og jafnframt' "
+                " í stað 'sem og'.",
+            suggestion="",
         )
 
-    def VillaAð(self, txt, variants, node):
+    def AðvörunAð(self, txt, variants, node):
         # 'að' er sennilega ofaukið
         return dict(
             text="'{0}' er að öllum líkindum ofaukið".format(txt),
             detail="'að' er yfirleitt ofaukið í samtengingum á "
-                "borð við 'áður en að', 'síðan að', 'enda þótt að' o.s.frv.",
-            suggestion=""
+                "borð við 'áður en', 'síðan', 'enda þótt' o.s.frv.",
+            suggestion="",
         )
 
-    def VillaKomma(self, txt, variants, node):
+    def AðvörunKomma(self, txt, variants, node):
         return dict(
             text="Komma er líklega óþörf",
             detail="Kommu er yfirleitt ofaukið milli frumlags og umsagnar, "
                 "milli forsendu og meginsetningar "
-                "('Áður en ég fer, má sækja tölvuna') o.s.frv.",
+                "('áður en ég fer [,] má sækja tölvuna') o.s.frv.",
             suggestion=""
         )
 
@@ -324,20 +361,14 @@ class ErrorFinder(ParseForestNavigator):
             except AttributeError:
                 pass
         if subj:
-            cast_functions = {
-                "nf": SimpleTree.nominative_np,
-                "þf": SimpleTree.accusative_np,
-                "þgf": SimpleTree.dative_np,
-                "ef": SimpleTree.genitive_np
-            }
             preposition = p.P.text
-            suggestion = preposition + " " + cast_functions[variants].fget(subj)
+            suggestion = preposition + " " + self._CAST_FUNCTIONS[variants].fget(subj)
             correct_np = correct_spaces(suggestion)
             return dict(
                 text="Á sennilega að vera '{0}'".format(correct_np),
                 detail="Forsetningin '{0}' stýrir {1}falli."
                     .format(
-                        preposition,
+                        preposition.lower(),
                         _CASE_NAMES[variants],
                     ),
                 suggestion=suggestion
@@ -345,15 +376,16 @@ class ErrorFinder(ParseForestNavigator):
         # In this case, there's no suggested correction
         return dict(
             text="Forsetningin '{0}' stýrir {1}falli."
-                .format(txt.split()[0], _CASE_NAMES[variants]),
+                .format(txt.split()[0].lower(), _CASE_NAMES[variants]),
         )
 
     def SvigaInnihaldNl(self, txt, variants, node):
         """ Explanatory noun phrase in a different case than the noun phrase
             that it explains """
+        np = self._simple_tree(node)
         return (
-            "'{0}' gæti átt að vera í {1}falli"
-            .format(txt, _CASE_NAMES[variants])
+            "Gæti átt að vera '{0}'"
+            .format(self._CAST_FUNCTIONS[variants].fget(np))
         )
 
     def VillaEndingIR(self, txt, variants, node):
@@ -363,11 +395,12 @@ class ErrorFinder(ParseForestNavigator):
         tnode = self._terminal_nodes[node.start]
         suggestion = tnode.accusative_np
         correct_np = correct_spaces(suggestion)
+        article = " með greini" if "gr" in tnode.all_variants else ""
         return dict(
             text="Á sennilega að vera '{0}'".format(correct_np),
-            detail="Orð á borð við 'læknir' og 'kælir' eru "
-                "rituð 'lækninn' og 'kælinn' í þolfalli með greini, "
-                "ekki 'læknirinn' eða 'kælirinn'.",
+            detail="Karlkyns orð sem enda á '-ir' í nefnifalli eintölu, "
+                "eins og '{0}', eru rituð "
+                "'{1}' í þolfalli{2}.".format(tnode.canonical_np, correct_np, article),
             suggestion=suggestion
         )
 
@@ -380,9 +413,10 @@ class ErrorFinder(ParseForestNavigator):
         correct_np = correct_spaces(suggestion)
         return dict(
             text="Á sennilega að vera '{0}'".format(correct_np),
-            detail="Orð á borð við 'flokkur' eru rituð "
-                "'flokkanna' í eignarfalli fleirtölu, "
-                "ekki 'flokkana'.",
+            detail="Karlkyns orð sem enda á '-ur' í nefnifalli eintölu, "
+                "eins og '{0}', eru rituð "
+                "'{1}' með tveimur n-um í eignarfalli fleirtölu, "
+                "ekki '{2}' með einu n-i.".format(tnode.canonical_np, correct_np, txt),
             suggestion=suggestion
         )
 
@@ -413,13 +447,6 @@ class ErrorFinder(ParseForestNavigator):
                     pass
         return subj
 
-    _CAST_FUNCTIONS = {
-        "nf": SimpleTree.nominative_np,
-        "þf": SimpleTree.accusative_np,
-        "þgf": SimpleTree.dative_np,
-        "ef": SimpleTree.genitive_np
-    }
-
     def visit_token(self, level, node):
         """ Entering a terminal/token match node """
 
@@ -440,6 +467,7 @@ class ErrorFinder(ParseForestNavigator):
             # Try to recover the verb's subject
             subj = self.find_verb_subject(tnode)
             code = "P_WRONG_CASE_" + subj_case_abbr + "_" + correct_case_abbr
+            personal = "persónuleg" if correct_case_abbr == "nf" else "ópersónuleg"
             if subj is not None:
                 # We know what the subject is: annotate it
                 start, end = subj.span
@@ -455,10 +483,10 @@ class ErrorFinder(ParseForestNavigator):
                             end=end,
                             code=code,
                             text="Á líklega að vera '{0}'".format(correct_np),
-                            detail="Sögnin 'að {0}' er ópersónuleg. "
+                            detail="Sögnin 'að {0}' er {3}. "
                                 "Frumlag hennar á að vera "
                                 "í {1}falli í stað {2}falls."
-                                .format(verb, correct_case, wrong_case),
+                                .format(verb, correct_case, wrong_case, personal),
                             suggest=suggestion
                         )
                     )
@@ -474,10 +502,10 @@ class ErrorFinder(ParseForestNavigator):
                         text="Frumlag sagnarinnar 'að {0}' "
                             "á að vera í {1}falli"
                             .format(verb, correct_case),
-                        detail="Sögnin 'að {0}' er ópersónuleg. "
+                        detail="Sögnin 'að {0}' er {3}. "
                             "Frumlag hennar á að vera "
                             "í {1}falli í stað {2}falls."
-                            .format(verb, correct_case, wrong_case),
+                            .format(verb, correct_case, wrong_case, personal),
                     )
                 )
 
@@ -503,6 +531,10 @@ class ErrorFinder(ParseForestNavigator):
         # node points to a fastparser.Node instance
         # tnode points to a SimpleTree instance
         subj_case_abbr = terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
+        if subj_case_abbr == "none":
+            # so_subj_nh_none or similar:
+            # hidden subject ('Í raun þyrfti að yfirfara alla ferla')
+            return
         assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
             "Unknown case in " + terminal.name
         )
@@ -540,8 +572,17 @@ class ErrorFinder(ParseForestNavigator):
         # Find the text function by dynamic dispatch
         text_func = getattr(self, name, None)
         # The error code in this case is P_NT_ + the name of the error-tagged
-        # nonterminal, however after cutting 'Villa' from its front
-        code = "P_NT_" + (name[5:] if name.startswith("Villa") else name)
+        # nonterminal, however after cutting 'Villa'/'Aðvörun' from its front
+        is_warning = False
+        if name.startswith("Aðvörun"):
+            # Warning
+            code = "P_NT_" + name[7:]
+            is_warning = True
+        elif name.startswith("Villa"):
+            # Error
+            code = "P_NT_" + name[5:]
+        else:
+            code = "P_NT_" + name
         if text_func is not None:
             # Yes: call it with the nonterminal's spanned text as argument
             ann = text_func(span_text, variants, node)
@@ -573,7 +614,7 @@ class ErrorFinder(ParseForestNavigator):
                 text=ann_text,
                 detail=ann_detail,
                 suggest=suggestion,
-                is_warning=code in {"P_NT_Að", "P_NT_Komma"}
+                is_warning=is_warning
             )
         )
         return None
@@ -616,7 +657,9 @@ class ErrorDetectionToken(BIN_Token):
         # verbs being used impersonally that shouldn't be. So we don't
         # check for "OP" (impersonal) in the form, but we're not so relaxed
         # that we accept "BH" (imperative) or "NH" (infinitive) forms.
-        return "BH" in form or "NH" in form
+        # We also don't accept plural forms, as those errors would be
+        # very improbable ("okkur hlökkum til jólanna").
+        return any(f in form for f in ("BH", "NH", "FT"))
 
     # Variants that must be present in the verb form if they
     # are present in the terminal. We cut away the "op"
@@ -811,13 +854,19 @@ def check(text, *, split_paragraphs=False):
 
 def check_with_custom_parser(text, *,
     split_paragraphs=False,
-    parser_class=ReynirCorrect
+    parser_class=ReynirCorrect,
+    progress_func=None
 ):
     """ Return a dict containing parsed paragraphs as well as statistics,
         using the given correction/parser class. This is a low-level
         function; normally check_with_stats() should be used. """
     rc = parser_class()
-    job = rc.submit(text, parse=True, split_paragraphs=split_paragraphs)
+    job = rc.submit(
+        text,
+        parse=True,
+        split_paragraphs=split_paragraphs,
+        progress_func=progress_func,
+    )
     # Enumerating through the job's paragraphs and sentences causes them
     # to be parsed and their statistics collected
     paragraphs = [[sent for sent in pg] for pg in job.paragraphs()]

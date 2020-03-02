@@ -1052,9 +1052,9 @@ def test_number_agreement(verbose=False):
     s = "Hann er einn þeirra sem slasaðist í árekstrinum."
     # check_sentence(s, [(5, 6, "P_NT_Þeirra")])        # TODO engin villa finnst.
     s = "Minnihluti starfsmanna samþykktu samninginn."
-    check_sentence(s, [(0, 1, "P_NT_FjöldiHluti")])     # TODO villan greinist, en ætti að vera staðsett á sögninni til að hægt sé að leiðrétta hana... Hvernig er þetta leiðrétt? Er bara ábending?
+    check_sentence(s, [(2, 2, "P_NT_FjöldiHluti")])     # TODO villan greinist, en ætti að vera staðsett á sögninni til að hægt sé að leiðrétta hana... Hvernig er þetta leiðrétt? Er bara ábending?
     s = "Helmingur landsmanna horfðu á barnaefnið."
-    check_sentence(s, [(0, 1, "P_NT_FjöldiHluti")])     # TODO villan greinist en ætti að vera staðsett á sögninni svo hægt sé að leiðrétta hana. Skoða hvernig/hvort villan er leiðrétt.
+    check_sentence(s, [(2, 2, "P_NT_FjöldiHluti")])     # TODO villan greinist en ætti að vera staðsett á sögninni svo hægt sé að leiðrétta hana. Skoða hvernig/hvort villan er leiðrétt.
     s = "Hér eru tuttugu og ein appelsínur."
     # check_sentence(s, [()])
 

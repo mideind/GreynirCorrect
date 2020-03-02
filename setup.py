@@ -2,7 +2,7 @@
 # -*- encoding: utf-8 -*-
 
 """
-    Reynir: Natural language processing for Icelandic
+    Greynir: Natural language processing for Icelandic
 
     Setup.py
 
@@ -58,6 +58,7 @@ def read(*names, **kwargs):
 
 setup(
     name="reynir-correct",
+    # Remember to update version in src/reynir_correct/__init__.py as well
     version="0.8.0",
     license="GNU GPLv3",
     description="A spelling and grammar corrector for Icelandic",

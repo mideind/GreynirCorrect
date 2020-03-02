@@ -1,6 +1,6 @@
 """
 
-    Reynir: Natural language processing for Icelandic
+    Greynir: Natural language processing for Icelandic
 
     Copyright (C) 2020 Miðeind ehf.
 
@@ -32,7 +32,11 @@ from .checker import (
     check_with_custom_parser
 )
 
+
 __author__ = u"Miðeind ehf"
+__copyright__ = "(C) 2020 Miðeind ehf."
+# Remember to update the version in setup.py as well
+__version__ = "0.8.0"
+
 
 Settings.read("config/ReynirCorrect.conf")
-
