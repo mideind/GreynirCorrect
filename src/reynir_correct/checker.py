@@ -161,6 +161,11 @@ class ErrorFinder(ParseForestNavigator):
         first_token, last_token = node.token_span
         return (first_token.index, last_token.index)
 
+    def cast_to_case(self, case, node):
+        """ Return the contents of a noun phrase node
+            inflected in the given case """
+        return self._CAST_FUNCTIONS[case].fget(node)
+
     def _simple_tree(self, node):
         """ Return a SimpleTree instance spanning the deep tree
             of which node is the root """
@@ -168,7 +173,7 @@ class ErrorFinder(ParseForestNavigator):
         toklist = self._tokens[first : last + 1]
         return SimpleTree.from_deep_tree(node, toklist, first_token_index=first)
 
-    def _node_text(self, node):
+    def _node_text(self, node, original_case=False):
         """ Return the text within the span of the node """
 
         def text(t):
@@ -190,8 +195,9 @@ class ErrorFinder(ParseForestNavigator):
             return t.txt.lower()
 
         first, last = self._node_span(node)
+        text_func = (lambda t: t.txt) if original_case else text
         return correct_spaces(
-            " ".join(text(t) for t in self._tokens[first : last + 1] if t.txt)
+            " ".join(text_func(t) for t in self._tokens[first : last + 1] if t.txt)
         )
 
     # Functions used to explain grammar errors associated with
@@ -291,6 +297,22 @@ class ErrorFinder(ParseForestNavigator):
             "og með honum á því að vera sögn í eintölu.".format(txt)
         )
 
+    def VillaEinkunn(self, txt, variants, node):
+        # Fornafn í einkunn er ekki í sama falli og nafnorð,
+        # t.d. 'þessum mann'
+        wrong_pronoun = self._node_text(node, original_case=True)
+        correct_case = variants.split("_")[0]
+        pronoun_node = next(node.enum_child_nodes())
+        p = self._simple_tree(pronoun_node)
+        correct_pronoun = self.cast_to_case(correct_case, p)
+        return dict(
+            text="'{0}' á sennilega að vera '{1}'"
+                .format(wrong_pronoun, correct_pronoun),
+            detail="Fornafnið '{0}' á að vera í {1}falli, eins og nafnliðurinn sem fylgir á eftir"
+                .format(wrong_pronoun, _CASE_NAMES[correct_case]),
+            suggestion=correct_pronoun,
+        )
+
     def AðvörunSem(self, txt, variants, node):
         # 'sem' er sennilega ofaukið
         return dict(
@@ -362,7 +384,7 @@ class ErrorFinder(ParseForestNavigator):
                 pass
         if subj:
             preposition = p.P.text
-            suggestion = preposition + " " + self._CAST_FUNCTIONS[variants].fget(subj)
+            suggestion = preposition + " " + self.cast_to_case(variants, subj)
             correct_np = correct_spaces(suggestion)
             return dict(
                 text="Á sennilega að vera '{0}'".format(correct_np),
@@ -385,7 +407,7 @@ class ErrorFinder(ParseForestNavigator):
         np = self._simple_tree(node)
         return (
             "Gæti átt að vera '{0}'"
-            .format(self._CAST_FUNCTIONS[variants].fget(np))
+            .format(self.cast_to_case(variants, np))
         )
 
     def VillaEndingIR(self, txt, variants, node):
@@ -471,7 +493,7 @@ class ErrorFinder(ParseForestNavigator):
             if subj is not None:
                 # We know what the subject is: annotate it
                 start, end = subj.span
-                suggestion = self._CAST_FUNCTIONS[correct_case_abbr].fget(subj)
+                suggestion = self.cast_to_case(correct_case_abbr, subj)
                 correct_np = correct_spaces(suggestion)
                 # Skip the annotation if it suggests the same text as the
                 # original one; this can happen if the word forms for two
