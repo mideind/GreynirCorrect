@@ -42,7 +42,6 @@ from .settings import (
     TabooWords,
     CDErrorForms,
     CIDErrorForms,
-    OwForms,
     Morphemes,
     Settings,
 )
