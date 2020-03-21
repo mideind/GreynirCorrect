@@ -16,7 +16,7 @@ Overview
 **ReynirCorrect** is a Python 3.x package for
 **checking and correcting spelling and grammar** in Icelandic text.
 
-ReynirCorrect uses the `Reynir <https://pypi.org/project/reynir/>`_ package,
+ReynirCorrect uses the `Greynir <https://pypi.org/project/reynir/>`_ package,
 by the same authors, to tokenize and parse text.
 
 Token-level correction
