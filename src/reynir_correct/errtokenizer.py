@@ -497,6 +497,7 @@ def parse_errors(token_stream, db, only_ci):
         return any(m.stofn.replace("-", "") in next_stems for m in meanings)
 
     token = None
+    at_sentence_start = False
 
     try:
 
@@ -506,6 +507,12 @@ def parse_errors(token_stream, db, only_ci):
         while True:
 
             next_token = get()
+
+            if token.kind == TOK.S_BEGIN:
+                yield token
+                token = next_token
+                at_sentence_start = True
+                continue
 
             # Make the lookahead checks we're interested in
 
@@ -517,17 +524,55 @@ def parse_errors(token_stream, db, only_ci):
                 and token.txt in WRONG_ABBREVS
             ):
                 original = token.txt
-                token = CorrectToken.word(WRONG_ABBREVS[token.txt], token.val)
+                corrected = WRONG_ABBREVS[original]
+                token = CorrectToken.word(corrected, token.val)
                 token.set_error(
                     AbbreviationError(
                         "001",
                         "Skammstöfunin '{0}' var leiðrétt í '{1}'"
-                        .format(original, token.txt)
+                        .format(original, corrected)
                     )
                 )
                 yield token
                 token = next_token
+                at_sentence_start = False
                 continue
+
+            # Check abbreviations with missing dots
+            if not token.val and token.txt in Abbreviations.WRONGDOTS:
+                # Multiple periods in original, some subset missing here
+                # We suggest the first alternative meaning here, out of
+                # potentially multiple such meanings
+                original = token.txt
+                corrected = Abbreviations.WRONGDOTS[original][0]
+                if (
+                    corrected.endswith(".")
+                    and not original.endswith(".")
+                    and next_token.txt == "."
+                ):
+                    # If this is an abbreviation missing a period, and the
+                    # correction is about adding a period to it, don't do
+                    # it if the next token is a period
+                    pass
+                else:
+                    _, token_m = db.lookup_word(original, at_sentence_start)
+                    if not token_m:
+                        # No meaning in BÍN: allow ourselves to correct it
+                        # as an abbreviation
+                        am = Abbreviations.get_meaning(corrected)
+                        m = list(map(BIN_Meaning._make, am))
+                        token = CorrectToken.word(corrected, m)
+                        token.set_error(
+                            AbbreviationError(
+                                "002",
+                                "Skammstöfunin '{0}' var leiðrétt í '{1}'"
+                                .format(original, corrected)
+                            )
+                        )
+                        yield token
+                        token = next_token
+                        at_sentence_start = False
+                        continue
 
             # Word duplication (note that word case must also match)
             # TODO STILLING - hér er bara samhengisháð leiðrétting
@@ -540,8 +585,6 @@ def parse_errors(token_stream, db, only_ci):
             ):
                 # TODO STILLING - hér er bara uppástunga, skiptir ekki máli fyrir ósh. málrýni
                 if token.txt.lower() in AllowedMultiples.SET:
-                    # print("Fann C004 (tilvik 1) í parse_errors: {}"
-                    #     .format(next_token.txt.lower()))
                     next_token.set_error(
                         CompoundError(
                             "004",
@@ -549,20 +592,18 @@ def parse_errors(token_stream, db, only_ci):
                         )
                     )
                     yield token
-                    token = next_token
-                    continue
                 else:
                     # Step to next token
                     next_token = CorrectToken.word(token.txt)
-                    # print("Fann C001 í parse_errors: {}".format(token.txt))
                     next_token.set_error(
                         CompoundError(
                             "001",
                             "Endurtekið orð ('{0}') var fellt burt".format(token.txt),
                         )
                     )
-                    token = next_token
-                    continue
+                token = next_token
+                at_sentence_start = False
+                continue
 
             # Word duplication with different cases
             # Only provide a suggestion
@@ -586,6 +627,7 @@ def parse_errors(token_stream, db, only_ci):
                 )
                 yield token
                 token = next_token
+                at_sentence_start = False
                 continue
 
             # Splitting wrongly compounded words
@@ -614,6 +656,7 @@ def parse_errors(token_stream, db, only_ci):
                         )
                     yield new_token
                 token = next_token
+                at_sentence_start = False
                 continue
 
             # TODO STILLING - hér er samhengisháð leiðrétting
@@ -629,6 +672,7 @@ def parse_errors(token_stream, db, only_ci):
                         # Don't want to correct
                         yield token
                         token = next_token
+                        at_sentence_start = False
                         continue
                     if token.txt.lower() in Morphemes.BOUND_DICT:
                         # Only want to mark as an error, can't fix in CI-mode.
@@ -642,18 +686,21 @@ def parse_errors(token_stream, db, only_ci):
                         )
                     yield token
                     token = next_token
+                    at_sentence_start = False
                     continue
                 if not next_token.txt or next_token.txt.istitle():
                     # If the latter part is in title case, we don't see it
                     # as a part of a split compound
                     yield token
                     token = next_token
+                    at_sentence_start = False
                     continue
                 if next_token.txt.isupper() and not token.txt.isupper():
                     # Don't allow a combination of an all-upper-case
                     # latter part with anything but an all-upper-case former part
                     yield token
                     token = next_token
+                    at_sentence_start = False
                     continue
                 if token.txt.isupper() and not next_token.txt.isupper():
                     # ...and vice versa
@@ -664,6 +711,7 @@ def parse_errors(token_stream, db, only_ci):
                 if not next_stems:
                     yield token
                     token = next_token
+                    at_sentence_start = False
                     continue
                 _, meanings = db.lookup_word(
                     next_token.txt.lower(), at_sentence_start=False
@@ -672,11 +720,11 @@ def parse_errors(token_stream, db, only_ci):
                     # The latter part is not in BÍN
                     yield token
                     token = next_token
+                    at_sentence_start = False
                     continue
                 if any(m.stofn.replace("-", "") in next_stems for m in meanings):
                     first_txt = token.txt
                     token = CorrectToken.word(token.txt + next_token.txt)
-                    # print("Fann C003 í parse_errors_1: {}".format(token.txt))
                     token.set_error(
                         CompoundError(
                             "003",
@@ -687,11 +735,13 @@ def parse_errors(token_stream, db, only_ci):
                     )
                     yield token
                     token = get()
+                    at_sentence_start = False
                     continue
                 next_pos = Morphemes.BOUND_DICT.get(token.txt.lower())
                 if not next_pos:
                     yield token
                     token = next_token
+                    at_sentence_start = False
                     continue
                 poses = set(m.ordfl for m in meanings if m.ordfl in next_pos)
                 notposes = set(m.ordfl for m in meanings if m.ordfl not in next_pos)
@@ -699,12 +749,12 @@ def parse_errors(token_stream, db, only_ci):
                     # Stop searching
                     yield token
                     token = next_token
+                    at_sentence_start = False
                     continue
                 if not notposes:
                     # No other PoS available, most likely a compound error
                     first_txt = token.txt
                     token = CorrectToken.word(token.txt + next_token.txt)
-                    # print("Fann C003 í parse_errors_2: {}".format(token.txt))
                     token.set_error(
                         CompoundError(
                             "003",
@@ -715,6 +765,7 @@ def parse_errors(token_stream, db, only_ci):
                     )
                     yield token
                     token = get()
+                    at_sentence_start = False
                     continue
                 # TODO STILLING - Hér er bara uppástunga, skiptir ekki máli f. ósh. málrýni.
                 # Erum búin að koma í veg fyrir að komast hingað ofar
@@ -735,6 +786,7 @@ def parse_errors(token_stream, db, only_ci):
                     )
                     yield token
                     token = next_token
+                    at_sentence_start = False
                     continue
 
             if token.kind == TOK.PUNCTUATION and token.txt != token.val[1]:
@@ -781,6 +833,8 @@ def parse_errors(token_stream, db, only_ci):
 
             # Yield the current token and advance to the lookahead
             yield token
+            if token.kind != TOK.PUNCTUATION and token.kind != TOK.ORDINAL:
+                at_sentence_start = False
             token = next_token
 
     except StopIteration:
@@ -900,6 +954,7 @@ def fix_compound_words(token_stream, db, token_ctor, only_ci):
     at_sentence_start = False
 
     for token in token_stream:
+
         if token.kind == TOK.S_BEGIN:
             yield token
             at_sentence_start = True
@@ -1060,25 +1115,11 @@ def lookup_unknown_words(
             return True
         return False
 
-    def replace_word(
-        code, token, corrected, corrected_display, *, abbrev_meanings=None
-    ):
+    def replace_word(code, token, corrected, corrected_display):
         """ Return a token for a corrected version of token_txt,
             marked with a SpellingError if corrected_display is
             a string containing the corrected word to be displayed """
-        if abbrev_meanings:
-            # An abbreviation, possibly having many meanings
-            w = corrected
-            m = [map(BIN_Meaning._make, each) for each in abbrev_meanings]
-            _, token_m = db.lookup_word(token.txt, at_sentence_start)
-            if token_m:
-                # Wrong form of abbreviation without dots is also a valid word
-                # Return its meanings at the front of the meaning list
-                # Note that we use '+' here instead of .append() since the
-                # meanings returned from db.lookup_word() should not be modified
-                m = token_m + m
-        else:
-            w, m = db.lookup_word(corrected, at_sentence_start)
+        w, m = db.lookup_word(corrected, at_sentence_start)
         ct = token_ctor.Word(w, m, token=token if corrected_display else None)
         if corrected_display:
             if "." in corrected_display:
@@ -1193,18 +1234,6 @@ def lookup_unknown_words(
                     yield replace_word(1, token, corrected_word, None)
             continue
 
-        # Check wrong abbreviations
-        if not token.val and token.txt in Abbreviations.WRONGDOTS:
-            # Multiple periods in original, some subset missing here
-            # We suggest the first alternative meaning here, out of
-            # potentially multiple such meanings
-            corrected_word = Abbreviations.WRONGDOTS[token.txt][0]
-            am = Abbreviations.get_meaning(corrected_word)
-            yield replace_word(
-                7, token, corrected_word, corrected_word, abbrev_meanings=am
-            )
-            continue
-
         # Check wrong word forms, i.e. those that do not exist in BÍN
         # !!! TODO: Some error forms are present in BÍN but in a different
         # !!! TODO: case (for instance, 'á' as a nominative of 'ær').
@@ -1219,7 +1248,6 @@ def lookup_unknown_words(
             continue
 
         if is_immune(token) or token.error:
-
             # Nothing more to do
             pass
 

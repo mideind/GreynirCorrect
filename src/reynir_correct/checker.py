@@ -433,12 +433,25 @@ class ErrorFinder(ParseForestNavigator):
         tnode = self._terminal_nodes[node.start]
         suggestion = tnode.genitive_np
         correct_np = correct_spaces(suggestion)
-        return dict(
-            text="Á sennilega að vera '{0}'".format(correct_np),
-            detail="Karlkyns orð sem enda á '-ur' í nefnifalli eintölu, "
+        canonical_np = tnode.canonical_np
+        if canonical_np.endswith("ar"):
+            # This might be something like 'landsteinar' which is only plural
+            detail = (
+                "Karlkyns orð sem enda á '-ar' í nefnifalli fleirtölu, "
                 "eins og '{0}', eru rituð "
                 "'{1}' með tveimur n-um í eignarfalli fleirtölu, "
-                "ekki '{2}' með einu n-i.".format(tnode.canonical_np, correct_np, txt),
+                "ekki '{2}' með einu n-i."
+            ).format(canonical_np, correct_np, txt)
+        else:
+            detail = (
+                "Karlkyns orð sem enda á '-{3}' í nefnifalli eintölu, "
+                "eins og '{0}', eru rituð "
+                "'{1}' með tveimur n-um í eignarfalli fleirtölu, "
+                "ekki '{2}' með einu n-i."
+            ).format(canonical_np, correct_np, txt, canonical_np[-2:])
+        return dict(
+            text="Á sennilega að vera '{0}'".format(correct_np),
+            detail=detail,
             suggestion=suggestion
         )
 
