@@ -617,8 +617,6 @@ def parse_errors(token_stream, db, only_ci):
                 and token.kind == TOK.WORD
             ):
                 # Set possible error on next token
-                # print("Fann C004 (tilvik 2) í parse_errors: {}"
-                #     .format(next_token.txt.lower()))
                 next_token.set_error(
                     CompoundError(
                         "004",
@@ -646,7 +644,6 @@ def parse_errors(token_stream, db, only_ci):
                 for ix, phrase_part in enumerate(correct_phrase):
                     new_token = CorrectToken.word(phrase_part)
                     if ix == 0:
-                        # print("Fann C002 í parse_errors: {}".format(token.txt))
                         new_token.set_error(
                             CompoundError(
                                 "002",
@@ -775,7 +772,6 @@ def parse_errors(token_stream, db, only_ci):
                         tp = transposes[0]
                     else:
                         tp = ", ".join(transposes[:-1]) + " eða " + transposes[-1]
-                    # print("Fann C005 í parse_errors: {}".format(token.txt))
                     token.set_error(
                         CompoundError(
                             "005",
@@ -855,7 +851,9 @@ class MultiwordErrorStream(MatchingStream):
         self._db = db
 
     def length(self, ix):
-        return len(MultiwordErrors.get_replacement(ix))
+        """ Return the length (word count) of the original phrase
+            that is being replaced """
+        return MultiwordErrors.get_phrase_length(ix)
 
     def match(self, tq, ix):
         """ This is a complete match of an error phrase;
@@ -873,10 +871,6 @@ class MultiwordErrorStream(MatchingStream):
                     w = w.title()
             ct = token_ctor.Word(w, m)
             if i == 0:
-                # print(
-                #     "Fann P_{} í parse_errors: {}"
-                #     .format(MultiwordErrors.get_code(ix), " ".join(t.txt for t in tq))
-                # )
                 ct.set_error(
                     PhraseError(
                         MultiwordErrors.get_code(ix),
@@ -985,7 +979,6 @@ def fix_compound_words(token_stream, db, token_ctor, only_ci):
             prefix = emulate_case(cw[0], token.txt)
             w, m = db.lookup_word(prefix, at_sentence_start)
             t1 = token_ctor.Word(w, m, token=token)
-            # print("Fann C002 í parse_errors: {}".format(token.txt))
             t1.set_error(
                 CompoundError(
                     "002", "Orðinu '{0}' var skipt upp".format(token.txt), span=2
@@ -1016,7 +1009,6 @@ def fix_compound_words(token_stream, db, token_ctor, only_ci):
                 )
                 prefix = emulate_case(cw[0], token.txt)
                 t1 = token_ctor.Word(w1, meanings1, token=token)
-                # print("Fann C002 í parse_errors: {}".format(token.txt))
                 t1.set_error(
                     CompoundError(
                         "002", "Orðinu '{0}' var skipt upp".format(token.txt), span=2
@@ -1028,14 +1020,12 @@ def fix_compound_words(token_stream, db, token_ctor, only_ci):
                 # TODO STILLING - hér er bara uppástunga.
                 # Other possibilities but want to mark as a possible error
                 # Often just weird forms in BÍN left
-                # print("Fann C005 í parse_errors: {}".format(token.txt))
                 if not only_ci:
                     transposes = list(set(POS[c] for c in poses))
                     if len(transposes) == 1:
                         tp = transposes[0]
                     else:
                         tp = ", ".join(transposes[:-1]) + " eða " + transposes[-1]
-                    # print("Fann C005 í parse_errors: {}".format(token.txt))
                     token.set_error(
                         CompoundError(
                             "005",
@@ -1059,7 +1049,6 @@ def fix_compound_words(token_stream, db, token_ctor, only_ci):
             corrected = emulate_case(corrected, token.txt)
             w, m = db.lookup_word(corrected, at_sentence_start)
             t1 = token_ctor.Word(w, m, token=token)
-            # print("Fann C006 í parse_errors: {}".format(token.txt))
             t1.set_error(
                 CompoundError(
                     "006",
@@ -1078,7 +1067,6 @@ def fix_compound_words(token_stream, db, token_ctor, only_ci):
             corrected = emulate_case(corrected, token.txt)
             w, m = db.lookup_word(corrected, at_sentence_start)
             t1 = token_ctor.Word(w, m, token=token)
-            # print("Fann C006 í parse_errors: {}".format(token.txt))
             t1.set_error(
                 CompoundError(
                     "006",
@@ -1131,8 +1119,6 @@ def lookup_unknown_words(
                     token.txt, corrected_display
                 )
             ct.set_error(SpellingError("{0:03}".format(code), text))
-            # print("Fann S00{} í parse_errors: {}".format(code, token.txt))
-            # print("Breyti {} í {}".format(token.txt, corrected))
         else:
             # In a multi-word sequence, mark the replacement
             # tokens with a boolean value so that further
@@ -1152,7 +1138,6 @@ def lookup_unknown_words(
         else:
             text = "Orðið '{0}' var leiðrétt í '{1}'".format(token.txt, corrected)
         ct.set_error(SpellingError("{0:03}".format(code), text))
-        # print("Fann S00{} í parse_errors: {}".format(code, token.txt))
         return ct
 
     def suggest_word(code, token, corrected):
@@ -1160,7 +1145,6 @@ def lookup_unknown_words(
             it, as we are not confident enough of the correction """
         text = "Orðið '{0}' gæti átt að vera '{1}'".format(token.txt, corrected)
         token.set_error(SpellingSuggestion("{0:03}".format(code), text, corrected))
-        # print("Fann S00{} í parse_errors: {}".format(code, token.txt))
         return token
 
     def only_suggest(token, m):
@@ -1204,9 +1188,9 @@ def lookup_unknown_words(
             # Don't modify at_sentence_start in this case
             continue
 
-        if token.kind != TOK.WORD or token.error_code or " " in token.txt:
-            # We don't process multi-word composites, or tokens that
-            # already have an associated error and eventual correction
+        if token.kind != TOK.WORD or " " in token.txt:
+            # No need to look at non-word tokens,
+            # and we don't process multi-word composites
             yield token
             # We're now within a sentence
             at_sentence_start = False
@@ -1234,6 +1218,14 @@ def lookup_unknown_words(
                     yield replace_word(1, token, corrected_word, None)
             continue
 
+        if token.error_code:
+            # This token already has an associated error and eventual correction:
+            # let it be
+            yield token
+            # We're now within a sentence
+            at_sentence_start = False
+            continue
+
         # Check wrong word forms, i.e. those that do not exist in BÍN
         # !!! TODO: Some error forms are present in BÍN but in a different
         # !!! TODO: case (for instance, 'á' as a nominative of 'ær').
@@ -1242,7 +1234,6 @@ def lookup_unknown_words(
         # TODO STILLING - hér er ósamhengisháð leiðrétting!
         if not token.val and CIDErrorForms.contains(token.txt):
             corrected = CIDErrorForms.get_correct_form(token.txt)
-            # print("Leiðrétt: {}".format(token.txt))
             yield replace_word(2, token, corrected, corrected)
             at_sentence_start = False
             continue
@@ -1311,7 +1302,6 @@ def lookup_unknown_words(
         if not token.val:
             # No annotation and not able to correct:
             # mark the token as an unknown word
-            # print("Fann U001 í parse_errors: {}".format(token.txt))
             token.set_error(
                 UnknownWordError("001", "Óþekkt orð: '{0}'".format(token.txt))
             )
@@ -1399,7 +1389,6 @@ def fix_capitalization(token_stream, db, token_ctor, only_ci):
                     original_txt = token.txt
                     w, m = db.lookup_word(token.txt.title(), at_sentence_start)
                     token = token_ctor.Word(w, m, token=token)
-                    # print("Fann Z002 í parse_errors: {}".format(token.txt))
                     token.set_error(
                         CapitalizationError(
                             "002", "Orð á að byrja á hástaf: '{0}'".format(original_txt)
@@ -1443,7 +1432,6 @@ def fix_capitalization(token_stream, db, token_ctor, only_ci):
                         token = token_ctor.Dateabs(
                             lower, token.val[0], token.val[1], token.val[2]
                         )
-                    # print("Fann Z003 í parse_errors: {}".format(token.txt))
                     token.set_error(
                         CapitalizationError(
                             "003",
@@ -1472,7 +1460,6 @@ def check_taboo_words(token_stream):
                 if stofn in TabooWords.DICT:
                     # Taboo word
                     suggested_word = TabooWords.DICT[stofn].split("_")[0]
-                    # print("Fann T001 í parse_errors: {}".format(token.txt))
                     token.set_error(
                         TabooWarning(
                             "001",

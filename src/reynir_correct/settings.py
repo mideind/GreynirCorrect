@@ -249,14 +249,24 @@ class MultiwordErrors:
         MultiwordErrors.DICT[words[0]].append((words[1:], ix))
 
     @staticmethod
-    def get_replacement(ix):
-        """ Return the replacement phrase with index ix """
-        return MultiwordErrors.LIST[ix][2]
+    def get_phrase(ix):
+        """ Return the original phrase with index ix """
+        return MultiwordErrors.LIST[ix][0]
+
+    @staticmethod
+    def get_phrase_length(ix):
+        """ Return the count of words in the original phrase with index ix """
+        return len(MultiwordErrors.LIST[ix][0])
 
     @staticmethod
     def get_code(ix):
         """ Return the error code with index ix """
         return MultiwordErrors.LIST[ix][1]
+
+    @staticmethod
+    def get_replacement(ix):
+        """ Return the replacement phrase with index ix """
+        return MultiwordErrors.LIST[ix][2]
 
 
 class TabooWords:

@@ -284,6 +284,24 @@ def test_split_compounds(verbose=False):
         else:
             assert not t.error_code
 
+    g = rc.tokenize("Hann var full fljótur á sér, en það var líka full ástæða til að fá full réttindi.")
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert len(g) == 20
+    assert "fullfljótur" in s
+    assert "full fljótur" not in s
+    assert "full ástæða" in s
+    assert "fullástæða" not in s
+    assert "full réttindi" in s
+    assert "fullréttindi" not in s
+    errors = {3}
+    for ix, t in enumerate(g):
+        if ix in errors:
+            assert t.error_code == "C003"  # fullfljótur
+        else:
+            assert not t.error_code
+
 
 def test_unique_context_independent_errors(verbose=False):
     # Known, unique, context independent spelling errors - S001
