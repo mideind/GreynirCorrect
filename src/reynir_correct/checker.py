@@ -48,7 +48,7 @@ from reynir.binparser import BIN_Token, BIN_Grammar
 from reynir.fastparser import Fast_Parser, ParseForestNavigator, ffi
 from reynir.reducer import Reducer
 from reynir.settings import VerbSubjects
-from reynir.matcher import SimpleTree
+from reynir.simpletree import SimpleTree
 
 from .errtokenizer import tokenize as tokenize_and_correct
 
