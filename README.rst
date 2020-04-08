@@ -2,12 +2,8 @@
 ReynirCorrect: A spelling and grammar corrector for Icelandic
 =============================================================
 
-.. start-badges
-
 .. image:: https://travis-ci.com/mideind/ReynirCorrect.svg?branch=master
     :target: https://travis-ci.com/mideind/ReynirCorrect
-
-.. end-badges
 
 ********
 Overview
@@ -49,6 +45,7 @@ that can be installed using ``pip``.
 ***************************
 Deep vs. shallow correction
 ***************************
+
 ReynirCorrect can do both deep and shallow correction.
 
 *Deep* correction shows both the proposed corrections (if they are available), 
@@ -58,7 +55,6 @@ and error messages to guide the user.
 or information about the errors. Only clear errors are corrected at this stage. 
 No grammar errors are corrected.
 
-
 *******
 Example
 *******
@@ -66,11 +62,13 @@ Example
 To tokenize text with deep token-level correction (the text is not parsed
 in this case, so no grammar checking is done):
 
->>> from reynir_correct import tokenize
->>> g = tokenize("Af gefnu tilefni fékk fékk daninn vilja sýnum "
->>>     "framgengt við hana í auknu mæli.")
->>> for tok in g:
->>>     print("{0:10} {1}".format(tok.txt or "", tok.error_description))
+.. code-block:: python
+
+   >>> from reynir_correct import tokenize
+   >>> g = tokenize("Af gefnu tilefni fékk fékk daninn vilja sýnum "
+   >>>     "framgengt við hana í auknu mæli.")
+   >>> for tok in g:
+   >>>     print("{0:10} {1}".format(tok.txt or "", tok.error_description))
 
 Output::
 
@@ -91,10 +89,12 @@ Output::
 
 To get a list of spelling and grammar annotations for a sentence:
 
->>> from reynir_correct import check_single
->>> sent = check_single("Páli, vini mínum, langaði að horfa á sjónvarpið.")
->>> for annotation in sent.annotations:
->>>     print("{0}".format(annotation))
+.. code-block:: python
+
+   >>> from reynir_correct import check_single
+   >>> sent = check_single("Páli, vini mínum, langaði að horfa á sjónvarpið.")
+   >>> for annotation in sent.annotations:
+   >>>     print("{0}".format(annotation))
 
 Output::
 
@@ -117,17 +117,21 @@ This package runs on CPython 3.5 or newer, and on PyPy 3.5 or newer.
 Installation
 ************
 
-To install this package::
+To install this package:
 
-    $ pip3 install reynir-correct   # or pip install reynir-correct if Python3 is your default
+.. code-block:: console
+
+   $ pip3 install reynir-correct   # or pip install reynir-correct if Python3 is your default
 
 If you want to be able to edit the source, do like so
-(assuming you have **git** installed)::
+(assuming you have **git** installed):
 
-    $ git clone https://github.com/mideind/ReynirCorrect
-    $ cd ReynirCorrect
-    $ # [ Activate your virtualenv here if you have one ]
-    $ python setup.py develop
+.. code-block:: console
+
+   $ git clone https://github.com/mideind/ReynirCorrect
+   $ cd ReynirCorrect
+   $ # [ Activate your virtualenv here if you have one ]
+   $ python setup.py develop
 
 The package source code is now in ``ReynirCorrect/src/reynir_correct``.
 
@@ -135,11 +139,12 @@ The package source code is now in ``ReynirCorrect/src/reynir_correct``.
 *********************
 The command line tool
 *********************
+
 After installation, the corrector can be invoked directly from the command line:
 
 .. code-block:: console
 
-    $ correct input.txt output.txt
+   $ correct input.txt output.txt
 
 Input and output files are encoded in UTF-8. If the files are not
 given explicitly, ``stdin`` and ``stdout`` are used for input and output,
@@ -173,24 +178,27 @@ Type ``correct -h`` to get a short help message.
 *******
 Example
 *******
+
 .. code-block:: console
-  $ echo "Atvinuleysi jókst um 3%" | correct
-  Atvinnuleysi jókst um 3%
 
-  $ echo "Barnið vil grænann lit" | correct --csv
-  6,"Barnið",""
-  6,"vil",""
-  6,"grænan",""
-  6,"lit",""
-  0,"",""
+   $ echo "Atvinuleysi jókst um 3%" | correct
+   Atvinnuleysi jókst um 3%
 
-  $ echo "Pakkin er fyrir hestin" | correct --json
-  {"k":"BEGIN SENT"}
-  {"k":"WORD","t":"Pakkinn"}
-  {"k":"WORD","t":"er"}
-  {"k":"WORD","t":"fyrir"}
-  {"k":"WORD","t":"hestinn"}
-  {"k":"END SENT"}
+   $ echo "Barnið vil grænann lit" | correct --csv
+   6,"Barnið",""
+   6,"vil",""
+   6,"grænan",""
+   6,"lit",""
+   0,"",""
+
+   $ echo "Pakkin er fyrir hestin" | correct --json
+   {"k":"BEGIN SENT"}
+   {"k":"WORD","t":"Pakkinn"}
+   {"k":"WORD","t":"er"}
+   {"k":"WORD","t":"fyrir"}
+   {"k":"WORD","t":"hestinn"}
+   {"k":"END SENT"}
+
 
 *****
 Tests
@@ -198,7 +206,9 @@ Tests
 
 To run the built-in tests, install `pytest <https://docs.pytest.org/en/latest/>`_,
 ``cd`` to your ``ReynirCorrect`` subdirectory (and optionally activate your
-virtualenv), then run::
+virtualenv), then run:
 
-    $ python -m pytest
+.. code-block:: console
+
+   $ python -m pytest
 
