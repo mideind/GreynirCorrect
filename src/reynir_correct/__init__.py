@@ -36,7 +36,7 @@ from .checker import (
 __author__ = u"Miðeind ehf"
 __copyright__ = "(C) 2020 Miðeind ehf."
 # Remember to update the version in setup.py as well
-__version__ = "0.9.0"
+__version__ = "0.8.0"
 
 
 Settings.read("config/ReynirCorrect.conf")
