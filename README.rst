@@ -111,7 +111,7 @@ and last tokens to which the annotation applies. ``E003`` is an error code.
 Prerequisites
 *************
 
-This package runs on CPython 3.4 or newer, and on PyPy 3.5 or newer.
+This package runs on CPython 3.5 or newer, and on PyPy 3.5 or newer.
 
 ************
 Installation
