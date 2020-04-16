@@ -319,7 +319,7 @@ def test_unique_context_independent_errors(verbose=False):
     assert "liltu" not in s
     assert "anddyri" in s
     assert "andyri" not in s
-    #assert g[1].error_code == "S001"   # TODO virkar ekki; endar sem S004
+    assert g[1].error_code == "S004"   # TODO Á að vera S001?
     assert g[4].error_code == "S001"
     assert g[5].error_code == "S001"
     assert g[7].error_code == "S001"
@@ -335,28 +335,40 @@ def test_unique_context_independent_errors(verbose=False):
     assert "áfarm" not in s
     assert "ókeypis" in s
     assert "ókeipis" not in s
-    # assert "ríkisstjórn" in s     # TODO eftir að útfæra
-    # assert "ríkistjórn" in s      # TODO eftir að útfæra
+    assert "ríkisstjórn" in s
+    assert "ríkistjórn" not in s
     assert g[2].error_code == "S001"
     assert g[5].error_code == "S001"
     assert g[6].error_code == "S001"
-    # assert g[7].error_code == "S001"      # TODO eftir að útfæra
+    assert g[7].error_code == "S001"
 
     g = rc.tokenize(
-        "Þar sat Gunan og fylgdist með frammistöðu liðisins í framlenginunni miklu."
+        "Þar sat Gunan og fyldist með framistöðu liðisins í framlenginunni mikklu."
     )
     g = list(g)
     if verbose: dump(g)
     s = normalize(g)
     # assert "sat Gunna og" in s              # TODO Virkar ekki eins og er út af hástaf í unique_errors
     # assert "sat Gunan og" not in s          # TODO Virkar ekki eins og er út af hástaf í unique_errors
-    assert "frammistöðu liðsins í" in s
-    assert "frammistöðu liðisins í" not in s
-    assert "í framlengingunni miklu" in s     # TODO Þetta virkar í viðmóti en allt í einu ekki hér.
-    assert "í framlenginunni miklu" not in s
+    assert " Gunna " in s
+    assert " Gunan " not in s
+    assert " fylgdist " in s
+    assert " fyldist " not in s
+    assert " frammistöðu " in s
+    assert " framistöðu " not in s
+    assert " liðsins " in s
+    assert " liðisins " not in s
+    assert " framlengingunni " in s
+    assert " framlenginunni " not in s
+    assert " miklu." in s
+    assert " mikklu." not in s
     # assert g[3].error_code == "S001"  # TODO virkar ekki út af hástaf í unique_errors, setja inn þegar það er lagað
+    assert g[5].error_code == "S004"  # TODO Á að vera S001?
+    assert g[7].error_code == "S001"
     assert g[8].error_code == "S001"
     assert g[10].error_code == "S001"
+    assert g[10].error_code == "S001"
+    assert g[11].error_code == "S004"  # TODO Á að vera S001?
 
 
 def test_other_context_independent_spelling_errors(verbose=False):

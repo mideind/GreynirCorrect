@@ -109,13 +109,15 @@ def check_sentence(rc, s, annotations):
 
 
 def test_multiword_phrases(rc):
-    s = "Einn af drengjunum fóru í sund af gefnu tilefni."
-    check_sentence(rc, s, [(3, 3, "P_NT_EinnAf"), (6, 8, "P_aðaf")])
+    s = "Einn af drengjunum fór í sund af gefnu tilefni."
+    check_sentence(rc, s, [(6, 8, "P_aðaf")])
 
 
 def test_error_finder(rc):
     """ Test errors that are found by traversing the detailed
         parse tree in checker.py (ErrorFinder class) """
+    s = "Einn af drengjunum fóru í sund."
+    check_sentence(rc, s, [(3, 3, "P_NT_EinnAf")])
     s = "Fjöldi þingmanna greiddu atkvæði gegn tillögunni."
     check_sentence(rc, s, [(2, 2, "P_NT_FjöldiHluti")])
     s = "Jón borðaði ís þar sem að hann var svangur."
@@ -183,7 +185,8 @@ def test_impersonal_verbs(rc):
     s = "Hestinum Grímni vantaði hamar."
     # s = "Hestinum Skjóna vantaði hamar."
     check_sentence(rc, s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
-    check_sentence(rc, "Ég hlakka til að sjá nýju Aliens-myndina.", [])
+    s = "Stóra manninum sem vinnur á verkstæðinu vantaði hamar."
+    check_sentence(rc, s, [(0, 5, "P_WRONG_CASE_þgf_þf")])
 
 
 def test_foreign_sentences(rc):
@@ -226,6 +229,12 @@ def test_correct_sentences(rc):
     check_sentence(rc, "Pál langaði að horfa á sjónvarpið.", [])
     check_sentence(rc, "Mig dreymdi mús sem var að elta kött.", [])
     check_sentence(rc, "Ég held að músin hafi kviðið fyrir að hitta köttinn.", [])
+    check_sentence(rc, "Músin kveið fyrir að hitta köttinn.", [])
+    check_sentence(rc,
+        "Páll hlakkaði til jólanna og að hitta strákinn sem hlakkaði til páskanna.",
+        []
+    )
+    check_sentence(rc, "Ég hlakka til að sjá nýju Aliens-myndina.", [])
 
 
 if __name__ == "__main__":
