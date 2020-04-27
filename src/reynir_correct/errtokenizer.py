@@ -26,11 +26,12 @@
 
 """
 
+from typing import cast, Type
 from collections import defaultdict
 
 from tokenizer import Abbreviations
 from reynir import TOK
-from reynir.bintokenizer import DefaultPipeline, MatchingStream, BIN_Meaning
+from reynir.bintokenizer import DefaultPipeline, MatchingStream, BIN_Meaning, Bin_TOK
 
 from .settings import (
     AllowedMultiples,
@@ -264,7 +265,6 @@ class PunctuationError(Error):
     def description(self):
         return self._txt
 
-    @property
     def set_span(self, span):
         self._span = span
 
@@ -1554,8 +1554,8 @@ class CorrectionPipeline(DefaultPipeline):
         self._apply_suggestions = options.pop("apply_suggestions", False)
 
     # Use the Correct_TOK class to construct tokens, instead of
-    # TOK (tokenizer.py) or _Bin_TOK (bintokenizer.py)
-    _token_ctor = Correct_TOK
+    # TOK (tokenizer.py) or Bin_TOK (bintokenizer.py)
+    _token_ctor = cast(Type[Bin_TOK], Correct_TOK)
 
     def correct_tokens(self, stream):
         """ Add a correction pass just before BÍN annotation """
