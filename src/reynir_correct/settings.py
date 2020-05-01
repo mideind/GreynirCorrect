@@ -32,6 +32,7 @@
 
 """
 
+from typing import Dict, Set, List, Tuple
 import os
 import locale
 import threading
@@ -48,17 +49,9 @@ _DEFAULT_SORT_LOCALE = ("IS_is", "UTF-8")
 _ALL_CASES = frozenset(("nf", "þf", "þgf", "ef"))
 _ALL_GENDERS = frozenset(("kk", "kvk", "hk"))
 
-ALLOWED_MULTIPLES = set()
-NOT_COMPOUNDS = dict()
-SPLIT_COMPOUNDS = dict()
-UNIQUE_ERRORS = dict()
-MW_ERRORS_SEARCH = dict()
-MW_ERRORS = dict()
-
 # A set of all strings that should be interpreted as True
 TRUE = {"true", "True", "1", "yes", "Yes"}
 
-# Magic stuff to change locale context temporarily
 
 @contextmanager
 def changedlocale(new_locale=None):
@@ -164,7 +157,7 @@ class LineReader:
 class AllowedMultiples:
 
     # Set of word forms allowed to appear more than once in a row
-    SET = set()
+    SET = set()  # type: Set[str]
 
     @staticmethod
     def add(word):
@@ -174,7 +167,7 @@ class AllowedMultiples:
 class WrongCompounds:
 
     # Dictionary structure: dict { wrong_compound : "right phrase" }
-    DICT = {}
+    DICT = {}  # type: Dict[str, Tuple[str, ...]]
 
     @staticmethod
     def add(word, parts):
@@ -187,7 +180,7 @@ class WrongCompounds:
 class SplitCompounds:
 
     # Dict of the form { first_part : set(second_part_stem) }
-    DICT = defaultdict(set)
+    DICT = defaultdict(set)  # type: Dict[str, Set[str]]
 
     @staticmethod
     def add(first_part, second_part_stem):
@@ -205,7 +198,7 @@ class SplitCompounds:
 class UniqueErrors:
 
     # Dictionary structure: dict { wrong_word : (tuple of right words) }
-    DICT = {}
+    DICT = {}  # type: Dict[str, Tuple[str, ...]]
 
     @staticmethod
     def add(word, corr):
@@ -218,11 +211,11 @@ class MultiwordErrors:
 
     # Dictionary structure: dict { phrase tuple: error specification }
     # List of tuples of multiword error phrases and their word category lists
-    LIST = []
+    LIST = []  # type: List[Tuple[Tuple[str, ...], str, List[str]]]
     # Parsing dictionary keyed by first word of phrase
-    DICT = defaultdict(list)
+    DICT = defaultdict(list)  # type: Dict[str, List[Tuple[Tuple[str, ...], int]]]
     # Error dictionary, { phrase : (error_code, right_phrase, right_parts_of_speech) }
-    ERROR_DICT = defaultdict(list)
+    ERROR_DICT = dict()  # type: Dict[Tuple[str, ...], str]
 
     @staticmethod
     def add(words, error):
@@ -272,7 +265,7 @@ class MultiwordErrors:
 class TabooWords:
 
     # Dictionary structure: dict { taboo_word : suggested_replacement }
-    DICT = {}
+    DICT = {}  # type: Dict[str, str]
 
     @staticmethod
     def add(word, replacement):
@@ -284,7 +277,7 @@ class TabooWords:
 class Suggestions:
 
     # Dictionary structure: dict { bad_word : [ suggested_replacements ] }
-    DICT = {}
+    DICT = {}  # type: Dict[str, List[str]]
 
     @staticmethod
     def add(word, replacements):
@@ -296,9 +289,9 @@ class Suggestions:
 class CapitalizationErrors:
 
     # Set of wrongly capitalized words
-    SET = set()
+    SET = set()  # type: Set[str]
     # Reverse capitalization (íslendingur -> Íslendingur, Danskur -> danskur)
-    SET_REV = set()
+    SET_REV = set()  # type: Set[str]
 
     @staticmethod
     def add(word):
@@ -319,7 +312,7 @@ class CapitalizationErrors:
 class OwForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
-    DICT = dict()
+    DICT = dict()  # type: Dict[str, Tuple[str, str, int, str, str]]
 
     @staticmethod
     def contains(word):
@@ -375,7 +368,7 @@ class OwForms:
 class CIDErrorForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
-    DICT = dict()
+    DICT = dict()  # type: Dict[str, Tuple[str, str, int, str, str]]
 
     @staticmethod
     def contains(word):
@@ -431,7 +424,7 @@ class CIDErrorForms:
 class CDErrorForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
-    DICT = dict()
+    DICT = dict()  # type: Dict[str, Tuple[str, str, int, str, str]]
 
     @staticmethod
     def contains(word):
@@ -487,9 +480,9 @@ class CDErrorForms:
 class Morphemes:
 
     # dict { morpheme : [ preferred PoS ] }
-    BOUND_DICT = {}
+    BOUND_DICT = {}  # type: Dict[str, List[str]]
     # dict { morpheme : [ excluded PoS ] }
-    FREE_DICT = {}
+    FREE_DICT = {}  # type: Dict[str, List[str]]
 
     @staticmethod
     def add(morph, boundlist, freelist):
@@ -498,6 +491,7 @@ class Morphemes:
         Morphemes.BOUND_DICT[morph] = boundlist
         # The freelist may be empty
         Morphemes.FREE_DICT[morph] = freelist
+
 
 class Settings:
 
@@ -535,7 +529,7 @@ class Settings:
         assert s
         if len(s.split()) != 1:
             raise ConfigError("Only one word per line allowed in allowed_multiples section")
-        if s in ALLOWED_MULTIPLES:
+        if s in AllowedMultiples.SET:
             raise ConfigError("'{0}' is repeated in allowed_multiples section".format(s))
         AllowedMultiples.add(s)
 

@@ -1,5 +1,7 @@
 language: python
 
+cache: pip
+
 dist: xenial
 
 python:
@@ -7,15 +9,21 @@ python:
   - "3.6"
   - "3.7"
   - "3.8"
-  - "pypy3.5"
+  - "pypy3"
+
+before_install:
+  - python -m pip install --upgrade pip
+  - python -m pip install --upgrade pytest
+  - if [ "$TRAVIS_PYTHON_VERSION" == "3.5" ]; then python -m pip install mypy; fi
+  - python -m pip install git+https://github.com/mideind/Tokenizer#egg=tokenizer
+  - python -m pip install git+https://github.com/mideind/Icegrams#egg=icegrams
+  - python -m pip install git+https://github.com/mideind/ReynirPackage#egg=reynir
 
 install:
-  - python -m pip install git+https://github.com/mideind/Tokenizer#egg=tokenizer
-  - python -m pip install git+https://github.com/mideind/ReynirPackage#egg=reynir
-  - python -m pip install git+https://github.com/mideind/Icegrams#egg=icegrams
-  - python setup.py develop
+  - python -m pip install -e .
 
 script:
+  - if [ "$TRAVIS_PYTHON_VERSION" == "3.5" ]; then mypy src/reynir_correct/__init__.py; fi
   - python -m pytest
 
 notifications:

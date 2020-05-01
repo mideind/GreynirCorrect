@@ -37,7 +37,7 @@ from functools import lru_cache
 from reynir import tokenize, correct_spaces, TOK
 from reynir.bindb import BIN_Db
 
-from icegrams import Ngrams, MAX_ORDER
+from icegrams import Ngrams, MAX_ORDER  # type: ignore
 from .settings import Settings
 
 

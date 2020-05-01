@@ -33,6 +33,7 @@
 
 from typing import List, Tuple, Callable, Dict
 from threading import Lock
+from functools import partial
 
 from reynir.simpletree import SimpleTree
 from reynir.settings import VerbObjects
@@ -87,6 +88,10 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
+        detail = (
+            "Sögnin '{0}' tekur yfirleitt með sér "
+            "forsetninguna 'að', ekki 'af'.".format(vp.tidy_text)
+        )
         if match.tidy_text.count(" af ") == 1:
             # Only one way to substitute af -> að: do it
             suggest = match.tidy_text.replace(" af ", " að ")
@@ -99,8 +104,36 @@ class PatternMatcher:
                 end=end,
                 code="P001",
                 text=text,
-                detail="Sögnin '{0}' tekur yfirleitt með sér "
-                    "forsetninguna 'að', ekki 'af'.".format(vp.tidy_text),
+                detail=detail,
+                suggest=suggest,
+            )
+        )
+
+    def wrong_verb_use(self, match, correct_verb):
+        """ Annotate wrong verbs being used with nouns,
+            for instance 'byði hnekki' where the verb should
+            be 'bíða' -> 'biði hnekki' instead of 'bjóða' """
+        vp = match.first_match("VP > { %verb }", self.ctx_verb_01)
+        verb = next(ch for ch in vp.children if ch.tcat == "so").own_lemma_mm
+        np = match.first_match("NP >> { %noun }", self.ctx_verb_01)
+        start, end = min(vp.span[0], np.span[0]), max(vp.span[1], np.span[1])
+        # noun = next(ch for ch in np.leaves if ch.tcat == "no").own_lemma
+        text = (
+            "Hér á líklega að vera sögnin '{0}' í stað '{1}'."
+            .format(correct_verb, verb)
+        )
+        detail = (
+            "Í samhenginu '{0}' er rétt að nota sögnina '{1}' í stað '{2}'."
+            .format(match.tidy_text, correct_verb, verb)
+        )
+        suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P002",
+                text=text,
+                detail=detail,
                 suggest=suggest,
             )
         )
@@ -109,6 +142,7 @@ class PatternMatcher:
     def create_patterns(cls):
         """ Initialize the list of patterns and handling functions """
         p = cls.PATTERNS
+
         # Access the dictionary of verb+preposition attachment errors
         # from the settings (actually from the reynir settings),
         # read from config/Verbs.conf
@@ -161,6 +195,40 @@ class PatternMatcher:
                 cls.wrong_preposition_af,
                 cls.ctx_af
             ))
+
+        # Verbs used wrongly with particular nouns
+        def wrong_noun(nouns, tree):
+            """ Context matching function for the %noun macro in combinations
+                of verbs and their noun objects """
+            lemma = tree.own_lemma
+            try:
+                case = (set(tree.variants) & {"nf", "þf", "þgf", "ef"}).pop()
+            except KeyError:
+                return False
+            return (lemma + "_" + case) in nouns
+
+        NOUNS_01 = {
+            "ósigur_þf", "hnekkir_þf", "álitshnekkir_þf",
+            "afhroð_þf", "bani_þf", "færi_ef", "boð_ef", "átekt_ef"
+        }
+        cls.ctx_verb_01 = {"verb": "'bjóða'", "noun": partial(wrong_noun, NOUNS_01) }
+        p.append((
+            "bjóða",  # Trigger lemma for this pattern
+            "VP > { VP > { %verb } NP-OBJ >> { %noun } }",
+            lambda self, match: self.wrong_verb_use(match, "bíða"),
+            cls.ctx_verb_01
+        ))
+
+        NOUNS_02 = {
+            "haus_þf", "þvottur_þf"
+        }
+        cls.ctx_verb_02 = {"verb": "'hegna'", "noun": partial(wrong_noun, NOUNS_02) }
+        p.append((
+            "hegna",  # Trigger lemma for this pattern
+            "VP > { VP > { %verb } NP-OBJ >> { %noun } }",
+            lambda self, match: self.wrong_verb_use(match, "hengja"),
+            cls.ctx_verb_02
+        ))
 
     def go(self):
         """ Apply the patterns to the sentence """

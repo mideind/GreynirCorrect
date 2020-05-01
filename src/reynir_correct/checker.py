@@ -39,11 +39,13 @@
 
 """
 
-from typing import Iterable, List, Dict, Type
+from typing import Iterable, Iterator, List, Dict, Type
 from threading import Lock
 
 from reynir import (
-    Reynir, correct_spaces, TOK, _Job, _Sentence, _Paragraph, ProgressFunc
+    Reynir, correct_spaces, TOK, Tok,
+    _Job, _Sentence, _Paragraph,
+    ProgressFunc, ParseResult
 )
 from reynir.binparser import BIN_Token, BIN_Grammar
 from reynir.fastparser import Fast_Parser, ParseForestNavigator, ffi
@@ -168,7 +170,7 @@ class ReynirCorrect(Reynir):
     def __init__(self):
         super().__init__()
 
-    def tokenize(self, text: str) -> Iterable:
+    def tokenize(self, text: str) -> Iterator[Tok]:
         """ Use the correcting tokenizer instead of the normal one """
         return tokenize_and_correct(text)
 
@@ -301,7 +303,7 @@ def check_with_custom_parser(text: str, *,
     split_paragraphs: bool=False,
     parser_class: Type[ReynirCorrect]=ReynirCorrect,
     progress_func: ProgressFunc=None
-) -> Dict:
+) -> ParseResult:
     """ Return a dict containing parsed paragraphs as well as statistics,
         using the given correction/parser class. This is a low-level
         function; normally check_with_stats() should be used. """

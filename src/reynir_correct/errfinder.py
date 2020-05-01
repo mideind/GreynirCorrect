@@ -36,6 +36,7 @@ from reynir.settings import VerbSubjects
 from reynir.simpletree import SimpleTree
 
 from .annotation import Annotation
+from .errtokenizer import emulate_case
 
 
 # Case name prefixes
@@ -431,12 +432,14 @@ class ErrorFinder(ParseForestNavigator):
             if subj is not None:
                 # We know what the subject is: annotate it
                 start, end = subj.span
+                subj_text = subj.tidy_text
                 suggestion = self.cast_to_case(correct_case_abbr, subj)
                 correct_np = correct_spaces(suggestion)
+                correct_np = emulate_case(correct_np, subj_text)
                 # Skip the annotation if it suggests the same text as the
                 # original one; this can happen if the word forms for two
                 # cases are identical
-                if subj.tidy_text != correct_np:
+                if subj_text != correct_np:
                     self._ann.append(
                         Annotation(
                             start=start,
