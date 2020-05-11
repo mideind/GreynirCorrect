@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
-
 """
     Greynir: Natural language processing for Icelandic
 
@@ -103,7 +102,7 @@ setup(
     ],
     keywords=["nlp", "parser", "icelandic"],
     setup_requires=[],
-    install_requires=["reynir>=2.2.0", "icegrams>=0.3.0"],
+    install_requires=["reynir>=2.2.0", "icegrams>=0.6.0"],
     # Set up a 'correct' command ('correct.exe' on Windows),
     # which calls main() in src/reynir-correct/main.py
     entry_points={
