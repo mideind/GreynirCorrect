@@ -234,6 +234,9 @@ Copyright and License
 
 **Copyright (C) 2020 Miðeind ehf.**
 
+.. image:: https://greynir.is/static/img/mideind-horizontal-small.png
+    :target: https://mideind.is
+
 ReynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
 
 Parts of this software are developed under the auspices of the
