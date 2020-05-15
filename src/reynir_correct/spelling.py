@@ -6,17 +6,26 @@
 
     Copyright (C) 2020 Miðeind ehf.
 
-       This program is free software: you can redistribute it and/or modify
-       it under the terms of the GNU General Public License as published by
-       the Free Software Foundation, either version 3 of the License, or
-       (at your option) any later version.
-       This program is distributed in the hope that it will be useful,
-       but WITHOUT ANY WARRANTY; without even the implied warranty of
-       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-       GNU General Public License for more details.
+   This software is licensed under the MIT License:
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see http://www.gnu.org/licenses/.
+        Permission is hereby granted, free of charge, to any person
+        obtaining a copy of this software and associated documentation
+        files (the "Software"), to deal in the Software without restriction,
+        including without limitation the rights to use, copy, modify, merge,
+        publish, distribute, sublicense, and/or sell copies of the Software,
+        and to permit persons to whom the Software is furnished to do so,
+        subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be
+        included in all copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
     This module uses word frequency information extracted from the
@@ -416,27 +425,15 @@ class Corrector:
                 """ Return the log probability of an n-gram as a maximum of
                     the log probability of the lower case n-gram and the title case
                     n-gram, respectively """
-                # The followin is written to be compatible with Python 3.4
-                lp1 = self.logprob(*args)
-                args = args[:-1] + (args[-1].title(),)
-                lp2 = self.logprob(*args)
-                return max(lp1, lp2)
-                # On Python >= 3.5, the following works:
-                # ctx, w = args[:-1], args[-1]
-                # return max(self.logprob(*ctx, w), self.logprob(*ctx, w.title()))
+                ctx, w = args[:-1], args[-1]
+                return max(self.logprob(*ctx, w), self.logprob(*ctx, w.title()))
 
             def freq_title(*args):
                 """ Return the frequency of an n-gram as a maximum of
                     the frequency of the lower case n-gram and the title case
                     n-gram, respectively """
-                # The followin is written to be compatible with Python 3.4
-                lp1 = self.freq(*args)
-                args = args[:-1] + (args[-1].title(),)
-                lp2 = self.freq(*args)
-                return max(lp1, lp2)
-                # On Python >= 3.5, the following works:
-                # ctx, w = args[:-1], args[-1]
-                # return max(self.freq(*ctx, w), self.freq(*ctx, w.title()))
+                ctx, w = args[:-1], args[-1]
+                return max(self.freq(*ctx, w), self.freq(*ctx, w.title()))
 
             if original_word.istitle() or at_sentence_start:
                 # If we are dealing with a word that was originally in title
@@ -481,9 +478,9 @@ class Corrector:
                     lamb += LOG_LAMBDA
 
             P = stupid_backoff
-            e0 = edits0(word) | edits0(original_word)
-            # Note that we do not put the e0 set through the known() filter
-            for c in e0:  # known(e0):
+            e0 = edits0(word)  # | edits0(original_word)
+            # -- Note that we do not put the e0 set through the known() filter
+            for c in known(e0):  # e0
                 yield (c, P(c) + EDIT_0_FACTOR)
             for c in known(self.subs(word)):
                 yield (c, P(c) + EDIT_S_FACTOR)
@@ -507,9 +504,7 @@ class Corrector:
             # print(f"The original word {word} is above the threshold, returning it")
             return word
         # Otherwise, generate replacement candidates
-        candidates = []
-        for c, log_prob in gen_candidates(original_word, word):
-            candidates.append((c, log_prob))
+        candidates = list(gen_candidates(original_word, word))
         if not candidates:
             # No candidates beside the word itself: return it
             # print(f"Candidate {word} is only candidate, returning it")
@@ -522,6 +517,7 @@ class Corrector:
                 print("Candidate {0} for {1} is {2} with log_prob {3:.3f}"
                     .format(i+1, word, c, log_prob)
                 )
+        # Find the candidate with the highest probability
         m = max(candidates, key=lambda t: t[1])
         if (
             m[1] < self._MIN_LOG_PROBABILITY

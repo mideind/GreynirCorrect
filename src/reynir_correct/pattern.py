@@ -6,18 +6,26 @@
 
     Copyright (C) 2020 Miðeind ehf.
 
-        This program is free software: you can redistribute it and/or modify
-        it under the terms of the GNU General Public License as published by
-        the Free Software Foundation, either version 3 of the License, or
-        (at your option) any later version.
+   This software is licensed under the MIT License:
 
-        This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-        GNU General Public License for more details.
+        Permission is hereby granted, free of charge, to any person
+        obtaining a copy of this software and associated documentation
+        files (the "Software"), to deal in the Software without restriction,
+        including without limitation the rights to use, copy, modify, merge,
+        publish, distribute, sublicense, and/or sell copies of the Software,
+        and to permit persons to whom the Software is furnished to do so,
+        subject to the following conditions:
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+        The above copyright notice and this permission notice shall be
+        included in all copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
     This module contains the PatternMatcher class, which implements
@@ -91,6 +99,33 @@ class PatternMatcher:
         detail = (
             "Sögnin '{0}' tekur yfirleitt með sér "
             "forsetninguna 'að', ekki 'af'.".format(vp.tidy_text)
+        )
+        if match.tidy_text.count(" af ") == 1:
+            # Only one way to substitute af -> að: do it
+            suggest = match.tidy_text.replace(" af ", " að ")
+        else:
+            # !!! TODO: More intelligent substitution to create a suggestion
+            suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P001",
+                text=text,
+                detail=detail,
+                suggest=suggest,
+            )
+        )
+
+    def wrong_preposition_vitni_af(self, match):
+        """ Handle a match of a suspect preposition pattern """
+        # Find the offending verb phrase
+        # Calculate the start and end token indices, spanning both phrases
+        start, end = match.span
+        text = "'verða vitni af' á sennilega að vera 'verða vitni að'"
+        detail = (
+            "Í samhenginu 'verða vitni að e-u' er notuð "
+            "forsetningin 'að', ekki 'af'."
         )
         if match.tidy_text.count(" af ") == 1:
             # Only one way to substitute af -> að: do it
@@ -194,6 +229,23 @@ class PatternMatcher:
                 ". > { (NP-PRD | IP-INF) > { VP > { %verb } } PP >> { P > { \"af\" } } }",
                 cls.wrong_preposition_af,
                 cls.ctx_af
+            ))
+
+            # Catch "Þetta er mesta vitleysa sem ég hef orðið vitni af"
+            p.append((
+                "vitni",  # Trigger lemma for this pattern
+                "VP > { VP >> [ .* ('verða' | 'vera') .* \"vitni\" ] "
+                "ADVP > \"af\" }",
+                cls.wrong_preposition_vitni_af,
+                None
+            ))
+            # Catch "Hún varð vitni af því þegar kúturinn sprakk"
+            p.append((
+                "vitni",  # Trigger lemma for this pattern
+                "VP > { VP > [ .* ('verða' | 'vera') .* "
+                "NP-PRD > { \"vitni\" PP > { P > { \"af\" } } } ] } ",
+                cls.wrong_preposition_vitni_af,
+                None
             ))
 
         # Verbs used wrongly with particular nouns

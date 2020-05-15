@@ -5,11 +5,12 @@ ReynirCorrect: A spelling and grammar corrector for Icelandic
 .. image:: https://travis-ci.com/mideind/ReynirCorrect.svg?branch=master
     :target: https://travis-ci.com/mideind/ReynirCorrect
 
+
 ********
 Overview
 ********
 
-**ReynirCorrect** is a Python 3.x package for
+**ReynirCorrect** is a Python 3 (>= 3.5) package and command line tool for
 **checking and correcting spelling and grammar** in Icelandic text.
 
 ReynirCorrect uses the `Greynir <https://pypi.org/project/reynir/>`_ package,
@@ -18,9 +19,9 @@ by the same authors, to tokenize and parse text.
 Token-level correction
 ----------------------
 
-ReynirCorrect can tokenize text and return a corrected token list.
+ReynirCorrect can tokenize text and return an automatically corrected token stream.
 This catches token-level errors, such as spelling errors and erroneous
-phrases, but not grammatical errors.
+phrases, but not grammatical errors. Token-level correction is relatively fast.
 
 Full grammar analysis
 ---------------------
@@ -30,37 +31,22 @@ it, after token-level correction. The parsing is done according to Reynir's
 context-free grammar for Icelandic, augmented with additional production
 rules for common grammatical errors. The analysis returns a set of annotations
 (errors and suggestions) that apply to spans (consecutive tokens) within
-sentences in the resulting token list.
+sentences in the resulting token list. Full grammar analysis is considerably
+slower than token-level correction.
 
-******
-Status
-******
+Command-line tool
+-----------------
 
-This code is under development and has early Beta status. It will eventually
-become the foundation of a spelling and grammar checker that will be open
-to the public on the `Greynir.is <https://greynir.is>`_ website.
-Of course it will also be available as an open-source Python package
-that can be installed using ``pip``.
+ReynirCorrect can also be invoked as a command-line tool
+to perform token-level correction. The command is ``correct infile.txt outfile.txt``.
+The command-line tool is further documented below.
 
-***************************
-Deep vs. shallow correction
-***************************
-
-ReynirCorrect can do both deep and shallow correction.
-
-*Deep* correction shows both the proposed corrections (if they are available), 
-and error messages to guide the user.
-
-*Shallow* correction corrects the input file automatically but doesn't give any error messages 
-or information about the errors. Only clear errors are corrected at this stage. 
-No grammar errors are corrected.
 
 *******
 Example
 *******
 
-To tokenize text with deep token-level correction (the text is not parsed
-in this case, so no grammar checking is done):
+To perform token-level correction from Python code:
 
 .. code-block:: python
 
@@ -87,25 +73,24 @@ Output::
    mæli
    .
 
-To get a list of spelling and grammar annotations for a sentence:
+To perform full spelling and grammar analysis of a sentence:
 
 .. code-block:: python
 
-   >>> from reynir_correct import check_single
-   >>> sent = check_single("Páli, vini mínum, langaði að horfa á sjónvarpið.")
-   >>> for annotation in sent.annotations:
-   >>>     print("{0}".format(annotation))
-
-Output::
-
-   000-004: E003  Frumlag sagnarinnar 'að langa' á að vera í þolfalli en ekki í þágufalli
-
-                  [ The subject of the verb 'að langa/to want' should be in the
-                     accusative case, not the dative case ]
+   >>>> from reynir_correct import check_single
+   >>>> sent = check_single("Páli, vini mínum, langaði að horfa á sjónnvarpið.")
+   >>>> for annotation in sent.annotations:
+   >>>>     print("{0}".format(annotation))
+   000-004: P_WRONG_CASE_þgf_þf Á líklega að vera 'Pál, vin minn' / [Pál , vin minn]
+   009-009: S004   Orðið 'sjónnvarpið' var leiðrétt í 'sjónvarpið'
+   >>>> sent.tidy_text
+   'Páli, vini mínum, langaði að horfa á sjónvarpið.'
 
 Note that the ``annotation.start`` and ``annotation.end`` properties
 (here ``start`` is 0 and ``end`` is 4) contain the indices of the first
-and last tokens to which the annotation applies. ``E003`` is an error code.
+and last tokens to which the annotation applies.
+``P_WRONG_CASE_þgf_þf`` and ``S004`` are error codes.
+
 
 *************
 Prerequisites
@@ -113,25 +98,26 @@ Prerequisites
 
 This package runs on CPython 3.5 or newer, and on PyPy 3.5 or newer.
 
+
 ************
 Installation
 ************
 
-To install this package:
+To install this package (assuming you have Python 3 with ``pip`` installed):
 
 .. code-block:: console
 
-   $ pip3 install reynir-correct   # or pip install reynir-correct if Python3 is your default
+   $ pip install reynir-correct
 
 If you want to be able to edit the source, do like so
-(assuming you have **git** installed):
+(assuming you have ``git`` installed):
 
 .. code-block:: console
 
    $ git clone https://github.com/mideind/ReynirCorrect
    $ cd ReynirCorrect
    $ # [ Activate your virtualenv here if you have one ]
-   $ python setup.py develop
+   $ pip install -e .
 
 The package source code is now in ``ReynirCorrect/src/reynir_correct``.
 
@@ -145,6 +131,13 @@ After installation, the corrector can be invoked directly from the command line:
 .. code-block:: console
 
    $ correct input.txt output.txt
+
+...or:
+
+.. code-block:: console
+
+   $ echo "Þinngið samþikkti tilöguna" | correct
+   Þingið samþykkti tillöguna
 
 Input and output files are encoded in UTF-8. If the files are not
 given explicitly, ``stdin`` and ``stdout`` are used for input and output,
@@ -160,20 +153,19 @@ The following (mutually exclusive) options can be specified
 on the command line:
 
 +-------------------+---------------------------------------------------+
-| | ``--csv``       | Deep tokenization. Output token objects in CSV    |
+| | ``--csv``       | Output token objects in CSV                       |
 |                   | format, one per line. Sentences are separated by  |
 |                   | lines containing ``0,"",""``                      |
 +-------------------+---------------------------------------------------+
-| | ``--json``      | Deep tokenization. Output token objects in JSON   |
-|                   | format, one per line.                             |
+| | ``--json``      | Output token objects in JSON format, one per line.|
 +-------------------+---------------------------------------------------+
 | | ``--normalize`` | Normalize punctuation, causing e.g. quotes to be  |
 |                   | output in Icelandic form and hyphens to be        |
-|                   | regularized. This option is only applicable to    |
-|                   | shallow tokenization.                             |
+|                   | regularized.                                      |
 +-------------------+---------------------------------------------------+
 
 Type ``correct -h`` to get a short help message.
+
 
 *******
 Example
@@ -181,7 +173,7 @@ Example
 
 .. code-block:: console
 
-   $ echo "Atvinuleysi jókst um 3%" | correct
+   $ echo "Atvinuleysi jógst um 3%" | correct
    Atvinnuleysi jókst um 3%
 
    $ echo "Barnið vil grænann lit" | correct --csv
@@ -211,4 +203,38 @@ virtualenv), then run:
 .. code-block:: console
 
    $ python -m pytest
+
+
+*********************
+Copyright and License
+*********************
+
+**Copyright (C) 2020 Miðeind ehf.**
+ReynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
+
+Parts of this software are developed under the auspices of the
+Icelandic Government's 5-year Language Technology Programme for Icelandic,
+which is described
+`here <https://www.stjornarradid.is/lisalib/getfile.aspx?itemid=56f6368e-54f0-11e7-941a-005056bc530c>`_.
+
+This software is licensed under the *MIT License*:
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of the Software,
+and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
