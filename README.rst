@@ -234,10 +234,8 @@ Copyright and License
 
 **Copyright (C) 2020 Miðeind ehf.**
 
-.. image:: https://greynir.is/static/img/mideind-horizontal-small.png
+.. image:: https://github.com/mideind/ReynirPackage/raw/master/doc/_static/MideindLogoVert100.png?raw=true
    :target: https://mideind.is
-   :width: 321px
-   :height: 100px
    :align: right
    :alt: Miðeind ehf.
 
