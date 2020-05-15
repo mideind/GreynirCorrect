@@ -232,12 +232,12 @@ virtualenv), then run:
 Copyright and License
 *********************
 
-**Copyright (C) 2020 Miðeind ehf.**
-
 .. image:: https://github.com/mideind/ReynirPackage/raw/master/doc/_static/MideindLogoVert100.png?raw=true
    :target: https://mideind.is
    :align: right
    :alt: Miðeind ehf.
+
+**Copyright (C) 2020 Miðeind ehf.**
 
 ReynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
 
