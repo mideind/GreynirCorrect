@@ -236,6 +236,9 @@ Copyright and License
 
 .. image:: https://greynir.is/static/img/mideind-horizontal-small.png
     :target: https://mideind.is
+    :scale: 50%
+    :align: right
+    :alt: Miðeind ehf.
 
 ReynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
 
