@@ -27,7 +27,7 @@ Full grammar analysis
 ---------------------
 
 ReynirCorrect can also analyze text grammatically by attempting to parse
-it, after token-level correction. The parsing is done according to Reynir's
+it, after token-level correction. The parsing is done according to Greynir's
 context-free grammar for Icelandic, augmented with additional production
 rules for common grammatical errors. The analysis returns a set of annotations
 (errors and suggestions) that apply to spans (consecutive tokens) within
@@ -81,9 +81,18 @@ To perform full spelling and grammar analysis of a sentence:
    >>>> sent = check_single("Páli, vini mínum, langaði að horfa á sjónnvarpið.")
    >>>> for annotation in sent.annotations:
    >>>>     print("{0}".format(annotation))
+
+Output::
+
    000-004: P_WRONG_CASE_þgf_þf Á líklega að vera 'Pál, vin minn' / [Pál , vin minn]
    009-009: S004   Orðið 'sjónnvarpið' var leiðrétt í 'sjónvarpið'
+
+.. code-block:: python
+
    >>>> sent.tidy_text
+
+Output::
+
    'Páli, vini mínum, langaði að horfa á sjónvarpið.'
 
 Note that the ``annotation.start`` and ``annotation.end`` properties
@@ -96,7 +105,16 @@ and last tokens to which the annotation applies.
 Prerequisites
 *************
 
-This package runs on CPython 3.5 or newer, and on PyPy 3.5 or newer.
+ReynirCorrect runs on CPython 3.5 or newer, and on PyPy 3.5 or newer. It has
+been tested on Linux, MacOS and Windows. The PyPi package includes binary wheels
+for common environments, but if the setup on your OS requires compilation
+from sources, you may need
+
+.. code-block:: console
+
+   $ sudo apt-get install python3-dev
+
+...or something to similar effect to enable this.
 
 
 ************
@@ -167,9 +185,9 @@ on the command line:
 Type ``correct -h`` to get a short help message.
 
 
-*******
-Example
-*******
+********
+Examples
+********
 
 .. code-block:: console
 
@@ -182,6 +200,11 @@ Example
    6,"grænan",""
    6,"lit",""
    0,"",""
+
+Note how *vil* is not corrected, as it is a valid and common word, and
+the ``correct`` command does not perform grammar checking.
+
+.. code-block:: console
 
    $ echo "Pakkin er fyrir hestin" | correct --json
    {"k":"BEGIN SENT"}
@@ -210,6 +233,7 @@ Copyright and License
 *********************
 
 **Copyright (C) 2020 Miðeind ehf.**
+
 ReynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
 
 Parts of this software are developed under the auspices of the
@@ -219,22 +243,22 @@ which is described
 
 This software is licensed under the *MIT License*:
 
-Permission is hereby granted, free of charge, to any person
-obtaining a copy of this software and associated documentation
-files (the "Software"), to deal in the Software without restriction,
-including without limitation the rights to use, copy, modify, merge,
-publish, distribute, sublicense, and/or sell copies of the Software,
-and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
+   *Permission is hereby granted, free of charge, to any person
+   obtaining a copy of this software and associated documentation
+   files (the "Software"), to deal in the Software without restriction,
+   including without limitation the rights to use, copy, modify, merge,
+   publish, distribute, sublicense, and/or sell copies of the Software,
+   and to permit persons to whom the Software is furnished to do so,
+   subject to the following conditions:*
 
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
+   *The above copyright notice and this permission notice shall be
+   included in all copies or substantial portions of the Software.*
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+   *THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+   IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+   CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.*
 
