@@ -30,7 +30,7 @@
         SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-    This module sets up the ReynirCorrect package and installs the
+    This module sets up the GreynirCorrect package and installs the
     'correct' command-line utility.
 
     This package requires Python >= 3.5, and supports PyPy >= 3.5.
@@ -52,7 +52,7 @@ from setuptools import setup
 
 
 if sys.version_info < (3, 5):
-    print("ReynirCorrect requires Python >= 3.5")
+    print("GreynirCorrect requires Python >= 3.5")
     sys.exit(1)
 
 
@@ -81,7 +81,7 @@ setup(
     ),
     author="Miðeind ehf",
     author_email="mideind@mideind.is",
-    url="https://github.com/mideind/ReynirCorrect",
+    url="https://github.com/mideind/GreynirCorrect",
     packages=find_packages("src"),
     package_dir={"": "src"},
     py_modules=[splitext(basename(path))[0] for path in glob("src/*.py")],

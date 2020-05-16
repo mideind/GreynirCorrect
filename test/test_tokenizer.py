@@ -2,11 +2,11 @@
 
     test_tokenizer.py
 
-    Tests for ReynirCorrect module
+    Tests for GreynirCorrect module
 
     Copyright (C) 2020 by Miðeind ehf.
 
-   This software is licensed under the MIT License:
+    This software is licensed under the MIT License:
 
         Permission is hereby granted, free of charge, to any person
         obtaining a copy of this software and associated documentation
@@ -29,7 +29,7 @@
 
 
     This module tests the token-level error detection and correction
-    of ReynirCorrect.
+    of GreynirCorrect.
 
 """
 

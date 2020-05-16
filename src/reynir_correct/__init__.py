@@ -29,11 +29,11 @@
 
 # Expose the reynir-correct API
 
-from reynir import Reynir, correct_spaces, mark_paragraphs
+from reynir import Greynir, correct_spaces, mark_paragraphs
 from .settings import Settings
 from .errtokenizer import CorrectionPipeline, tokenize, Correct_TOK
 from .checker import (
-    ReynirCorrect,
+    GreynirCorrect,
     check,
     check_single,
     check_with_stats,
@@ -47,4 +47,4 @@ __copyright__ = "(C) 2020 Miðeind ehf."
 __version__ = "1.0.0"
 
 
-Settings.read("config/ReynirCorrect.conf")
+Settings.read("config/GreynirCorrect.conf")

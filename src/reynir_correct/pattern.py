@@ -6,7 +6,7 @@
 
     Copyright (C) 2020 Miðeind ehf.
 
-   This software is licensed under the MIT License:
+    This software is licensed under the MIT License:
 
         Permission is hereby granted, free of charge, to any person
         obtaining a copy of this software and associated documentation

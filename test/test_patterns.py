@@ -2,11 +2,11 @@
 
     test_patterns.py
 
-    Tests for ReynirCorrect module
+    Tests for GreynirCorrect module
 
     Copyright (C) 2020 by Miðeind ehf.
 
-   This software is licensed under the MIT License:
+    This software is licensed under the MIT License:
 
         Permission is hereby granted, free of charge, to any person
         obtaining a copy of this software and associated documentation
@@ -29,7 +29,7 @@
 
 
     This module tests the grammatical pattern annotation functionality
-    of ReynirCorrect.
+    of GreynirCorrect.
 
 """
 
@@ -40,8 +40,8 @@ import reynir_correct
 
 @pytest.fixture(scope="module")
 def rc():
-    """ Provide a module-scoped Greynir instance as a test fixture """
-    r = reynir_correct.ReynirCorrect()
+    """ Provide a module-scoped GreynirCorrect instance as a test fixture """
+    r = reynir_correct.GreynirCorrect()
     yield r
     # Do teardown here
     r.__class__.cleanup()

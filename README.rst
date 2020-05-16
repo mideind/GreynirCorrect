@@ -1,32 +1,32 @@
-=============================================================
-ReynirCorrect: A spelling and grammar corrector for Icelandic
-=============================================================
+==============================================================
+GreynirCorrect: A spelling and grammar corrector for Icelandic
+==============================================================
 
-.. image:: https://travis-ci.com/mideind/ReynirCorrect.svg?branch=master
-    :target: https://travis-ci.com/mideind/ReynirCorrect
+.. image:: https://travis-ci.com/mideind/GreynirCorrect.svg?branch=master
+    :target: https://travis-ci.com/mideind/GreynirCorrect
 
 
 ********
 Overview
 ********
 
-**ReynirCorrect** is a Python 3 (>= 3.5) package and command line tool for
+**GreynirCorrect** is a Python 3 (>= 3.5) package and command line tool for
 **checking and correcting spelling and grammar** in Icelandic text.
 
-ReynirCorrect uses the `Greynir <https://pypi.org/project/reynir/>`_ package,
+GreynirCorrect uses the `Greynir <https://pypi.org/project/reynir/>`_ package,
 by the same authors, to tokenize and parse text.
 
 Token-level correction
 ----------------------
 
-ReynirCorrect can tokenize text and return an automatically corrected token stream.
+GreynirCorrect can tokenize text and return an automatically corrected token stream.
 This catches token-level errors, such as spelling errors and erroneous
 phrases, but not grammatical errors. Token-level correction is relatively fast.
 
 Full grammar analysis
 ---------------------
 
-ReynirCorrect can also analyze text grammatically by attempting to parse
+GreynirCorrect can also analyze text grammatically by attempting to parse
 it, after token-level correction. The parsing is done according to Greynir's
 context-free grammar for Icelandic, augmented with additional production
 rules for common grammatical errors. The analysis returns a set of annotations
@@ -37,7 +37,7 @@ slower than token-level correction.
 Command-line tool
 -----------------
 
-ReynirCorrect can also be invoked as a command-line tool
+GreynirCorrect can also be invoked as a command-line tool
 to perform token-level correction. The command is ``correct infile.txt outfile.txt``.
 The command-line tool is further documented below.
 
@@ -105,7 +105,7 @@ and last tokens to which the annotation applies.
 Prerequisites
 *************
 
-ReynirCorrect runs on CPython 3.5 or newer, and on PyPy 3.5 or newer. It has
+GreynirCorrect runs on CPython 3.5 or newer, and on PyPy 3.5 or newer. It has
 been tested on Linux, MacOS and Windows. The PyPi package includes binary wheels
 for common environments, but if the setup on your OS requires compilation
 from sources, you may need
@@ -132,12 +132,12 @@ If you want to be able to edit the source, do like so
 
 .. code-block:: console
 
-   $ git clone https://github.com/mideind/ReynirCorrect
-   $ cd ReynirCorrect
+   $ git clone https://github.com/mideind/GreynirCorrect
+   $ cd GreynirCorrect
    $ # [ Activate your virtualenv here if you have one ]
    $ pip install -e .
 
-The package source code is now in ``ReynirCorrect/src/reynir_correct``.
+The package source code is now in ``GreynirCorrect/src/reynir_correct``.
 
 
 *********************
@@ -220,7 +220,7 @@ Tests
 *****
 
 To run the built-in tests, install `pytest <https://docs.pytest.org/en/latest/>`_,
-``cd`` to your ``ReynirCorrect`` subdirectory (and optionally activate your
+``cd`` to your ``GreynirCorrect`` subdirectory (and optionally activate your
 virtualenv), then run:
 
 .. code-block:: console
@@ -239,12 +239,13 @@ Copyright and License
 
 **Copyright (C) 2020 Miðeind ehf.**
 
-ReynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
+GreynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
 
 Parts of this software are developed under the auspices of the
 Icelandic Government's 5-year Language Technology Programme for Icelandic,
 which is described
-`here <https://www.stjornarradid.is/lisalib/getfile.aspx?itemid=56f6368e-54f0-11e7-941a-005056bc530c>`_.
+`here <https://www.stjornarradid.is/lisalib/getfile.aspx?itemid=56f6368e-54f0-11e7-941a-005056bc530c>`_
+(English version `here <https://clarin.is/media/uploads/mlt-en.pdf>`_).
 
 This software is licensed under the *MIT License*:
 

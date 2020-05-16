@@ -6,7 +6,7 @@
 
     Copyright (C) 2020 Miðeind ehf.
 
-   This software is licensed under the MIT License:
+    This software is licensed under the MIT License:
 
         Permission is hereby granted, free of charge, to any person
         obtaining a copy of this software and associated documentation
@@ -32,7 +32,7 @@
     text strings.
 
     It defines subclasses of the classes BIN_Token and Fast_Parser,
-    both found in the Reynir package. These classes add error detection
+    both found in the Greynir package. These classes add error detection
     functionality to their base classes. After parsing a sentence, the
     ErrorFinder and PatternMatcher classes are used to identify grammar
     errors and questionable patterns.
@@ -51,7 +51,7 @@ from typing import Iterable, Iterator, List, Dict, Type
 from threading import Lock
 
 from reynir import (
-    Reynir, correct_spaces, TOK, Tok,
+    Greynir, correct_spaces, TOK, Tok,
     _Job, _Sentence, _Paragraph,
     ProgressFunc, ParseResult
 )
@@ -163,13 +163,13 @@ class ErrorDetectingParser(Fast_Parser):
         return ErrorDetectionToken(t, ix)
 
 
-class ReynirCorrect(Reynir):
+class GreynirCorrect(Greynir):
 
     """ Parser augmented with the ability to add spelling and grammar
         annotations to the returned sentences """
 
-    # ReynirCorrect has its own class instances of a parser and a reducer,
-    # separate from the Reynir class, as they use different settings and
+    # GreynirCorrect has its own class instances of a parser and a reducer,
+    # separate from the Greynir class, as they use different settings and
     # parsing enviroments
     _parser = None
     _reducer = None
@@ -187,21 +187,21 @@ class ReynirCorrect(Reynir):
         """ Override the parent class' construction of a parser instance """
         with self._lock:
             if (
-                ReynirCorrect._parser is None
-                or ReynirCorrect._parser.is_grammar_modified()[0]
+                GreynirCorrect._parser is None
+                or GreynirCorrect._parser.is_grammar_modified()[0]
             ):
                 # Initialize a singleton instance of the parser and the reducer.
                 # Both classes are re-entrant and thread safe.
-                ReynirCorrect._parser = edp = ErrorDetectingParser()
-                ReynirCorrect._reducer = Reducer(edp.grammar)
-            return ReynirCorrect._parser
+                GreynirCorrect._parser = edp = ErrorDetectingParser()
+                GreynirCorrect._reducer = Reducer(edp.grammar)
+            return GreynirCorrect._parser
 
     @property
     def reducer(self) -> Reducer:
         """ Return the reducer instance to be used """
         # Should always retrieve the parser attribute first
-        assert ReynirCorrect._reducer is not None
-        return ReynirCorrect._reducer
+        assert GreynirCorrect._reducer is not None
+        return GreynirCorrect._reducer
 
     @staticmethod
     def annotate(sent) -> List:
@@ -293,7 +293,7 @@ class ReynirCorrect(Reynir):
 
 def check_single(sentence: str) -> _Sentence:
     """ Check and annotate a single sentence, given in plain text """
-    rc = ReynirCorrect()
+    rc = GreynirCorrect()
     return rc.parse_single(sentence)
 
 
@@ -301,7 +301,7 @@ def check(text: str, *, split_paragraphs: bool=False) -> Iterable[_Paragraph]:
     """ Return a generator of checked paragraphs of text,
         each being a generator of checked sentences with
         annotations """
-    rc = ReynirCorrect()
+    rc = GreynirCorrect()
     # This is an asynchronous (on-demand) parse job
     job = rc.submit(text, parse=True, split_paragraphs=split_paragraphs)
     yield from job.paragraphs()
@@ -309,7 +309,7 @@ def check(text: str, *, split_paragraphs: bool=False) -> Iterable[_Paragraph]:
 
 def check_with_custom_parser(text: str, *,
     split_paragraphs: bool=False,
-    parser_class: Type[ReynirCorrect]=ReynirCorrect,
+    parser_class: Type[GreynirCorrect]=GreynirCorrect,
     progress_func: ProgressFunc=None
 ) -> ParseResult:
     """ Return a dict containing parsed paragraphs as well as statistics,

@@ -7,7 +7,7 @@
 
     Copyright (C) 2020 Miðeind ehf.
 
-   This software is licensed under the MIT License:
+    This software is licensed under the MIT License:
 
         Permission is hereby granted, free of charge, to any person
         obtaining a copy of this software and associated documentation
@@ -29,7 +29,7 @@
         SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-    This is an executable program wrapper (main module) for the ReynirCorrect
+    This is an executable program wrapper (main module) for the GreynirCorrect
     package. It can be used to invoke the corrector from the command line,
     or via fork() or exec(), with the command 'correct'. The main() function
     of this module is registered as a console_script entry point in setup.py.

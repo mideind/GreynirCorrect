@@ -6,7 +6,7 @@
 
     Copyright (C) 2020 Miðeind ehf.
 
-   This software is licensed under the MIT License:
+    This software is licensed under the MIT License:
 
         Permission is hereby granted, free of charge, to any person
         obtaining a copy of this software and associated documentation
@@ -28,7 +28,7 @@
         SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-    This module reads and interprets the ReynirCorrect.conf
+    This module reads and interprets the GreynirCorrect.conf
     configuration file. The file can include other files using the $include
     directive, making it easier to arrange configuration sections into logical
     and manageable pieces.
@@ -510,7 +510,7 @@ class Settings:
     loaded = False
     DEBUG = os.environ.get("DEBUG", "").strip() in TRUE
 
-    # Configuration settings from the ReynirCorrect.conf file
+    # Configuration settings from the GreynirCorrect.conf file
 
     @staticmethod
     def _handle_settings(s):

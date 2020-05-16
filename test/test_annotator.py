@@ -2,7 +2,7 @@
 
     test_annotator.py
 
-    Tests for ReynirCorrect module
+    Tests for GreynirCorrect module
 
     Copyright (C) 2020 by Miðeind ehf.
 
@@ -29,7 +29,7 @@
 
 
     This module tests the sentence-level annotation functionality
-    of ReynirCorrect.
+    of GreynirCorrect.
 
     Potential test sentences:
 
@@ -63,8 +63,8 @@ import reynir_correct
 
 @pytest.fixture(scope="module")
 def rc():
-    """ Provide a module-scoped Greynir instance as a test fixture """
-    r = reynir_correct.ReynirCorrect()
+    """ Provide a module-scoped GreynirCorrect instance as a test fixture """
+    r = reynir_correct.GreynirCorrect()
     yield r
     # Do teardown here
     r.__class__.cleanup()
@@ -246,12 +246,12 @@ def test_correct_sentences(rc):
 
 if __name__ == "__main__":
 
-    from reynir_correct import ReynirCorrect
+    from reynir_correct import GreynirCorrect
 
-    rc = ReynirCorrect()
-    test_multiword_phrases(rc)
-    test_impersonal_verbs(rc)
-    test_error_finder(rc)
-    test_correct_sentences(rc)
-    test_foreign_sentences(rc)
-    test_number(rc)
+    gc = GreynirCorrect()
+    test_multiword_phrases(gc)
+    test_impersonal_verbs(gc)
+    test_error_finder(gc)
+    test_correct_sentences(gc)
+    test_foreign_sentences(gc)
+    test_number(gc)
