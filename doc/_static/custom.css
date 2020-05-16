@@ -1,0 +1,75 @@
+
+/*
+    custom.css
+
+    Copyright (C) 2020 Miðeind ehf.
+    See the Greynir GitHub repository at
+    https://github.com/mideind/ReynirPackage
+    for copyright and licensing information.
+
+    This style sheet overrides stuff from the standard Sphinx Alabaster
+    style to make it more compliant with the Mideind/Greynir branding
+
+*/
+
+@import url('https://fonts.googleapis.com/css?family=Lato:300,300i,400,400i,700,700i&display=swap');
+
+body {
+    font-weight: 300;
+    font-size: 16px;
+}
+
+strong {
+    font-weight: 400;
+}
+
+div.body h1, div.body h2, div.body h3, div.body h4, div.body h5, div.body h6 {
+    font-family: 'Lato', 'Garamond', 'Georgia', serif;
+    font-weight: normal;
+}
+
+div.body h1 {
+    font-weight: 700;
+    font-style: italic;
+    font-size: 220%;
+    color: #006eff;
+    margin-top: 20px;
+}
+
+div.body h2 {
+    color: #006eff;
+    font-size: 160%;
+}
+
+div.body p, div.body dd, div.body li {
+    line-height: 1.5em;
+}
+
+pre, tt, code {
+    font-size: 14px;
+    line-height: 1.25em;
+}
+
+div.sphinxsidebarwrapper p.blurb {
+    margin-top: 5px;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+div.sphinxsidebar h3, div.sphinxsidebar h4 {
+    font-family: 'Lato', 'Garamond', 'Georgia', serif;
+    font-weight: 400;
+    font-size: 22px;
+    color: #006eff;
+    margin-top: 15px;
+    margin-bottom: 5px;
+}
+
+div.sphinxsidebar ul li.toctree-l1 > a {
+    font-size: 110%;
+    line-height: 1.7;
+}
+
+div.figure p.caption span.caption-text {
+    font-style: italic;
+}
