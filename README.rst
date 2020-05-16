@@ -5,6 +5,7 @@ GreynirCorrect: A spelling and grammar corrector for Icelandic
 .. image:: https://travis-ci.com/mideind/GreynirCorrect.svg?branch=master
     :target: https://travis-ci.com/mideind/GreynirCorrect
 
+.. _overview:
 
 ********
 Overview
@@ -13,7 +14,7 @@ Overview
 **GreynirCorrect** is a Python 3 (>= 3.5) package and command line tool for
 **checking and correcting spelling and grammar** in Icelandic text.
 
-GreynirCorrect uses the `Greynir <https://pypi.org/project/reynir/>`_ package,
+GreynirCorrect relies on the `Greynir <https://pypi.org/project/reynir/>`_ package,
 by the same authors, to tokenize and parse text.
 
 Token-level correction
@@ -26,7 +27,7 @@ phrases, but not grammatical errors. Token-level correction is relatively fast.
 Full grammar analysis
 ---------------------
 
-GreynirCorrect can also analyze text grammatically by attempting to parse
+GreynirCorrect can analyze text grammatically by attempting to parse
 it, after token-level correction. The parsing is done according to Greynir's
 context-free grammar for Icelandic, augmented with additional production
 rules for common grammatical errors. The analysis returns a set of annotations
@@ -37,14 +38,15 @@ slower than token-level correction.
 Command-line tool
 -----------------
 
-GreynirCorrect can also be invoked as a command-line tool
+GreynirCorrect can be invoked as a command-line tool
 to perform token-level correction. The command is ``correct infile.txt outfile.txt``.
 The command-line tool is further documented below.
 
+.. _examples:
 
-*******
-Example
-*******
+********
+Examples
+********
 
 To perform token-level correction from Python code:
 
@@ -73,7 +75,7 @@ Output::
    mæli
    .
 
-To perform full spelling and grammar analysis of a sentence:
+To perform full spelling and grammar analysis of a sentence from Python code:
 
 .. code-block:: python
 
@@ -100,15 +102,17 @@ Note that the ``annotation.start`` and ``annotation.end`` properties
 and last tokens to which the annotation applies.
 ``P_WRONG_CASE_þgf_þf`` and ``S004`` are error codes.
 
+.. _prerequisites:
 
 *************
 Prerequisites
 *************
 
 GreynirCorrect runs on CPython 3.5 or newer, and on PyPy 3.5 or newer. It has
-been tested on Linux, MacOS and Windows. The PyPi package includes binary wheels
-for common environments, but if the setup on your OS requires compilation
-from sources, you may need
+been tested on Linux, MacOS and Windows. The
+`PyPi package <https://pypi.org/project/reynir-correct/>`_
+includes binary wheels for common environments, but if the setup on your OS
+requires compilation from sources, you may need
 
 .. code-block:: console
 
@@ -116,6 +120,7 @@ from sources, you may need
 
 ...or something to similar effect to enable this.
 
+.. _installation:
 
 ************
 Installation
@@ -139,6 +144,7 @@ If you want to be able to edit the source, do like so
 
 The package source code is now in ``GreynirCorrect/src/reynir_correct``.
 
+.. _commandline:
 
 *********************
 The command line tool
@@ -185,14 +191,15 @@ on the command line:
 Type ``correct -h`` to get a short help message.
 
 
-********
-Examples
-********
+Command Line Examples
+---------------------
 
 .. code-block:: console
 
    $ echo "Atvinuleysi jógst um 3%" | correct
    Atvinnuleysi jókst um 3%
+
+.. code-block:: console
 
    $ echo "Barnið vil grænann lit" | correct --csv
    6,"Barnið",""
@@ -215,6 +222,64 @@ the ``correct`` command does not perform grammar checking.
    {"k":"END SENT"}
 
 
+.. _reference:
+
+*********
+Reference
+*********
+
+Importing GreynirCorrect
+------------------------
+
+After installing the ``reynir-correct`` package (see :ref:`installation`),
+import it using::
+
+   import reynir_correct as grc
+
+Alternatively, use the following code to initialize an instance of
+the :py:class:`GreynirCorrect` class::
+
+    from reynir_correct import GreynirCorrect
+    grc = GreynirCorrect()
+
+If you only want to do token-level checking, the simplest method
+is to import only the tokenize() method (documented below)::
+
+    from reynir_correct import tokenize
+
+Similarly, if you only want straightforward checking on single
+sentences, you can import only the check_single() method
+(documented below)::
+
+    from reynir_correct import check_single
+
+The ``tokenize()`` function
+---------------------------
+
+    .. py:method:: tokenize(text, **options)
+
+        Consumes a text stream and returns a generator of corrected or
+        annotated tokens.
+
+        :param text: A text string, or an iterator of strings.
+
+        :param options: Tokenizer options can be passed via keyword arguments,
+            as in ``grc = GreynirCorrect(convert_numbers=True)``. See
+            the documentation for the `Tokenizer <https://github.com/mideind/Tokenizer>`_
+            package for further information.
+
+            Two boolean flags directly affect the correction process.
+            Setting ``only_ci=True`` tells the checker to look only for
+            context-independent errors. Setting ``apply_suggestions=True``
+            makes the checker more aggressive in turning suggestions into
+            corrections.
+
+        :return: A generator of tokens, where each token is an instance
+            of the CorrectToken class.
+
+
+.. _tests:
+
 *****
 Tests
 *****
@@ -227,6 +292,7 @@ virtualenv), then run:
 
    $ python -m pytest
 
+.. _license:
 
 *********************
 Copyright and License
