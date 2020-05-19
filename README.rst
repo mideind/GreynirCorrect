@@ -114,7 +114,7 @@ been tested on Linux, MacOS and Windows. The
 includes binary wheels for common environments, but if the setup on your OS
 requires compilation from sources, you may need
 
-.. code-block:: console
+.. code-block:: bash
 
    $ sudo apt-get install python3-dev
 
@@ -128,14 +128,14 @@ Installation
 
 To install this package (assuming you have Python 3 with ``pip`` installed):
 
-.. code-block:: console
+.. code-block:: bash
 
    $ pip install reynir-correct
 
 If you want to be able to edit the source, do like so
 (assuming you have ``git`` installed):
 
-.. code-block:: console
+.. code-block:: bash
 
    $ git clone https://github.com/mideind/GreynirCorrect
    $ cd GreynirCorrect
@@ -152,13 +152,13 @@ The command line tool
 
 After installation, the corrector can be invoked directly from the command line:
 
-.. code-block:: console
+.. code-block:: bash
 
    $ correct input.txt output.txt
 
 ...or:
 
-.. code-block:: console
+.. code-block:: bash
 
    $ echo "Þinngið samþikkti tilöguna" | correct
    Þingið samþykkti tillöguna
@@ -197,12 +197,12 @@ Type ``correct -h`` to get a short help message.
 Command Line Examples
 ---------------------
 
-.. code-block:: console
+.. code-block:: bash
 
    $ echo "Atvinuleysi jógst um 3%" | correct
    Atvinnuleysi jókst um 3%
 
-.. code-block:: console
+.. code-block:: bash
 
    $ echo "Barnið vil grænann lit" | correct --csv
    6,"Barnið",""
@@ -214,7 +214,7 @@ Command Line Examples
 Note how *vil* is not corrected, as it is a valid and common word, and
 the ``correct`` command does not perform grammar checking.
 
-.. code-block:: console
+.. code-block:: bash
 
    $ echo "Pakkin er fyrir hestin" | correct --json
    {"k":"BEGIN SENT"}
@@ -234,7 +234,7 @@ To run the built-in tests, install `pytest <https://docs.pytest.org/en/latest/>`
 ``cd`` to your ``GreynirCorrect`` subdirectory (and optionally activate your
 virtualenv), then run:
 
-.. code-block:: console
+.. code-block:: bash
 
    $ python -m pytest
 

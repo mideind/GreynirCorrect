@@ -5,13 +5,13 @@ Command Line Tool
 
 After installation, the corrector can be invoked directly from the command line:
 
-.. code-block:: console
+.. code-block:: bash
 
    $ correct input.txt output.txt
 
 ...or:
 
-.. code-block:: console
+.. code-block:: bash
 
    $ echo "Þinngið samþikkti tilöguna" | correct
    Þingið samþykkti tillöguna
@@ -47,12 +47,12 @@ Type ``correct -h`` to get a short help message.
 Command Line Examples
 ---------------------
 
-.. code-block:: console
+.. code-block:: bash
 
    $ echo "Atvinuleysi jógst um 3%" | correct
    Atvinnuleysi jókst um 3%
 
-.. code-block:: console
+.. code-block:: bash
 
    $ echo "Barnið vil grænann lit" | correct --csv
    6,"Barnið",""
@@ -64,7 +64,7 @@ Command Line Examples
 Note how *vil* is not corrected, as it is a valid and common word, and
 the ``correct`` command does not perform grammar checking.
 
-.. code-block:: console
+.. code-block:: bash
 
    $ echo "Pakkin er fyrir hestin" | correct --json
    {"k":"BEGIN SENT"}
