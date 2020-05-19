@@ -79,10 +79,10 @@ To perform full spelling and grammar analysis of a sentence from Python code:
 
 .. code-block:: python
 
-   >>>> from reynir_correct import check_single
-   >>>> sent = check_single("Páli, vini mínum, langaði að horfa á sjónnvarpið.")
-   >>>> for annotation in sent.annotations:
-   >>>>     print("{0}".format(annotation))
+   from reynir_correct import check_single
+   sent = check_single("Páli, vini mínum, langaði að horfa á sjónnvarpið.")
+   for annotation in sent.annotations:
+       print("{0}".format(annotation))
 
 Output::
 
@@ -91,7 +91,7 @@ Output::
 
 .. code-block:: python
 
-   >>>> sent.tidy_text
+   sent.tidy_text
 
 Output::
 
@@ -187,6 +187,9 @@ on the command line:
 |                   | output in Icelandic form and hyphens to be        |
 |                   | regularized.                                      |
 +-------------------+---------------------------------------------------+
+
+The CSV and JSON formats are identical to those documented for the
+`Tokenizer package<https://github.com/mideind/Tokenizer>`_.
 
 Type ``correct -h`` to get a short help message.
 

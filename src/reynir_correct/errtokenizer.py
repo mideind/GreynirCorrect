@@ -34,11 +34,11 @@
 
 """
 
-from typing import cast, Type
+from typing import cast, Type, Union, Tuple, List, Iterable, Iterator
 from collections import defaultdict
 
 from tokenizer import Abbreviations
-from reynir import TOK
+from reynir import TOK, Tok
 from reynir.bintokenizer import DefaultPipeline, MatchingStream, BIN_Meaning, Bin_TOK
 
 from .settings import (
@@ -151,38 +151,40 @@ class CorrectToken:
     # to be subclassed or custom attributes to be added
     __slots__ = ("kind", "txt", "val", "_err")
 
-    def __init__(self, kind, txt, val):
+    def __init__(self, kind: int, txt: str, val: Union[None, Tuple, List]) -> None:
         self.kind = kind
         self.txt = txt
         self.val = val
-        self._err = None
+        self._err = None  # type: Union[None, Error, bool]
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Union[int, str, None, Tuple, List]:
         """ Support tuple-style indexing, as raw tokens do """
         return (self.kind, self.txt, self.val)[index]
 
     @classmethod
-    def from_token(cls, token):
+    def from_token(cls, token: Tok) -> "CorrectToken":
         """ Wrap a raw token in a CorrectToken """
         return cls(token.kind, token.txt, token.val)
 
     @classmethod
-    def word(cls, txt, val=None):
+    def word(cls, txt: str, val: Union[None, Tuple, List]=None) -> "CorrectToken":
         """ Create a wrapped word token """
         return cls(TOK.WORD, txt, val)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<CorrectToken(kind: {0}, txt: '{1}', val: {2})>".format(
             TOK.descr[self.kind], self.txt, self.val
         )
 
     __str__ = __repr__
 
-    def set_error(self, err):
+    def set_error(self, err: Union[None, "Error", bool]) -> None:
         """ Associate an Error class instance with this token """
         self._err = err
 
-    def copy_error(self, other, coalesce=False):
+    def copy_error(
+        self, other: Union[List["CorrectToken"], "CorrectToken"], coalesce: bool=False
+    ) -> bool:
         """ Copy the error field from another CorrectToken instance """
         if isinstance(other, list):
             # We have a list of CorrectToken instances to copy from:
@@ -198,32 +200,33 @@ class CorrectToken:
                 # a single token out of the span
                 # ('fimm hundruð' -> number token), so we reset
                 # the span to one token
+                assert isinstance(self._err, Error)
                 self._err.set_span(1)
         return self._err is not None
 
     @property
-    def error(self):
+    def error(self) -> Union[None, "Error", bool]:
         """ Return the error object associated with this token, if any """
         # Note that self._err may be a bool
         return self._err
 
     @property
-    def error_description(self):
+    def error_description(self) -> str:
         """ Return the description of an error associated with this token, if any """
         return getattr(self._err, "description", "")
 
     @property
-    def error_code(self):
+    def error_code(self) -> str:
         """ Return the code of an error associated with this token, if any """
         return getattr(self._err, "code", "")
 
     @property
-    def error_suggestion(self):
+    def error_suggestion(self) -> str:
         """ Return the text of a suggested replacement of this token, if any """
         return getattr(self._err, "suggestion", None)
 
     @property
-    def error_span(self):
+    def error_span(self) -> int:
         """ Return the number of tokens affected by this error """
         return getattr(self._err, "span", 1)
 
@@ -253,6 +256,9 @@ class Error:
 
     def to_dict(self):
         return {"code": self.code, "descr": self.description}
+
+    def set_span(self, span):
+        ...
 
 
 class PunctuationError(Error):
@@ -1592,7 +1598,7 @@ class CorrectionPipeline(DefaultPipeline):
         return stream
 
 
-def tokenize(text, **options):
+def tokenize(text: Union[str, Iterable[str]], **options) -> Iterator[CorrectToken]:
     """ Tokenize text using the correction pipeline, overriding a part
         of the default tokenization pipeline """
     pipeline = CorrectionPipeline(text, **options)

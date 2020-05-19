@@ -1,6 +1,6 @@
 .. _copyright:
 
-Copyright and licensing
+Copyright and Licensing
 =======================
 
 .. figure:: _static/MideindLogoVert100.png

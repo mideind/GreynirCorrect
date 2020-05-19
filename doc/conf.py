@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Greynir documentation build configuration file, created by
+# GreynirCorrect documentation build configuration file, created by
 # sphinx-quickstart on Sun Apr  8 01:20:08 2018.
 #
 # This file is execfile()d with the current directory set to its
@@ -141,7 +141,10 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, "Greynir.tex", "Greynir Documentation", u"Miðeind ehf.", "manual")
+    (
+        master_doc, "Greynir.tex", "GreynirCorrect Documentation",
+        u"Miðeind ehf.", "manual"
+    )
 ]
 
 
@@ -149,7 +152,11 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "greynir", "Greynir Documentation", [author], 1)]
+man_pages = [
+    (
+        master_doc, "greynir", "GreynirCorrect Documentation", [author], 1
+    )
+]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -161,10 +168,10 @@ texinfo_documents = [
     (
         master_doc,
         "Greynir",
-        "Greynir Documentation",
+        "GreynirCorrect Documentation",
         author,
-        "Greynir",
-        "Natural language processing for Icelandic",
+        "GreynirCorrect",
+        "Spelling and grammar correction for Icelandic",
         "NLP",
     )
 ]

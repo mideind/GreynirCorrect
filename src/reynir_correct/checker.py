@@ -47,7 +47,7 @@
 
 """
 
-from typing import Iterable, Iterator, List, Dict, Type
+from typing import cast, Iterable, Iterator, List, Dict, Type
 from threading import Lock
 
 from reynir import (
@@ -61,7 +61,7 @@ from reynir.reducer import Reducer
 from reynir.settings import VerbSubjects
 
 from .annotation import Annotation
-from .errtokenizer import tokenize as tokenize_and_correct
+from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
 from .errfinder import ErrorFinder
 from .pattern import PatternMatcher
 
@@ -180,7 +180,8 @@ class GreynirCorrect(Greynir):
 
     def tokenize(self, text: str) -> Iterator[Tok]:
         """ Use the correcting tokenizer instead of the normal one """
-        return tokenize_and_correct(text)
+        # The CorrectToken class is a duck-typing implementation of Tok
+        return cast(Iterator[Tok], tokenize_and_correct(text))
 
     @property
     def parser(self) -> Fast_Parser:
@@ -204,10 +205,10 @@ class GreynirCorrect(Greynir):
         return GreynirCorrect._reducer
 
     @staticmethod
-    def annotate(sent) -> List:
+    def annotate(sent: _Sentence) -> List[Annotation]:
         """ Returns a list of annotations for a sentence object, containing
             spelling and grammar annotations of that sentence """
-        ann = []
+        ann = []  # type: List[Annotation]
         words_in_bin = 0
         words_not_in_bin = 0
         # First, add token-level annotations
@@ -222,15 +223,17 @@ class GreynirCorrect(Greynir):
             # Note: these tokens and indices are the original tokens from
             # the submitted text, including ones that are not understood
             # by the parser, such as quotation marks and exotic punctuation
-            if hasattr(t, "error_code") and t.error_code:
-                ann.append(
-                    Annotation(
-                        start=ix,
-                        end=ix + t.error_span - 1,
-                        code=t.error_code,
-                        text=t.error_description,
+            if hasattr(t, "error_code"):
+                assert isinstance(t, CorrectToken)
+                if t.error_code:
+                    ann.append(
+                        Annotation(
+                            start=ix,
+                            end=ix + t.error_span - 1,
+                            code=t.error_code,
+                            text=t.error_description,
+                        )
                     )
-                )
         # Then, look at the whole sentence
         num_words = words_in_bin + words_not_in_bin
         if num_words > 2 and words_in_bin / num_words < ICELANDIC_RATIO:
@@ -252,7 +255,7 @@ class GreynirCorrect(Greynir):
             # If the sentence couldn't be parsed,
             # put an annotation on it as a whole.
             # In this case, we keep the token-level annotations.
-            err_index = sent.err_index
+            err_index = sent.err_index or 0
             start = max(0, err_index - 1)
             end = min(len(sent.tokens), err_index + 2)
             toktext = correct_spaces(
@@ -282,7 +285,7 @@ class GreynirCorrect(Greynir):
         ann.sort(key=lambda a: (a.start, -a.end))
         return ann
 
-    def create_sentence(self, job: _Job, s: List) -> _Sentence:
+    def create_sentence(self, job: _Job, s: List[Tok]) -> _Sentence:
         """ Create a fresh sentence object and annotate it
             before returning it to the client """
         sent = super().create_sentence(job, s)
