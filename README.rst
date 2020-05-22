@@ -17,6 +17,10 @@ Overview
 GreynirCorrect relies on the `Greynir <https://pypi.org/project/reynir/>`_ package,
 by the same authors, to tokenize and parse text.
 
+GreynirCorrect is documented in detail `here <https://yfirlestur.is/doc/>`_.
+
+The software has three main modes of operation, described below.
+
 Token-level correction
 ----------------------
 
