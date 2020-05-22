@@ -193,7 +193,7 @@ on the command line:
 +-------------------+---------------------------------------------------+
 
 The CSV and JSON formats are identical to those documented for the
-`Tokenizer package<https://github.com/mideind/Tokenizer>`_.
+`Tokenizer package <https://github.com/mideind/Tokenizer>`_.
 
 Type ``correct -h`` to get a short help message.
 
