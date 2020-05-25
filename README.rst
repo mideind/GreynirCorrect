@@ -253,7 +253,7 @@ Copyright and License
    :align: right
    :alt: Miðeind ehf.
 
-**Copyright (C) 2020 Miðeind ehf.**
+**Copyright © 2020 Miðeind ehf.**
 
 GreynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
 
