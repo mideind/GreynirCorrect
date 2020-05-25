@@ -17,7 +17,7 @@ Overview
 GreynirCorrect relies on the `Greynir <https://pypi.org/project/reynir/>`_ package,
 by the same authors, to tokenize and parse text.
 
-GreynirCorrect is documented in detail `here <https://yfirlestur.is/doc/>`_.
+GreynirCorrect is documented in detail `here <https://yfirlestur.is/doc/>`__.
 
 The software has three main modes of operation, described below.
 
@@ -260,8 +260,8 @@ GreynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
 Parts of this software are developed under the auspices of the
 Icelandic Government's 5-year Language Technology Programme for Icelandic,
 which is described
-`here <https://www.stjornarradid.is/lisalib/getfile.aspx?itemid=56f6368e-54f0-11e7-941a-005056bc530c>`_
-(English version `here <https://clarin.is/media/uploads/mlt-en.pdf>`_).
+`here <https://www.stjornarradid.is/lisalib/getfile.aspx?itemid=56f6368e-54f0-11e7-941a-005056bc530c>`__
+(English version `here <https://clarin.is/media/uploads/mlt-en.pdf>`__).
 
 This software is licensed under the *MIT License*:
 
