@@ -1193,9 +1193,12 @@ def lookup_unknown_words(
             context = tuple()
             continue
 
+        # Store the previous context in case we need to construct
+        # a new current context (after token substitution)
+        prev_context = context
         if token.txt:
             # Maintain a context trigram, ending with the current token
-            context = (context + tuple(token.txt.split()))[-3:]
+            context = (prev_context + tuple(token.txt.split()))[-3:]
 
         if token.kind == TOK.PUNCTUATION or token.kind == TOK.ORDINAL:
             yield token
@@ -1224,12 +1227,15 @@ def lookup_unknown_words(
             corrected_display = " ".join(corrected)
             for ix, corrected_word in enumerate(corrected):
                 if ix == 0:
-                    yield replace_word(1, token, corrected_word, corrected_display)
+                    rtok = replace_word(1, token, corrected_word, corrected_display)
                     at_sentence_start = False
                 else:
                     # In a multi-word sequence, we only mark the first
                     # token with a SpellingError
-                    yield replace_word(1, token, corrected_word, None)
+                    rtok = replace_word(1, token, corrected_word, None)
+                yield rtok
+                context = (prev_context + tuple(rtok.txt.split()))[-3:]
+                prev_context = context
             continue
 
         if token.error_code:
@@ -1248,8 +1254,11 @@ def lookup_unknown_words(
         # TODO STILLING - hér er ósamhengisháð leiðrétting!
         if not token.val and CIDErrorForms.contains(token.txt):
             corrected = CIDErrorForms.get_correct_form(token.txt)
-            yield replace_word(2, token, corrected, corrected)
+            rtok = replace_word(2, token, corrected, corrected)
             at_sentence_start = False
+            # Update the context with the replaced token
+            context = (prev_context + tuple(rtok.txt.split()))[-3:]
+            yield rtok
             continue
 
         if is_immune(token) or token.error:
@@ -1284,6 +1293,10 @@ def lookup_unknown_words(
                     # The correction simply removed "ó" from the start of the
                     # word: probably not a good idea
                     pass
+                elif not m and token.txt[0].isupper():
+                    # Don't correct uppercase words if the suggested correction
+                    # is not in BÍN
+                    pass
                 elif len(token.txt) == 1 and corrected != SINGLE_LETTER_CORRECTIONS.get(
                     (at_sentence_start, token.txt)
                 ):
@@ -1300,6 +1313,7 @@ def lookup_unknown_words(
                             )
                         )
                     yield suggest_word(1, token, corrected)
+                    # We do not update the context in this case
                     at_sentence_start = False
                     continue
                 else:
@@ -1307,7 +1321,10 @@ def lookup_unknown_words(
                     # it should replace the original word: yield it
                     if Settings.DEBUG:
                         print("Corrected '{0}' to '{1}'".format(token.txt, corrected))
-                    yield correct_word(4, token, corrected, w, m)
+                    ctok = correct_word(4, token, corrected, w, m)
+                    yield ctok
+                    # Update the context with the corrected token
+                    context = (prev_context + tuple(ctok.txt.split()))[-3:]
                     at_sentence_start = False
                     continue
 
