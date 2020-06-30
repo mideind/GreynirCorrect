@@ -64,7 +64,7 @@ from .spelling import Corrector
 
 
 # Token constructor classes
-TokenCtor = Union[Tok, Bin_TOK, "Correct_TOK"]
+TokenCtor = Union[TOK, Bin_TOK, "Correct_TOK"]
 
 # Words that contain any letter from the following set are assumed
 # to be foreign and their spelling is not corrected, but suggestions are made
@@ -882,7 +882,7 @@ class MultiwordErrorStream(MatchingStream):
                 # !!! TODO: handle all-uppercase
                 if tq[0].txt.istitle():
                     w = w.title()
-            ct = token_ctor.Word(w, m)
+            ct = cast(CorrectToken, token_ctor.Word(w, m))
             if i == 0:
                 ct.set_error(
                     PhraseError(
