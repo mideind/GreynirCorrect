@@ -958,7 +958,7 @@ WRONG_FORMERS_CI = {
 
 
 def fix_compound_words(
-    token_stream: Iterable[Tok],
+    token_stream: Iterable[CorrectToken],
     db: BIN_Db,
     token_ctor: TokenCtor,
     only_ci: bool
@@ -1106,7 +1106,7 @@ def fix_compound_words(
 def lookup_unknown_words(
     corrector: Corrector,
     token_ctor: TokenCtor,
-    token_stream: Iterable[Tok],
+    token_stream: Iterable[CorrectToken],
     only_ci: bool,
     apply_suggestions: bool
 ) -> Iterator[CorrectToken]:
