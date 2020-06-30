@@ -48,6 +48,7 @@
 """
 
 from typing import cast, Iterable, Iterator, List, Dict, Type, Optional
+
 from threading import Lock
 
 from reynir import (
