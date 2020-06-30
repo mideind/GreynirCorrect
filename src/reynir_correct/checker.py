@@ -57,6 +57,7 @@ from reynir import (
     ProgressFunc, ParseResult
 )
 from reynir.binparser import BIN_Token, BIN_Grammar
+from reynir.bintokenizer import StringIterable
 from reynir.fastparser import Fast_Parser, ParseForestNavigator, ffi
 from reynir.reducer import Reducer
 from reynir.settings import VerbSubjects
@@ -150,13 +151,13 @@ class ErrorDetectingParser(Fast_Parser):
     # Keep a separate grammar class instance and time stamp for
     # ErrorDetectingParser. This Python sleight-of-hand overrides
     # class attributes that are defined in BIN_Parser, see binparser.py.
-    _grammar_ts = None
-    _grammar = None
+    _grammar_ts = None  # type: float
+    _grammar = None  # type: BIN_Grammar
     _grammar_class = ErrorDetectingGrammar
 
     # Also keep separate class instances of the C grammar and its timestamp
     _c_grammar = ffi.NULL
-    _c_grammar_ts = None
+    _c_grammar_ts = None  # type: float
 
     @staticmethod
     def _create_wrapped_token(t, ix):
@@ -179,10 +180,10 @@ class GreynirCorrect(Greynir):
     def __init__(self):
         super().__init__()
 
-    def tokenize(self, text: str) -> Iterator[Tok]:
+    def tokenize(self, text_or_gen: StringIterable) -> Iterator[Tok]:
         """ Use the correcting tokenizer instead of the normal one """
         # The CorrectToken class is a duck-typing implementation of Tok
-        return cast(Iterator[Tok], tokenize_and_correct(text))
+        return cast(Iterator[Tok], tokenize_and_correct(text_or_gen))
 
     @property
     def parser(self) -> Fast_Parser:

@@ -461,7 +461,9 @@ class PhraseError(Error):
         return self._txt
 
 
-def parse_errors(token_stream: Iterator[Tok], db: BIN_Db, only_ci: bool):
+def parse_errors(
+    token_stream: Iterator[Tok], db: BIN_Db, only_ci: bool
+) -> Iterator[CorrectToken]:
 
     """ This tokenization phase is done before BÍN annotation
         and before static phrases are identified. It finds duplicated words,
@@ -1624,11 +1626,11 @@ class CorrectionPipeline(DefaultPipeline):
     # TOK (tokenizer.py) or Bin_TOK (bintokenizer.py)
     _token_ctor = Correct_TOK
 
-    def correct_tokens(self, stream):
+    def correct_tokens(self, stream: Iterator[Tok]) -> Iterator[CorrectToken]:
         """ Add a correction pass just before BÍN annotation """
         return parse_errors(stream, self._db, self._only_ci)
 
-    def check_spelling(self, stream):
+    def check_spelling(self, stream: Iterable[CorrectToken]) -> Iterator[CorrectToken]:
         """ Attempt to resolve unknown words """
         # Create a Corrector on the first invocation
         if self._corrector is None:
@@ -1651,8 +1653,8 @@ class CorrectionPipeline(DefaultPipeline):
         return stream
 
 
-def tokenize(text: Union[str, Iterable[str]], **options) -> Iterator[CorrectToken]:
+def tokenize(text_or_gen: StringIterable, **options) -> Iterator[CorrectToken]:
     """ Tokenize text using the correction pipeline, overriding a part
         of the default tokenization pipeline """
-    pipeline = CorrectionPipeline(text, **options)
+    pipeline = CorrectionPipeline(text_or_gen, **options)
     return pipeline.tokenize()
