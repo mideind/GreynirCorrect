@@ -35,7 +35,7 @@
 """
 
 from typing import (
-    cast, Any, Type, Union, Tuple, List, Dict, Iterable, Iterator, Optional
+    cast, Any, Type, Union, Tuple, List, Dict, Iterable, Iterator, Optional, Type
 )
 
 from collections import defaultdict
@@ -1613,6 +1613,10 @@ class CorrectionPipeline(DefaultPipeline):
     """ Override the default tokenization pipeline defined in bintokenizer.py
         in ReynirPackage, adding a correction phase """
 
+    # Use the Correct_TOK class to construct tokens, instead of
+    # TOK (tokenizer.py) or Bin_TOK (bintokenizer.py)
+    _token_ctor = Correct_TOK  # type: Type[Bin_TOK]
+
     def __init__(self, text_or_gen: StringIterable, **options) -> None:
         super().__init__(text_or_gen, **options)
         self._corrector = None  # type: Optional[Corrector]
@@ -1621,10 +1625,6 @@ class CorrectionPipeline(DefaultPipeline):
         # If apply_suggestions is True, we are aggressive in modifying
         # tokens with suggested corrections, i.e. not just suggesting them
         self._apply_suggestions = options.pop("apply_suggestions", False)
-
-    # Use the Correct_TOK class to construct tokens, instead of
-    # TOK (tokenizer.py) or Bin_TOK (bintokenizer.py)
-    _token_ctor = Correct_TOK
 
     def correct_tokens(self, stream: Iterator[Tok]) -> Iterator[CorrectToken]:
         """ Add a correction pass just before BÍN annotation """
