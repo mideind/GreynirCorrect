@@ -35,6 +35,8 @@
 
 """
 
+from typing import List
+
 import os
 import math
 import re
@@ -660,7 +662,7 @@ def test():
                 The lines are joined by newlines ('\n') but there is no trailing
                 newline. """
             result = []
-            line = []
+            line = []  # type: List[str]
             len_line = 0
             for wrd in txt.split():
                 if len_line + 1 + len(wrd) > margin:

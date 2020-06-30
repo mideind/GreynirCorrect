@@ -1022,19 +1022,20 @@ def test_correct_words(verbose=False):
 
 # Tests for checker.py
 
-def check_sentence(s, annotations):
+def check_sentence(s, annotations, is_foreign=False):
     """ Check whether a given single sentence gets the
         specified annotations when checked """
 
     def check_sent(sent):
         assert sent is not None
-        if sent.tree is None:
+        if sent.tree is None and not is_foreign:
             # If the sentence should not parse, call
             # check_sentence with annotations=None
             assert annotations is None
             return
         assert annotations is not None
-        assert sent.tree is not None
+        if not is_foreign:
+            assert sent.tree is not None
         if not annotations:
             # This sentence is not supposed to have any annotations
             assert (not hasattr(sent, "annotations")) or len(sent.annotations) == 0
@@ -1256,9 +1257,9 @@ def test_foreign_sentences(verbose=False):
         "expensive subterranean fungi, many would no doubt imagine men "
         "with dogs going through woodlands in France or Italy."
     )
-    # check_sentence(s, [(0, 33, "E004")])      # TODO þetta virðist ekki virka; strandar á því að setningin greinist ekki!
-    s = "Rock and roll er skemmtilegt."
-    check_sentence(s, [(0, 5, "E004")])
+    check_sentence(s, [(0, 31, "E004")], is_foreign=True)
+    s = "Rock and roll er great fun."
+    check_sentence(s, [(0, 6, "E004")], is_foreign=True)
 
 
 def test_conjunctions(verbose=False):

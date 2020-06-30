@@ -47,7 +47,7 @@
 
 """
 
-from typing import cast, Iterable, Iterator, List, Dict, Type
+from typing import cast, Iterable, Iterator, List, Dict, Type, Optional
 from threading import Lock
 
 from reynir import (
@@ -171,7 +171,7 @@ class GreynirCorrect(Greynir):
     # GreynirCorrect has its own class instances of a parser and a reducer,
     # separate from the Greynir class, as they use different settings and
     # parsing enviroments
-    _parser = None
+    _parser = None  # type: Optional[ErrorDetectingParser]
     _reducer = None
     _lock = Lock()
 
@@ -220,6 +220,9 @@ class GreynirCorrect(Greynir):
                 else:
                     # The word has no recognized meaning
                     words_not_in_bin += 1
+            elif t.kind == TOK.PERSON:
+                # Person names count as recognized words
+                words_in_bin += 1
             # Note: these tokens and indices are the original tokens from
             # the submitted text, including ones that are not understood
             # by the parser, such as quotation marks and exotic punctuation

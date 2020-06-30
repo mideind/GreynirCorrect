@@ -47,8 +47,8 @@ import sys
 from glob import glob
 from os.path import basename, dirname, join, splitext
 
-from setuptools import find_packages
-from setuptools import setup
+from setuptools import find_packages  # type: ignore
+from setuptools import setup  # type: ignore
 
 
 if sys.version_info < (3, 5):
@@ -113,7 +113,7 @@ setup(
     ],
     keywords=["nlp", "parser", "icelandic"],
     setup_requires=[],
-    install_requires=["reynir>=2.2.0", "icegrams>=0.6.0"],
+    install_requires=["reynir>=2.4.0", "icegrams>=0.6.0"],
     # Set up a 'correct' command ('correct.exe' on Windows),
     # which calls main() in src/reynir-correct/main.py
     entry_points={

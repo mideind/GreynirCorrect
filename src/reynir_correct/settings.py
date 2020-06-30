@@ -354,12 +354,12 @@ class OwForms:
         if c is None:
             # Not found: can't correct
             return wrong_form
-        c = c[1]
+        form = c[1]
         if wrong_form.istitle():
-            return c.title()
+            return form.title()
         if wrong_form.isupper():
-            return c.upper()
-        return c
+            return form.upper()
+        return form
 
     @staticmethod
     def get_id(wrong_form):
@@ -410,12 +410,12 @@ class CIDErrorForms:
         if c is None:
             # Not found: can't correct
             return wrong_form
-        c = c[1]
+        form = c[1]
         if wrong_form.istitle():
-            return c.title()
+            return form.title()
         if wrong_form.isupper():
-            return c.upper()
-        return c
+            return form.upper()
+        return form
 
     @staticmethod
     def get_id(wrong_form):
@@ -466,12 +466,12 @@ class CDErrorForms:
         if c is None:
             # Not found: can't correct
             return wrong_form
-        c = c[1]
+        form = c[1]
         if wrong_form.istitle():
-            return c.title()
+            return form.title()
         if wrong_form.isupper():
-            return c.upper()
-        return c
+            return form.upper()
+        return form
 
     @staticmethod
     def get_id(wrong_form):

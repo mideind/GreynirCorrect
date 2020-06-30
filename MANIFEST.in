@@ -1,3 +1,4 @@
 graft src
 prune src/reynir_correct/__pycache__
+prune src/reynir_correct/.mypy_cache
 include src/reynir_correct/config/*.conf

@@ -79,19 +79,20 @@ def dump(tokens):
             print("   {0}: {1}".format(token.error_code, err))
 
 
-def check_sentence(rc, s, annotations):
+def check_sentence(rc, s, annotations, is_foreign=False):
     """ Check whether a given single sentence gets the
         specified annotations when checked """
 
     def check_sent(sent):
         assert sent is not None
-        if sent.tree is None:
+        if sent.tree is None and not is_foreign:
             # If the sentence should not parse, call
             # check_sentence with annotations=None
             assert annotations is None
             return
         assert annotations is not None
-        assert sent.tree is not None
+        if not is_foreign:
+            assert sent.tree is not None
         if not annotations:
             # This sentence is not supposed to have any annotations
             assert (not hasattr(sent, "annotations")) or len(sent.annotations) == 0
@@ -200,17 +201,20 @@ def test_foreign_sentences(rc):
     check_sentence(
         rc,
         "It was the best of times, it was the worst of times.",
-        [(0, 13, "E004")]
+        [(0, 13, "E004")],
+        is_foreign=True
     )
     check_sentence(
         rc,
         "Praise the Lord.",
-        [(0, 3, "E004")]
+        [(0, 3, "E004")],
+        is_foreign=True
     )
     check_sentence(
         rc,
         "Borðaðu Magnyl og Xanax in Rushmore.",
-        [(0, 6, "E004")]
+        [(0, 6, "E004")],
+        is_foreign=True
     )
 
 

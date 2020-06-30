@@ -39,14 +39,22 @@
 
 """
 
-from typing import List, Tuple, Callable, Dict
+from typing import List, Tuple, Set, Callable, Dict, Optional, Union
 from threading import Lock
 from functools import partial
 
+from reynir import _Sentence
 from reynir.simpletree import SimpleTree
 from reynir.settings import VerbObjects
 
 from .annotation import Annotation
+
+
+# The types involved in pattern processing
+CheckFunction = Callable[[SimpleTree], bool]
+ContextType = Dict[str, Union[str, CheckFunction]]
+AnnotationFunction = Callable[["PatternMatcher", SimpleTree], None]
+PatternTuple = Tuple[str, str, AnnotationFunction, Optional[ContextType]]
 
 
 class PatternMatcher:
@@ -66,11 +74,16 @@ class PatternMatcher:
     # * Annotation function, called for each match
     # * Context dictionary to be passed to match_pattern()
 
-    PATTERNS = []  # type: List[Tuple[str, str, Callable, Dict]]
+    PATTERNS = []  # type: List[PatternTuple]
 
     _LOCK = Lock()
 
-    def __init__(self, ann, sent):
+    ctx_af = None  # type: ContextType
+    ctx_verb_01 = None  # type: ContextType
+    ctx_verb_02 = None  # type: ContextType
+
+
+    def __init__(self, ann: List[Annotation], sent: _Sentence) -> None:
         # Annotation list
         self._ann = ann
         # The original sentence object
@@ -85,7 +98,7 @@ class PatternMatcher:
                 # First instance: create the class-wide pattern list
                 self.create_patterns()
 
-    def wrong_preposition_af(self, match):
+    def wrong_preposition_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verb phrase
         vp = match.first_match("VP > { %verb }", self.ctx_af)
@@ -117,7 +130,7 @@ class PatternMatcher:
             )
         )
 
-    def wrong_preposition_vitni_af(self, match):
+    def wrong_preposition_vitni_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verb phrase
         # Calculate the start and end token indices, spanning both phrases
@@ -144,7 +157,7 @@ class PatternMatcher:
             )
         )
 
-    def wrong_verb_use(self, match, correct_verb):
+    def wrong_verb_use(self, match: SimpleTree, correct_verb: str) -> None:
         """ Annotate wrong verbs being used with nouns,
             for instance 'byði hnekki' where the verb should
             be 'bíða' -> 'biði hnekki' instead of 'bjóða' """
@@ -174,7 +187,7 @@ class PatternMatcher:
         )
 
     @classmethod
-    def create_patterns(cls):
+    def create_patterns(cls) -> None:
         """ Initialize the list of patterns and handling functions """
         p = cls.PATTERNS
 
@@ -249,7 +262,7 @@ class PatternMatcher:
             ))
 
         # Verbs used wrongly with particular nouns
-        def wrong_noun(nouns, tree):
+        def wrong_noun(nouns: Set[str], tree: SimpleTree) -> bool:
             """ Context matching function for the %noun macro in combinations
                 of verbs and their noun objects """
             lemma = tree.own_lemma
@@ -282,7 +295,7 @@ class PatternMatcher:
             cls.ctx_verb_02
         ))
 
-    def go(self):
+    def go(self) -> None:
         """ Apply the patterns to the sentence """
         tree = None if self._sent is None else self._sent.tree
         if tree is None:

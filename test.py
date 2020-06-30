@@ -34,13 +34,16 @@ for pg in rc.check(txt, split_paragraphs=True):
 
 sys.exit(0)
 
+import time
 
 from reynir_correct.spelling import Corrector
 from reynir.bindb import BIN_Db
-with BIN_Db.get_db() as db: c = Corrector(db)
-import time
 
-def test(word):
+with BIN_Db.get_db() as db:
+    c = Corrector(db)  # type: Corrector
+
+
+def test(c, word):
     t0 = time.time()
     result = list(c.subs(word))
     valid = [r for r in result if r in c]
@@ -50,7 +53,7 @@ def test(word):
     print(valid)
 
 
-test("hæstarréttarlögmaður")
-test("fangageimslan")
-test("ollíugeimir")
+test(c, "hæstarréttarlögmaður")
+test(c, "fangageimslan")
+test(c, "ollíugeimir")
 

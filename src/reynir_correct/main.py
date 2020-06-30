@@ -36,13 +36,15 @@
 
 """
 
+from typing import List
+
 import sys
 import argparse
 import json
 from functools import partial
 
-from tokenizer import detokenize, normalized_text_from_tokens
-from .errtokenizer import TOK, tokenize
+from tokenizer import Tok, detokenize, normalized_text_from_tokens
+from .errtokenizer import TOK, CorrectToken, Error, tokenize
 
 
 # File types for UTF-8 encoded text files
@@ -145,7 +147,7 @@ def main():
     json_dumps = partial(json.dumps, ensure_ascii=False, separators=(',', ':'))
 
     # Initialize sentence accumulator list
-    curr_sent = []
+    curr_sent = []  # type: List[CorrectToken]
 
     for t in tokenize(gen(args.infile), **options):
         if args.csv:
@@ -172,7 +174,7 @@ def main():
             v = val(t)
             if t.kind not in {TOK.WORD, TOK.PERSON, TOK.ENTITY} and v is not None:
                 d["v"] = v
-            if t.error is not None:
+            if isinstance(t.error, Error):
                 d["e"] = t.error.to_dict()
             print(json_dumps(d), file=args.outfile)
         else:
