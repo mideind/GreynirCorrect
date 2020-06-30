@@ -35,7 +35,7 @@
 
 """
 
-from typing import List
+from typing import List, Tuple
 
 import os
 import math
@@ -568,7 +568,7 @@ class Corrector:
         # Return True if the lower case version is rare
         return self.logprob(wl) < self._RARE_THRESHOLD
 
-    def correct(self, word, *, context=(), at_sentence_start=False):
+    def correct(self, word: str, *, context: Tuple=(), at_sentence_start: bool=False) -> str:
         """ Correct a single word, keeping its case (lower/upper/title) intact.
             The optional context parameter contains a tuple of preceding
             words, used to enable a more accurate probability prediction. """

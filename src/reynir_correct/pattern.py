@@ -304,6 +304,8 @@ class PatternMatcher:
         # Make a set of the lemmas in the sentence
         # (Note: these are ordinary lemmas, not middle voice lemmas, so be careful
         # not to use middle voice lemmas as trigger words)
+        if not self._sent.lemmas:
+            return
         lemmas = set(lemma.replace("-", "") for lemma in self._sent.lemmas)
         for trigger, pattern, func, context in self.PATTERNS:
             # We only do the expensive pattern matching if the trigger lemma

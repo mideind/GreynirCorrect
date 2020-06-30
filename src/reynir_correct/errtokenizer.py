@@ -34,7 +34,9 @@
 
 """
 
-from typing import cast, Any, Type, Union, Tuple, List, Dict, Iterable, Iterator
+from typing import (
+    cast, Any, Type, Union, Tuple, List, Dict, Iterable, Iterator, Optional
+)
 
 from collections import defaultdict
 from abc import ABC, abstractmethod
@@ -62,7 +64,7 @@ from .spelling import Corrector
 
 
 # Token constructor classes
-TokenCtor = Union[Tok, "CorrectToken"]
+TokenCtor = Union[Tok, Bin_TOK, "Correct_TOK"]
 
 # Words that contain any letter from the following set are assumed
 # to be foreign and their spelling is not corrected, but suggestions are made
@@ -243,11 +245,12 @@ class Error(ABC):
     """ Base class for spelling and grammar errors, warnings and recommendations.
         An Error has a code and can provide a description of itself. """
 
-    def __init__(self, code: str, is_warning: bool=False) -> None:
+    def __init__(self, code: str, is_warning: bool=False, span: int=1) -> None:
         # Note that if is_warning is True, "/w" is appended to
         # the error code. This causes the Greynir UI to display
         # a warning annotation instead of an error annotation.
         self._code = code + ("/w" if is_warning else "")
+        self._span = span
 
     @property
     def code(self) -> str:
@@ -258,6 +261,15 @@ class Error(ABC):
     def description(self) -> str:
         """ Should be overridden """
         ...
+
+    def set_span(self, span:int) -> None:
+        """ Set the number of tokens spanned by this error """
+        self._span = span
+
+    @property
+    def span(self) -> int:
+        """ Return the number of tokens spanned by this error """
+        return self._span
 
     def __str__(self) -> str:
         return "{0}: {1}".format(self.code, self.description)
@@ -276,16 +288,12 @@ class PunctuationError(Error):
 
     def __init__(self, code: str, txt: str, span: int=1) -> None:
         # Punctuation error codes start with "N"
-        super().__init__("N" + code)
+        super().__init__("N" + code, span=span)
         self._txt = txt
-        self._span = span
 
     @property
     def description(self) -> str:
         return self._txt
-
-    def set_span(self, span: int) -> None:
-        self._span = span
 
 
 class CompoundError(Error):
@@ -305,21 +313,12 @@ class CompoundError(Error):
         # Compound error codes start with "C"
         # We consider C004 to be a warning, not an error
         is_warning = code == "004"
-        super().__init__("C" + code, is_warning=is_warning)
+        super().__init__("C" + code, is_warning=is_warning, span=span)
         self._txt = txt
-        self._span = span
 
     @property
     def description(self) -> str:
         return self._txt
-
-    @property
-    def span(self) -> int:
-        return self._span
-
-    def set_span(self, span: int) -> None:
-        """ Reset the span to the given number """
-        self._span = span
 
 
 class UnknownWordError(Error):
@@ -424,7 +423,7 @@ class SpellingSuggestion(Error):
 
     # W001: Replacement suggested
 
-    def __init__(self, code: str, txt: str, suggest: bool) -> None:
+    def __init__(self, code: str, txt: str, suggest: str) -> None:
         # Spelling suggestion codes start with "W"
         super().__init__("W" + code, is_warning=True)
         self._txt = txt
@@ -435,7 +434,7 @@ class SpellingSuggestion(Error):
         return self._txt
 
     @property
-    def suggestion(self) -> bool:
+    def suggestion(self) -> str:
         return self._suggest
 
     def to_dict(self) -> Dict[str, Any]:
@@ -454,24 +453,15 @@ class PhraseError(Error):
     def __init__(self, code: str, txt: str, span: int, is_warning: bool=False) -> None:
         # Phrase error codes start with "P", and are followed by
         # a string indicating the type of error, i.e. YI for y/i, etc.
-        super().__init__("P_" + code, is_warning=is_warning)
+        super().__init__("P_" + code, is_warning=is_warning, span=span)
         self._txt = txt
-        self._span = span
 
     @property
     def description(self) -> str:
         return self._txt
 
-    @property
-    def span(self) -> int:
-        return self._span
 
-    def set_span(self, span: int) -> None:
-        """ Reset the span to the given number """
-        self._span = span
-
-
-def parse_errors(token_stream: Iterable[Tok], db: BIN_Db, only_ci: bool):
+def parse_errors(token_stream: Iterator[Tok], db: BIN_Db, only_ci: bool):
 
     """ This tokenization phase is done before BÍN annotation
         and before static phrases are identified. It finds duplicated words,
@@ -804,19 +794,23 @@ def parse_errors(token_stream: Iterable[Tok], db: BIN_Db, only_ci: bool):
                     at_sentence_start = False
                     continue
 
-            if token.kind == TOK.PUNCTUATION and token.txt != token.val[1]:
-                if token.val[1] in "„“":
+            if (
+                token.kind == TOK.PUNCTUATION
+                and token.txt != cast(Tuple[str, str], token.val)[1]
+            ):
+                ntxt = cast(Tuple[str, str], token.val)[1]
+                if ntxt in "„“":
                     # TODO Could add normalize_quotation_marks as a parameter,
                     # should normalize automatically if chosen
                     token.set_error(
                         PunctuationError(
                             "001",
                             "Gæsalappirnar {0} ættu að vera {1}".format(
-                                token.txt, token.val[1]
+                                token.txt, ntxt
                             ),
                         )
                     )
-                elif token.val[1] == "…":
+                elif ntxt == "…":
                     if token.txt == "..":
                         # Assume user meant to write a single period
                         # Doesn't happen with current tokenizer behaviour
@@ -835,13 +829,13 @@ def parse_errors(token_stream: Iterable[Tok], db: BIN_Db, only_ci: bool):
                         # Not pointed out, allowed as-is
                         # TODO could add normalize_ellipsis as a parameter here
                         pass
-                elif token.val[1] == "?!":
+                elif ntxt == "?!":
                     # Changed automatically, pointed out as informal
                     token.set_error(
                         PunctuationError(
                             "003",
                             "'{0}' er óformlegt, breytt í '{1}'".format(
-                                token.txt, token.val[1]
+                                token.txt, ntxt
                             ),
                         )
                     )
@@ -1060,7 +1054,7 @@ def fix_compound_words(
                             "Ef '{0}' er {1} á að skipta orðinu upp".format(
                                 token.txt, tp
                             ),
-                            span=2,
+                            span=2
                         )
                     )
 
@@ -1137,10 +1131,10 @@ def lookup_unknown_words(
         return False
 
     def replace_word(
-        code: str,
+        code: int,
         token: CorrectToken,
         corrected: str,
-        corrected_display: str
+        corrected_display: Optional[str]
     ) -> CorrectToken:
 
         """ Return a token for a corrected version of token_txt,
@@ -1167,7 +1161,7 @@ def lookup_unknown_words(
         return ct
 
     def correct_word(
-        code: str,
+        code: int,
         token: CorrectToken,
         corrected: str,
         w: str,
@@ -1188,7 +1182,7 @@ def lookup_unknown_words(
         ct.set_error(SpellingError("{0:03}".format(code), text))
         return ct
 
-    def suggest_word(code: str, token: CorrectToken, corrected: str) -> CorrectToken:
+    def suggest_word(code: int, token: CorrectToken, corrected: str) -> CorrectToken:
         """ Mark the current token with an annotation but don't correct
             it, as we are not confident enough of the correction """
         text = "Orðið '{0}' gæti átt að vera '{1}'".format(token.txt, corrected)
@@ -1287,8 +1281,8 @@ def lookup_unknown_words(
         # !!! TODO: Handle upper/lowercase
         # TODO STILLING - hér er ósamhengisháð leiðrétting!
         if not token.val and CIDErrorForms.contains(token.txt):
-            corrected = CIDErrorForms.get_correct_form(token.txt)
-            rtok = replace_word(2, token, corrected, corrected)
+            corr_txt = CIDErrorForms.get_correct_form(token.txt)
+            rtok = replace_word(2, token, corr_txt, corr_txt)
             at_sentence_start = False
             # Update the context with the replaced token
             context = (prev_context + tuple(rtok.txt.split()))[-3:]
@@ -1317,13 +1311,13 @@ def lookup_unknown_words(
             # We use context[-3:-1] since the current token is the last item
             # in the context tuple, and we want the bigram preceding it.
             # TODO Consider limiting to words under 15 characters
-            corrected = corrector.correct(
+            corrected_txt = corrector.correct(
                 token.txt, context=context[-3:-1], at_sentence_start=at_sentence_start
             )
-            if corrected != token.txt:
+            if corrected_txt != token.txt:
                 # We have a candidate correction: take a closer look at it
-                w, m = db.lookup_word(corrected, at_sentence_start=at_sentence_start)
-                if token.txt[0].lower() == "ó" and corrected == token.txt[1:]:
+                w, m = db.lookup_word(corrected_txt, at_sentence_start=at_sentence_start)
+                if token.txt[0].lower() == "ó" and corrected_txt == token.txt[1:]:
                     # The correction simply removed "ó" from the start of the
                     # word: probably not a good idea
                     pass
@@ -1331,7 +1325,7 @@ def lookup_unknown_words(
                     # Don't correct uppercase words if the suggested correction
                     # is not in BÍN
                     pass
-                elif len(token.txt) == 1 and corrected != SINGLE_LETTER_CORRECTIONS.get(
+                elif len(token.txt) == 1 and corrected_txt != SINGLE_LETTER_CORRECTIONS.get(
                     (at_sentence_start, token.txt)
                 ):
                     # Only allow single-letter corrections of a->á and i->í
@@ -1343,10 +1337,10 @@ def lookup_unknown_words(
                     if Settings.DEBUG:
                         print(
                             "Suggested '{1}' instead of '{0}'".format(
-                                token.txt, corrected
+                                token.txt, corrected_txt
                             )
                         )
-                    yield suggest_word(1, token, corrected)
+                    yield suggest_word(1, token, corrected_txt)
                     # We do not update the context in this case
                     at_sentence_start = False
                     continue
@@ -1354,8 +1348,8 @@ def lookup_unknown_words(
                     # We have a better candidate and are confident that
                     # it should replace the original word: yield it
                     if Settings.DEBUG:
-                        print("Corrected '{0}' to '{1}'".format(token.txt, corrected))
-                    ctok = correct_word(4, token, corrected, w, m)
+                        print("Corrected '{0}' to '{1}'".format(token.txt, corrected_txt))
+                    ctok = correct_word(4, token, corrected_txt, w, m)
                     yield ctok
                     # Update the context with the corrected token
                     context = (prev_context + tuple(ctok.txt.split()))[-3:]
@@ -1384,7 +1378,8 @@ def fix_capitalization(
     token_stream: Iterable[CorrectToken],
     db: BIN_Db,
     token_ctor: TokenCtor,
-    only_ci: bool) -> CorrectToken:
+    only_ci: bool
+) -> Iterator[CorrectToken]:
 
     """ Annotate tokens with errors if they are capitalized incorrectly """
 
@@ -1426,7 +1421,7 @@ def fix_capitalization(
         # an uppercase version is in BÍN, consider that an error
         if lower and meanings:
             # We find uppercase meanings in BÍN: do a further check
-            if all("-" in m.stofn for m in token.val):
+            if all("-" in m.stofn for m in cast(Iterable[BIN_Meaning], token.val)):
                 # If the word has no non-composite meanings in lower case,
                 # this is probably an error
                 return True
@@ -1439,7 +1434,8 @@ def fix_capitalization(
         # case: the original word may exist in its
         # original case in a non-noun/adjective category,
         # such as "finni" and "finna" as a verb
-        if lower and any(m.ordfl not in {"kk", "kvk", "hk"} for m in token.val):
+        tval = cast(Iterable[BIN_Meaning], token.val)
+        if lower and any(m.ordfl not in {"kk", "kvk", "hk"} for m in tval):
             # Not definitely wrong
             return False
         # Definitely wrong
@@ -1493,14 +1489,15 @@ def fix_capitalization(
                     else:
                         lower = token.txt.lower()
                     original_txt = token.txt
+                    tval = cast(Tuple[int, int, int], token.val)
                     if token.kind == TOK.DATEREL:
                         token = token_ctor.Daterel(
-                            lower, token.val[0], token.val[1], token.val[2]
+                            lower, tval[0], tval[1], tval[2]
                         )
                     else:
                         assert token.kind == TOK.DATEABS
                         token = token_ctor.Dateabs(
-                            lower, token.val[0], token.val[1], token.val[2]
+                            lower, tval[0], tval[1], tval[2]
                         )
                     token.set_error(
                         CapitalizationError(
@@ -1515,7 +1512,7 @@ def fix_capitalization(
             at_sentence_start = False
 
 
-def check_taboo_words(token_stream: Iterable[CorrectToken]) -> CorrectToken:
+def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectToken]:
     """ Annotate taboo words with warnings """
 
     for token in token_stream:
@@ -1616,7 +1613,7 @@ class CorrectionPipeline(DefaultPipeline):
 
     def __init__(self, text_or_gen: StringIterable, **options) -> None:
         super().__init__(text_or_gen, **options)
-        self._corrector = None
+        self._corrector = None  # type: Optional[Corrector]
         # If only_ci is True, we only correct context-independent errors
         self._only_ci = options.pop("only_ci", False)
         # If apply_suggestions is True, we are aggressive in modifying
@@ -1625,7 +1622,7 @@ class CorrectionPipeline(DefaultPipeline):
 
     # Use the Correct_TOK class to construct tokens, instead of
     # TOK (tokenizer.py) or Bin_TOK (bintokenizer.py)
-    _token_ctor = cast(Type[Bin_TOK], Correct_TOK)
+    _token_ctor = Correct_TOK
 
     def correct_tokens(self, stream):
         """ Add a correction pass just before BÍN annotation """

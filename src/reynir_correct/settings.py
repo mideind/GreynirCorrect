@@ -397,7 +397,7 @@ class CIDErrorForms:
         return CIDErrorForms.DICT[wrong_form][0]
 
     @staticmethod
-    def get_correct_form(wrong_form):
+    def get_correct_form(wrong_form: str) -> str:
         """ Return a corrected form of the given word, attempting
             to emulate the lower/upper/title case of the word """
         # First, try the original casing of the wrong form
@@ -643,9 +643,9 @@ class Settings:
         if wrong_form == correct_form:
             return
             # !!! TODO: Should do this:
-            raise ConfigError(
-                "Wrong form identical to correct form for '{0}'".format(wrong_form)
-            )
+            # raise ConfigError(
+            #     "Wrong form identical to correct form for '{0}'".format(wrong_form)
+            # )
         meaning = (
             split[1].strip(),  # Lemma (stofn)
             correct_form,      # Correct form (ordmynd)
