@@ -64,7 +64,7 @@ from .spelling import Corrector
 
 
 # Token constructor classes
-TokenCtor = Union[Bin_TOK, "Correct_TOK"]
+TokenCtor = Type[Bin_TOK]
 
 # Words that contain any letter from the following set are assumed
 # to be foreign and their spelling is not corrected, but suggestions are made
