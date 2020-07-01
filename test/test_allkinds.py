@@ -1251,7 +1251,7 @@ def test_foreign_sentences(verbose=False):
         "Brooks Koepka lék hringinn á þremur undir pari og er því "
         "líkt og Thomas og Schauffele á tíu höggum undir pari. "
     )
-    check_sentence(s, [(0, 0, "U001"), (1, 1, "U001"), (15, 15, "U001")])
+    check_sentence(s, [(14, 14, "U001")])
     s = (
         "If you asked people to try to picture hunting for truffles, the "
         "expensive subterranean fungi, many would no doubt imagine men "

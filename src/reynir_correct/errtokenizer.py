@@ -44,7 +44,8 @@ from abc import ABC, abstractmethod
 from tokenizer import Abbreviations
 from reynir import TOK, Tok
 from reynir.bintokenizer import (
-    DefaultPipeline, MatchingStream, BIN_Meaning, BIN_Db, Bin_TOK, StringIterable
+    DefaultPipeline, MatchingStream, BIN_Meaning, BIN_Db, Bin_TOK,
+    StringIterable, TokenIterator
 )
 
 from .settings import (
@@ -64,7 +65,7 @@ from .spelling import Corrector
 
 
 # Token constructor classes
-TokenCtor = Type[Bin_TOK]
+TokenCtor = Type["Correct_TOK"]
 
 # Words that contain any letter from the following set are assumed
 # to be foreign and their spelling is not corrected, but suggestions are made
@@ -870,7 +871,7 @@ class MultiwordErrorStream(MatchingStream):
             that is being replaced """
         return MultiwordErrors.get_phrase_length(ix)
 
-    def match(self, tq: List[Tok], ix: int) -> Iterator[CorrectToken]:
+    def match(self, tq: List[Tok], ix: int) -> Iterable[Tok]:
         """ This is a complete match of an error phrase;
             yield the replacement phrase """
         replacement = MultiwordErrors.get_replacement(ix)
@@ -900,12 +901,12 @@ class MultiwordErrorStream(MatchingStream):
                 # continuation tokens to True, thus avoiding
                 # further meddling with them
                 ct.set_error(True)
-            yield ct
+            yield cast(Tok, ct)
 
 
 def handle_multiword_errors(
-    token_stream: Iterable[Tok], db: BIN_Db, token_ctor: TokenCtor
-):
+    token_stream: Iterator[CorrectToken], db: BIN_Db, token_ctor: TokenCtor
+) -> Iterator[CorrectToken]:
 
     """ Parse a stream of tokens looking for multiword phrases
         containing errors.
@@ -914,7 +915,11 @@ def handle_multiword_errors(
     """
 
     mwes = MultiwordErrorStream(db, token_ctor)
-    yield from mwes.process(token_stream)
+    tok_stream = cast(Iterator[Tok], token_stream)
+    yield from cast(
+        Iterator[CorrectToken],
+        mwes.process(tok_stream)
+    )
 
 
 # Compound word stuff
@@ -1615,7 +1620,7 @@ class CorrectionPipeline(DefaultPipeline):
 
     # Use the Correct_TOK class to construct tokens, instead of
     # TOK (tokenizer.py) or Bin_TOK (bintokenizer.py)
-    _token_ctor = Correct_TOK  # type: Type[Bin_TOK]
+    _token_ctor = cast(Type[Bin_TOK], Correct_TOK)
 
     def __init__(self, text_or_gen: StringIterable, **options) -> None:
         super().__init__(text_or_gen, **options)
@@ -1626,35 +1631,41 @@ class CorrectionPipeline(DefaultPipeline):
         # tokens with suggested corrections, i.e. not just suggesting them
         self._apply_suggestions = options.pop("apply_suggestions", False)
 
-    def correct_tokens(self, stream: Iterator[Tok]) -> Iterator[CorrectToken]:
+    def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """ Add a correction pass just before BÍN annotation """
-        return parse_errors(stream, self._db, self._only_ci)
+        assert self._db is not None
+        return cast(TokenIterator, parse_errors(stream, self._db, self._only_ci))
 
-    def check_spelling(self, stream: Iterable[CorrectToken]) -> Iterator[CorrectToken]:
+    def check_spelling(self, stream: TokenIterator) -> TokenIterator:
         """ Attempt to resolve unknown words """
         # Create a Corrector on the first invocation
+        assert self._db is not None
         if self._corrector is None:
             self._corrector = Corrector(self._db)
         only_ci = self._only_ci
+        # Shenanigans to satisfy mypy
+        token_ctor = cast(TokenCtor, self._token_ctor)
+        ct_stream = cast(Iterator[CorrectToken], stream)
         # Fix compound words
-        stream = fix_compound_words(stream, self._db, self._token_ctor, only_ci)
+        ct_stream = fix_compound_words(ct_stream, self._db, token_ctor, only_ci)
         # Fix multiword error phrases
         if not only_ci:
-            stream = handle_multiword_errors(stream, self._db, self._token_ctor)
+            ct_stream = handle_multiword_errors(ct_stream, self._db, token_ctor)
         # Fix capitalization
-        stream = fix_capitalization(stream, self._db, self._token_ctor, only_ci)
+        ct_stream = fix_capitalization(ct_stream, self._db, token_ctor, only_ci)
         # Fix single-word errors
-        stream = lookup_unknown_words(
-            self._corrector, self._token_ctor, stream, only_ci, self._apply_suggestions
+        ct_stream = lookup_unknown_words(
+            self._corrector, token_ctor,
+            ct_stream, only_ci, self._apply_suggestions
         )
         # Check taboo words
         if not only_ci:
-            stream = check_taboo_words(stream)
-        return stream
+            ct_stream = check_taboo_words(ct_stream)
+        return cast(TokenIterator, ct_stream)
 
 
 def tokenize(text_or_gen: StringIterable, **options) -> Iterator[CorrectToken]:
-    """ Tokenize text using the correction pipeline, overriding a part
-        of the default tokenization pipeline """
+    """ Tokenize text using the correction pipeline,
+        overriding a part of the default tokenization pipeline """
     pipeline = CorrectionPipeline(text_or_gen, **options)
-    return pipeline.tokenize()
+    return cast(Iterator[CorrectToken], pipeline.tokenize())
