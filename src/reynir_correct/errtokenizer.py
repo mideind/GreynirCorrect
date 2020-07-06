@@ -44,8 +44,8 @@ from abc import ABC, abstractmethod
 from tokenizer import Abbreviations
 from reynir import TOK, Tok
 from reynir.bintokenizer import (
-    DefaultPipeline, MatchingStream, BIN_Meaning, BIN_Db, Bin_TOK,
-    StringIterable, TokenIterator
+    DefaultPipeline, MatchingStream, load_token,
+    BIN_Db, Bin_TOK, BIN_Meaning, StringIterable, TokenIterator
 )
 
 from .settings import (
@@ -134,6 +134,18 @@ WRONG_ABBREVS = {
     "ca": "ca.",
 }
 
+# A dictionary of token error classes, used in serialization
+ErrorType = Type["Error"]
+ERROR_CLASS_REGISTRY = dict()  # type: Dict[str, ErrorType]
+
+
+def register_error_class(cls: ErrorType) -> ErrorType:
+    """ A decorator that populates the registry of all error classes,
+        to aid in serialization """
+    global ERROR_CLASS_REGISTRY
+    ERROR_CLASS_REGISTRY[cls.__name__] = cls
+    return cls
+
 
 def emulate_case(s: str, template: str) -> str:
     """ Return the string s but emulating the case of the template
@@ -170,6 +182,62 @@ class CorrectToken:
     def __getitem__(self, index: int) -> Union[int, str, None, Tuple, List]:
         """ Support tuple-style indexing, as raw tokens do """
         return (self.kind, self.txt, self.val)[index]
+
+    def __eq__(self, other: Any) -> bool:
+        """ Comparison between two CorrectToken instances """
+        if not isinstance(other, CorrectToken):
+            return False
+        return (
+            self.kind == other.kind and self.txt == other.txt
+            and self.val == other.val and self._err == other._err
+        )
+
+    def __ne__(self, other: Any) -> bool:
+        """ Comparison between two CorrectToken instances """
+        return not self.__eq__(other)
+
+    @staticmethod
+    def dump(tok: Union[Tok, "CorrectToken"]) -> Tuple:
+        """ Returns a JSON-dumpable object corresponding to a CorrectToken """
+        if not hasattr(tok, '_err'):
+            # We assume this is a "plain" token, i.e. (kind, txt, val)
+            assert isinstance(tok, Tok)
+            return tuple(tok)
+        # This looks like a CorrectToken
+        assert isinstance(tok, CorrectToken)
+        t = (tok.kind, tok.txt, tok.val)
+        err = tok._err
+        if err is None or isinstance(err, bool):
+            # Simple err field: return a 4-tuple
+            return t + (err,)
+        # This token has an associated error object:
+        # return a 5-tuple with the error class name and instance dict
+        # (which must be JSON serializable!)
+        return t + (err.__class__.__name__, err.__dict__)
+
+    @staticmethod
+    def load(*args) -> "CorrectToken":
+        """ Loads a CorrectToken instance from a JSON dump """
+        largs = len(args)
+        assert largs > 3
+        ct = CorrectToken(*load_token(*args))
+        if largs == 4:
+            # Simple err field: add it
+            ct.set_error(args[3])
+            return ct
+        # 5-tuple: We have a proper error object
+        error_class_name = args[3]
+        error_dict = args[4]
+        error_cls = ERROR_CLASS_REGISTRY[error_class_name]
+        # Python hack to create a fresh, empty instance of the
+        # error class, then update its dict directly from the JSON data.
+        # Note that directly assigning __dict__ = error_dict causes
+        # a segfault on PyPy, hence the .update() call - which anyway
+        # feels cleaner.
+        instance = error_cls.__new__(error_cls)
+        instance.__dict__.update(error_dict)
+        ct.set_error(instance)
+        return ct
 
     @classmethod
     def from_token(cls, token: Tok) -> "CorrectToken":
@@ -244,7 +312,10 @@ class CorrectToken:
 class Error(ABC):
 
     """ Base class for spelling and grammar errors, warnings and recommendations.
-        An Error has a code and can provide a description of itself. """
+        An Error has a code and can provide a description of itself.
+        Note that Error instances (including subclass instances) are
+        serialized to JSON and must therefore only contain serializable
+        attributes, in a plain __dict__. """
 
     def __init__(self, code: str, is_warning: bool=False, span: int=1) -> None:
         # Note that if is_warning is True, "/w" is appended to
@@ -252,6 +323,16 @@ class Error(ABC):
         # a warning annotation instead of an error annotation.
         self._code = code + ("/w" if is_warning else "")
         self._span = span
+
+    def __eq__(self, other: Any) -> bool:
+        return (
+            isinstance(other, Error)
+            and self._code == other._code
+            and self._span == other._span
+        )
+
+    def __ne__(self, other: Any) -> bool:
+        return not self.__eq__(other)
 
     @property
     def code(self) -> str:
@@ -275,10 +356,17 @@ class Error(ABC):
     def __str__(self) -> str:
         return "{0}: {1}".format(self.code, self.description)
 
+    def __repr__(self) -> str:
+        return "<{3} {0}: {1} (span {2})>".format(
+            self.code, self.description, self.span,
+            self.__class__.__name__
+        )
+
     def to_dict(self) -> Dict[str, Any]:
         return {"code": self.code, "descr": self.description}
 
 
+@register_error_class
 class PunctuationError(Error):
 
     """ A PunctuationError is an error where punctuation is wrong """
@@ -297,6 +385,7 @@ class PunctuationError(Error):
         return self._txt
 
 
+@register_error_class
 class CompoundError(Error):
 
     """ A CompoundError is an error where words are duplicated, split or not
@@ -322,6 +411,7 @@ class CompoundError(Error):
         return self._txt
 
 
+@register_error_class
 class UnknownWordError(Error):
 
     """ An UnknownWordError is an error where the given word form does not
@@ -340,6 +430,7 @@ class UnknownWordError(Error):
         return self._txt
 
 
+@register_error_class
 class CapitalizationError(Error):
 
     """ A CapitalizationError is an error where a word is capitalized
@@ -361,6 +452,7 @@ class CapitalizationError(Error):
         return self._txt
 
 
+@register_error_class
 class AbbreviationError(Error):
 
     """ An AbbreviationError is an error where an abbreviation
@@ -378,6 +470,7 @@ class AbbreviationError(Error):
         return self._txt
 
 
+@register_error_class
 class TabooWarning(Error):
 
     """ A TabooWarning marks a word that is vulgar or not appropriate
@@ -395,6 +488,7 @@ class TabooWarning(Error):
         return self._txt
 
 
+@register_error_class
 class SpellingError(Error):
 
     """ A SpellingError is an erroneous word that was replaced
@@ -417,6 +511,7 @@ class SpellingError(Error):
         return self._txt
 
 
+@register_error_class
 class SpellingSuggestion(Error):
 
     """ A SpellingSuggestion is an annotation suggesting that
@@ -444,6 +539,7 @@ class SpellingSuggestion(Error):
         return d
 
 
+@register_error_class
 class PhraseError(Error):
 
     """ A PhraseError is a wrong multiword phrase, where a word is out

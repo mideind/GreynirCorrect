@@ -44,7 +44,7 @@ from .checker import (
 __author__ = u"Miðeind ehf"
 __copyright__ = "(C) 2020 Miðeind ehf."
 # Remember to update the version in setup.py as well
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 Settings.read("config/GreynirCorrect.conf")

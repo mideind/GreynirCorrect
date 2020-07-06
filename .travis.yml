@@ -23,7 +23,6 @@ install:
   - python -m pip install -e .
 
 script:
-  - if [ "$TRAVIS_PYTHON_VERSION" == "3.5" ]; then python -m mypy --version; fi
   - if [ "$TRAVIS_PYTHON_VERSION" == "3.5" ]; then python -m mypy src/reynir_correct/__init__.py; fi
   - python -m pytest
 

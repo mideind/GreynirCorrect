@@ -47,7 +47,7 @@
 
 """
 
-from typing import cast, Iterable, Iterator, List, Dict, Type, Optional
+from typing import cast, Iterable, Iterator, List, Tuple, Dict, Type, Optional
 
 from threading import Lock
 
@@ -63,7 +63,9 @@ from reynir.reducer import Reducer
 from reynir.settings import VerbSubjects
 
 from .annotation import Annotation
-from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
+from .errtokenizer import (
+    CorrectToken, tokenize as tokenize_and_correct
+)
 from .errfinder import ErrorFinder
 from .pattern import PatternMatcher
 
@@ -177,13 +179,29 @@ class GreynirCorrect(Greynir):
     _reducer = None
     _lock = Lock()
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     def tokenize(self, text_or_gen: StringIterable) -> Iterator[Tok]:
         """ Use the correcting tokenizer instead of the normal one """
         # The CorrectToken class is a duck-typing implementation of Tok
         return cast(Iterator[Tok], tokenize_and_correct(text_or_gen))
+
+    @staticmethod
+    def _dump_token(tok: Tok) -> Tuple:
+        """ Override token dumping function from Greynir,
+            providing a JSON-dumpable object """
+        return CorrectToken.dump(cast(CorrectToken, tok))
+
+    @classmethod
+    def _load_token(cls, *args):
+        """ Load token from serialized data """
+        largs = len(args)
+        if largs == 3:
+            # Plain ol' token
+            return super()._load_token(*args)
+        # This is a CorrectToken: pass it to that class for handling
+        return CorrectToken.load(*args)
 
     @property
     def parser(self) -> Fast_Parser:
