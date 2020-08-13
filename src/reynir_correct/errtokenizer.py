@@ -441,6 +441,8 @@ class CapitalizationError(Error):
     # Z001: Word should begin with lowercase letter
     # Z002: Word should begin with uppercase letter
     # Z003: Month name should begin with lowercase letter
+    # Z004: Numbers should be written in lowercase ('24 milljónir')
+    # Z005: Amounts should be written in lowercase ('24 milljónir króna')
 
     def __init__(self, code: str, txt: str) -> None:
         # Capitalization error codes start with "Z"
@@ -1609,10 +1611,62 @@ def fix_capitalization(
                             "að byrja á lágstaf".format(original_txt),
                         )
                     )
+
         yield token
         if token.kind != TOK.PUNCTUATION and token.kind != TOK.ORDINAL:
             # !!! TODO: This may need to be made more intelligent
             at_sentence_start = False
+
+
+def late_fix_capitalization(
+    token_stream: Iterable[CorrectToken],
+    db: BIN_Db,
+    token_ctor: TokenCtor,
+    only_ci: bool
+) -> Iterator[CorrectToken]:
+
+    """ Annotate final, coalesced tokens with errors
+        if they are capitalized incorrectly """
+
+    for token in token_stream:
+        if token.kind == TOK.NUMBER:
+            if token.txt.upper() == token.txt:
+                # ALL-CAPS: don't worry about it
+                pass
+            else:
+                original_txt = token.txt
+                lower = token.txt.lower()
+                tval = cast(Tuple[int, int, int], token.val)
+                token = token_ctor.Number(
+                    lower, tval[0], tval[1], tval[2]
+                )
+                token.set_error(
+                    CapitalizationError(
+                        "004",
+                        "Töluna eða fjárhæðina '{0}' á að rita "
+                        "með lágstöfum".format(original_txt),
+                    )
+                )
+        elif token.kind == TOK.AMOUNT:
+            if token.txt.upper() == token.txt:
+                # ALL-CAPS: don't worry about it
+                pass
+            else:
+                original_txt = token.txt
+                lower = token.txt.lower()
+                # token.val tuple: (n, iso, cases, genders)
+                tval = cast(Tuple[float, str, Any, Any], token.val)
+                token = token_ctor.Amount(
+                    lower, tval[1], tval[0], tval[2], tval[3]
+                )
+                token.set_error(
+                    CapitalizationError(
+                        "005",
+                        "Fjárhæðina '{0}' á að rita "
+                        "með lágstöfum".format(original_txt),
+                    )
+                )
+        yield token
 
 
 def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectToken]:
@@ -1661,6 +1715,16 @@ class Correct_TOK(TOK):
     @staticmethod
     def Number(w, n, cases=None, genders=None, token=None):
         ct = CorrectToken(TOK.NUMBER, w, (n, cases, genders))
+        if token is not None:
+            # This token is being constructed in reference to a previously
+            # generated token, or a list of tokens, which might have had
+            # an associated error: make sure that it is preserved
+            ct.copy_error(token, coalesce=True)
+        return ct
+
+    @staticmethod
+    def Amount(w: str, iso: str, n: float, cases=None, genders=None, token=None) -> CorrectToken:
+        ct = CorrectToken(TOK.AMOUNT, w, (n, iso, cases, genders))
         if token is not None:
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
@@ -1758,6 +1822,17 @@ class CorrectionPipeline(DefaultPipeline):
         if not only_ci:
             ct_stream = check_taboo_words(ct_stream)
         return cast(TokenIterator, ct_stream)
+
+    def final_correct(self, stream: TokenIterator) -> TokenIterator:
+        """ Final correction pass """
+        assert self._db is not None
+        # Fix capitalization of final, coalesced tokens, such
+        # as numbers ('24 Milljónir') and amounts ('3 Þúsund Dollarar')
+        token_ctor = cast(TokenCtor, self._token_ctor)
+        return cast(
+            TokenIterator,
+            late_fix_capitalization(stream, self._db, token_ctor, self._only_ci)
+        )
 
 
 def tokenize(text_or_gen: StringIterable, **options) -> Iterator[CorrectToken]:
