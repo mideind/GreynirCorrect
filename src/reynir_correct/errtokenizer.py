@@ -38,6 +38,7 @@ from typing import (
     cast, Any, Type, Union, Tuple, List, Dict, Iterable, Iterator, Optional, Type
 )
 
+import re
 from collections import defaultdict
 from abc import ABC, abstractmethod
 
@@ -1628,36 +1629,61 @@ def late_fix_capitalization(
     """ Annotate final, coalesced tokens with errors
         if they are capitalized incorrectly """
 
+    def number_error(
+        token: CorrectToken, replace: str, code: str, instruction_txt: str
+    ) -> CorrectToken:
+        """ Mark a number token with a capitalization error """
+        original_txt = token.txt
+        tval = cast(Tuple[int, int, int], token.val)
+        token = token_ctor.Number(replace, tval[0], tval[1], tval[2])
+        token.set_error(
+            CapitalizationError(
+                code,
+                "Töluna eða fjárhæðina '{0}' á að rita {1}"
+                .format(original_txt, instruction_txt),
+            )
+        )
+        return token
+
+    at_sentence_start = False
+
     for token in token_stream:
+        if token.kind == TOK.S_BEGIN:
+            yield token
+            at_sentence_start = True
+            continue
         if token.kind == TOK.NUMBER:
-            if token.txt.upper() == token.txt:
-                # ALL-CAPS: don't worry about it
+            if re.match(r"[0-9.,]+$", token.txt) or token.txt.isupper():
+                # '1.234,56' or '24 MILLJÓNIR' is always OK
+                pass
+            elif at_sentence_start:
+                if token.txt[0].isnumeric() and not token.txt[1:].islower():
+                    # '500 Milljónir' at sentence start
+                    token = number_error(token, token.txt.lower(), "004", "með lágstöfum")
+                elif token.txt[0].isupper() and not token.txt[1:].islower():
+                    # 'Fimm Hundruð milljónir' at sentence start
+                    token = number_error(token, token.txt.capitalize(), "005", "með hástaf aðeins í upphafi")
+                elif token.txt[0].islower():
+                    # 'fimm hundruð milljónir' at sentence start
+                    token = number_error(token, token.txt.capitalize(), "006", "með hástaf")
+            elif token.txt.islower():
+                # All lower case: OK
                 pass
             else:
-                original_txt = token.txt
-                lower = token.txt.lower()
-                tval = cast(Tuple[int, int, int], token.val)
-                token = token_ctor.Number(
-                    lower, tval[0], tval[1], tval[2]
-                )
-                token.set_error(
-                    CapitalizationError(
-                        "004",
-                        "Töluna eða fjárhæðina '{0}' á að rita "
-                        "með lágstöfum".format(original_txt),
-                    )
-                )
+                # Mixed case: something strange going on
+                token = number_error(token, token.txt.lower(), "004", "með lágstöfum")
         elif token.kind == TOK.AMOUNT:
-            if token.txt.upper() == token.txt:
-                # ALL-CAPS: don't worry about it
+            if token.txt.islower() or token.txt.isupper():
+                # All lower case or ALL-CAPS: don't worry about it
                 pass
             else:
+                # Mixed case: something strange going on
                 original_txt = token.txt
                 lower = token.txt.lower()
                 # token.val tuple: (n, iso, cases, genders)
-                tval = cast(Tuple[float, str, Any, Any], token.val)
+                tval2 = cast(Tuple[float, str, Any, Any], token.val)
                 token = token_ctor.Amount(
-                    lower, tval[1], tval[0], tval[2], tval[3]
+                    lower, tval2[1], tval2[0], tval2[2], tval2[3]
                 )
                 token.set_error(
                     CapitalizationError(
@@ -1667,6 +1693,9 @@ def late_fix_capitalization(
                     )
                 )
         yield token
+        if token.kind != TOK.PUNCTUATION and token.kind != TOK.ORDINAL:
+            # !!! TODO: This may need to be made more intelligent
+            at_sentence_start = False
 
 
 def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectToken]:
@@ -1829,9 +1858,10 @@ class CorrectionPipeline(DefaultPipeline):
         # Fix capitalization of final, coalesced tokens, such
         # as numbers ('24 Milljónir') and amounts ('3 Þúsund Dollarar')
         token_ctor = cast(TokenCtor, self._token_ctor)
+        ct_stream = cast(Iterator[CorrectToken], stream)
         return cast(
             TokenIterator,
-            late_fix_capitalization(stream, self._db, token_ctor, self._only_ci)
+            late_fix_capitalization(ct_stream, self._db, token_ctor, self._only_ci)
         )
 
 

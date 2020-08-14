@@ -51,6 +51,10 @@ def dump(tokens):
             print("   {0}: {1}".format(token.error_code, err))
 
 
+def gen_to_string(g):
+    return tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt))
+
+
 def test_correct(verbose=False):
     """ Test the spelling and grammar correction module """
 
@@ -70,7 +74,7 @@ def test_correct(verbose=False):
     assert g[19].error_code == "S001"  # aldrey
     assert g[20].error_code == "C003"  # aftaka veður -> aftakaveður
 
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "báðum megin" in s
     assert "upp undir" in s
     assert "aldrei" in s
@@ -90,7 +94,7 @@ def test_correct(verbose=False):
     assert g[6].error_code == "S004"  # ýtrekað -> ítrekað
     assert g[10].error_code == "U001"  # cyclotroninn
 
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "Müller" in s
     assert "ítrekað" in s
     assert "ýtrekað" not in s
@@ -110,7 +114,7 @@ def test_correct(verbose=False):
     assert g[6].error_code == "C002"
     assert g[21].error_code == "C002"
 
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "allt saman" in s
     assert "alls ekki" in s
     assert "hafið hafið" in s
@@ -128,7 +132,7 @@ def test_correct(verbose=False):
     assert g[5].error_code == "C001"  # áður áður
     assert g[18].error_code == "C001"  # hækkun hækkun
 
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "áður áður" not in s
     assert "hækkun hækkun" not in s
     assert "klukkustundar frest" not in s
@@ -147,7 +151,7 @@ def test_allowed_multiples(verbose=False):
     g = list(g)
     if verbose: dump(g)
 
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "gerði gerði" in s
     assert "á Á á á á" in s
 
@@ -162,7 +166,7 @@ def test_wrong_compounds(verbose=False):
     g = list(g)
     if verbose: dump(g)
 
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "allskonar" not in s
     assert "alls konar" in s
     assert "annarsstaðar" not in s
@@ -181,7 +185,7 @@ def test_split_compounds(verbose=False):
     g = list(g)
     if verbose: dump(g)
 
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "bakdyra megin" not in s
     assert "bakdyramegin" in s
     assert "auka herbergi" not in s
@@ -202,7 +206,7 @@ def test_unique_errors(verbose=False):
     g = rc.tokenize("Hann er einhverskonar asni en það er a.m.k rétt.")
     g = list(g)
     if verbose: dump(g)
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "a.m.k " not in s
     assert "a. m. k " not in s
     assert "a. m. k. " in s
@@ -218,7 +222,7 @@ def test_unique_errors(verbose=False):
     g = list(g)
     if verbose: dump(g)
 
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "Björgvinn" not in s
     assert "Björgvin" in s
     assert "efitr" not in s
@@ -235,7 +239,7 @@ def test_unique_errors(verbose=False):
     g = rc.tokenize("Mér er sama þótt hann deyji enda er hann einhversslags asni.")
     g = list(g)
     if verbose: dump(g)
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "deyji" not in s
     assert "deyi" in s
     assert "einhversslags" not in s
@@ -254,7 +258,7 @@ def test_error_forms(verbose=False):
     g = list(g)
     if verbose: dump(g)
 
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "Fellibylir" not in s
     assert "Fellibyljir" in s
     assert "jafvel" not in s
@@ -276,7 +280,7 @@ def test_capitalization_errors(verbose=False):
     g = list(g)
     if verbose: dump(g)
 
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert s.startswith("Íslenskir ")
     assert "Danska" not in s
     assert "danska" in s
@@ -296,7 +300,7 @@ def test_capitalization_errors(verbose=False):
     )
     g = list(g)
     if verbose: dump(g)
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert s.startswith("Finnar ")
     assert "finnarnir" not in s
     assert "Finnarnir" in s
@@ -310,7 +314,7 @@ def test_capitalization_errors(verbose=False):
     )
     g = list(g)
     if verbose: dump(g)
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert s.startswith("Gyðingurinn ")
     assert "Lenínisminn" not in s
     assert "lenínisminn" in s
@@ -327,7 +331,7 @@ def test_capitalization_errors(verbose=False):
     )
     g = list(g)
     if verbose: dump(g)
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "Desember" not in s
     assert "desember" in s
     assert "JÚLÍ" in s
@@ -342,7 +346,7 @@ def test_capitalization_errors(verbose=False):
     )
     g = list(g)
     if verbose: dump(g)
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "30. Janúar" not in s
     assert "30. janúar" in s
     assert "Febrúar" not in s
@@ -353,6 +357,64 @@ def test_capitalization_errors(verbose=False):
     assert "kemur ágúst" not in s
     assert "þriðja Júlí" not in s
     assert "þriðja júlí" in s
+
+
+def test_capitalization_of_numbers(verbose=False):
+    g = rc.tokenize("Fjögur hundruð manns komu saman í dag.")
+    s = gen_to_string(g)
+    assert "Fjögur hundruð manns" in s
+    g = rc.tokenize("FJÖGUR HUNDRUÐ manns komu saman í dag.")
+    s = gen_to_string(g)
+    assert "FJÖGUR HUNDRUÐ manns" in s
+    g = rc.tokenize("Fjögur Hundruð manns komu saman í dag.")
+    s = gen_to_string(g)
+    # assert "Fjögur hundruð manns" in s  # !!! Needs BÍN fix, upcoming
+    g = rc.tokenize("Fjögur Þúsund manns komu saman í dag.")
+    s = gen_to_string(g)
+    assert "Fjögur þúsund manns" in s
+    g = rc.tokenize("Fjórar Milljónir manna komu saman í dag.")
+    s = gen_to_string(g)
+    assert "Fjórar milljónir manna" in s
+    g = rc.tokenize("Fjórar MILLJÓNIR manna komu saman í dag.")
+    s = gen_to_string(g)
+    assert "Fjórar milljónir manna" in s
+    g = rc.tokenize("fjögur hundruð manns komu saman í dag.")
+    s = gen_to_string(g)
+    assert "Fjögur hundruð manns" in s
+    g = rc.tokenize("400 þúsund manns komu saman í dag.")
+    s = gen_to_string(g)
+    assert "400 þúsund manns" in s
+    g = rc.tokenize("400 Þúsund manns komu saman í dag.")
+    s = gen_to_string(g)
+    assert "400 þúsund manns" in s
+
+    g = rc.tokenize("Tilkynnt var að Fjögur hundruð manns kæmu saman í dag.")
+    s = gen_to_string(g)
+    assert "fjögur hundruð manns" in s
+    g = rc.tokenize("Tilkynnt var að FJÖGUR HUNDRUÐ manns kæmu saman í dag.")
+    s = gen_to_string(g)
+    assert "FJÖGUR HUNDRUÐ manns" in s
+    g = rc.tokenize("Tilkynnt var að Fjögur Hundruð manns kæmu saman í dag.")
+    s = gen_to_string(g)
+    # assert "fjögur hundruð manns" in s  # !!! Needs BÍN fix, upcoming
+    g = rc.tokenize("Tilkynnt var að Fjögur Þúsund manns kæmu saman í dag.")
+    s = gen_to_string(g)
+    assert "fjögur þúsund manns" in s
+    g = rc.tokenize("Tilkynnt var að Fjórar Milljónir manna kæmu saman í dag.")
+    s = gen_to_string(g)
+    assert "fjórar milljónir manna" in s
+    g = rc.tokenize("Tilkynnt var að Fjórar MILLJÓNIR manna kæmu saman í dag.")
+    s = gen_to_string(g)
+    assert "fjórar milljónir manna" in s
+    g = rc.tokenize("Tilkynnt var að fjögur hundruð manns kæmu saman í dag.")
+    s = gen_to_string(g)
+    assert "fjögur hundruð manns" in s
+    g = rc.tokenize("Tilkynnt var að 400 þúsund manns kæmu saman í dag.")
+    s = gen_to_string(g)
+    assert "400 þúsund manns" in s
+    g = rc.tokenize("Tilkynnt var að 400 Þúsund manns kæmu saman í dag.")
+    s = gen_to_string(g)
+    assert "400 þúsund manns" in s
 
 
 def test_taboo_words(verbose=False):
@@ -379,7 +441,7 @@ def test_multiword_errors(verbose=False):
     g = rc.tokenize(sent)
     g = list(g)
     if verbose: dump(g)
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
 
     assert "Af gefnu" not in s
     assert "Að gefnu" in s
@@ -408,7 +470,7 @@ def test_complex(verbose=False):
     g = rc.tokenize(s)
     g = list(g)
     if verbose: dump(g)
-    s = tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt is not None))
+    s = gen_to_string(g)
     assert "malefnis" not in s
     assert "málefnis" in s
     assert "attu" not in s
