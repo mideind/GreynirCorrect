@@ -1752,7 +1752,7 @@ class Correct_TOK(TOK):
         return ct
 
     @staticmethod
-    def Amount(w: str, iso: str, n: float, cases=None, genders=None, token=None) -> CorrectToken:
+    def Amount(w, iso, n, cases=None, genders=None, token=None):
         ct = CorrectToken(TOK.AMOUNT, w, (n, iso, cases, genders))
         if token is not None:
             # This token is being constructed in reference to a previously
