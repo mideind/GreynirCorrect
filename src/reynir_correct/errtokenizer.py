@@ -42,7 +42,7 @@ import re
 from collections import defaultdict
 from abc import ABC, abstractmethod
 
-from tokenizer import Abbreviations
+from tokenizer import Abbreviations, detokenize
 from reynir import TOK, Tok
 from reynir.bintokenizer import (
     DefaultPipeline, MatchingStream, load_token,
@@ -1523,13 +1523,17 @@ def fix_capitalization(
             # don't bother
             return False
         meanings = db.meanings(rev_word) or []
-        # If this is a lowercase word without BÍN meanings ('ástralía') but
-        # an uppercase version is in BÍN, consider that an error
-        if lower and meanings:
-            # We find uppercase meanings in BÍN: do a further check
-            if all("-" in m.stofn for m in cast(Iterable[BIN_Meaning], token.val)):
-                # If the word has no non-composite meanings in lower case,
-                # this is probably an error
+        # If this is a word without BÍN meanings ('ástralía') but
+        # an reversed-case version is in BÍN (without being a compound),
+        # consider that an error
+        if lower and any("-" not in m.stofn for m in meanings):
+            # We find reversed-case meanings in BÍN: do a further check
+            if all(
+                m.stofn.islower() != lower or "-" in m.stofn
+                for m in cast(Iterable[BIN_Meaning], token.val)
+            ):
+                # If the word has no non-composite meanings
+                # in its original case, this is probably an error
                 return True
         # If we don't find any of the stems of the "corrected"
         # meanings in the corrected error set (SET_REV),
@@ -1563,7 +1567,8 @@ def fix_capitalization(
                     token = token_ctor.Word(w, m, token=token)
                     token.set_error(
                         CapitalizationError(
-                            "002", "Orð á að byrja á hástaf: '{0}'".format(original_txt)
+                            "002",
+                            "Orð á að byrja á hástaf: '{0}'".format(original_txt),
                         )
                     )
                 else:
@@ -1692,6 +1697,9 @@ def late_fix_capitalization(
                         "með lágstöfum".format(original_txt),
                     )
                 )
+        elif token.kind == TOK.MEASUREMENT:
+            # !!! TODO
+            pass
         yield token
         if token.kind != TOK.PUNCTUATION and token.kind != TOK.ORDINAL:
             # !!! TODO: This may need to be made more intelligent

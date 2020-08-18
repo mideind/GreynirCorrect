@@ -55,6 +55,10 @@ def gen_to_string(g):
     return tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt))
 
 
+def roundtrip(s):
+    return rc.detokenize(rc.tokenize(s))
+
+
 def test_correct(verbose=False):
     """ Test the spelling and grammar correction module """
 
@@ -368,7 +372,7 @@ def test_capitalization_of_numbers(verbose=False):
     assert "FJÖGUR HUNDRUÐ manns" in s
     g = rc.tokenize("Fjögur Hundruð manns komu saman í dag.")
     s = gen_to_string(g)
-    # assert "Fjögur hundruð manns" in s  # !!! Needs BÍN fix, upcoming
+    assert "Fjögur hundruð manns" in s
     g = rc.tokenize("Fjögur Þúsund manns komu saman í dag.")
     s = gen_to_string(g)
     assert "Fjögur þúsund manns" in s
@@ -396,7 +400,7 @@ def test_capitalization_of_numbers(verbose=False):
     assert "FJÖGUR HUNDRUÐ manns" in s
     g = rc.tokenize("Tilkynnt var að Fjögur Hundruð manns kæmu saman í dag.")
     s = gen_to_string(g)
-    # assert "fjögur hundruð manns" in s  # !!! Needs BÍN fix, upcoming
+    assert "fjögur hundruð manns" in s
     g = rc.tokenize("Tilkynnt var að Fjögur Þúsund manns kæmu saman í dag.")
     s = gen_to_string(g)
     assert "fjögur þúsund manns" in s
@@ -415,6 +419,64 @@ def test_capitalization_of_numbers(verbose=False):
     g = rc.tokenize("Tilkynnt var að 400 Þúsund manns kæmu saman í dag.")
     s = gen_to_string(g)
     assert "400 þúsund manns" in s
+
+    s = roundtrip("Jón greiddi Hundrað Þúsund Dollara fyrir bílinn.")
+    assert "hundrað þúsund dollara" in s
+    s = roundtrip("Jón greiddi hundrað Þúsund Dollara fyrir bílinn.")
+    assert "hundrað þúsund dollara" in s
+    s = roundtrip("Jón greiddi hundrað þúsund Dollara fyrir bílinn.")
+    assert "hundrað þúsund dollara" in s
+    s = roundtrip("Jón greiddi Hundrað þúsund Dollara fyrir bílinn.")
+    assert "hundrað þúsund dollara" in s
+    s = roundtrip("Jón greiddi Hundrað þúsund dollara fyrir bílinn.")
+    assert "hundrað þúsund dollara" in s
+    s = roundtrip("Jón greiddi Tíu þúsund dollara fyrir bílinn.")
+    assert "tíu þúsund dollara" in s
+    s = roundtrip("Jón greiddi Fjögur þúsund dollara fyrir bílinn.")
+    assert "fjögur þúsund dollara" in s
+    s = roundtrip("Jón greiddi 4 Þúsund dollara fyrir bílinn.")
+    assert "4 þúsund dollara" in s
+    s = roundtrip("Jón greiddi 4 þúsund Dollara fyrir bílinn.")
+    assert "4 þúsund dollara" in s
+    s = roundtrip("Jón greiddi 4 Þúsund Dollara fyrir bílinn.")
+    assert "4 þúsund dollara" in s
+
+    s = roundtrip("Jón greiddi Hundrað þúsund danskar krónur fyrir bílinn.")
+    assert "hundrað þúsund danskar krónur" in s
+    s = roundtrip("Jón greiddi hundrað Þúsund danskar krónur fyrir bílinn.")
+    assert "hundrað þúsund danskar krónur" in s
+    s = roundtrip("Jón greiddi hundrað þúsund Danskar krónur fyrir bílinn.")
+    assert "hundrað þúsund danskar krónur" in s
+    s = roundtrip("Jón greiddi hundrað þúsund danskar Krónur fyrir bílinn.")
+    assert "hundrað þúsund danskar krónur" in s
+    s = roundtrip("Jón greiddi Hundrað þúsund Danskar krónur fyrir bílinn.")
+    assert "hundrað þúsund danskar krónur" in s
+    s = roundtrip("Jón greiddi Tíu þúsund danskar krónur fyrir bílinn.")
+    assert "tíu þúsund danskar krónur" in s
+    s = roundtrip("Jón greiddi Fjögur þúsund danskar krónur fyrir bílinn.")
+    assert "fjögur þúsund danskar krónur" in s
+    s = roundtrip("Jón greiddi FJÖGUR ÞÚSUND DANSKAR KRÓNUR fyrir bílinn.")
+    assert "FJÖGUR ÞÚSUND DANSKAR KRÓNUR" in s
+    s = roundtrip("Jón greiddi 4 Þúsund danskar krónur fyrir bílinn.")
+    assert "4 þúsund danskar krónur" in s
+    s = roundtrip("Jón greiddi 4 þúsund Danskar krónur fyrir bílinn.")
+    assert "4 þúsund danskar krónur" in s
+    s = roundtrip("Jón greiddi 4 Þúsund danskar Krónur fyrir bílinn.")
+    assert "4 þúsund danskar krónur" in s
+    s = roundtrip("Jón greiddi 4 ÞÚSUND DANSKAR KRÓNUR fyrir bílinn.")
+    assert "4 ÞÚSUND DANSKAR KRÓNUR" in s
+
+    # !!! TODO
+    #s = roundtrip("Gísli notaði 200 Grömm af hveiti í kökuna.")
+    #assert "200 grömm" in s
+    #s = roundtrip("Gísli notaði Hundrað Grömm af hveiti í kökuna.")
+    #assert "hundrað grömm" in s
+    #s = roundtrip("Gísli notaði Hundrað grömm af hveiti í kökuna.")
+    #assert "hundrað grömm" in s
+    #s = roundtrip("Gísli notaði 20 Millilítra af vanilludropum í kökuna.")
+    #assert "20 millilítra" in s
+    #s = roundtrip("Gísli notaði 20 Kíló af pipar í kökuna.")
+    #assert "20 kíló" in s
 
 
 def test_taboo_words(verbose=False):

@@ -31,13 +31,22 @@
 
 from reynir import Greynir, correct_spaces, mark_paragraphs
 from .settings import Settings
-from .errtokenizer import CorrectionPipeline, tokenize, Correct_TOK
+
+# Token-level correction
+from .errtokenizer import (
+    CorrectionPipeline,
+    tokenize,
+    detokenize,
+    Correct_TOK,
+)
+
+# Grammar checking
 from .checker import (
     GreynirCorrect,
     check,
     check_single,
     check_with_stats,
-    check_with_custom_parser
+    check_with_custom_parser,
 )
 
 
