@@ -319,6 +319,7 @@ class GreynirCorrect(Greynir):
 
 def check_single(sentence: str) -> _Sentence:
     """ Check and annotate a single sentence, given in plain text """
+    # Raises StopIteration if no sentence was parsed
     rc = GreynirCorrect()
     return rc.parse_single(sentence)
 

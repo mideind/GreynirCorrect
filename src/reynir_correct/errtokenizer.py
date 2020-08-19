@@ -421,9 +421,9 @@ class UnknownWordError(Error):
 
     # U001: Unknown word. Nothing more is known. Cannot be corrected, only pointed out.
 
-    def __init__(self, code: str, txt: str) -> None:
+    def __init__(self, code: str, txt: str, is_warning: bool=False) -> None:
         # Unknown word error codes start with "U"
-        super().__init__("U" + code)
+        super().__init__("U" + code, is_warning=is_warning)
         self._txt = txt
 
     @property
@@ -1467,8 +1467,13 @@ def lookup_unknown_words(
         if not token.val:
             # No annotation and not able to correct:
             # mark the token as an unknown word
+            # (but only as a warning if it is an uppercase word)
             token.set_error(
-                UnknownWordError("001", "Óþekkt orð: '{0}'".format(token.txt))
+                UnknownWordError(
+                    "001",
+                    "Óþekkt orð: '{0}'".format(token.txt),
+                    is_warning=token.txt[0].isupper(),
+                )
             )
 
         if token.error is True:

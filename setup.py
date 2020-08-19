@@ -69,7 +69,7 @@ def read(*names, **kwargs):
 setup(
     name="reynir-correct",
     # Remember to update version in src/reynir_correct/__init__.py as well
-    version="1.0.1",
+    version="1.1.0",
     license="MIT",
     description="A spelling and grammar corrector for Icelandic",
     long_description="{0}\n{1}".format(

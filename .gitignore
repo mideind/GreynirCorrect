@@ -20,7 +20,6 @@ __pycache__/
 *.dll
 
 # Doc stuff
-doc/Makefile
 doc/make.bat
 doc/_build/
 
@@ -68,6 +67,9 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 .mypy_cache/
+
+# Symlink to iceErrorCorpus for evaluation
+eval/iceErrorCorpus
 
 # Django stuff
 *.log

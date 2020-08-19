@@ -87,6 +87,16 @@ class Annotation:
         return self._code
 
     @property
+    def is_warning(self):
+        """ Return True if this annotation is a warning only """
+        return self._code.endswith("/w")
+
+    @property
+    def is_error(self):
+        """ Return True if this annotation is an error """
+        return not self._code.endswith("/w")
+
+    @property
     def text(self):
         """ A description of the annotation """
         return self._text
