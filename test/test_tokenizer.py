@@ -73,7 +73,7 @@ def test_correct(verbose=False):
     assert len(g) == 24
     assert g[4].error_code == "C002"  # báðumegin -> báðum megin
     assert g[6].error_code == "C001"  # sagði sagði
-    assert g[7].error_code == "U001"  # Cthulhu
+    assert g[7].error_code == "U001/w"  # Cthulhu
     assert g[11].error_code == "C002"  # uppundir -> upp undir
     assert g[19].error_code == "S001"  # aldrey
     assert g[20].error_code == "C003"  # aftaka veður -> aftakaveður
@@ -94,7 +94,7 @@ def test_correct(verbose=False):
     if verbose: dump(g)
 
     assert len(g) == 13
-    assert g[1].error_code == "U001"  # Müller
+    assert g[1].error_code == "U001/w"  # Müller
     assert g[6].error_code == "S004"  # ýtrekað -> ítrekað
     assert g[10].error_code == "U001"  # cyclotroninn
 
