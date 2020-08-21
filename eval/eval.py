@@ -150,9 +150,11 @@ OUT_OF_SCOPE = {
     "missing-quots",        # gæsalappir vantar	punctuation	I'm winning > „I'm winning“
 }
 
-# Default glob path of the error corpus TEI XML files to be processed
-_GLOB_PATH = '**/*.xml'
+# Default glob path of the development set TEI XML files to be processed
+_DEV_PATH = 'iceErrorCorpus/data/**/*.xml'
 
+# Default glob path of the test set TEI XML files to be processed
+_TEST_PATH = 'iceErrorCorpus/testCorpus/**/*.xml'
 
 # Define the command line arguments
 
@@ -164,9 +166,15 @@ parser.add_argument(
     'path',
     nargs='?',
     type=str,
-    default=_GLOB_PATH,
-    help=f"glob path of error corpus XML files (default: {_GLOB_PATH})",
+    default=_DEV_PATH,
+    help=f"glob path of XML files to process (default: {_DEV_PATH})",
 )
+
+parser.add_argument(
+    "-n", "--number",
+    type=int,
+    default=10,
+    help="number of files to process (0=all, default: 10)")
 
 
 def element_text(element: ET.Element) -> str:
@@ -297,7 +305,7 @@ def process(category: str, fpath: str, stats: Stats=None) -> None:
     # Iterate through the sentences in the file
     for sent in root.findall("ns:text/ns:body/ns:p/ns:s", ns):
         # Sentence index
-        index = int(sent.attrib["n"])
+        index = int(sent.attrib.get("n", 0))
         tokens: List[str] = []
         errors: List[ErrorDict] = []
         # Enumerate through the tokens in the sentence
@@ -357,6 +365,8 @@ def process(category: str, fpath: str, stats: Stats=None) -> None:
             continue
         # Output the original sentence
         print(f"\n{index:03}: {text}")
+        if index == 0:
+            print("000: *** Sentence index is missing ('n' attribute) ***")
         gc_error = False
         ice_error = False
         # Output GreynirCorrect annotations
@@ -392,6 +402,7 @@ def main() -> None:
     args = parser.parse_args()
     # Count the processed files
     count = 0
+    max_count = args.number
     # Initialize the statistics collector
     stats = Stats()
     # Process each TEI XML file in turn
@@ -406,8 +417,7 @@ def main() -> None:
         stats.add_file(category)
         process(category, fpath, stats)
         count += 1
-        # !!! DEBUG: stop after a fixed number of files
-        if count >= 100:
+        if max_count > 0 and count >= max_count:
             break
     stats.output()
     print()

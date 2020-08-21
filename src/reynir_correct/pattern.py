@@ -217,19 +217,18 @@ class PatternMatcher:
             )
         )
 
-    def wrong_verb_use(self, match: SimpleTree, correct_verb: str) -> None:
+    def wrong_verb_use(
+        self,
+        match: SimpleTree,
+        correct_verb: str,
+        context: ContextType,
+    ) -> None:
         """ Annotate wrong verbs being used with nouns,
             for instance 'byði hnekki' where the verb should
             be 'bíða' -> 'biði hnekki' instead of 'bjóða' """
-        # !!! BUG: The code currently allows nonterminal nodes to match
-        # literal text strings and macros such as %verb. This means that
-        # the following code is not guaranteed to yield only terminal
-        # children of vp, i.e. vp.children can consist entirely of nonterminals
-        # where none of them matches the tcat=="so" condition.
-        vp = match.first_match("VP > { %verb }", self.ctx_verb_01)
-        verb_children = [ch for ch in vp.children if ch.tcat == "so"]
-        verb = verb_children[0].own_lemma_mm # <-- this can thus fail on an empty list
-        np = match.first_match("NP >> { %noun }", self.ctx_verb_01)
+        vp = match.first_match("VP > { %verb }", context)
+        verb = next(ch for ch in vp.children if ch.tcat == "so").own_lemma_mm
+        np = match.first_match("NP >> { %noun }", context)
         start, end = min(vp.span[0], np.span[0]), max(vp.span[1], np.span[1])
         # noun = next(ch for ch in np.leaves if ch.tcat == "no").own_lemma
         text = (
@@ -347,7 +346,6 @@ class PatternMatcher:
 
         if verbs_að:
             # Create matching patterns with a context that catches the að/af verbs.
-
             cls.ctx_að = {
                 "verb": lambda tree: (
                     tree.own_lemma_mm in verbs_að and not (set(tree.variants) & {"1", "2"})
@@ -381,6 +379,9 @@ class PatternMatcher:
             """ Context matching function for the %noun macro in combinations
                 of verbs and their noun objects """
             lemma = tree.own_lemma
+            if not lemma:
+                # The passed-in tree node is probably not a terminal
+                return False
             try:
                 case = (set(tree.variants) & {"nf", "þf", "þgf", "ef"}).pop()
             except KeyError:
@@ -391,22 +392,26 @@ class PatternMatcher:
             "ósigur_þf", "hnekkir_þf", "álitshnekkir_þf",
             "afhroð_þf", "bani_þf", "færi_ef", "boð_ef", "átekt_ef"
         }
-        cls.ctx_verb_01 = {"verb": "'bjóða'", "noun": partial(wrong_noun, NOUNS_01) }
+        # The macro %verb expands to "@'bjóða'" which matches terminals
+        # whose corresponding token has a meaning with the 'bjóða' lemma.
+        # The macro %noun is resolved by calling the function wrong_noun()
+        # with the potentially matching tree node as an argument.
+        cls.ctx_verb_01 = {"verb": "@'bjóða'", "noun": partial(wrong_noun, NOUNS_01) }
         p.append((
             "bjóða",  # Trigger lemma for this pattern
             "VP > { VP > { %verb } NP-OBJ >> { %noun } }",
-            lambda self, match: self.wrong_verb_use(match, "bíða"),
+            lambda self, match: self.wrong_verb_use(match, "bíða", cls.ctx_verb_01),
             cls.ctx_verb_01
         ))
 
         NOUNS_02 = {
-            "haus_þf", "þvottur_þf"
+            "haus_þgf", "þvottur_þgf"
         }
-        cls.ctx_verb_02 = {"verb": "'hegna'", "noun": partial(wrong_noun, NOUNS_02) }
+        cls.ctx_verb_02 = {"verb": "@'hegna'", "noun": partial(wrong_noun, NOUNS_02) }
         p.append((
             "hegna",  # Trigger lemma for this pattern
             "VP > { VP > { %verb } NP-OBJ >> { %noun } }",
-            lambda self, match: self.wrong_verb_use(match, "hengja"),
+            lambda self, match: self.wrong_verb_use(match, "hengja", cls.ctx_verb_02),
             cls.ctx_verb_02
         ))
 
