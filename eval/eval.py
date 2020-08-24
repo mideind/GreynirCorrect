@@ -172,8 +172,8 @@ parser.add_argument(
 parser.add_argument(
     "-n", "--number",
     type=int,
-    default=10,
-    help="number of files to process (0=all, default: 10)",
+    default=0,
+    help="number of files to process (default=all)",
 )
 
 parser.add_argument(
@@ -310,14 +310,21 @@ def process(
     # Namespace dictionary to be passed to ET functions
     ns = dict(ns=NS)
     # Parse the XML file into a tree
-    tree = ET.parse(fpath)
-    # Obtain the root of the XML tree
-    root = tree.getroot()
     if not measure_only:
         # Output a file header
         print("\n" + "-" * 64)
         print(f"File: {fpath}")
         print("-" * 64)
+    try:
+        tree = ET.parse(fpath)
+    except ET.ParseError:
+        if measure_only:
+            print(f"000: *** Unable to parse XML file {fpath} ***")
+        else:
+            print(f"000: *** Unable to parse XML file ***")
+        return
+    # Obtain the root of the XML tree
+    root = tree.getroot()
     # Iterate through the sentences in the file
     for sent in root.findall("ns:text/ns:body/ns:p/ns:s", ns):
         # Sentence identifier (index)

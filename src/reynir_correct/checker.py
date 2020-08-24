@@ -123,11 +123,13 @@ class ErrorDetectionToken(BIN_Token):
     _RESTRICTIVE_VARIANTS = ("sagnb", "lhþt", "bh")
 
     def verb_subject_matches(self, verb, subj):
-        """ Returns True if the given subject type/case is allowed for this verb
-            or if it is an erroneous subject which we can flag """
-        return subj in self._VERB_SUBJECTS.get(
-            verb, set()
-        ) or subj in self._VERB_ERROR_SUBJECTS.get(verb, set())
+        """ Returns True if the given subject type/case is allowed
+            for this verb or if it is an erroneous subject
+            which we can flag """
+        return (
+            subj in self._VERB_SUBJECTS.get(verb, set()) or
+            subj in self._VERB_ERROR_SUBJECTS.get(verb, set())
+        )
 
 
 class ErrorDetectingGrammar(BIN_Grammar):

@@ -64,6 +64,10 @@ class ErrorFinder(ParseForestNavigator):
         "ef": SimpleTree.genitive_np
     }
 
+    _NON_OP_VERB_FORMS = {
+        "lýst": ("líst", "'Lýst' á sennilega að vera 'líst', þ.e. sögnin 'að líta(st)' í stað sagnarinnar 'að ljósta'."),
+    }
+
     def __init__(self, ann, sent):
         super().__init__(visit_all=True)
         # Annotation list
@@ -480,6 +484,21 @@ class ErrorFinder(ParseForestNavigator):
                     )
                 )
 
+        def annotate_wrong_op_verb_form(verb, correct, detail):
+            """ Annotate wrong impersonal verb forms, such as 'Mér lýst' """
+            index = node.token.index
+            self._ann.append(
+                Annotation(
+                    start=index,
+                    end=index,
+                    code="P_WRONG_OP_FORM",
+                    text="Sögnin '{0}' á sennilega að vera '{1}'"
+                        .format(verb.lower(), correct),
+                    detail=detail,
+                    suggest=emulate_case(verb, correct),
+                )
+            )
+
         if not terminal.is_subj:
             # Check whether we had to match an impersonal verb
             # with this "normal" (non _subj) terminal
@@ -509,6 +528,15 @@ class ErrorFinder(ParseForestNavigator):
         assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
             "Unknown case in " + terminal.name
         )
+
+        # Check whether this is a verb form that is forbidden from
+        # impersonal use, such as 'lýst' which cannot be used impersonally
+        # as a form of 'ljósta' ('Eldingunni laust niður')
+        if node.token.lower in self._NON_OP_VERB_FORMS:
+            correct, detail = self._NON_OP_VERB_FORMS[node.token.lower]
+            annotate_wrong_op_verb_form(node.token.text, correct, detail)
+            return
+
         # Check whether this verb has an entry in the VERBS_ERRORS
         # dictionary, and whether that entry then has an item for
         # the present subject case

@@ -56,7 +56,7 @@ pip-delete-this-directory.txt
 # Unit test / coverage reports
 test.py
 test.txt
-eval.out
+eval*.out
 htmlcov/
 .tox/
 .coverage
