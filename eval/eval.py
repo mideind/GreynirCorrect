@@ -394,8 +394,8 @@ def process(
         for ann in s.annotations:
             if ann.is_error:
                 gc_error = True
-        if not measure_only:
-            print(f">>> {ann}")
+            if not measure_only:
+                print(f">>> {ann}")
         # Output iceErrorCorpus annotations
         for err in errors:
             asterisk = "*"
