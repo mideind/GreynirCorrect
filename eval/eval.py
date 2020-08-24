@@ -166,7 +166,6 @@ parser.add_argument(
     'path',
     nargs='?',
     type=str,
-    default=_DEV_PATH,
     help=f"glob path of XML files to process (default: {_DEV_PATH})",
 )
 
@@ -174,7 +173,14 @@ parser.add_argument(
     "-n", "--number",
     type=int,
     default=10,
-    help="number of files to process (0=all, default: 10)")
+    help="number of files to process (0=all, default: 10)",
+)
+
+parser.add_argument(
+    "-m", "--measure",
+    action="store_true",
+    help="run measurements on test corpus and output results only",
+)
 
 
 def element_text(element: ET.Element) -> str:
@@ -236,37 +242,37 @@ class Stats:
         print(f"Total processing time {h}h {m:02}m {s:02}s")
         print(f"Files processed:            {sum(self._files.values()):6}")
         for c in CATEGORIES:
-            print(f"   {c:<13}:            {self._files[c]:5}")
+            print(f"   {c:<13}:           {self._files[c]:6}")
         # Total number of tokens processed
         num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
         print(f"Tokens processed:           {num_tokens:6}")
         for c in CATEGORIES:
-            print(f"   {c:<13}:            {self._sentences[c]['num_tokens']:5}")
+            print(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
         # Total number of sentences processed
         num_sentences = sum(d["count"] for d in self._sentences.values())
         print(f"Sentences processed:        {num_sentences:6}")
         for c in CATEGORIES:
-            print(f"   {c:<13}:            {self._sentences[c]['count']:5}")
+            print(f"   {c:<13}:           {self._sentences[c]['count']:6}")
         # Total number of true negatives found
         true_negatives = sum(d["true_negatives"] for d in self._sentences.values())
         print(f"True negatives:             {true_negatives:6}")
         for c in CATEGORIES:
-            print(f"   {c:<13}:            {self._sentences[c]['true_negatives']:5}")
+            print(f"   {c:<13}:           {self._sentences[c]['true_negatives']:6}")
         # Total number of true positives found
         true_positives = sum(d["true_positives"] for d in self._sentences.values())
         print(f"True positives:             {true_positives:6}")
         for c in CATEGORIES:
-            print(f"   {c:<13}:            {self._sentences[c]['true_positives']:5}")
+            print(f"   {c:<13}:           {self._sentences[c]['true_positives']:6}")
         # Total number of false negatives found
         false_negatives = sum(d["false_negatives"] for d in self._sentences.values())
         print(f"False negatives:            {false_negatives:6}")
         for c in CATEGORIES:
-            print(f"   {c:<13}:            {self._sentences[c]['false_negatives']:5}")
+            print(f"   {c:<13}:           {self._sentences[c]['false_negatives']:6}")
         # Total number of false positives found
         false_positives = sum(d["false_positives"] for d in self._sentences.values())
         print(f"False positives:            {false_positives:6}")
         for c in CATEGORIES:
-            print(f"   {c:<13}:            {self._sentences[c]['false_positives']:5}")
+            print(f"   {c:<13}:           {self._sentences[c]['false_positives']:6}")
         # Percentage of true vs. false
         true_results = true_positives + true_negatives
         false_results = false_positives + false_negatives
@@ -287,8 +293,17 @@ class Stats:
             print(f"   {c:<13}: {result:>16}")
 
 
-def process(category: str, fpath: str, stats: Stats=None) -> None:
-    """ Process a single error corpus file in TEI XML format """
+def process(
+    category: str,
+    fpath: str,
+    stats: Stats=None,
+    measure_only: bool=False
+) -> None:
+
+    """ Process a single error corpus file in TEI XML format.
+        If measure_only is True, we are processing the test corpus
+        and do not output information about individual errors. """
+
     NS = "http://www.tei-c.org/ns/1.0"
     # Length of namespace prefix to cut from tag names, including { }
     nl = len(NS) + 2
@@ -298,14 +313,15 @@ def process(category: str, fpath: str, stats: Stats=None) -> None:
     tree = ET.parse(fpath)
     # Obtain the root of the XML tree
     root = tree.getroot()
-    # Output a file header
-    print("\n" + "-" * 64)
-    print(f"File: {fpath}")
-    print("-" * 64)
+    if not measure_only:
+        # Output a file header
+        print("\n" + "-" * 64)
+        print(f"File: {fpath}")
+        print("-" * 64)
     # Iterate through the sentences in the file
     for sent in root.findall("ns:text/ns:body/ns:p/ns:s", ns):
-        # Sentence index
-        index = int(sent.attrib.get("n", 0))
+        # Sentence identifier (index)
+        index = sent.attrib.get("n", "")
         tokens: List[str] = []
         errors: List[ErrorDict] = []
         # Enumerate through the tokens in the sentence
@@ -345,7 +361,7 @@ def process(category: str, fpath: str, stats: Stats=None) -> None:
                         rev_id=rev_id,
                         xtype=xtype,
                         in_scope=xtype not in OUT_OF_SCOPE,
-                        eid=attr["eid"],
+                        eid=attr.get("eid", ""),
                         original=original,
                         corrected=corrected,
                     )
@@ -361,18 +377,24 @@ def process(category: str, fpath: str, stats: Stats=None) -> None:
         try:
             s = gc.check_single(text)
         except StopIteration:
-            print(f"\n{index:03}: *** No parse for sentence *** {text}")
+            if measure_only:
+                print(f"In file {fpath}:")
+            print(f"\n{index}: *** No parse for sentence *** {text}")
             continue
-        # Output the original sentence
-        print(f"\n{index:03}: {text}")
-        if index == 0:
-            print("000: *** Sentence index is missing ('n' attribute) ***")
+        if not measure_only:
+            # Output the original sentence
+            print(f"\n{index}: {text}")
+        if not index:
+            if measure_only:
+                print(f"In file {fpath}:")
+            print("000: *** Sentence identifier is missing ('n' attribute) ***")
         gc_error = False
         ice_error = False
         # Output GreynirCorrect annotations
         for ann in s.annotations:
             if ann.is_error:
                 gc_error = True
+        if not measure_only:
             print(f">>> {ann}")
         # Output iceErrorCorpus annotations
         for err in errors:
@@ -380,17 +402,19 @@ def process(category: str, fpath: str, stats: Stats=None) -> None:
             if err["in_scope"]:
                 asterisk = ""
                 ice_error = True
-            print(f"<<< {err['start']:03}-{err['end']:03}: {asterisk}{err['xtype']}")
-        # Output true/false positive/negative result
-        if ice_error and gc_error:
-            print("=++ True positive")
-        elif not ice_error and not gc_error:
-            print("=-- True negative")
-        elif ice_error and not gc_error:
-            print("!-- False negative")
-        else:
-            assert gc_error and not ice_error
-            print("!++ False positive")
+            if not measure_only:
+                print(f"<<< {err['start']:03}-{err['end']:03}: {asterisk}{err['xtype']}")
+        if not measure_only:
+            # Output true/false positive/negative result
+            if ice_error and gc_error:
+                print("=++ True positive")
+            elif not ice_error and not gc_error:
+                print("=-- True negative")
+            elif ice_error and not gc_error:
+                print("!-- False negative")
+            else:
+                assert gc_error and not ice_error
+                print("!++ False positive")
         # Collect statistics
         if stats is not None:
             stats.add_sentence(category, len(tokens), ice_error, gc_error)
@@ -405,8 +429,14 @@ def main() -> None:
     max_count = args.number
     # Initialize the statistics collector
     stats = Stats()
+    # The glob path of the XML files to process
+    # When running measurements only, we use _TEST_PATH as the default,
+    # otherwise _DEV_PATH
+    path = args.path
+    if path is None:
+        path = _TEST_PATH if args.measure else _DEV_PATH
     # Process each TEI XML file in turn
-    for fpath in glob.iglob(args.path, recursive=True):
+    for fpath in glob.iglob(path, recursive=True):
         # Find out which category the file belongs to by
         # inference from the file name
         for category in CATEGORIES:
@@ -415,7 +445,7 @@ def main() -> None:
         else:
             assert False, f"File path does not contain a recognized category: {fpath}"
         stats.add_file(category)
-        process(category, fpath, stats)
+        process(category, fpath, stats, args.measure)
         count += 1
         if max_count > 0 and count >= max_count:
             break
