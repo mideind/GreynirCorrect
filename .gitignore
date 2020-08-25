@@ -56,7 +56,6 @@ pip-delete-this-directory.txt
 # Unit test / coverage reports
 test.py
 test.txt
-eval*.out
 htmlcov/
 .tox/
 .coverage
@@ -68,6 +67,10 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 .mypy_cache/
+
+# Measurement results
+eval*.out
+test*.out
 
 # Symlink to iceErrorCorpus for evaluation
 eval/iceErrorCorpus

@@ -53,21 +53,28 @@
 
     $ python eval.py ~/github/iceErrorCorpus/data/**/*.xml
 
+    This program uses Python's multiprocessing.Pool() to perform
+    the evaluation using all available CPU cores, simultaneously.
+
 """
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Tuple, Iterable
 
 from collections import defaultdict
 from datetime import datetime
 import glob
 import argparse
 import xml.etree.ElementTree as ET
+import multiprocessing
 
 import reynir_correct as gc
 
 
 # The type of a single error descriptor, extracted from a TEI XML file
 ErrorDict = Dict[str, Union[str, int, bool]]
+
+# Create a lock to ensure that only one process outputs at a time
+OUTPUT_LOCK = multiprocessing.Lock()
 
 # Content categories, embedded within the file paths
 CATEGORIES = (
@@ -182,6 +189,9 @@ parser.add_argument(
     help="run measurements on test corpus and output results only",
 )
 
+# This boolean global is set to True if the -m flag is specified
+MEASURE_ONLY = False
+
 
 def element_text(element: ET.Element) -> str:
     """ Return the text of the given element, including all its subelements, if any """
@@ -294,145 +304,179 @@ class Stats:
 
 
 def process(
-    category: str,
-    fpath: str,
-    stats: Stats=None,
-    measure_only: bool=False
-) -> None:
+    fpath_and_category: Tuple[str, str],
+) -> List[Tuple]:
 
     """ Process a single error corpus file in TEI XML format.
-        If measure_only is True, we are processing the test corpus
-        and do not output information about individual errors. """
+        This function is called within a multiprocessing pool
+        and therefore usually executes in a child process, separate
+        from the parent process. It should thus not modify any
+        global state, and arguments and return values should be
+        picklable. """
 
+    # Unpack arguments
+    fpath, category = fpath_and_category
+
+    # Set up XML namespace stuff
     NS = "http://www.tei-c.org/ns/1.0"
     # Length of namespace prefix to cut from tag names, including { }
     nl = len(NS) + 2
     # Namespace dictionary to be passed to ET functions
     ns = dict(ns=NS)
-    # Parse the XML file into a tree
-    if not measure_only:
-        # Output a file header
-        print("\n" + "-" * 64)
-        print(f"File: {fpath}")
-        print("-" * 64)
+
+    # Statistics about processed sentences. This list will
+    # be returned back to the parent process.
+    stats: List[Tuple] = []
+
+    # Accumulate standard output in a buffer, for writing in one fell
+    # swoop at the end (after acquiring the output lock)
+    buffer: List[str] = []
+
+    def bprint(s: str):
+        """ Buffered print: accumulate output for printing at the end """
+        buffer.append(s)
+
     try:
-        tree = ET.parse(fpath)
-    except ET.ParseError:
-        if measure_only:
-            print(f"000: *** Unable to parse XML file {fpath} ***")
-        else:
-            print(f"000: *** Unable to parse XML file ***")
-        return
-    # Obtain the root of the XML tree
-    root = tree.getroot()
-    # Iterate through the sentences in the file
-    for sent in root.findall("ns:text/ns:body/ns:p/ns:s", ns):
-        # Sentence identifier (index)
-        index = sent.attrib.get("n", "")
-        tokens: List[str] = []
-        errors: List[ErrorDict] = []
-        # Enumerate through the tokens in the sentence
-        for el in sent:
-            tag = el.tag[nl:]
-            if tag == "revision":
-                # An error annotation starts here, eventually
-                # spanning multiple tokens
-                original = ""
-                corrected = ""
-                # Note the index of the starting token within the span
-                start = len(tokens)
-                # Revision id
-                rev_id = el.attrib["id"]
-                # Look at the original text
-                el_orig = el.find("ns:original", ns)
-                if el_orig is not None:
-                    # We have 0 or more original tokens embedded within the revision tag
-                    orig_tokens = [element_text(subel) for subel in el_orig]
-                    tokens.extend(orig_tokens)
-                    original = " ".join(orig_tokens).strip()
-                # Calculate the index of the ending token within the span
-                end = max(start, len(tokens) - 1)
-                # Look at the corrected text
-                el_corr = el.find("ns:corrected", ns)
-                if el_corr is not None:
-                    corr_tokens = [element_text(subel) for subel in el_corr]
-                    corrected = " ".join(corr_tokens).strip()
-                # Accumulate the annotations (errors)
-                for el_err in el.findall("ns:errors/ns:error", ns):
-                    attr = el_err.attrib
-                    # Collect relevant information into a dict
-                    xtype = attr["xtype"].lower()
-                    error: ErrorDict = dict(
-                        start=start,
-                        end=end,
-                        rev_id=rev_id,
-                        xtype=xtype,
-                        in_scope=xtype not in OUT_OF_SCOPE,
-                        eid=attr.get("eid", ""),
-                        original=original,
-                        corrected=corrected,
-                    )
-                    errors.append(error)
-            else:
-                tokens.append(element_text(el))
-        # Reconstruct the original sentence as a shallow-tokenized text string
-        text = " ".join(tokens).strip()
-        if not text:
-            # Nothing to do: drop this and go to the next sentence
-            continue
-        # Pass it to GreynirCorrect
+
+        if not MEASURE_ONLY:
+            # Output a file header
+            bprint("-" * 64)
+            bprint(f"File: {fpath}")
+            bprint("-" * 64)
+        # Parse the XML file into a tree
         try:
-            s = gc.check_single(text)
-        except StopIteration:
-            if measure_only:
-                print(f"In file {fpath}:")
-            print(f"\n{index}: *** No parse for sentence *** {text}")
-            continue
-        if not measure_only:
-            # Output the original sentence
-            print(f"\n{index}: {text}")
-        if not index:
-            if measure_only:
-                print(f"In file {fpath}:")
-            print("000: *** Sentence identifier is missing ('n' attribute) ***")
-        gc_error = False
-        ice_error = False
-        # Output GreynirCorrect annotations
-        for ann in s.annotations:
-            if ann.is_error:
-                gc_error = True
-            if not measure_only:
-                print(f">>> {ann}")
-        # Output iceErrorCorpus annotations
-        for err in errors:
-            asterisk = "*"
-            if err["in_scope"]:
-                asterisk = ""
-                ice_error = True
-            if not measure_only:
-                print(f"<<< {err['start']:03}-{err['end']:03}: {asterisk}{err['xtype']}")
-        if not measure_only:
-            # Output true/false positive/negative result
-            if ice_error and gc_error:
-                print("=++ True positive")
-            elif not ice_error and not gc_error:
-                print("=-- True negative")
-            elif ice_error and not gc_error:
-                print("!-- False negative")
+            tree = ET.parse(fpath)
+        except ET.ParseError:
+            if MEASURE_ONLY:
+                bprint(f"000: *** Unable to parse XML file {fpath} ***")
             else:
-                assert gc_error and not ice_error
-                print("!++ False positive")
-        # Collect statistics
-        if stats is not None:
-            stats.add_sentence(category, len(tokens), ice_error, gc_error)
+                bprint(f"000: *** Unable to parse XML file ***")
+            return stats
+        # Obtain the root of the XML tree
+        root = tree.getroot()
+        # Iterate through the sentences in the file
+        for sent in root.findall("ns:text/ns:body/ns:p/ns:s", ns):
+            # Sentence identifier (index)
+            index = sent.attrib.get("n", "")
+            tokens: List[str] = []
+            errors: List[ErrorDict] = []
+            # Enumerate through the tokens in the sentence
+            for el in sent:
+                tag = el.tag[nl:]
+                if tag == "revision":
+                    # An error annotation starts here, eventually
+                    # spanning multiple tokens
+                    original = ""
+                    corrected = ""
+                    # Note the index of the starting token within the span
+                    start = len(tokens)
+                    # Revision id
+                    rev_id = el.attrib["id"]
+                    # Look at the original text
+                    el_orig = el.find("ns:original", ns)
+                    if el_orig is not None:
+                        # We have 0 or more original tokens embedded within the revision tag
+                        orig_tokens = [element_text(subel) for subel in el_orig]
+                        tokens.extend(orig_tokens)
+                        original = " ".join(orig_tokens).strip()
+                    # Calculate the index of the ending token within the span
+                    end = max(start, len(tokens) - 1)
+                    # Look at the corrected text
+                    el_corr = el.find("ns:corrected", ns)
+                    if el_corr is not None:
+                        corr_tokens = [element_text(subel) for subel in el_corr]
+                        corrected = " ".join(corr_tokens).strip()
+                    # Accumulate the annotations (errors)
+                    for el_err in el.findall("ns:errors/ns:error", ns):
+                        attr = el_err.attrib
+                        # Collect relevant information into a dict
+                        xtype = attr["xtype"].lower()
+                        error: ErrorDict = dict(
+                            start=start,
+                            end=end,
+                            rev_id=rev_id,
+                            xtype=xtype,
+                            in_scope=xtype not in OUT_OF_SCOPE,
+                            eid=attr.get("eid", ""),
+                            original=original,
+                            corrected=corrected,
+                        )
+                        errors.append(error)
+                else:
+                    tokens.append(element_text(el))
+            # Reconstruct the original sentence as a shallow-tokenized text string
+            text = " ".join(tokens).strip()
+            if not text:
+                # Nothing to do: drop this and go to the next sentence
+                continue
+            # Pass it to GreynirCorrect
+            s = gc.check_single(text)
+            if s is None:
+                if MEASURE_ONLY:
+                    bprint(f"In file {fpath}:")
+                bprint(f"\n{index}: *** No parse for sentence *** {text}")
+                continue
+            if not MEASURE_ONLY:
+                # Output the original sentence
+                bprint(f"\n{index}: {text}")
+            if not index:
+                if MEASURE_ONLY:
+                    bprint(f"In file {fpath}:")
+                bprint("000: *** Sentence identifier is missing ('n' attribute) ***")
+            gc_error = False
+            ice_error = False
+            # Output GreynirCorrect annotations
+            for ann in s.annotations:
+                if ann.is_error:
+                    gc_error = True
+                if not MEASURE_ONLY:
+                    bprint(f">>> {ann}")
+            # Output iceErrorCorpus annotations
+            for err in errors:
+                asterisk = "*"
+                if err["in_scope"]:
+                    asterisk = ""
+                    ice_error = True
+                if not MEASURE_ONLY:
+                    bprint(f"<<< {err['start']:03}-{err['end']:03}: {asterisk}{err['xtype']}")
+            if not MEASURE_ONLY:
+                # Output true/false positive/negative result
+                if ice_error and gc_error:
+                    bprint("=++ True positive")
+                elif not ice_error and not gc_error:
+                    bprint("=-- True negative")
+                elif ice_error and not gc_error:
+                    bprint("!-- False negative")
+                else:
+                    assert gc_error and not ice_error
+                    bprint("!++ False positive")
+            # Collect statistics into the stats list, to be returned
+            # to the parent process
+            if stats is not None:
+                stats.append((category, len(tokens), ice_error, gc_error))
+
+    finally:
+        # Print the accumulated output before exiting
+        with OUTPUT_LOCK:
+            for s in buffer:
+                print(s)
+            if not MEASURE_ONLY:
+                print("", flush=True)
+
+    # This return value will be pickled and sent back to the parent process
+    return stats
 
 
 def main() -> None:
     """ Main program """
     # Parse the command line arguments
     args = parser.parse_args()
+
+    # Store the measure_only flag in a global that is accessible to all processes
+    global MEASURE_ONLY
+    MEASURE_ONLY = args.measure
+
     # Count the processed files
-    count = 0
     max_count = args.number
     # Initialize the statistics collector
     stats = Stats()
@@ -441,23 +485,48 @@ def main() -> None:
     # otherwise _DEV_PATH
     path = args.path
     if path is None:
-        path = _TEST_PATH if args.measure else _DEV_PATH
-    # Process each TEI XML file in turn
-    for fpath in glob.iglob(path, recursive=True):
-        # Find out which category the file belongs to by
-        # inference from the file name
-        for category in CATEGORIES:
-            if category in fpath:
+        path = _TEST_PATH if MEASURE_ONLY else _DEV_PATH
+
+    def gen_files() -> Iterable[Tuple[str, str]]:
+        """ Generate tuples with the file paths and categories
+            to be processed by the multiprocessing pool """
+        count = 0
+        for fpath in glob.iglob(path, recursive=True):
+            # Find out which category the file belongs to by
+            # inference from the file name
+            for category in CATEGORIES:
+                if category in fpath:
+                    break
+            else:
+                assert False, f"File path does not contain a recognized category: {fpath}"
+            # Add the file to the statistics under its category
+            stats.add_file(category)
+            # Yield the information to the multiprocessing pool
+            yield fpath, category
+            count += 1
+            # If there is a limit on the number of processed files,
+            # and we're done, stop the generator
+            if max_count > 0 and count >= max_count:
                 break
-        else:
-            assert False, f"File path does not contain a recognized category: {fpath}"
-        stats.add_file(category)
-        process(category, fpath, stats, args.measure)
-        count += 1
-        if max_count > 0 and count >= max_count:
-            break
-    stats.output()
-    print()
+
+    # Use a multiprocessing pool to process the articles.
+    # The following defaults to using as many processes as there are CPU cores.
+    with multiprocessing.Pool() as pool:
+        # Iterate through each TEI XML file in turn and call the process()
+        # function on each file, in a child process within the pool
+        for result in pool.imap_unordered(process, gen_files()):
+            # Results come back as lists of arguments (tuples) that
+            # we pass to Stats.add_sentence()
+            for sent_result in result:
+                stats.add_sentence(*sent_result)
+        # Done: close the pool in an orderly manner
+        pool.close()
+        pool.join()
+
+    # Finally, acquire the output lock and write the final statistics
+    with OUTPUT_LOCK:
+        stats.output()
+        print("", flush=True)
 
 
 if __name__ == "__main__":
