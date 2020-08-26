@@ -88,10 +88,18 @@ import reynir_correct as gc
 # The type of a single error descriptor, extracted from a TEI XML file
 ErrorDict = Dict[str, Union[str, int, bool]]
 
+# The type of the dict that holds statistical information about sentences
+# within a particular content category
+SentenceStatsDict = Dict[str, Union[float, int]]
+
+# The type of the dict that holds statistical information about
+# content categories
+CategoryStatsDict = Dict[str, SentenceStatsDict]
+
 # Create a lock to ensure that only one process outputs at a time
 OUTPUT_LOCK = multiprocessing.Lock()
 
-# Content categories, embedded within the file paths
+# Content categories in iceErrorCorpus, embedded within the file paths
 CATEGORIES = (
     "essays", "onlineNews", "wikipedia",
 )
@@ -172,10 +180,10 @@ OUT_OF_SCOPE = {
     "missing-quots",        # gæsalappir vantar	punctuation	I'm winning > „I'm winning“
 }
 
-# Default glob path of the development set TEI XML files to be processed
+# Default glob path of the development corpus TEI XML files to be processed
 _DEV_PATH = 'iceErrorCorpus/data/**/*.xml'
 
-# Default glob path of the test set TEI XML files to be processed
+# Default glob path of the test corpus TEI XML files to be processed
 _TEST_PATH = 'iceErrorCorpus/testCorpus/**/*.xml'
 
 # Define the command line arguments
@@ -204,7 +212,7 @@ parser.add_argument(
 parser.add_argument(
     "-c", "--cores",
     type=int,
-    help=f"number of CPU cores to use (default=all, i.e. {os.cpu_count()})",
+    help=f"number of CPU cores to use (default=all, i.e. {os.cpu_count() or 1})",
 )
 
 parser.add_argument(
@@ -227,13 +235,14 @@ parser.add_argument(
     help="output individual sentences as well as results, even for the test corpus",
 )
 
-# This boolean global is set to True for quiet ouput (used for processing
-# of the test corpus)
+# This boolean global is set to True for quiet output,
+# which is the default when processing the test corpus
 QUIET = False
 
 
 def element_text(element: ET.Element) -> str:
-    """ Return the text of the given element, including all its subelements, if any """
+    """ Return the text of the given element,
+        including all its subelements, if any """
     return "".join(element.itertext())
 
 
@@ -245,7 +254,7 @@ class Stats:
         """ Initialize empty defaults for the stats collection """
         self._starttime = datetime.utcnow()
         self._files: Dict[str, int] = defaultdict(int)
-        self._sentences: Dict[str, Dict[str, Union[float, int]]] = defaultdict(lambda: defaultdict(int))
+        self._sentences: CategoryStatsDict = defaultdict(lambda: defaultdict(int))
 
     def add_file(self, category: str) -> None:
         """ Add a processed file in a given content category """
@@ -275,7 +284,7 @@ class Stats:
         false_positive = gc_error and not ice_error
         d["false_positives"] += 1 if false_positive else 0
 
-    def output(self) -> None:
+    def output(self, cores: int) -> None:
         """ Write the statistics to stdout """
         # Calculate the duration of the processing
         dur = int((datetime.utcnow() - self._starttime).total_seconds())
@@ -283,23 +292,23 @@ class Stats:
         m = (dur % 3600) // 60
         s = (dur % 60)
         # Output a summary banner
-        print("\n\n" + "=" * 7)
+        print("\n" + "=" * 7)
         print("Summary")
         print("=" * 7 + "\n")
         # Total number of files processed, and timing stats
         print(f"Processing started at {str(self._starttime)[0:19]}")
-        print(f"Total processing time {h}h {m:02}m {s:02}s")
-        print(f"Files processed:            {sum(self._files.values()):6}")
+        print(f"Total processing time {h}h {m:02}m {s:02}s, using {cores} cores")
+        print(f"\nFiles processed:            {sum(self._files.values()):6}")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._files[c]:6}")
         # Total number of tokens processed
         num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
-        print(f"Tokens processed:           {num_tokens:6}")
+        print(f"\nTokens processed:           {num_tokens:6}")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
         # Total number of sentences processed
         num_sentences = sum(d["count"] for d in self._sentences.values())
-        print(f"Sentences processed:        {num_sentences:6}")
+        print(f"\nSentences processed:        {num_sentences:6}")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['count']:6}")
 
@@ -311,25 +320,25 @@ class Stats:
 
         # Total number of true negatives found
         true_negatives = sum(d["true_negatives"] for d in self._sentences.values())
-        print(f"True negatives:             {true_negatives:6} {perc(true_negatives):>6}%")
+        print(f"\nTrue negatives:             {true_negatives:6} {perc(true_negatives):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['true_negatives']:6}")
 
         # Total number of true positives found
         true_positives = sum(d["true_positives"] for d in self._sentences.values())
-        print(f"True positives:             {true_positives:6} {perc(true_positives):>6}%")
+        print(f"\nTrue positives:             {true_positives:6} {perc(true_positives):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['true_positives']:6}")
 
         # Total number of false negatives found
         false_negatives = sum(d["false_negatives"] for d in self._sentences.values())
-        print(f"False negatives:            {false_negatives:6} {perc(false_negatives):>6}%")
+        print(f"\nFalse negatives:            {false_negatives:6} {perc(false_negatives):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['false_negatives']:6}")
 
         # Total number of false positives found
         false_positives = sum(d["false_positives"] for d in self._sentences.values())
-        print(f"False positives:            {false_positives:6} {perc(false_positives):>6}%")
+        print(f"\nFalse positives:            {false_positives:6} {perc(false_positives):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['false_positives']:6}")
 
@@ -340,7 +349,7 @@ class Stats:
             result = "N/A"
         else:
             result = f"{100.0*true_results/num_sentences:3.2f}%/{100.0*false_results/num_sentences:3.2f}%"
-        print(f"True/false split: {result:>16}")
+        print(f"\nTrue/false split: {result:>16}")
         for c in CATEGORIES:
             d = self._sentences[c]
             num_sentences = d["count"]
@@ -354,7 +363,7 @@ class Stats:
 
         # Recall
         recall = true_positives / (true_positives + false_negatives)
-        print(f"Recall:                     {recall:1.4f}")
+        print(f"\nRecall:                     {recall:1.4f}")
         for c in CATEGORIES:
             d = self._sentences[c]
             denominator = d["true_positives"] + d["false_negatives"]
@@ -366,7 +375,7 @@ class Stats:
 
         # Precision
         precision = true_positives / (true_positives + false_positives)
-        print(f"Precision:                  {precision:1.4f}")
+        print(f"\nPrecision:                  {precision:1.4f}")
         for c in CATEGORIES:
             d = self._sentences[c]
             denominator = d["true_positives"] + d["false_positives"]
@@ -378,7 +387,7 @@ class Stats:
 
         # F1 score
         f1 = 2 * precision * recall / (precision + recall)
-        print(f"F1 score:                   {f1:1.4f}")
+        print(f"\nF1 score:                   {f1:1.4f}")
         for c in CATEGORIES:
             d = self._sentences[c]
             if "recall" not in d or "precision" not in d:
@@ -551,6 +560,7 @@ def process(
             for err in errors:
                 asterisk = "*"
                 if err["in_scope"]:
+                    # This is an in-scope error
                     asterisk = ""
                     ice_error = True
                 if not QUIET:
@@ -590,7 +600,7 @@ def main() -> None:
 
     # For a measurement run on the test corpus, the default is
     # quiet operation. We store the flag in a global variable
-    # that is accessible to all processes.
+    # that is accessible to child processes.
     global QUIET
     QUIET = args.measure
 
@@ -601,14 +611,14 @@ def main() -> None:
     if args.quiet is not None:
         QUIET = True
 
-    # Count the processed files
+    # Maximum number of files to process (0=all files)
     max_count = args.number
     # Initialize the statistics collector
     stats = Stats()
     # The glob path of the XML files to process
+    path = args.path
     # When running measurements only, we use _TEST_PATH as the default,
     # otherwise _DEV_PATH
-    path = args.path
     if path is None:
         path = _TEST_PATH if args.measure else _DEV_PATH
 
@@ -626,7 +636,7 @@ def main() -> None:
                 assert False, f"File path does not contain a recognized category: {fpath}"
             # Add the file to the statistics under its category
             stats.add_file(category)
-            # Yield the information to the multiprocessing pool
+            # Yield the file information to the multiprocessing pool
             yield fpath, category
             count += 1
             # If there is a limit on the number of processed files,
@@ -634,10 +644,9 @@ def main() -> None:
             if max_count > 0 and count >= max_count:
                 break
 
-    # Use a multiprocessing pool to process the articles.
-    # The following defaults to using as many processes as there are CPU cores.
+    # Use a multiprocessing pool to process the articles
     with multiprocessing.Pool(processes=args.cores) as pool:
-        # Iterate through each TEI XML file in turn and call the process()
+        # Iterate through the TEI XML files in turn and call the process()
         # function on each file, in a child process within the pool
         for result in pool.imap_unordered(process, gen_files()):
             # Results come back as lists of arguments (tuples) that
@@ -650,7 +659,7 @@ def main() -> None:
 
     # Finally, acquire the output lock and write the final statistics
     with OUTPUT_LOCK:
-        stats.output()
+        stats.output(cores=args.cores or os.cpu_count() or 1)
         print("", flush=True)
 
 
