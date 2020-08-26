@@ -38,6 +38,9 @@
     The machine-generated annotations are then compared with the hand-annotated
     gold reference.
 
+    This program uses Python's multiprocessing.Pool() to perform
+    the evaluation using all available CPU cores, simultaneously.
+
     A normal way to configure this program is to clone the iceErrorCorpus
     repository (from the above path) into a separate directory, and
     then place a symlink to it to the /eval directory. For example:
@@ -48,18 +51,30 @@
     $ ln -s ../../iceErrorCorpus/ .
     $ python eval.py
 
-    An alternate method is to specify the glob path to the error corpus as an
+    An alternate method is to specify a glob path to the error corpus as an
     argument to eval.py:
 
     $ python eval.py ~/github/iceErrorCorpus/data/**/*.xml
 
-    This program uses Python's multiprocessing.Pool() to perform
-    the evaluation using all available CPU cores, simultaneously.
+    To measure GreynirCorrect's performance on the test set
+    (by default located in ./iceErrorCorpus/testCorpus/):
+
+    $ python eval.py -m
+
+    To run GreynirCorrect on the entire development corpus
+    (by default located in ./iceErrorCorpus/data):
+
+    $ python eval.py
+
+    To run GreynirCorrect on 10 files in the development corpus:
+
+    $ python eval.py -n 10
 
 """
 
-from typing import Dict, List, Optional, Union, Tuple, Iterable
+from typing import Dict, List, Optional, Union, Tuple, Iterable, cast
 
+import os
 from collections import defaultdict
 from datetime import datetime
 import glob
@@ -166,7 +181,10 @@ _TEST_PATH = 'iceErrorCorpus/testCorpus/**/*.xml'
 # Define the command line arguments
 
 parser = argparse.ArgumentParser(
-    description="Evaluates spelling and grammar checking performance"
+    description=(
+        "This program evaluates the spelling and grammar checking performance "
+        "of GreynirCorrect on iceErrorCorpus"
+    )
 )
 
 parser.add_argument(
@@ -184,13 +202,34 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "-c", "--cores",
+    type=int,
+    help=f"number of CPU cores to use (default=all, i.e. {os.cpu_count()})",
+)
+
+parser.add_argument(
     "-m", "--measure",
     action="store_true",
     help="run measurements on test corpus and output results only",
 )
 
-# This boolean global is set to True if the -m flag is specified
-MEASURE_ONLY = False
+parser.add_argument(
+    "-q", "--quiet",
+    default=None,
+    action="store_true",
+    help="output results only, not individual sentences",
+)
+
+parser.add_argument(
+    "-v", "--verbose",
+    default=None,
+    action="store_true",
+    help="output individual sentences as well as results, even for the test corpus",
+)
+
+# This boolean global is set to True for quiet ouput (used for processing
+# of the test corpus)
+QUIET = False
 
 
 def element_text(element: ET.Element) -> str:
@@ -206,7 +245,7 @@ class Stats:
         """ Initialize empty defaults for the stats collection """
         self._starttime = datetime.utcnow()
         self._files: Dict[str, int] = defaultdict(int)
-        self._sentences: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        self._sentences: Dict[str, Dict[str, Union[float, int]]] = defaultdict(lambda: defaultdict(int))
 
     def add_file(self, category: str) -> None:
         """ Add a processed file in a given content category """
@@ -263,26 +302,37 @@ class Stats:
         print(f"Sentences processed:        {num_sentences:6}")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['count']:6}")
+
+        def perc(n):
+            """ Return a percentage of total sentences, formatted as 3.2f """
+            if num_sentences == 0:
+                return "N/A"
+            return f"{100.0*n/num_sentences:3.2f}"
+
         # Total number of true negatives found
         true_negatives = sum(d["true_negatives"] for d in self._sentences.values())
-        print(f"True negatives:             {true_negatives:6}")
+        print(f"True negatives:             {true_negatives:6} {perc(true_negatives):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['true_negatives']:6}")
+
         # Total number of true positives found
         true_positives = sum(d["true_positives"] for d in self._sentences.values())
-        print(f"True positives:             {true_positives:6}")
+        print(f"True positives:             {true_positives:6} {perc(true_positives):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['true_positives']:6}")
+
         # Total number of false negatives found
         false_negatives = sum(d["false_negatives"] for d in self._sentences.values())
-        print(f"False negatives:            {false_negatives:6}")
+        print(f"False negatives:            {false_negatives:6} {perc(false_negatives):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['false_negatives']:6}")
+
         # Total number of false positives found
         false_positives = sum(d["false_positives"] for d in self._sentences.values())
-        print(f"False positives:            {false_positives:6}")
+        print(f"False positives:            {false_positives:6} {perc(false_positives):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['false_positives']:6}")
+
         # Percentage of true vs. false
         true_results = true_positives + true_negatives
         false_results = false_positives + false_negatives
@@ -301,6 +351,43 @@ class Stats:
             else:
                 result = f"{100.0*true_results/num_sentences:3.2f}%/{100.0*false_results/num_sentences:3.2f}%"
             print(f"   {c:<13}: {result:>16}")
+
+        # Recall
+        recall = true_positives / (true_positives + false_negatives)
+        print(f"Recall:                     {recall:1.4f}")
+        for c in CATEGORIES:
+            d = self._sentences[c]
+            denominator = d["true_positives"] + d["false_negatives"]
+            if denominator == 0:
+                print(f"   {c:<13}:              N/A")
+            else:
+                rc = d["recall"] = d["true_positives"] / denominator
+                print(f"   {c:<13}:           {rc:1.4f}")
+
+        # Precision
+        precision = true_positives / (true_positives + false_positives)
+        print(f"Precision:                  {precision:1.4f}")
+        for c in CATEGORIES:
+            d = self._sentences[c]
+            denominator = d["true_positives"] + d["false_positives"]
+            if denominator == 0:
+                print(f"   {c:<13}:              N/A")
+            else:
+                p = d["precision"] = d["true_positives"] / denominator
+                print(f"   {c:<13}:           {p:1.4f}")
+
+        # F1 score
+        f1 = 2 * precision * recall / (precision + recall)
+        print(f"F1 score:                   {f1:1.4f}")
+        for c in CATEGORIES:
+            d = self._sentences[c]
+            if "recall" not in d or "precision" not in d:
+                print(f"   {c:<13}:              N/A")
+                continue
+            rc = d["recall"]
+            p = d["precision"]
+            f1 = 2 * p * rc / (p + rc)
+            print(f"   {c:<13}:           {f1:1.4f}")
 
 
 def process(
@@ -338,7 +425,7 @@ def process(
 
     try:
 
-        if not MEASURE_ONLY:
+        if not QUIET:
             # Output a file header
             bprint("-" * 64)
             bprint(f"File: {fpath}")
@@ -347,7 +434,7 @@ def process(
         try:
             tree = ET.parse(fpath)
         except ET.ParseError:
-            if MEASURE_ONLY:
+            if QUIET:
                 bprint(f"000: *** Unable to parse XML file {fpath} ***")
             else:
                 bprint(f"000: *** Unable to parse XML file ***")
@@ -360,6 +447,9 @@ def process(
             index = sent.attrib.get("n", "")
             tokens: List[str] = []
             errors: List[ErrorDict] = []
+            # A dictionary of errors by their index (idx field)
+            error_indexes: Dict[str, ErrorDict] = {}
+            dependencies: List[Tuple[str, ErrorDict]] = []
             # Enumerate through the tokens in the sentence
             for el in sent:
                 tag = el.tag[nl:]
@@ -402,8 +492,34 @@ def process(
                             corrected=corrected,
                         )
                         errors.append(error)
+                        # Temporarily index errors by the idx field
+                        idx = attr.get("idx")
+                        if idx:
+                            error_indexes[idx] = error
+                        # Accumulate dependencies that need to be "fixed up",
+                        # i.e. errors that depend on and refer to other errors
+                        # within the sentence
+                        if xtype == "dep":
+                            dep_id = attr.get("depId")
+                            if dep_id:
+                                # Note the fact that this error depends on the
+                                # error with idx=dep_id
+                                dependencies.append((dep_id, error))
+                            else:
+                                if QUIET:
+                                    bprint(f"In file {fpath}:")
+                                bprint(f"\n{index}: *** 'depId' attribute missing for dependency ***")
                 else:
                     tokens.append(element_text(el))
+            # Fix up the dependencies, if any
+            for dep_id, error in dependencies:
+                if dep_id not in error_indexes:
+                    if QUIET:
+                        bprint(f"In file {fpath}:")
+                    bprint(f"\n{index}: *** No error has idx='{dep_id}' ***")
+                else:
+                    # Copy the in_scope attribute from the original error
+                    error["in_scope"] = error_indexes[dep_id]["in_scope"]
             # Reconstruct the original sentence as a shallow-tokenized text string
             text = " ".join(tokens).strip()
             if not text:
@@ -412,15 +528,15 @@ def process(
             # Pass it to GreynirCorrect
             s = gc.check_single(text)
             if s is None:
-                if MEASURE_ONLY:
+                if QUIET:
                     bprint(f"In file {fpath}:")
                 bprint(f"\n{index}: *** No parse for sentence *** {text}")
                 continue
-            if not MEASURE_ONLY:
+            if not QUIET:
                 # Output the original sentence
                 bprint(f"\n{index}: {text}")
             if not index:
-                if MEASURE_ONLY:
+                if QUIET:
                     bprint(f"In file {fpath}:")
                 bprint("000: *** Sentence identifier is missing ('n' attribute) ***")
             gc_error = False
@@ -429,7 +545,7 @@ def process(
             for ann in s.annotations:
                 if ann.is_error:
                     gc_error = True
-                if not MEASURE_ONLY:
+                if not QUIET:
                     bprint(f">>> {ann}")
             # Output iceErrorCorpus annotations
             for err in errors:
@@ -437,9 +553,9 @@ def process(
                 if err["in_scope"]:
                     asterisk = ""
                     ice_error = True
-                if not MEASURE_ONLY:
+                if not QUIET:
                     bprint(f"<<< {err['start']:03}-{err['end']:03}: {asterisk}{err['xtype']}")
-            if not MEASURE_ONLY:
+            if not QUIET:
                 # Output true/false positive/negative result
                 if ice_error and gc_error:
                     bprint("=++ True positive")
@@ -460,7 +576,7 @@ def process(
         with OUTPUT_LOCK:
             for s in buffer:
                 print(s)
-            if not MEASURE_ONLY:
+            if not QUIET:
                 print("", flush=True)
 
     # This return value will be pickled and sent back to the parent process
@@ -472,9 +588,18 @@ def main() -> None:
     # Parse the command line arguments
     args = parser.parse_args()
 
-    # Store the measure_only flag in a global that is accessible to all processes
-    global MEASURE_ONLY
-    MEASURE_ONLY = args.measure
+    # For a measurement run on the test corpus, the default is
+    # quiet operation. We store the flag in a global variable
+    # that is accessible to all processes.
+    global QUIET
+    QUIET = args.measure
+
+    # Overriding flags
+    if args.verbose is not None:
+        QUIET = False
+    # --quiet has precedence over --verbose
+    if args.quiet is not None:
+        QUIET = True
 
     # Count the processed files
     max_count = args.number
@@ -485,7 +610,7 @@ def main() -> None:
     # otherwise _DEV_PATH
     path = args.path
     if path is None:
-        path = _TEST_PATH if MEASURE_ONLY else _DEV_PATH
+        path = _TEST_PATH if args.measure else _DEV_PATH
 
     def gen_files() -> Iterable[Tuple[str, str]]:
         """ Generate tuples with the file paths and categories
@@ -511,7 +636,7 @@ def main() -> None:
 
     # Use a multiprocessing pool to process the articles.
     # The following defaults to using as many processes as there are CPU cores.
-    with multiprocessing.Pool() as pool:
+    with multiprocessing.Pool(processes=args.cores) as pool:
         # Iterate through each TEI XML file in turn and call the process()
         # function on each file, in a child process within the pool
         for result in pool.imap_unordered(process, gen_files()):
