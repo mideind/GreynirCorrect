@@ -529,8 +529,10 @@ def process(
                 else:
                     # Copy the in_scope attribute from the original error
                     error["in_scope"] = error_indexes[dep_id]["in_scope"]
-            # Reconstruct the original sentence as a shallow-tokenized text string
-            text = " ".join(tokens).strip()
+            # Reconstruct the original sentence
+            # !!! TODO: this actually fixes spacing errors, causing them
+            # not to be reported by GreynirCorrect.
+            text = gc.correct_spaces(" ".join(tokens))
             if not text:
                 # Nothing to do: drop this and go to the next sentence
                 continue
