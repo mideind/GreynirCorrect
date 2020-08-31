@@ -72,7 +72,7 @@
 
 """
 
-from typing import Dict, List, Optional, Union, Tuple, Iterable, cast
+from typing import Dict, List, Optional, Union, Tuple, Iterable, cast, NamedTuple
 
 import os
 from collections import defaultdict
@@ -83,6 +83,7 @@ import xml.etree.ElementTree as ET
 import multiprocessing
 
 import reynir_correct as gc
+from tokenizer import detokenize, Tok, TOK
 
 
 # The type of a single error descriptor, extracted from a TEI XML file
@@ -399,6 +400,15 @@ class Stats:
             print(f"   {c:<13}:           {f1:1.4f}")
 
 
+def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
+    """ Returns a string with a reasonably correct concatenation
+        of the tokens, where each token is a (tag, text) tuple. """
+    return detokenize(
+        Tok(TOK.PUNCTUATION if tag == "c" else TOK.WORD, txt, None)
+        for tag, txt in tokens
+    )
+
+
 def process(
     fpath_and_category: Tuple[str, str],
 ) -> List[Tuple]:
@@ -454,7 +464,7 @@ def process(
         for sent in root.findall("ns:text/ns:body/ns:p/ns:s", ns):
             # Sentence identifier (index)
             index = sent.attrib.get("n", "")
-            tokens: List[str] = []
+            tokens: List[Tuple[str, str]] = []
             errors: List[ErrorDict] = []
             # A dictionary of errors by their index (idx field)
             error_indexes: Dict[str, ErrorDict] = {}
@@ -475,9 +485,12 @@ def process(
                     el_orig = el.find("ns:original", ns)
                     if el_orig is not None:
                         # We have 0 or more original tokens embedded within the revision tag
-                        orig_tokens = [element_text(subel) for subel in el_orig]
+                        orig_tokens = [
+                            (subel.tag[nl:], element_text(subel))
+                            for subel in el_orig
+                        ]
                         tokens.extend(orig_tokens)
-                        original = " ".join(orig_tokens).strip()
+                        original = " ".join(t[1] for t in orig_tokens).strip()
                     # Calculate the index of the ending token within the span
                     end = max(start, len(tokens) - 1)
                     # Look at the corrected text
@@ -519,7 +532,7 @@ def process(
                                     bprint(f"In file {fpath}:")
                                 bprint(f"\n{index}: *** 'depId' attribute missing for dependency ***")
                 else:
-                    tokens.append(element_text(el))
+                    tokens.append((tag, element_text(el)))
             # Fix up the dependencies, if any
             for dep_id, error in dependencies:
                 if dep_id not in error_indexes:
@@ -530,9 +543,7 @@ def process(
                     # Copy the in_scope attribute from the original error
                     error["in_scope"] = error_indexes[dep_id]["in_scope"]
             # Reconstruct the original sentence
-            # !!! TODO: this actually fixes spacing errors, causing them
-            # not to be reported by GreynirCorrect.
-            text = gc.correct_spaces(" ".join(tokens))
+            text = correct_spaces(tokens)
             if not text:
                 # Nothing to do: drop this and go to the next sentence
                 continue
