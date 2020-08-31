@@ -263,7 +263,10 @@ class Stats:
     def add_sentence(
         self,
         category: str, num_tokens: int,
-        ice_error: bool, gc_error: bool
+        ice_error: bool, gc_error: bool,
+        tp: int, tn: int, fp: int, fn: int,
+        right_corr: int, wrong_corr: int,
+        right_span: int, wrong_span: int
     ) -> None:
         """ Add a processed sentence in a given content category """
         d = self._sentences[category]
@@ -283,6 +286,18 @@ class Stats:
         # False positive: GC reports an error where iceErrorCorpus doesn't
         false_positive = gc_error and not ice_error
         d["false_positives"] += 1 if false_positive else 0
+
+        # Stats for error detection for sentence
+        d["tp"] += tp
+        d["tn"] += tn
+        d["fp"] += fp
+        d["fn"] += fn
+        # Stats for error correction
+        d["right_corr"] += right_corr
+        d["wrong_corr"] += wrong_corr
+        # Stats for error span
+        d["right_span"] += right_span
+        d["wrong_span"] += wrong_span
 
     def output(self, cores: int) -> None:
         """ Write the statistics to stdout """
@@ -318,6 +333,15 @@ class Stats:
                 return "N/A"
             return f"{100.0*n/num_sentences:3.2f}"
 
+        ### SENTENCE SCORES
+        # TODO Setja útreikning á P, R og F í sérfall, 
+        # Fær sent inn TN, TP, FP og FN - er þá búin að summa það upp
+        # Get sent inn aukagildi, sem segir t.d. hvort nota á F0,5 eða F1
+        # Og hvað er verið að reikna?
+        # Get líka sent inn texta sem segir hvað er verið að reikna,
+        # s.s. "Results for Error detection" eða "Results for sentence correctness"?
+
+        print("\nResults for error detection in sentences")
         # Total number of true negatives found
         true_negatives = sum(d["true_negatives"] for d in self._sentences.values())
         print(f"\nTrue negatives:             {true_negatives:6} {perc(true_negatives):>6}%")
@@ -362,7 +386,10 @@ class Stats:
             print(f"   {c:<13}: {result:>16}")
 
         # Recall
-        recall = true_positives / (true_positives + false_negatives)
+        if true_positives + false_negatives == 0:
+            recall = 0
+        else:
+            recall = true_positives / (true_positives + false_negatives)
         print(f"\nRecall:                     {recall:1.4f}")
         for c in CATEGORIES:
             d = self._sentences[c]
@@ -374,7 +401,10 @@ class Stats:
                 print(f"   {c:<13}:           {rc:1.4f}")
 
         # Precision
-        precision = true_positives / (true_positives + false_positives)
+        if true_positives + false_negatives == 0:
+            precision = 0
+        else:
+            precision = true_positives / (true_positives + false_positives)
         print(f"\nPrecision:                  {precision:1.4f}")
         for c in CATEGORIES:
             d = self._sentences[c]
@@ -386,7 +416,10 @@ class Stats:
                 print(f"   {c:<13}:           {p:1.4f}")
 
         # F1 score
-        f1 = 2 * precision * recall / (precision + recall)
+        if precision + recall == 0:
+            f1 = 0.0
+        else:
+            f1 = 2 * precision * recall / (precision + recall)
         print(f"\nF1 score:                   {f1:1.4f}")
         for c in CATEGORIES:
             d = self._sentences[c]
@@ -397,6 +430,54 @@ class Stats:
             p = d["precision"]
             f1 = 2 * p * rc / (p + rc)
             print(f"   {c:<13}:           {f1:1.4f}")
+
+        print("Results for error detection  within sentences")
+        num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
+        print(f"\nTokens processed:           {num_tokens:6}")
+        for c in CATEGORIES:
+            print(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
+
+        tp = sum(d["tp"] for d in self._sentences.values())
+        print(f"\nTrue positives:           {tp:6}")
+        for c in CATEGORIES:
+            print(f"   {c:<13}:           {self._sentences[c]['tp']:6}")
+
+        tn = sum(d["tn"] for d in self._sentences.values())
+        print(f"\nTrue negatives:           {tn:6}")
+        for c in CATEGORIES:
+            print(f"   {c:<13}:           {self._sentences[c]['tn']:6}")
+
+        fp = sum(d["fp"] for d in self._sentences.values())
+        print(f"\nFalse positives:           {fp:6}")
+        for c in CATEGORIES:
+            print(f"   {c:<13}:           {self._sentences[c]['fp']:6}")
+
+        fn = sum(d["fn"] for d in self._sentences.values())
+        print(f"\nFalse negatives:           {fn:6}")
+        for c in CATEGORIES:
+            print(f"   {c:<13}:           {self._sentences[c]['fn']:6}")
+
+        print("Results for error correction")
+        right_corr = sum(d["right_corr"] for d in self._sentences.values())
+        print(f"\nRight correction:           {right_corr:6}")
+        for c in CATEGORIES:
+            print(f"   {c:<13}:           {self._sentences[c]['right_corr']:6}")
+       
+        wrong_corr = sum(d["wrong_corr"] for d in self._sentences.values())
+        print(f"\nWrong correction:           {wrong_corr:6}")
+        for c in CATEGORIES:
+            print(f"   {c:<13}:           {self._sentences[c]['wrong_corr']:6}")
+
+        print("Results for error span")
+        right_span = sum(d["right_span"] for d in self._sentences.values())
+        print(f"\nRight span:           {right_span:6}")
+        for c in CATEGORIES:
+            print(f"   {c:<13}:           {self._sentences[c]['right_span']:6}")
+       
+        wrong_span = sum(d["wrong_span"] for d in self._sentences.values())
+        print(f"\nWrong span:           {wrong_span:6}")
+        for c in CATEGORIES:
+            print(f"   {c:<13}:           {self._sentences[c]['wrong_span']:6}")
 
 
 def process(
@@ -532,6 +613,7 @@ def process(
             # Reconstruct the original sentence
             # !!! TODO: this actually fixes spacing errors, causing them
             # not to be reported by GreynirCorrect.
+            # !!! TODO might be the cause of quotation marks being affixed to the next word
             text = gc.correct_spaces(" ".join(tokens))
             if not text:
                 # Nothing to do: drop this and go to the next sentence
@@ -578,10 +660,87 @@ def process(
                 else:
                     assert gc_error and not ice_error
                     bprint("!++ False positive")
+
+
+            # print(" ".join(tokens))
+            # for gg in s.annotations:
+            #     print(gg)
+            # for ii in errors:
+            #     print(ii)
+            # print("===========Úrvinnsla===========")
+            tp, tn, fp, fn = 0, 0, 0, 0
+            right_corr, wrong_corr = 0, 0
+            right_span, wrong_span = 0, 0
+            if ice_error and gc_error:
+                gcoutput = iter(x for x in s.annotations)
+                iecoutput = iter(y for y in errors if y["in_scope"])
+                # Use a kind of a merging algorithm for comparing the errors
+                x = next(gcoutput)
+                y = next(iecoutput)
+                while True:
+                    # print("Ber saman:\n\t{}\n\t{}".format(x, y))
+                    if x.start == y["start"]:  
+                        # Errors start in same place
+                        # Can check for same span
+                        # and same correction
+                        # print("\tByrja á sama stað")
+                        tp += 1
+                        if x.end == y["end"]:
+                            # Found exact same span
+                            # Can check for same correction
+                            right_span +=1
+                            if x.suggest == y["correction"]:
+                                # print("\tFann allt eins!")
+                                right_corr +=1
+                                # TODO Tékka hér hvort er bara viðvörun, x.is_warning()
+                                # Ákveða hvernig það spilar inn í niðurstöðurnar
+                            else:
+                                # print("\tRöng leiðrétting en allt annað rétt")
+                                wrong_corr +=1
+                            # print("\tFann sömu spönn")
+                        else:
+                            # Found error with wrong span
+                            wrong_span +=1
+                        x = next(gcoutput)
+                        y = next(iecoutput)
+                        continue
+                    elif x.start < y["start"]:
+                        # Found error not found in gold standard
+                        # print("\tFann FP")
+                        fp +=1
+                        x = next(gcoutput)
+                        continue
+                    elif x.start > y["start"]:
+                        # Didn't find error present in gold standard
+                        #print("\tFann FN")
+                        fn +=1
+                        y = next(iecoutput)
+                    else:
+                        print("\tHvað gerist hér???")
+                # TODO vinna úr rest af listum ef eitthvað er eftir. Get tékkað á lengdinni í upphafi?
+            elif ice_error:
+                # Only errors in gold standard
+                for each in errors:
+                    if each["in_scope"]:
+                        #print(each)
+                        fn +=1
+                        #print("\tFann FN")
+            elif gc_error:
+                # Only errors in output
+                for each in s.annotations:
+                    #print(each)
+                    fp +=1
+                    #print("\tFann FP")
+            else:
+                # Nothing found
+                pass
+            # TODO Finna fágaðri lausn, sem tekur tillit til villuspana.
+            tn = len(tokens)-fp-fn-tp
             # Collect statistics into the stats list, to be returned
             # to the parent process
+            # TODO Bæta við stats sem skila
             if stats is not None:
-                stats.append((category, len(tokens), ice_error, gc_error))
+                stats.append((category, len(tokens), ice_error, gc_error, tp, tn, fp, fn, right_corr, wrong_corr, right_span, wrong_span))
 
     finally:
         # Print the accumulated output before exiting
