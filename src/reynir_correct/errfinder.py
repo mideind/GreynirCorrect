@@ -38,7 +38,7 @@
 
 """
 
-from typing import Tuple, List
+from typing import Tuple, List, Dict, Any
 
 import re
 
@@ -65,8 +65,8 @@ class ErrorFinder(ParseForestNavigator):
         "nf": SimpleTree.nominative_np,
         "þf": SimpleTree.accusative_np,
         "þgf": SimpleTree.dative_np,
-        "ef": SimpleTree.genitive_np
-    }
+        "ef": SimpleTree.genitive_np,
+    }  # type: Dict[str, Any]
 
     _NON_OP_VERB_FORMS = {
         "lýst": ("líst", "'Lýst' á sennilega að vera 'líst', þ.e. sögnin 'að líta(st)' í stað sagnarinnar 'að ljósta'."),
