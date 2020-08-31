@@ -38,7 +38,11 @@
 
 """
 
-from reynir import correct_spaces, TOK
+from typing import Tuple, List
+
+import re
+
+from reynir import correct_spaces, TOK, _Sentence
 from reynir.fastparser import ParseForestNavigator
 from reynir.settings import VerbSubjects
 from reynir.simpletree import SimpleTree
@@ -68,7 +72,7 @@ class ErrorFinder(ParseForestNavigator):
         "lýst": ("líst", "'Lýst' á sennilega að vera 'líst', þ.e. sögnin 'að líta(st)' í stað sagnarinnar 'að ljósta'."),
     }
 
-    def __init__(self, ann, sent):
+    def __init__(self, ann: List[Annotation], sent: _Sentence) -> None:
         super().__init__(visit_all=True)
         # Annotation list
         self._ann = ann
@@ -84,25 +88,25 @@ class ErrorFinder(ParseForestNavigator):
         return super().go(self._sent.deep_tree)
 
     @staticmethod
-    def _node_span(node):
+    def _node_span(node) -> Tuple[int, int]:
         """ Return the start and end indices of the tokens
             spanned by the given node """
         first_token, last_token = node.token_span
         return (first_token.index, last_token.index)
 
-    def cast_to_case(self, case, node):
+    def cast_to_case(self, case, node) -> str:
         """ Return the contents of a noun phrase node
             inflected in the given case """
         return self._CAST_FUNCTIONS[case].fget(node)
 
-    def _simple_tree(self, node):
+    def _simple_tree(self, node) -> SimpleTree:
         """ Return a SimpleTree instance spanning the deep tree
             of which node is the root """
         first, last = self._node_span(node)
         toklist = self._tokens[first : last + 1]
         return SimpleTree.from_deep_tree(node, toklist, first_token_index=first)
 
-    def _node_text(self, node, original_case=False):
+    def _node_text(self, node, original_case=False) -> str:
         """ Return the text within the span of the node """
 
         def text(t):
@@ -187,6 +191,16 @@ class ErrorFinder(ParseForestNavigator):
                 "Rita á 'annað hvort' í tveimur orðum þegar um er að ræða fornöfn, "
                 "til dæmis 'annað hvort systkinanna'.",
             suggestion="annaðhvort"
+        )
+
+    def VillaTvípunkturFs(self, txt, variants, node):
+        # Tvípunktur milli forsetningar og nafnliðar
+        correct = re.sub(r"\s*:", "", txt)
+        return dict(
+            text="Tvípunktur er óþarfi í '{0}'".format(txt),
+            detail="Óþarft er að hafa tvípunkt milli forsetningar og nafnliðarins "
+                "sem hún stýrir falli á.",
+            suggestion=correct
         )
 
     def singular_error(self, txt, variants, node, detail):

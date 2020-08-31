@@ -35,7 +35,7 @@
 
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import os
 import math
@@ -304,11 +304,20 @@ class Corrector:
     # Minimum frequency in trigrams database to be considered a "known" word
     _KNOWN_WORD_MIN_FREQUENCY = 3
 
+    # Singleton Ngrams dictionary
+    _NGRAMS = None  # type: Optional[Ngrams]
+
+
     def __init__(self, db, dictionary=None):
         # Word database
         self._db = db
         # N-gram frequency dictionary
-        self.ngrams = dictionary or Ngrams()
+        if dictionary is not None:
+            self.ngrams = dictionary
+        else:
+            if self._NGRAMS is None:
+                self.__class__._NGRAMS = Ngrams()
+            self.ngrams = self._NGRAMS
         # Function for log probability of word
         self.logprob = self.ngrams.logprob
         # Function for (adjusted) frequency of word

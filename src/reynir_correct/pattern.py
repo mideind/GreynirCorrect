@@ -430,7 +430,7 @@ class PatternMatcher:
         for trigger, pattern, func, context in self.PATTERNS:
             # We only do the expensive pattern matching if the trigger lemma
             # for a pattern rule (if given) is actually found in the sentence
-            if trigger and trigger in lemmas:
+            if (not trigger) or trigger in lemmas:
                 for match in tree.all_matches(pattern, context):
                     # Call the annotation function for this match
                     func(self, match)

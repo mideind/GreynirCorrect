@@ -1223,6 +1223,12 @@ def lookup_unknown_words(
     at_sentence_start = False
     context = tuple()  # type: Tuple[str, ...]
     db = corrector.db
+    # When entering parentheses, we push dict(closing=")", prefix=""),
+    # where closing means the corresponding closing symbol (")", "]")
+    # and prefix is the starting token within the parenthesis, if any,
+    # such as "e." for "English"
+    PARENS = {"(": ")", "[": "]", "{": "}"}
+    parenthesis_stack = []  # type: List[Dict[str, str]]
 
     def is_immune(token: CorrectToken) -> bool:
         """ Return True if the token should definitely not be
@@ -1325,6 +1331,7 @@ def lookup_unknown_words(
             # A new sentence is starting
             at_sentence_start = True
             context = tuple()
+            parenthesis_stack = []
             continue
 
         # Store the previous context in case we need to construct
@@ -1335,8 +1342,17 @@ def lookup_unknown_words(
             context = (prev_context + tuple(token.txt.split()))[-3:]
 
         if token.kind == TOK.PUNCTUATION or token.kind == TOK.ORDINAL:
-            yield token
+            # Manage the parenthesis stack
+            if token.txt in PARENS:
+                # Opening a new scope
+                parenthesis_stack.append(
+                    dict(closing=PARENS[token.txt])
+                )
+            elif bool(parenthesis_stack) and token.txt == parenthesis_stack[-1]["closing"]:
+                # Closing a scope
+                parenthesis_stack.pop()
             # Don't modify at_sentence_start in this case
+            yield token
             continue
 
         if token.kind != TOK.WORD or " " in token.txt:
@@ -1467,12 +1483,13 @@ def lookup_unknown_words(
         if not token.val:
             # No annotation and not able to correct:
             # mark the token as an unknown word
-            # (but only as a warning if it is an uppercase word)
+            # (but only as a warning if it is an uppercase word or
+            # if we're within parentheses)
             token.set_error(
                 UnknownWordError(
                     "001",
                     "Óþekkt orð: '{0}'".format(token.txt),
-                    is_warning=token.txt[0].isupper(),
+                    is_warning=token.txt[0].isupper() or bool(parenthesis_stack),
                 )
             )
 

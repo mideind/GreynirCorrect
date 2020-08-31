@@ -212,8 +212,8 @@ def test_foreign_sentences(rc):
     )
     check_sentence(
         rc,
-        "Borðaðu Magnyl og Xanax in Rushmore.",
-        [(0, 6, "E004")],
+        "Borðaðu Magnyl og Xanax out in Rushmore.",
+        [(0, 7, "E004")],
         is_foreign=True
     )
 
