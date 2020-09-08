@@ -37,6 +37,8 @@ import pytest
 
 import reynir_correct
 
+from test_annotator import check_sentence
+
 
 @pytest.fixture(scope="module")
 def rc():
@@ -45,42 +47,6 @@ def rc():
     yield r
     # Do teardown here
     r.__class__.cleanup()
-
-
-def check_sentence(rc, s, annotations):
-    """ Check whether a given single sentence gets the
-        specified annotations when checked """
-
-    def check_sent(sent):
-        assert sent is not None
-        if sent.tree is None:
-            # If the sentence should not parse, call
-            # check_sentence with annotations=None
-            assert annotations is None
-            return
-        assert annotations is not None
-        assert sent.tree is not None
-        if not annotations:
-            # This sentence is not supposed to have any annotations
-            assert (not hasattr(sent, "annotations")) or len(sent.annotations) == 0
-            return
-        assert hasattr(sent, "annotations")
-        assert len(sent.annotations) == len(annotations)
-        for a, (start, end, code) in zip(sent.annotations, annotations):
-            assert a.start == start
-            assert a.end == end
-            assert a.code == code
-
-    # Test check_single()
-    check_sent(rc.parse_single(s))
-    # Test check()
-    for pg in reynir_correct.check(s):
-        for sent in pg:
-            check_sent(sent)
-    # Test check_with_stats()
-    for pg in reynir_correct.check_with_stats(s)["paragraphs"]:
-        for sent in pg:
-            check_sent(sent)
 
 
 def test_verb_af(rc):
@@ -100,7 +66,7 @@ def test_verb_af(rc):
     check_sentence(rc, s, [(4, 5, "P001")])
 
     s = "Páll brosti af töktunum í Gunnu."
-    check_sentence(rc, s, [(1, 2, "P001")])
+    check_sentence(rc, s, [(1, 2, "P001")], ignore_warnings=True)
 
     s = "Ég var leitandi af kettinum í allan dag."
     check_sentence(rc, s, [(2, 3, "P001")])
@@ -110,3 +76,16 @@ def test_verb_af(rc):
 
     s = "Ertu að leita af skrifstofuhúsnæði?"
     check_sentence(rc, s, [(2, 3, "P001")])
+
+
+def test_verb_líst(rc):
+    s = "Jóni veiðimanni lýst ekki á þetta mál."
+    check_sentence(rc, s, [(2, 2, "P_WRONG_OP_FORM")])
+    s = "Eins og fram hefur komið lýst mér vel á þetta."
+    check_sentence(rc, s, [(5, 5, "P_WRONG_OP_FORM")])
+    s = "Jón hefur lýst sinni afstöðu til málsins."
+    check_sentence(rc, s, [])
+    s = "Þegar leið á kvöldið var gangstéttin lýst með ljósum."
+    check_sentence(rc, s, [], ignore_warnings=True)
+    # TODO: The following gets no annotation:
+    # 'Ég verð að segja að mér lýst ekkert á þetta.'

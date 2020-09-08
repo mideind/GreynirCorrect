@@ -79,7 +79,7 @@ def dump(tokens):
             print("   {0}: {1}".format(token.error_code, err))
 
 
-def check_sentence(rc, s, annotations, is_foreign=False):
+def check_sentence(rc, s, annotations, is_foreign=False, ignore_warnings=False):
     """ Check whether a given single sentence gets the
         specified annotations when checked """
 
@@ -93,16 +93,31 @@ def check_sentence(rc, s, annotations, is_foreign=False):
         assert annotations is not None
         if not is_foreign:
             assert sent.tree is not None
+        # Compile a list of error annotations, omitting warnings
+        if not hasattr(sent, "annotations"):
+            sent_errors = []
+        else:
+            sent_errors = [a for a in sent.annotations if not a.code.endswith("/w")]
         if not annotations:
             # This sentence is not supposed to have any annotations
-            assert (not hasattr(sent, "annotations")) or len(sent.annotations) == 0
+            if ignore_warnings:
+                assert len(sent_errors) == 0
+            else:
+                assert (not hasattr(sent, "annotations")) or len(sent.annotations) == 0
             return
         assert hasattr(sent, "annotations")
-        assert len(sent.annotations) == len(annotations)
-        for a, (start, end, code) in zip(sent.annotations, annotations):
-            assert a.start == start
-            assert a.end == end
-            assert a.code == code
+        if ignore_warnings:
+            assert len(sent_errors) == len(annotations)
+            for a, (start, end, code) in zip(sent_errors, annotations):
+                assert a.start == start
+                assert a.end == end
+                assert a.code == code
+        else:
+            assert len(sent.annotations) == len(annotations)
+            for a, (start, end, code) in zip(sent.annotations, annotations):
+                assert a.start == start
+                assert a.end == end
+                assert a.code == code
 
     # Test check_single()
     check_sent(rc.parse_single(s))
@@ -212,7 +227,7 @@ def test_foreign_sentences(rc):
     )
     check_sentence(
         rc,
-        "Borðaðu Magnyl og Xanax out in Rushmore.",
+        "Borðaðu Magnyl og Xanax eagerly in Rushmore.",
         [(0, 7, "E004")],
         is_foreign=True
     )
@@ -239,7 +254,12 @@ def test_number(rc):
 def test_correct_sentences(rc):
     check_sentence(rc, "Pál langaði að horfa á sjónvarpið.", [])
     check_sentence(rc, "Mig dreymdi mús sem var að elta kött.", [])
-    check_sentence(rc, "Ég held að músin hafi kviðið fyrir að hitta köttinn.", [])
+    check_sentence(
+        rc,
+        "Ég held að músin hafi kviðið fyrir að hitta köttinn.",
+        [],
+        ignore_warnings=True
+    )
     check_sentence(rc, "Músin kveið fyrir að hitta köttinn.", [])
     check_sentence(rc,
         "Páll hlakkaði til jólanna og að hitta strákinn sem hlakkaði til páskanna.",
