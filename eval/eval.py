@@ -70,6 +70,11 @@
 
     $ python eval.py -n 10
 
+    To run GreynirCorrect on a randomly chosen subset of 10 files
+    in the development corpus:
+
+    $ python eval.py -n 10 -r
+
 """
 
 from typing import Dict, List, Optional, Union, Tuple, Iterable, cast, NamedTuple
@@ -78,6 +83,7 @@ import os
 from collections import defaultdict
 from datetime import datetime
 import glob
+import random
 import argparse
 import xml.etree.ElementTree as ET
 import multiprocessing
@@ -223,6 +229,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "-r", "--randomize",
+    action="store_true",
+    help="process a random subset of files",
+)
+
+parser.add_argument(
     "-q", "--quiet",
     default=None,
     action="store_true",
@@ -363,8 +375,13 @@ class Stats:
             print(f"   {c:<13}: {result:>16}")
 
         # Recall
-        recall = true_positives / (true_positives + false_negatives)
-        print(f"\nRecall:                     {recall:1.4f}")
+        if true_positives + false_negatives == 0:
+            result = "N/A"
+            recall = 0.0
+        else:
+            recall = true_positives / (true_positives + false_negatives)
+            result = f"{recall:1.4f}"
+        print(f"\nRecall:                     {result}")
         for c in CATEGORIES:
             d = self._sentences[c]
             denominator = d["true_positives"] + d["false_negatives"]
@@ -375,8 +392,13 @@ class Stats:
                 print(f"   {c:<13}:           {rc:1.4f}")
 
         # Precision
-        precision = true_positives / (true_positives + false_positives)
-        print(f"\nPrecision:                  {precision:1.4f}")
+        if true_positives + false_positives == 0:
+            result = "N/A"
+            precision = 0.0
+        else:
+            precision = true_positives / (true_positives + false_positives)
+            result = f"{precision:1.4f}"
+        print(f"\nPrecision:                  {result}")
         for c in CATEGORIES:
             d = self._sentences[c]
             denominator = d["true_positives"] + d["false_positives"]
@@ -387,8 +409,13 @@ class Stats:
                 print(f"   {c:<13}:           {p:1.4f}")
 
         # F1 score
-        f1 = 2 * precision * recall / (precision + recall)
-        print(f"\nF1 score:                   {f1:1.4f}")
+        if precision + recall > 0.0:
+            f1 = 2 * precision * recall / (precision + recall)
+            result = f"{f1:1.4f}"
+        else:
+            f1 = 0.0
+            result = "N/A"
+        print(f"\nF1 score:                   {result}")
         for c in CATEGORIES:
             d = self._sentences[c]
             if "recall" not in d or "precision" not in d:
@@ -396,8 +423,11 @@ class Stats:
                 continue
             rc = d["recall"]
             p = d["precision"]
-            f1 = 2 * p * rc / (p + rc)
-            print(f"   {c:<13}:           {f1:1.4f}")
+            if p + rc > 0.0:
+                f1 = 2 * p * rc / (p + rc)
+                print(f"   {c:<13}:           {f1:1.4f}")
+            else:
+                print(f"   {c:<13}:           N/A")
 
 
 def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
@@ -639,7 +669,14 @@ def main() -> None:
         """ Generate tuples with the file paths and categories
             to be processed by the multiprocessing pool """
         count = 0
-        for fpath in glob.iglob(path, recursive=True):
+        it: Iterable[str]
+        if args.randomize and max_count > 0:
+            # Randomizing only makes sense if there is a max count as well
+            it = glob.glob(path, recursive=True)
+            it = random.sample(it, max_count)
+        else:
+            it = glob.iglob(path, recursive=True)
+        for fpath in it:
             # Find out which category the file belongs to by
             # inference from the file name
             for category in CATEGORIES:
