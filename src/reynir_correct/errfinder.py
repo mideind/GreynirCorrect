@@ -54,6 +54,55 @@ from .errtokenizer import emulate_case
 # Case name prefixes
 CASE_NAMES = {"nf": "nefni", "þf": "þol", "þgf": "þágu", "ef": "eignar"}
 
+# Replacements for numeric ordinals, in the various genders and cases
+ORDINALS = {
+    1: {
+        "kk": {"nf": "fyrsti", "þf": "fyrsta", "þgf": "fyrsta", "ef": "fyrsta"},
+        "kvk": {"nf": "fyrsta", "þf": "fyrstu", "þgf": "fyrstu", "ef": "fyrstu"},
+        "hk": {"nf": "fyrsta", "þf": "fyrsta", "þgf": "fyrsta", "ef": "fyrsta"},
+    },
+    2: {
+        "kk": {"nf": "annar", "þf": "annan", "þgf": "öðrum", "ef": "annars"},
+        "kvk": {"nf": "önnur", "þf": "aðra", "þgf": "annarri", "ef": "annarrar"},
+        "hk": {"nf": "annað", "þf": "annað", "þgf": "öðru", "ef": "annars"},
+    },
+    3: {
+        "kk": {"nf": "þriðji", "þf": "þriðja", "þgf": "þriðja", "ef": "þriðja"},
+        "kvk": {"nf": "þriðja", "þf": "þriðju", "þgf": "þriðju", "ef": "þriðju"},
+        "hk": {"nf": "þriðja", "þf": "þriðja", "þgf": "þriðja", "ef": "þriðja"},
+    },
+    4: {
+        "kk": {"nf": "fjórði", "þf": "fjórða", "þgf": "fjórða", "ef": "fjórða"},
+        "kvk": {"nf": "fjórða", "þf": "fjórðu", "þgf": "fjórðu", "ef": "fjórðu"},
+        "hk": {"nf": "fjórða", "þf": "fjórða", "þgf": "fjórða", "ef": "fjórða"},
+    },
+    5: {
+        "kk": {"nf": "fimmti", "þf": "fimmta", "þgf": "fimmta", "ef": "fimmta"},
+        "kvk": {"nf": "fimmta", "þf": "fimmtu", "þgf": "fimmtu", "ef": "fimmtu"},
+        "hk": {"nf": "fimmta", "þf": "fimmta", "þgf": "fimmta", "ef": "fimmta"},
+    },
+    6: {
+        "kk": {"nf": "sjötti", "þf": "sjötta", "þgf": "sjötta", "ef": "sjötta"},
+        "kvk": {"nf": "sjötta", "þf": "sjöttu", "þgf": "sjöttu", "ef": "sjöttu"},
+        "hk": {"nf": "sjötta", "þf": "sjötta", "þgf": "sjötta", "ef": "sjötta"},
+    },
+    7: {
+        "kk": {"nf": "sjöundi", "þf": "sjöunda", "þgf": "sjöunda", "ef": "sjöunda"},
+        "kvk": {"nf": "sjöunda", "þf": "sjöundu", "þgf": "sjöundu", "ef": "sjöundu"},
+        "hk": {"nf": "sjöunda", "þf": "sjöunda", "þgf": "sjöunda", "ef": "sjöunda"},
+    },
+    8: {
+        "kk": {"nf": "áttundi", "þf": "áttunda", "þgf": "áttunda", "ef": "áttunda"},
+        "kvk": {"nf": "áttunda", "þf": "áttundu", "þgf": "áttundu", "ef": "áttundu"},
+        "hk": {"nf": "áttunda", "þf": "áttunda", "þgf": "áttunda", "ef": "áttunda"},
+    },
+    9: {
+        "kk": {"nf": "níundi", "þf": "níunda", "þgf": "níunda", "ef": "níunda"},
+        "kvk": {"nf": "níunda", "þf": "níundu", "þgf": "níundu", "ef": "níundu"},
+        "hk": {"nf": "níunda", "þf": "níunda", "þgf": "níunda", "ef": "níunda"},
+    },
+}
+
 
 class ErrorFinder(ParseForestNavigator):
 
@@ -438,6 +487,41 @@ class ErrorFinder(ParseForestNavigator):
         """ Entering a terminal/token match node """
 
         terminal = node.terminal
+
+        if terminal.category == "raðnr":
+            # Annotate ordinal numbers ("2.")
+            if node.token.t0 != TOK.ORDINAL:
+                # The token is not a numeric ordinal: no complaint
+                return
+            num = node.token.t2
+            if not(1 <= num <= 9):
+                # We only want to correct 1. - 9.
+                return
+            if node.token.t1[0] not in "0123456789":
+                # Probably a Roman numeral - we don't mess with those
+                return
+            if "." in node.token.t1[:-1]:
+                # Looks like more than one period (2.4.1): leave as-is
+                return
+            if len(terminal.variants) < 2:
+                # We can only annotate if we have the case and the gender
+                return
+            correct = ORDINALS[num][terminal.gender][terminal.case]
+            self._ann.append(
+                Annotation(
+                    start=node.start,
+                    end=node.start,
+                    code="X_NUMBER4WORD",
+                    text="Betra væri '{0}'".format(correct),
+                    detail=(
+                        "Æskilegt er að rita lágar raðtölur "
+                        "með bókstöfum fremur en tölustöfum."
+                    ),
+                    suggest=correct
+                )
+            )
+            return
+
         if terminal.category != "so":
             # Currently we only need to check verb terminals
             return
