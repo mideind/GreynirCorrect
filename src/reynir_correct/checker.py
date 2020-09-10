@@ -52,7 +52,7 @@ from typing import cast, Iterable, Iterator, List, Tuple, Dict, Type, Optional
 from threading import Lock
 
 from reynir import (
-    Greynir, correct_spaces, TOK, Tok,
+    Greynir, correct_spaces, TOK, Tok, TokenList,
     _Job, _Sentence, _Paragraph,
     ProgressFunc, ParseResult, ICELANDIC_RATIO,
 )
@@ -77,14 +77,16 @@ class ErrorDetectionToken(BIN_Token):
 
     _VERB_ERROR_SUBJECTS = VerbSubjects.VERBS_ERRORS
 
-    def __init__(self, t: CorrectToken, original_index: int) -> None:
+    def __init__(self, t: Tok, original_index: int) -> None:
         """ original_index is the index of this token in
             the original token list, as submitted to the parser,
             including not-understood tokens such as quotation marks """
         super().__init__(t, original_index)
-        # Store the capitalization state
-        # which is of (None, "sentence_start", "after_ordinal", "in_sentence")
-        self._cap = t._cap
+        # Store the capitalization state, carried over from CorrectToken instances.
+        # The state is one of (None, "sentence_start", "after_ordinal", "in_sentence").
+        # Since some token objects may be instances of Tok, not CorrectToken,
+        # we tread carefully here.
+        self._cap = getattr(t, "_cap", None)
 
     @property
     def cap_sentence_start(self) -> bool:
@@ -177,7 +179,7 @@ class ErrorDetectingParser(Fast_Parser):
     _c_grammar_ts = None  # type: float
 
     @staticmethod
-    def _create_wrapped_token(t: CorrectToken, ix: int) -> ErrorDetectionToken:
+    def _create_wrapped_token(t: Tok, ix: int) -> ErrorDetectionToken:
         """ Create an instance of a wrapped token """
         return ErrorDetectionToken(t, ix)
 
@@ -206,7 +208,8 @@ class GreynirCorrect(Greynir):
     def _dump_token(tok: Tok) -> Tuple:
         """ Override token dumping function from Greynir,
             providing a JSON-dumpable object """
-        return CorrectToken.dump(cast(CorrectToken, tok))
+        assert isinstance(tok, CorrectToken)
+        return CorrectToken.dump(tok)
 
     @classmethod
     def _load_token(cls, *args) -> CorrectToken:
@@ -323,7 +326,7 @@ class GreynirCorrect(Greynir):
         ann.sort(key=lambda a: (a.start, -a.end))
         return ann
 
-    def create_sentence(self, job: _Job, s: List[Tok]) -> _Sentence:
+    def create_sentence(self, job: _Job, s: TokenList) -> _Sentence:
         """ Create a fresh sentence object and annotate it
             before returning it to the client """
         sent = super().create_sentence(job, s)

@@ -87,6 +87,7 @@ import random
 import argparse
 import xml.etree.ElementTree as ET
 import multiprocessing
+# import multiprocessing.dummy as multiprocessing
 
 import reynir_correct as gc
 from tokenizer import detokenize, Tok, TOK
