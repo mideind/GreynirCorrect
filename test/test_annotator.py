@@ -175,6 +175,20 @@ def test_error_finder(rc):
     check_sentence(rc, s, [(5, 5, "P_NT_Heldur/w")])
 
 
+def test_ordinals(rc):
+    s = "4. barnið fæddist í gær, en það er 3. strákur þeirra hjóna."
+    check_sentence(rc, s, [(0, 0, "X_number4word"), (8, 8, "X_number4word")])
+    sent = rc.parse_single(s)
+    assert sent.annotations[0].suggest == "Fjórða"
+    assert sent.annotations[1].suggest == "þriðji"
+    s = "5. Ákæran beinist gegn Jóni og Friðberti."
+    check_sentence(rc, s, [])
+    s = "2. deildin fer vel af stað í vetur."
+    check_sentence(rc, s, [(0, 0, "X_number4word")])
+    s = "XVII. kafli: Um landsins gagn og nauðsynjar."
+    check_sentence(rc, s, [])
+
+
 def test_impersonal_verbs(rc):
     s = "Mig hlakkaði til."
     check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_þf_nf")])

@@ -172,13 +172,17 @@ class CorrectToken:
     # Use __slots__ as a performance enhancement, since we want instances
     # to be as lightweight as possible - and we don't expect this class
     # to be subclassed or custom attributes to be added
-    __slots__ = ("kind", "txt", "val", "_err")
+    __slots__ = ("kind", "txt", "val", "_err", "_cap")
 
     def __init__(self, kind: int, txt: str, val: Union[None, Tuple, List]) -> None:
         self.kind = kind
         self.txt = txt
         self.val = val
+        # Error annotation
         self._err = None  # type: Union[None, Error, bool]
+        # Capitalization state: indicates where this token appears in a sentence.
+        # None or one of ("sentence_start", "after_ordinal", "in_sentence")
+        self._cap = None  # type: Optional[str]
 
     def __getitem__(self, index: int) -> Union[int, str, None, Tuple, List]:
         """ Support tuple-style indexing, as raw tokens do """
@@ -256,6 +260,25 @@ class CorrectToken:
         )
 
     __str__ = __repr__
+
+    def set_capitalization(self, cap: str) -> None:
+        """ Set the capitalization state for this token """
+        self._cap = cap
+
+    @property
+    def cap_sentence_start(self) -> bool:
+        """ True if this token appears at sentence start """
+        return self._cap == "sentence_start"
+
+    @property
+    def cap_after_ordinal(self) -> bool:
+        """ True if this token appears after an ordinal at sentence start """
+        return self._cap == "after_ordinal"
+
+    @property
+    def cap_in_sentence(self) -> bool:
+        """ True if this token appears within a sentence """
+        return self._cap == "in_sentence"
 
     def set_error(self, err: Union[None, "Error", bool]) -> None:
         """ Associate an Error class instance with this token """
@@ -1517,7 +1540,8 @@ def fix_capitalization(
 
     # This variable must be defined before is_wrong() because
     # the function closes over it
-    at_sentence_start = False
+    # The states are ("sentence_start", "after_ordinal", "in_sentence")
+    state = "sentence_start"
 
     def is_wrong(token: CorrectToken) -> bool:
         """ Return True if the word is wrongly capitalized """
@@ -1527,14 +1551,14 @@ def fix_capitalization(
             return False
         lower = True
         if word.istitle():
-            if at_sentence_start:
+            if state != "in_sentence":
                 # An uppercase word at the beginning of a sentence can't be wrong
                 return False
             # Danskur -> danskur
             rev_word = word.lower()
             lower = False
         elif word.islower():
-            if at_sentence_start:
+            if state == "sentence_start":
                 # A lower case word at the beginning of a sentence is definitely wrong
                 return True
             # íslendingur -> Íslendingur
@@ -1574,9 +1598,10 @@ def fix_capitalization(
         return True
 
     for token in token_stream:
-        if token.kind == TOK.S_BEGIN:
+        if token.kind == TOK.S_BEGIN or token.kind == TOK.P_BEGIN:
+            token.set_capitalization(state)
             yield token
-            at_sentence_start = True
+            state = "sentence_start"
             continue
         # !!! TODO: Consider whether to overwrite previous error,
         # !!! if token.error is not None
@@ -1585,7 +1610,9 @@ def fix_capitalization(
                 if token.txt.islower():
                     # Token is lowercase but should be capitalized
                     original_txt = token.txt
-                    w, m = db.lookup_word(token.txt.title(), at_sentence_start)
+                    # We set at_sentence_start to True because we want
+                    # a fallback to lowercase matches
+                    w, m = db.lookup_word(token.txt.title(), True)
                     token = token_ctor.Word(w, m, token=token)
                     token.set_error(
                         CapitalizationError(
@@ -1596,7 +1623,7 @@ def fix_capitalization(
                 else:
                     # Token is capitalized but should be lower case
                     original_txt = token.txt
-                    w, m = db.lookup_word(token.txt.lower(), at_sentence_start)
+                    w, m = db.lookup_word(token.txt.lower(), False)
                     token = token_ctor.Word(w, m, token=token)
                     token.set_error(
                         CapitalizationError(
@@ -1610,14 +1637,16 @@ def fix_capitalization(
                 if token.txt.upper() == token.txt:
                     # ALL-CAPS: don't worry about it
                     pass
-                elif at_sentence_start and token.txt.startswith(
+                elif state == "sentence_start" and token.txt.startswith(
                     MONTH_NAMES_CAPITALIZED
                 ):
-                    # At the sentence start, it's OK to have a capitalized month name
+                    # At the sentence start, it's OK to have a capitalized month name.
+                    # Note that after an ordinal (state='after_ordinal'), a capitalized
+                    # month name is not allowed.
                     pass
                 else:
                     # Wrong capitalization of month name: replace it
-                    if at_sentence_start:
+                    if state == "sentence_start":
                         lower = token.txt.capitalize()
                     else:
                         lower = token.txt.lower()
@@ -1640,10 +1669,17 @@ def fix_capitalization(
                         )
                     )
 
+        token.set_capitalization(state)
         yield token
-        if token.kind != TOK.PUNCTUATION and token.kind != TOK.ORDINAL:
-            # !!! TODO: This may need to be made more intelligent
-            at_sentence_start = False
+        if state == "sentence_start" and token.kind == TOK.ORDINAL:
+            # Special state if we've only seen ordinals at the start
+            # of a sentence. In this state, both upper and lower case
+            # words are allowed.
+            state = "after_ordinal"
+        elif token.kind != TOK.PUNCTUATION:
+            # Punctuation is not enough to change the state, but
+            # all other tokens do change it to in_sentence
+            state = "in_sentence"
 
 
 def late_fix_capitalization(

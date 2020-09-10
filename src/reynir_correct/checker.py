@@ -77,14 +77,32 @@ class ErrorDetectionToken(BIN_Token):
 
     _VERB_ERROR_SUBJECTS = VerbSubjects.VERBS_ERRORS
 
-    def __init__(self, t, original_index):
+    def __init__(self, t: CorrectToken, original_index: int) -> None:
         """ original_index is the index of this token in
             the original token list, as submitted to the parser,
             including not-understood tokens such as quotation marks """
         super().__init__(t, original_index)
+        # Store the capitalization state
+        # which is of (None, "sentence_start", "after_ordinal", "in_sentence")
+        self._cap = t._cap
+
+    @property
+    def cap_sentence_start(self) -> bool:
+        """ True if this token appears at sentence start """
+        return self._cap == "sentence_start"
+
+    @property
+    def cap_after_ordinal(self) -> bool:
+        """ True if this token appears after an ordinal at sentence start """
+        return self._cap == "after_ordinal"
+
+    @property
+    def cap_in_sentence(self) -> bool:
+        """ True if this token appears within a sentence """
+        return self._cap == "in_sentence"
 
     @staticmethod
-    def verb_is_strictly_impersonal(verb, form):
+    def verb_is_strictly_impersonal(verb: str, form: str) -> bool:
         """ Return True if the given verb should not be allowed to match
             with a normal (non _op) verb terminal """
         if "OP" in form and not VerbSubjects.is_strictly_impersonal(verb):
@@ -101,7 +119,7 @@ class ErrorDetectionToken(BIN_Token):
         return False
 
     @staticmethod
-    def verb_cannot_be_impersonal(verb, form):
+    def verb_cannot_be_impersonal(verb: str, form: str) -> bool:
         """ Return True if this verb cannot match an so_xxx_op terminal. """
         # We have a relaxed condition here because we want to catch
         # verbs being used impersonally that shouldn't be. So we don't
@@ -117,7 +135,7 @@ class ErrorDetectionToken(BIN_Token):
     # verbs to appear as normal verbs.
     _RESTRICTIVE_VARIANTS = ("sagnb", "lhþt", "bh")
 
-    def verb_subject_matches(self, verb, subj):
+    def verb_subject_matches(self, verb: str, subj: str) -> bool:
         """ Returns True if the given subject type/case is allowed
             for this verb or if it is an erroneous subject
             which we can flag """
@@ -134,7 +152,7 @@ class ErrorDetectingGrammar(BIN_Grammar):
         $if(include_errors)...$endif(include_errors),
         to be included in the grammar as it is read and parsed """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         # Enable the 'include_errors' condition
         self.set_conditions({"include_errors"})
@@ -159,7 +177,7 @@ class ErrorDetectingParser(Fast_Parser):
     _c_grammar_ts = None  # type: float
 
     @staticmethod
-    def _create_wrapped_token(t, ix):
+    def _create_wrapped_token(t: CorrectToken, ix: int) -> ErrorDetectionToken:
         """ Create an instance of a wrapped token """
         return ErrorDetectionToken(t, ix)
 
@@ -191,7 +209,7 @@ class GreynirCorrect(Greynir):
         return CorrectToken.dump(cast(CorrectToken, tok))
 
     @classmethod
-    def _load_token(cls, *args):
+    def _load_token(cls, *args) -> CorrectToken:
         """ Load token from serialized data """
         largs = len(args)
         if largs == 3:

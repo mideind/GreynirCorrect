@@ -483,49 +483,46 @@ class ErrorFinder(ParseForestNavigator):
                     pass
         return subj
 
-    def visit_token(self, level, node):
-        """ Entering a terminal/token match node """
-
+    def _annotate_ordinal(self, node):
+        """ Check for errors in ordinal number terminals ("2.") and annotate them """
+        if node.token.t0 != TOK.ORDINAL:
+            # The matched token is not a numeric ordinal: no complaint
+            return
+        num = node.token.t2
+        if not(1 <= num <= 9):
+            # We only want to correct 1. - 9.
+            return
+        if node.token.t1[0] not in "0123456789":
+            # Probably a Roman numeral - we don't mess with those
+            return
+        if "." in node.token.t1[:-1]:
+            # Looks like more than one period (2.4.1): leave as-is
+            return
         terminal = node.terminal
-
-        if terminal.category == "raðnr":
-            # Annotate ordinal numbers ("2.")
-            if node.token.t0 != TOK.ORDINAL:
-                # The token is not a numeric ordinal: no complaint
-                return
-            num = node.token.t2
-            if not(1 <= num <= 9):
-                # We only want to correct 1. - 9.
-                return
-            if node.token.t1[0] not in "0123456789":
-                # Probably a Roman numeral - we don't mess with those
-                return
-            if "." in node.token.t1[:-1]:
-                # Looks like more than one period (2.4.1): leave as-is
-                return
-            if len(terminal.variants) < 2:
-                # We can only annotate if we have the case and the gender
-                return
-            correct = ORDINALS[num][terminal.gender][terminal.case]
-            self._ann.append(
-                Annotation(
-                    start=node.start,
-                    end=node.start,
-                    code="X_NUMBER4WORD",
-                    text="Betra væri '{0}'".format(correct),
-                    detail=(
-                        "Æskilegt er að rita lágar raðtölur "
-                        "með bókstöfum fremur en tölustöfum."
-                    ),
-                    suggest=correct
-                )
+        if len(terminal.variants) < 2:
+            # We can only annotate if we have the case and the gender
+            return
+        correct = ORDINALS[num][terminal.gender][terminal.case]
+        if node.token.cap_sentence_start:
+            # The token is at the start of a sentence: suggest an uppercase word
+            correct = correct.capitalize()
+        self._ann.append(
+            Annotation(
+                start=node.start,
+                end=node.start,
+                code="X_number4word",
+                text="Betra væri '{0}'".format(correct),
+                detail=(
+                    "Æskilegt er að rita lágar raðtölur "
+                    "með bókstöfum fremur en tölustöfum."
+                ),
+                suggest=correct
             )
-            return
+        )
 
-        if terminal.category != "so":
-            # Currently we only need to check verb terminals
-            return
-
+    def _annotate_verb(self, node):
+        """ Annotate a verb (so) terminal """
+        terminal = node.terminal
         tnode = self._terminal_nodes[node.start]
         verb = tnode.lemma
 
@@ -642,6 +639,14 @@ class ErrorFinder(ParseForestNavigator):
         if subj_case_abbr in errors:
             # Yes, this appears to be an erroneous subject case
             annotate_wrong_subject_case(subj_case_abbr, errors[subj_case_abbr])
+
+    def visit_token(self, level, node):
+        """ Entering a terminal/token match node """
+        terminal = node.terminal
+        if terminal.category == "so":
+            self._annotate_verb(node)
+        elif terminal.category == "raðnr":
+            self._annotate_ordinal(node)
 
     def visit_nonterminal(self, level, node):
         """ Entering a nonterminal node """
