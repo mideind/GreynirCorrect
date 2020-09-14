@@ -116,76 +116,76 @@ CATEGORIES = (
 # for GreynirCorrect, at this stage at least
 OUT_OF_SCOPE = {
     "agreement-pro",        # samræmi fornafns við undanfara	grammar	...vöðvahólf sem sé um dælinguna. Hann dælir blóðinu > Það dælir blóðinu
-    "ind4def",              # óákveðið fyrir ákveðið	grammar	gítartakta > gítartaktana
-    "def4ind",              # ákveðið fyrir óákveðið	grammar	skákinni > skák
-    "missing-word",         # orð vantar	omission	í Donalda > í þorpinu Donalda
-    "missing-words",        # fleiri en eitt orð vantar	omission	því betri laun > því betri laun hlýtur maður
-    "missing-commas",       # kommur vantar utan um innskot	punctuation	Hún er jafn verðmæt ef ekki verðmætari en háskólapróf > Hún er verðmæt, ef ekki verðmætari, en háskólapróf
-    "missing-conjunction",  # samtengingu vantar	punctuation	í Noregi suður að Gíbraltarsundi > í Noregi og suður að Gíbraltarsundi
-    "punctuation",          # greinarmerki	punctuation	hún mætti og hann var ekki tilbúinn > hún mætti en hann var ekki tilbúinn
-    "extra-punctuation",    # auka greinarmerki	punctuation	... að > að
-    "extra-comma",          # auka komma	punctuation	stríð, við náttúruna > stríð við náttúruna
-    "extra-period",         # auka punktur	punctuation	á morgun. Og ... > á morgun og...
-    "period4comma",         # punktur fyrir kommu	punctuation	meira en áður. Hella meira í sig > meira en áður, hella meira í sig
-    "period4conjunction",   # punktur fyrir samtengingu	punctuation	...maður vill gera. Vissulega > ...maður vill gera en vissulega
-    "conjunction4period",   # samtenging fyrir punkt	punctuation	...tónlist ár hvert og tónlistarstefnurnar eru orðnar... > ...tónlist ár hvert. Tónlistarstefnurnar eru orðnar...
-    "conjunction4comma",    # samtenging fyrir kommu	punctuation	...geta orðið þröngvandi og erfitt getur verið... > ...geta orðið þröngvandi, erfitt getur verið...
-    "comma4conjunction",    # komma fyrir samtengingu	punctuation	...fara með vald Guðs, öll löggjöf byggir... > ...fara með vald Guðs og öll löggjöf byggir...
-    "comma4ex",             # komma fyrir upphrópun	punctuation	Viti menn, almúginn... > Viti menn! Almúginn...
-    "period4ex",            # punktur fyrir upphrópun	punctuation	Viti menn. > Viti menn!
-    "zzz",                  # to revisit	unannotated	
-    "xxx",                  # unclassified	unclassified	
-    "extra-word",           # orði ofaukið	insertion	augun á mótherja > augu mótherja
-    "extra-words",          # orðum ofaukið	insertion	...ég fer að hugsa... > ...ég hugsa...
-    "wording",              # orðalag	wording	...gerðum allt í raun... > ...gerðum í raun allt...
     "aux",                  # meðferð vera og verða, hjálparsagna	wording	mun verða eftirminnilegt > mun vera eftirminnilegt
-    "foreign-error",        # villa í útlendu orði	foreign	Supurbowl > Super Bowl
-    "gendered",             # kynjað mál, menn fyrir fólk	exclusion	menn hugsa oft > fólk hugsar oft
-    "style",                # stíll	style	urðu ekkert frægir > urðu ekki frægir
-    "unicelandic",          # óíslenskuleg málnotkun	style	...fer eftir persónunni... > ...fer eftir manneskjunni...
-    "missing-space",        # vantar bil	spacing	eðlis-og efnafræði > eðlis- og efnafræði
-    "extra-space",          # bili ofaukið	spacing	4 . > 4.
-    "loan-syntax",          # lánuð setningagerð	style	ég vaknaði upp > ég vaknaði
-    "noun4pro",             # nafnorð í stað fornafns	grammar	menntun má nálgast > hana má nálgast
-    "pro4noun",             # fornafn í stað nafnorðs	grammar	þau voru spurð > parið var spurt
-    "reflexive4noun",       # afturbeygt fornafn í stað nafnorðs	grammar	félagið hélt aðalfund þess > félagið hélt aðalfund sinn
-    "pro4reflexive",        # nafnorð í stað afturbeygðs fornafns	grammar	gefur orku til fólks í kringum það > gefur orku til fólks í kringum sig
-    "pres4past",            # sögn í nútíð í stað þátíðar	grammar	Þeir fara út > Þeir fóru út
-    "past4pres",            # sögn í þátíð í stað nútíðar	grammar	þegar hún leigði spólur > þegar hún leigir spólur
-    "pro4reflexive",        # persónufornafn í stað afturbeygðs fn.	grammar	Fólk heldur að það geri það hamingjusamt > Fólk heldur að það geri sig hamingjusamt
-    "reflexive4pro",        # afturbeygt fornafn í stað persónufornafns	grammar	gegnum líkama sinn > gegnum líkama hans
-    "missing-ex",           # vantar upphrópunarmerki	punctuation	Viti menn ég komst af > Viti menn! Ég komst af
-    "qm4ex",                # spurningarmerki fyrir upphrópun	punctuation	Algjört hrak sjálf? > Algjört hrak sjálf!
-    "pers4dem",             # persónufornafn í staðinn fyrir ábendingarf.	grammar	það > þetta
-    "dem-pro",              # hinn í stað fyrir sá; sá ekki til eða ofnotað	grammar	hinn > sá
-    "indef-pro",            # óákveðið fornafn	grammar	enginn > ekki neinn
-    "context",              # rangt orð í samhengi	other	
-    "fw4ice",               # erlent orð þýtt yfir á íslensku	style	Elba > Saxelfur
     "bracket4square",       # svigi fyrir hornklofa	punctuation	(Portúgal) > [Portúgal]
-    "square4bracket",       # hornklofi fyrir sviga	punctuation	[börnin] > (börnin)
-    "missing-semicolon",    # vantar semíkommu	punctuation	Haukar Björgvin Páll > Haukar; Björgvin Páll
-    "dem4pers",             # ábendingarfornafn í stað persónufornafns	grammar	þessi > hún
-    "simple4cont",          # nútíð í stað vera að + nafnh.	grammar	ók > var að aka
-    "nonit4it",             # óskáletrað fyrir skáletrað		orðið qibt > orðið qibt
-    "comma4dash",           # komma fyrir bandstrik	punctuation	, > -
-    "dash4semicolon",       # bandstrik fyrir semíkommu	punctuation	núna - þetta > núna; þetta
-    "it4nonit",             # skáletrað fyrir óskáletrað		Studdi Isma'il > Studdi Isma'il
-    "extra-symbol",         # tákn ofaukið	other	Dalvík + gaf... > Dalvík gaf...
-    "missing-symbol",       # tákn vantar	punctuation	0 > 0%
-    "extra-number",         # tölustöfum ofaukið	other	139,0 > 139
-    "missing-square",       # vantar hornklofi	punctuation	þeir > [þeir]
-    "dem4noun",             # ábendingarfornafn í stað nafnorðs	grammar	hinn > maðurinn
-    "noun4dem",             # nafnorð í stað ábendingarfornafns	grammar	stærsta klukkan > sú stærsta
-    "ice4fw",               # íslenskt orð notað í stað erlends		Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
-    "upper4lower-proper",   # stór stafur í sérnafni þar sem hann á ekki að vera	capitalization	Mál og Menning > Mál og menning
-    "collocation",          # fast orðasamband	collocation	fram á þennan dag > fram til þessa dags
     "collocation-idiom",    # fast orðasamband með ógagnsæja merkingu	collocation	hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
-    "ind4sub",              # framsöguháttur fyrir vh.	grammar	Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
-    "sub4ind",              # viðtengingarh. fyrir fh.	grammar	Stjórnvöld vildu auka rétt borgara og geri þeim kleift > Stjórnvöld vildu auka rétt borgara og gera þeim kleift
+    "collocation",          # fast orðasamband	collocation	fram á þennan dag > fram til þessa dags
+    "comma4conjunction",    # komma fyrir samtengingu	punctuation	...fara með vald Guðs, öll löggjöf byggir... > ...fara með vald Guðs og öll löggjöf byggir...
+    "comma4dash",           # komma fyrir bandstrik	punctuation	, > -
+    "comma4ex",             # komma fyrir upphrópun	punctuation	Viti menn, almúginn... > Viti menn! Almúginn...
     "comma4period",         # komma fyrir punkt	punctuation	...kynnast nýju fólki, er á þrítugsaldri > ...kynnast nýju fólki. Hann er á þrítugsaldri
     "comma4qm",             # komma fyrir spurningarmerki	punctuation	Höfum við réttinn, eins og að... > Höfum við réttinn? Eins og að...
+    "conjunction4comma",    # samtenging fyrir kommu	punctuation	...geta orðið þröngvandi og erfitt getur verið... > ...geta orðið þröngvandi, erfitt getur verið...
+    "conjunction4period",   # samtenging fyrir punkt	punctuation	...tónlist ár hvert og tónlistarstefnurnar eru orðnar... > ...tónlist ár hvert. Tónlistarstefnurnar eru orðnar...
+    "context",              # rangt orð í samhengi	other	
+    "dash4semicolon",       # bandstrik fyrir semíkommu	punctuation	núna - þetta > núna; þetta
+    "def4ind",              # ákveðið fyrir óákveðið	grammar	skákinni > skák
+    "dem-pro",              # hinn í stað fyrir sá; sá ekki til eða ofnotað	grammar	hinn > sá
+    "dem4noun",             # ábendingarfornafn í stað nafnorðs	grammar	hinn > maðurinn
+    "dem4pers",             # ábendingarfornafn í stað persónufornafns	grammar	þessi > hún
+    "extra-comma",          # auka komma	punctuation	stríð, við náttúruna > stríð við náttúruna
+    "extra-number",         # tölustöfum ofaukið	other	139,0 > 139
+    "extra-period",         # auka punktur	punctuation	á morgun. Og ... > á morgun og...
+    "extra-punctuation",    # auka greinarmerki	punctuation	... að > að
+    "extra-space",          # bili ofaukið	spacing	4 . > 4.
+    "extra-symbol",         # tákn ofaukið	other	Dalvík + gaf... > Dalvík gaf...
+    "extra-word",           # orði ofaukið	insertion	augun á mótherja > augu mótherja
+    "extra-words",          # orðum ofaukið	insertion	...ég fer að hugsa... > ...ég hugsa...
+    "foreign-error",        # villa í útlendu orði	foreign	Supurbowl > Super Bowl
+    "fw4ice",               # erlent orð þýtt yfir á íslensku	style	Elba > Saxelfur
+    "gendered",             # kynjað mál, menn fyrir fólk	exclusion	menn hugsa oft > fólk hugsar oft
+    "ice4fw",               # íslenskt orð notað í stað erlends		Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
+    "ind4def",              # óákveðið fyrir ákveðið	grammar	gítartakta > gítartaktana
+    "ind4sub",              # framsöguháttur fyrir vh.	grammar	Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
+    "indef-pro",            # óákveðið fornafn	grammar	enginn > ekki neinn
+    "it4nonit",             # skáletrað fyrir óskáletrað		Studdi Isma'il > Studdi Isma'il
+    "loan-syntax",          # lánuð setningagerð	style	ég vaknaði upp > ég vaknaði
+    "missing-commas",       # kommur vantar utan um innskot	punctuation	Hún er jafn verðmæt ef ekki verðmætari en háskólapróf > Hún er verðmæt, ef ekki verðmætari, en háskólapróf
+    "missing-conjunction",  # samtengingu vantar	punctuation	í Noregi suður að Gíbraltarsundi > í Noregi og suður að Gíbraltarsundi
+    "missing-ex",           # vantar upphrópunarmerki	punctuation	Viti menn ég komst af > Viti menn! Ég komst af
     "missing-quot",         # gæsalöpp vantar	punctuation	„I'm winning > „I'm winning“
     "missing-quots",        # gæsalappir vantar	punctuation	I'm winning > „I'm winning“
+    "missing-semicolon",    # vantar semíkommu	punctuation	Haukar Björgvin Páll > Haukar; Björgvin Páll
+    # "missing-space",        # vantar bil	spacing	eðlis-og efnafræði > eðlis- og efnafræði
+    "missing-square",       # vantar hornklofi	punctuation	þeir > [þeir]
+    "missing-symbol",       # tákn vantar	punctuation	0 > 0%
+    "missing-word",         # orð vantar	omission	í Donalda > í þorpinu Donalda
+    "missing-words",        # fleiri en eitt orð vantar	omission	því betri laun > því betri laun hlýtur maður
+    "nonit4it",             # óskáletrað fyrir skáletrað		orðið qibt > orðið qibt
+    "noun4dem",             # nafnorð í stað ábendingarfornafns	grammar	stærsta klukkan > sú stærsta
+    "noun4pro",             # nafnorð í stað fornafns	grammar	menntun má nálgast > hana má nálgast
+    "past4pres",            # sögn í þátíð í stað nútíðar	grammar	þegar hún leigði spólur > þegar hún leigir spólur
+    "period4comma",         # punktur fyrir kommu	punctuation	meira en áður. Hella meira í sig > meira en áður, hella meira í sig
+    "period4conjunction",   # punktur fyrir samtengingu	punctuation	...maður vill gera. Vissulega > ...maður vill gera en vissulega
+    "period4ex",            # punktur fyrir upphrópun	punctuation	Viti menn. > Viti menn!
+    "pers4dem",             # persónufornafn í staðinn fyrir ábendingarf.	grammar	það > þetta
+    "pres4past",            # sögn í nútíð í stað þátíðar	grammar	Þeir fara út > Þeir fóru út
+    "pro4noun",             # fornafn í stað nafnorðs	grammar	þau voru spurð > parið var spurt
+    "pro4reflexive",        # nafnorð í stað afturbeygðs fornafns	grammar	gefur orku til fólks í kringum það > gefur orku til fólks í kringum sig
+    "pro4reflexive",        # persónufornafn í stað afturbeygðs fn.	grammar	Fólk heldur að það geri það hamingjusamt > Fólk heldur að það geri sig hamingjusamt
+    "punctuation",          # greinarmerki	punctuation	hún mætti og hann var ekki tilbúinn > hún mætti en hann var ekki tilbúinn
+    "qm4ex",                # spurningarmerki fyrir upphrópun	punctuation	Algjört hrak sjálf? > Algjört hrak sjálf!
+    "reflexive4noun",       # afturbeygt fornafn í stað nafnorðs	grammar	félagið hélt aðalfund þess > félagið hélt aðalfund sinn
+    "reflexive4pro",        # afturbeygt fornafn í stað persónufornafns	grammar	gegnum líkama sinn > gegnum líkama hans
+    "simple4cont",          # nútíð í stað vera að + nafnh.	grammar	ók > var að aka
+    "square4bracket",       # hornklofi fyrir sviga	punctuation	[börnin] > (börnin)
+    "style",                # stíll	style	urðu ekkert frægir > urðu ekki frægir
+    "sub4ind",              # viðtengingarh. fyrir fh.	grammar	Stjórnvöld vildu auka rétt borgara og geri þeim kleift > Stjórnvöld vildu auka rétt borgara og gera þeim kleift
+    "unicelandic",          # óíslenskuleg málnotkun	style	...fer eftir persónunni... > ...fer eftir manneskjunni...
+    "upper4lower-proper",   # stór stafur í sérnafni þar sem hann á ekki að vera	capitalization	Mál og Menning > Mál og menning
+    "wording",              # orðalag	wording	...gerðum allt í raun... > ...gerðum í raun allt...
+    "xxx",                  # unclassified	unclassified	
+    "zzz",                  # to revisit	unannotated	
 }
 
 # Default glob path of the development corpus TEI XML files to be processed

@@ -411,6 +411,15 @@ class ErrorFinder(ParseForestNavigator):
             .format(self.cast_to_case(variants, np))
         )
 
+    def VillaSíðastLiðinn(self, txt, variants, node):
+        """ 'síðast liðinn' written in two words instead of one """
+        correct = txt.replace(" ", "")
+        return dict(
+            text="Venjulega er ritað '{0}'".format(correct),
+            detail="'Síðastliðinn' er sjálfstætt og gilt lýsingarorð.",
+            suggestion=correct
+        )
+
     def VillaEndingIR(self, txt, variants, node):
         # 'læknirinn' á sennilega að vera 'lækninn'
         # In this case, we need the accusative form
@@ -645,8 +654,10 @@ class ErrorFinder(ParseForestNavigator):
         terminal = node.terminal
         if terminal.category == "so":
             self._annotate_verb(node)
-        elif terminal.category == "raðnr":
-            self._annotate_ordinal(node)
+        # TODO: The following actually reduces GreynirCorrect's score on the
+        # iceErrorCorpus test set, so we comment it out for the time being.
+        # elif terminal.category == "raðnr":
+        #    self._annotate_ordinal(node)
 
     def visit_nonterminal(self, level, node):
         """ Entering a nonterminal node """

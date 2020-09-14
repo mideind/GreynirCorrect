@@ -1558,6 +1558,11 @@ def fix_capitalization(
             rev_word = word.lower()
             lower = False
         elif word.islower():
+            if len(word) >= 3 and word[1] == "-":
+                if word[0] in "abcdefghijklmnopqrstuvwxyz":
+                    # Something like 'b-deildin' or 'a-flokki' which should probably
+                    # be 'B-deildin' or 'A-flokki'
+                    return True
             if state == "sentence_start":
                 # A lower case word at the beginning of a sentence is definitely wrong
                 return True
@@ -1612,7 +1617,11 @@ def fix_capitalization(
                     original_txt = token.txt
                     # We set at_sentence_start to True because we want
                     # a fallback to lowercase matches
-                    w, m = db.lookup_word(token.txt.title(), True)
+                    correct = (
+                        token.txt.title() if " " in token.txt
+                        else token.txt.capitalize()
+                    )
+                    w, m = db.lookup_word(correct, True)
                     token = token_ctor.Word(w, m, token=token)
                     token.set_error(
                         CapitalizationError(
