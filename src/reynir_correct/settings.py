@@ -166,7 +166,7 @@ class LineReader:
 class AllowedMultiples:
 
     # Set of word forms allowed to appear more than once in a row
-    SET = set()  # type: Set[str]
+    SET: Set[str] = set()
 
     @staticmethod
     def add(word):
@@ -176,7 +176,7 @@ class AllowedMultiples:
 class WrongCompounds:
 
     # Dictionary structure: dict { wrong_compound : "right phrase" }
-    DICT = {}  # type: Dict[str, Tuple[str, ...]]
+    DICT: Dict[str, Tuple[str, ...]] = {}
 
     @staticmethod
     def add(word, parts):
@@ -189,7 +189,7 @@ class WrongCompounds:
 class SplitCompounds:
 
     # Dict of the form { first_part : set(second_part_stem) }
-    DICT = defaultdict(set)  # type: Dict[str, Set[str]]
+    DICT: Dict[str, Set[str]] = defaultdict(set)
 
     @staticmethod
     def add(first_part, second_part_stem):
@@ -207,7 +207,7 @@ class SplitCompounds:
 class UniqueErrors:
 
     # Dictionary structure: dict { wrong_word : (tuple of right words) }
-    DICT = {}  # type: Dict[str, Tuple[str, ...]]
+    DICT: Dict[str, Tuple[str, ...]] = {}
 
     @staticmethod
     def add(word, corr):
@@ -220,11 +220,11 @@ class MultiwordErrors:
 
     # Dictionary structure: dict { phrase tuple: error specification }
     # List of tuples of multiword error phrases and their word category lists
-    LIST = []  # type: List[Tuple[Tuple[str, ...], str, List[str]]]
+    LIST: List[Tuple[Tuple[str, ...], str, List[str]]] = []
     # Parsing dictionary keyed by first word of phrase
-    DICT = defaultdict(list)  # type: Dict[str, List[Tuple[Tuple[str, ...], int]]]
+    DICT: Dict[str, List[Tuple[Tuple[str, ...], int]]] = defaultdict(list)
     # Error dictionary, { phrase : (error_code, right_phrase, right_parts_of_speech) }
-    ERROR_DICT = dict()  # type: Dict[Tuple[str, ...], str]
+    ERROR_DICT: Dict[Tuple[str, ...], str] = dict()
 
     @staticmethod
     def add(words, error):
@@ -274,7 +274,7 @@ class MultiwordErrors:
 class TabooWords:
 
     # Dictionary structure: dict { taboo_word : suggested_replacement }
-    DICT = {}  # type: Dict[str, str]
+    DICT: Dict[str, str] = {}
 
     @staticmethod
     def add(word, replacement):
@@ -286,7 +286,7 @@ class TabooWords:
 class Suggestions:
 
     # Dictionary structure: dict { bad_word : [ suggested_replacements ] }
-    DICT = {}  # type: Dict[str, List[str]]
+    DICT: Dict[str, List[str]] = {}
 
     @staticmethod
     def add(word, replacements):
@@ -298,9 +298,9 @@ class Suggestions:
 class CapitalizationErrors:
 
     # Set of wrongly capitalized words
-    SET = set()  # type: Set[str]
+    SET: Set[str] = set()
     # Reverse capitalization (íslendingur -> Íslendingur, Danskur -> danskur)
-    SET_REV = set()  # type: Set[str]
+    SET_REV: Set[str] = set()
 
     @staticmethod
     def add(word):
@@ -321,7 +321,7 @@ class CapitalizationErrors:
 class OwForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
-    DICT = dict()  # type: Dict[str, Tuple[str, str, int, str, str]]
+    DICT: Dict[str, Tuple[str, str, int, str, str]] = dict()
 
     @staticmethod
     def contains(word):
@@ -377,7 +377,7 @@ class OwForms:
 class CIDErrorForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
-    DICT = dict()  # type: Dict[str, Tuple[str, str, int, str, str]]
+    DICT: Dict[str, Tuple[str, str, int, str, str]] = dict()
 
     @staticmethod
     def contains(word):
@@ -433,7 +433,7 @@ class CIDErrorForms:
 class CDErrorForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
-    DICT = dict()  # type: Dict[str, Tuple[str, str, int, str, str]]
+    DICT: Dict[str, Tuple[str, str, int, str, str]] = dict()
 
     @staticmethod
     def contains(word):
@@ -489,9 +489,9 @@ class CDErrorForms:
 class Morphemes:
 
     # dict { morpheme : [ preferred PoS ] }
-    BOUND_DICT = {}  # type: Dict[str, List[str]]
+    BOUND_DICT: Dict[str, List[str]] = {}
     # dict { morpheme : [ excluded PoS ] }
-    FREE_DICT = {}  # type: Dict[str, List[str]]
+    FREE_DICT: Dict[str, List[str]] = {}
 
     @staticmethod
     def add(morph, boundlist, freelist):

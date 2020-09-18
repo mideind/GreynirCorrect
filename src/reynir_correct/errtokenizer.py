@@ -137,7 +137,7 @@ WRONG_ABBREVS = {
 
 # A dictionary of token error classes, used in serialization
 ErrorType = Type["Error"]
-ERROR_CLASS_REGISTRY = dict()  # type: Dict[str, ErrorType]
+ERROR_CLASS_REGISTRY: Dict[str, ErrorType] = dict()
 
 
 def register_error_class(cls: ErrorType) -> ErrorType:
@@ -179,10 +179,10 @@ class CorrectToken:
         self.txt = txt
         self.val = val
         # Error annotation
-        self._err = None  # type: Union[None, Error, bool]
+        self._err: Union[None, Error, bool] = None
         # Capitalization state: indicates where this token appears in a sentence.
         # None or one of ("sentence_start", "after_ordinal", "in_sentence")
-        self._cap = None  # type: Optional[str]
+        self._cap: Optional[str] = None
 
     def __getitem__(self, index: int) -> Union[int, str, None, Tuple, List]:
         """ Support tuple-style indexing, as raw tokens do """
@@ -1244,14 +1244,14 @@ def lookup_unknown_words(
         as spelling errors (character juxtaposition, deletion, insertion...) """
 
     at_sentence_start = False
-    context = tuple()  # type: Tuple[str, ...]
+    context: Tuple[str, ...] = tuple()
     db = corrector.db
     # When entering parentheses, we push dict(closing=")", prefix=""),
     # where closing means the corresponding closing symbol (")", "]")
     # and prefix is the starting token within the parenthesis, if any,
     # such as "e." for "English"
     PARENS = {"(": ")", "[": "]", "{": "}"}
-    parenthesis_stack = []  # type: List[Dict[str, str]]
+    parenthesis_stack: List[Dict[str, str]] = []
 
     def is_immune(token: CorrectToken) -> bool:
         """ Return True if the token should definitely not be
@@ -1888,7 +1888,7 @@ class CorrectionPipeline(DefaultPipeline):
 
     def __init__(self, text_or_gen: StringIterable, **options) -> None:
         super().__init__(text_or_gen, **options)
-        self._corrector = None  # type: Optional[Corrector]
+        self._corrector: Optional[Corrector] = None
         # If only_ci is True, we only correct context-independent errors
         self._only_ci = options.pop("only_ci", False)
         # If apply_suggestions is True, we are aggressive in modifying

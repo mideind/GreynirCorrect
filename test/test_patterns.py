@@ -78,6 +78,15 @@ def test_verb_af(rc):
     check_sentence(rc, s, [(2, 3, "P001")])
 
 
+def test_placename_pp(rc):
+    s = "Ég hef búið á Hafnarfirði alla mína tíð en flyt nú í Akureyri."
+    check_sentence(rc, s, [(3, 4, "P_WRONG_PLACE_PP"), (9, 10, "P_WRONG_PLACE_PP")])
+    s = "Ég hef veitt í Vopnafirði undanfarin ár en búið á Vopnafirði."
+    check_sentence(rc, s, [])
+    s = "Það eru mörg náttúruvætti á Reykjanesi en ekki í Húsavík."
+    check_sentence(rc, s, [(8, 9, "P_WRONG_PLACE_PP")])
+
+
 def test_verb_líst(rc):
     s = "Jóni veiðimanni lýst ekki á þetta mál."
     check_sentence(rc, s, [(2, 2, "P_WRONG_OP_FORM")])

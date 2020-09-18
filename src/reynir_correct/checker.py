@@ -170,13 +170,13 @@ class ErrorDetectingParser(Fast_Parser):
     # Keep a separate grammar class instance and time stamp for
     # ErrorDetectingParser. This Python sleight-of-hand overrides
     # class attributes that are defined in BIN_Parser, see binparser.py.
-    _grammar_ts = None  # type: float
-    _grammar = None  # type: BIN_Grammar
+    _grammar_ts: Optional[float] = None
+    _grammar: Optional[BIN_Grammar] = None
     _grammar_class = ErrorDetectingGrammar
 
     # Also keep separate class instances of the C grammar and its timestamp
     _c_grammar = ffi.NULL
-    _c_grammar_ts = None  # type: float
+    _c_grammar_ts: Optional[float] = None
 
     @staticmethod
     def _create_wrapped_token(t: Tok, ix: int) -> ErrorDetectionToken:
@@ -192,7 +192,7 @@ class GreynirCorrect(Greynir):
     # GreynirCorrect has its own class instances of a parser and a reducer,
     # separate from the Greynir class, as they use different settings and
     # parsing enviroments
-    _parser = None  # type: Optional[ErrorDetectingParser]
+    _parser: Optional[ErrorDetectingParser] = None
     _reducer = None
     _lock = Lock()
 
@@ -246,7 +246,7 @@ class GreynirCorrect(Greynir):
     def annotate(sent: _Sentence) -> List[Annotation]:
         """ Returns a list of annotations for a sentence object, containing
             spelling and grammar annotations of that sentence """
-        ann = []  # type: List[Annotation]
+        ann: List[Annotation] = []
         words_in_bin = 0
         words_not_in_bin = 0
         # First, add token-level annotations

@@ -305,7 +305,7 @@ class Corrector:
     _KNOWN_WORD_MIN_FREQUENCY = 3
 
     # Singleton Ngrams dictionary
-    _NGRAMS = None  # type: Optional[Ngrams]
+    _NGRAMS: Optional[Ngrams] = None
 
 
     def __init__(self, db, dictionary=None):
@@ -671,7 +671,7 @@ def test():
                 The lines are joined by newlines ('\n') but there is no trailing
                 newline. """
             result = []
-            line = []  # type: List[str]
+            line: List[str] = []
             len_line = 0
             for wrd in txt.split():
                 if len_line + 1 + len(wrd) > margin:
