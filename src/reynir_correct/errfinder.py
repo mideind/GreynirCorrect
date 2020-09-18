@@ -125,10 +125,10 @@ class ErrorFinder(ParseForestNavigator):
         verb forms marked as errors """
 
     _CAST_FUNCTIONS: Dict[str, CastFunction] = {
-        "nf": SimpleTree.nominative_np,
-        "þf": SimpleTree.accusative_np,
-        "þgf": SimpleTree.dative_np,
-        "ef": SimpleTree.genitive_np,
+        "nf": cast(CastFunction, SimpleTree.nominative_np),
+        "þf": cast(CastFunction, SimpleTree.accusative_np),
+        "þgf": cast(CastFunction, SimpleTree.dative_np),
+        "ef": cast(CastFunction, SimpleTree.genitive_np),
     }
 
     _NON_OP_VERB_FORMS = {
@@ -629,7 +629,7 @@ class ErrorFinder(ParseForestNavigator):
             # with this "normal" (non _subj) terminal
             # Check whether the verb is present in the VERBS_ERRORS
             # dictionary, with an 'nf' entry mapping to another case
-            errors = VerbSubjects.VERBS_ERRORS.get(verb, set())
+            errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
             if "nf" in errors:
                 # We are using an impersonal verb as a normal verb,
                 # i.e. with a subject in nominative case:
@@ -665,7 +665,7 @@ class ErrorFinder(ParseForestNavigator):
         # Check whether this verb has an entry in the VERBS_ERRORS
         # dictionary, and whether that entry then has an item for
         # the present subject case
-        errors = VerbSubjects.VERBS_ERRORS.get(verb, set())
+        errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
         if subj_case_abbr in errors:
             # Yes, this appears to be an erroneous subject case
             annotate_wrong_subject_case(subj_case_abbr, errors[subj_case_abbr])

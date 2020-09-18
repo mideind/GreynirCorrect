@@ -294,7 +294,7 @@ class PatternMatcher:
             # Correct: return
             return
         start, end = match.span
-        suggest = match.tidy_text.replace(preposition, correct_preposition, count=1)
+        suggest = match.tidy_text.replace(preposition, correct_preposition, 1)
         text = "Rétt er að rita '{0}'".format(suggest)
         detail = (
             "Ýmist eru notaðar forsetningarnar 'í' eða 'á' með nöfnum "
