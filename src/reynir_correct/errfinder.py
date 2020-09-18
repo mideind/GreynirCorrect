@@ -61,7 +61,7 @@ AnnotationFunc = Callable[[str, str, Node], AnnotationReturn]
 
 
 class CastFunction(Protocol):
-    def fget(self, node: Node) -> str:
+    def fget(self, tree: SimpleTree) -> str:
         ...
 
 
@@ -160,10 +160,10 @@ class ErrorFinder(ParseForestNavigator):
         first_token, last_token = node.token_span
         return (first_token.index, last_token.index)
 
-    def cast_to_case(self, case: str, node: Node) -> str:
+    def cast_to_case(self, case: str, tree: SimpleTree) -> str:
         """ Return the contents of a noun phrase node
             inflected in the given case """
-        return self._CAST_FUNCTIONS[case].fget(node)
+        return self._CAST_FUNCTIONS[case].fget(tree)
 
     def _simple_tree(self, node: Node) -> SimpleTree:
         """ Return a SimpleTree instance spanning the deep tree
