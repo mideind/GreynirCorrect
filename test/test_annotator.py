@@ -191,6 +191,17 @@ def test_ordinals(rc):
     check_sentence(rc, s, [])
 
 
+def test_pronoun_annara(rc):
+    s = (
+        "Allir í hans bekk, auk nokkurra nemenda úr öðrum bekkjum, "
+        "umsjónakennara og fjögurra annara kennara "
+        "hafa verið sendir í sjö daga sóttkví."
+    )
+    check_sentence(rc, s, [(12, 12, "S004"), (15, 15, "P_NT_Annara")])
+    s = " Mér er annara um símann minn en orðspor mitt."
+    check_sentence(rc, s, [])
+
+
 def test_impersonal_verbs(rc):
     s = "Mig hlakkaði til."
     check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_þf_nf")])
