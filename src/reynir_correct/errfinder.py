@@ -215,8 +215,10 @@ class ErrorFinder(ParseForestNavigator):
         # 'fyrir tveimur mánuðum síðan'
         return dict(
             text="'síðan' er sennilega ofaukið",
-            detail="Yfirleitt er óþarfi að nota orðið 'síðan' í samhengi á borð við "
-            "'fyrir tveimur dögum'",
+            detail=(
+                "Yfirleitt er óþarfi að nota orðið 'síðan' í samhengi á borð við "
+                "'fyrir tveimur dögum'"
+            ),
             suggestion="",
         )
 
@@ -224,8 +226,10 @@ class ErrorFinder(ParseForestNavigator):
         # 'víst að' á sennilega að vera 'fyrst að'
         return dict(
             text="'{0}' á sennilega að vera 'fyrst að'".format(txt),
-            detail="Rétt er að nota 'fyrst að' fremur en 'víst að' "
-            " til að tengja saman atburð og forsendu.",
+            detail=(
+                "Rétt er að nota 'fyrst að' fremur en 'víst að' "
+                " til að tengja saman atburð og forsendu."
+            ),
             suggestion="fyrst að",
         )
 
@@ -233,8 +237,10 @@ class ErrorFinder(ParseForestNavigator):
         # 'allt frá því' á sennilega að vera 'allt frá því að'
         return dict(
             text="'{0}' á sennilega að vera '{0} að'".format(txt),
-            detail="Rétt er að nota samtenginuna 'að' í þessu samhengi, "
-            "til dæmis 'allt frá því að Anna hóf námið'.",
+            detail=(
+                "Rétt er að nota samtenginuna 'að' í þessu samhengi, "
+                "til dæmis 'allt frá því að Anna hóf námið'."
+            ),
             suggestion="{0} að".format(txt),
         )
 
@@ -242,9 +248,11 @@ class ErrorFinder(ParseForestNavigator):
         # Í stað 'annaðhvort' á sennilega að standa 'annað hvort'
         return dict(
             text="Í stað '{0}' á sennilega að standa 'annað hvort'".format(txt),
-            detail="Rita á 'annað hvort' þegar um er að ræða fornöfn, til dæmis "
-            "'annað hvort systkinanna'. Rita á 'annaðhvort' í samtengingu, "
-            "til dæmis 'Annaðhvort fer ég út eða þú'.",
+            detail=(
+                "Rita á 'annað hvort' þegar um er að ræða fornöfn, til dæmis "
+                "'annað hvort systkinanna'. Rita á 'annaðhvort' í samtengingu, "
+                "til dæmis 'Annaðhvort fer ég út eða þú'."
+            ),
             suggestion="annað hvort",
         )
 
@@ -252,10 +260,12 @@ class ErrorFinder(ParseForestNavigator):
         # Í stað 'annað hvort' á sennilega að standa 'annaðhvort'
         return dict(
             text="Í stað '{0}' á sennilega að standa 'annaðhvort'".format(txt),
-            detail="Rita á 'annaðhvort' í samtengingu, til dæmis "
-            "'Annaðhvort fer ég út eða þú'. "
-            "Rita á 'annað hvort' í tveimur orðum þegar um er að ræða fornöfn, "
-            "til dæmis 'annað hvort systkinanna'.",
+            detail=(
+                "Rita á 'annaðhvort' í samtengingu, til dæmis "
+                "'Annaðhvort fer ég út eða þú'. "
+                "Rita á 'annað hvort' í tveimur orðum þegar um er að ræða fornöfn, "
+                "til dæmis 'annað hvort systkinanna'."
+            ),
             suggestion="annaðhvort",
         )
 
@@ -264,9 +274,19 @@ class ErrorFinder(ParseForestNavigator):
         correct = re.sub(r"\s*:", "", txt)
         return dict(
             text="Tvípunktur er óþarfi í '{0}'".format(txt),
-            detail="Óþarft er að hafa tvípunkt milli forsetningar og nafnliðarins "
-            "sem hún stýrir falli á.",
+            detail=(
+                "Óþarft er að hafa tvípunkt milli forsetningar og nafnliðarins "
+                "sem hún stýrir falli á."
+            ),
             suggestion=correct,
+        )
+
+    def VillaAnnara(self, txt: str, variants: str, node: Node) -> AnnotationDict:
+        # Í stað fornafnsins 'annarra' í eignarfalli fleirtölu er ritað 'annara'
+        return dict(
+            text="Á líklega að vera 'annarra'",
+            detail="Fornafnið 'annar' er ritað 'annarra' í eignarfalli fleirtölu.",
+            suggestion="annarra",
         )
 
     def singular_error(
@@ -290,15 +310,18 @@ class ErrorFinder(ParseForestNavigator):
         if verb is not None:
             start, end = verb.span
             return dict(
-                text="Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(
-                    verb.tidy_text
+                text=(
+                    "Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(
+                        verb.tidy_text
+                    )
                 ),
                 detail=detail,
                 start=start,
                 end=end,
             )
-        return "Sögn sem á við '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(
-            txt
+        return (
+            "Sögn sem á við '{0}' á sennilega að vera "
+            "í eintölu, ekki fleirtölu".format(txt)
         )
 
     def VillaFjöldiHluti(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
@@ -333,8 +356,11 @@ class ErrorFinder(ParseForestNavigator):
             text="'{0}' á sennilega að vera '{1}'".format(
                 wrong_pronoun, correct_pronoun
             ),
-            detail="Fornafnið '{0}' á að vera í {1}falli, eins og nafnliðurinn sem fylgir á eftir".format(
-                wrong_pronoun, CASE_NAMES[correct_case]
+            detail=(
+                "Fornafnið '{0}' á að vera í {1}falli, eins og "
+                "nafnliðurinn sem fylgir á eftir".format(
+                    wrong_pronoun, CASE_NAMES[correct_case]
+                )
             ),
             suggestion=correct_pronoun,
         )
@@ -343,8 +369,10 @@ class ErrorFinder(ParseForestNavigator):
         # 'sem' er sennilega ofaukið
         return dict(
             text="'{0}' er að öllum líkindum ofaukið".format(txt),
-            detail="Oft fer betur á að rita 'og', 'og einnig' eða 'og jafnframt' "
-            " í stað 'sem og'.",
+            detail=(
+                "Oft fer betur á að rita 'og', 'og einnig' eða 'og jafnframt' "
+                " í stað 'sem og'."
+            ),
             suggestion="",
         )
 
@@ -352,17 +380,21 @@ class ErrorFinder(ParseForestNavigator):
         # 'að' er sennilega ofaukið
         return dict(
             text="'{0}' er að öllum líkindum ofaukið".format(txt),
-            detail="'að' er yfirleitt ofaukið í samtengingum á "
-            "borð við 'áður en', 'síðan', 'enda þótt' o.s.frv.",
+            detail=(
+                "'að' er yfirleitt ofaukið í samtengingum á "
+                "borð við 'áður en', 'síðan', 'enda þótt' o.s.frv."
+            ),
             suggestion="",
         )
 
     def AðvörunKomma(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         return dict(
             text="Komma er líklega óþörf",
-            detail="Kommu er yfirleitt ofaukið milli frumlags og umsagnar, "
-            "milli forsendu og meginsetningar "
-            "('áður en ég fer [,] má sækja tölvuna') o.s.frv.",
+            detail=(
+                "Kommu er yfirleitt ofaukið milli frumlags og umsagnar, "
+                "milli forsendu og meginsetningar "
+                "('áður en ég fer [,] má sækja tölvuna') o.s.frv."
+            ),
             suggestion="",
         )
 
@@ -374,8 +406,10 @@ class ErrorFinder(ParseForestNavigator):
         suggestion = "{0} að".format(txt)
         return dict(
             text="'{0}' á sennilega að vera '{1}' (eða 'þótt')".format(txt, suggestion),
-            detail="Réttara er að nota samtenginguna 'að' í samhengi á borð við "
-            "'jafnvel þó að von sé á sólskini'.",
+            detail=(
+                "Réttara er að nota samtenginguna 'að' í samhengi á borð við "
+                "'jafnvel þó að von sé á sólskini'."
+            ),
             suggestion=suggestion,
         )
 
@@ -396,7 +430,9 @@ class ErrorFinder(ParseForestNavigator):
             end=end,
         )
 
-    def VillaFsMeðFallstjórn(self, txt: str, variants: str, node: Node) -> AnnotationDict:
+    def VillaFsMeðFallstjórn(
+        self, txt: str, variants: str, node: Node
+    ) -> AnnotationDict:
         # Forsetningin z á að stýra x-falli en ekki y-falli
         tnode = self._terminal_nodes[node.start]
         p = tnode.enclosing_tag("PP")
@@ -412,8 +448,10 @@ class ErrorFinder(ParseForestNavigator):
             correct_np = correct_spaces(suggestion)
             return dict(
                 text="Á sennilega að vera '{0}'".format(correct_np),
-                detail="Forsetningin '{0}' stýrir {1}falli.".format(
-                    preposition.lower(), CASE_NAMES[variants],
+                detail=(
+                    "Forsetningin '{0}' stýrir {1}falli.".format(
+                        preposition.lower(), CASE_NAMES[variants],
+                    )
                 ),
                 suggestion=suggestion,
             )
@@ -449,9 +487,11 @@ class ErrorFinder(ParseForestNavigator):
         article = " með greini" if "gr" in tnode.all_variants else ""
         return dict(
             text="Á sennilega að vera '{0}'".format(correct_np),
-            detail="Karlkyns orð sem enda á '-ir' í nefnifalli eintölu, "
-            "eins og '{0}', eru rituð "
-            "'{1}' í þolfalli{2}.".format(tnode.canonical_np, correct_np, article),
+            detail=(
+                "Karlkyns orð sem enda á '-ir' í nefnifalli eintölu, "
+                "eins og '{0}', eru rituð "
+                "'{1}' í þolfalli{2}.".format(tnode.canonical_np, correct_np, article)
+            ),
             suggestion=suggestion,
         )
 
