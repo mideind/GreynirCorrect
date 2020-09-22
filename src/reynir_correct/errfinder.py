@@ -283,10 +283,32 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaAnnara(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # Í stað fornafnsins 'annarra' í eignarfalli fleirtölu er ritað 'annara'
+        d = {"annara": ("annar", "annarra"), "nokkura": ("nokkur", "nokkurra")}
+        lemma, correct = d[txt.lower()]
         return dict(
-            text="Á líklega að vera 'annarra'",
-            detail="Fornafnið 'annar' er ritað 'annarra' í eignarfalli fleirtölu.",
-            suggestion="annarra",
+            text=f"Á líklega að vera '{correct}'",
+            detail=f"Fornafnið '{lemma}' er ritað '{correct}' í eignarfalli fleirtölu.",
+            suggestion=correct,
+        )
+
+    def VillaAnnari(self, txt: str, variants: str, node: Node) -> AnnotationDict:
+        # Í stað fornafnsins 'annarri' í þágufalli eintölu er ritað 'annari'
+        d = {"annari": ("annar", "annarri"), "nokkuri": ("nokkur", "nokkurri")}
+        lemma, correct = d[txt.lower()]
+        return dict(
+            text=f"Á líklega að vera '{correct}'",
+            detail=f"Fornafnið '{lemma}' er ritað '{correct}' í þágufalli, eintölu, kvenkyni.",
+            suggestion=correct,
+        )
+
+    def VillaAnnarar(self, txt: str, variants: str, node: Node) -> AnnotationDict:
+        # Í stað fornafnsins 'annarrar' í þágufalli eintölu er ritað 'annarar'
+        d = {"annarar": ("annar", "annarrar"), "nokkurar": ("nokkur", "nokkurrar")}
+        lemma, correct = d[txt.lower()]
+        return dict(
+            text=f"Á líklega að vera '{correct}'",
+            detail=f"Fornafnið '{lemma}' er ritað '{correct}' í eignarfalli, eintölu, kvenkyni.",
+            suggestion=correct,
         )
 
     def singular_error(
