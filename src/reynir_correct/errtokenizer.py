@@ -28,7 +28,7 @@
         SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-    This module adds layers to the bintokenizer.py module in ReynirPackage.
+    This module adds layers to the bintokenizer.py module in GreynirPackage.
     These layers add token-level error corrections and recommendation flags
     to the token stream.
 
@@ -178,7 +178,7 @@ class CorrectToken:
 
     """ This class sneakily replaces the tokenizer.Tok tuple in the tokenization
         pipeline. When applying a CorrectionPipeline (instead of a DefaultPipeline,
-        as defined in binparser.py in ReynirPackage), tokens get translated to
+        as defined in binparser.py in GreynirPackage), tokens get translated to
         instances of this class in the correct() phase. This works due to Python's
         duck typing, because a CorrectToken class instance is able to walk and quack
         - i.e. behave - like a tokenizer.Tok tuple. It adds an _err attribute to hold
@@ -1908,7 +1908,7 @@ class Correct_TOK(TOK):
 class CorrectionPipeline(DefaultPipeline):
 
     """ Override the default tokenization pipeline defined in bintokenizer.py
-        in ReynirPackage, adding a correction phase """
+        in GreynirPackage, adding a correction phase """
 
     # Use the Correct_TOK class to construct tokens, instead of
     # TOK (tokenizer.py) or Bin_TOK (bintokenizer.py)

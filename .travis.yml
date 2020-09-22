@@ -17,7 +17,7 @@ before_install:
   - if [ "$TRAVIS_PYTHON_VERSION" == "3.6" ]; then python -m pip install mypy; fi
   - python -m pip install git+https://github.com/mideind/Tokenizer#egg=tokenizer
   - python -m pip install git+https://github.com/mideind/Icegrams#egg=icegrams
-  - python -m pip install git+https://github.com/mideind/ReynirPackage#egg=reynir
+  - python -m pip install git+https://github.com/mideind/GreynirPackage#egg=reynir
 
 install:
   - python -m pip install -e .

@@ -150,7 +150,7 @@ class ErrorDetectionToken(BIN_Token):
 class ErrorDetectingGrammar(BIN_Grammar):
 
     """ A subclass of BIN_Grammar that causes conditional sections in the
-        Reynir.grammar file, demarcated using
+        Greynir.grammar file, demarcated using
         $if(include_errors)...$endif(include_errors),
         to be included in the grammar as it is read and parsed """
 

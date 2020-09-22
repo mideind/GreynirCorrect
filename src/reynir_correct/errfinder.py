@@ -33,7 +33,7 @@
     parse trees and annotate the associated error or warning.
 
     Specifically, ErrorFinder finds nonterminals that are marked with $tag(error)
-    in the CFG (Reynir.grammar). These nonterminals give rise to error
+    in the CFG (Greynir.grammar). These nonterminals give rise to error
     or warning annotations for their respective token spans.
 
 """
@@ -750,7 +750,7 @@ class ErrorFinder(ParseForestNavigator):
         if not node.nonterminal.has_tag("error"):
             return None
         # This node has a nonterminal that is tagged with $tag(error)
-        # in the grammar file (Reynir.grammar)
+        # in the grammar file (Greynir.grammar)
         suggestion = None
         ann_text = None
         ann_detail = None

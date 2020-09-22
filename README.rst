@@ -248,7 +248,7 @@ virtualenv), then run:
 Copyright and License
 *********************
 
-.. image:: https://github.com/mideind/ReynirPackage/raw/master/doc/_static/MideindLogoVert100.png?raw=true
+.. image:: https://github.com/mideind/GreynirPackage/raw/master/doc/_static/MideindLogoVert100.png?raw=true
    :target: https://mideind.is
    :align: right
    :alt: Miðeind ehf.
