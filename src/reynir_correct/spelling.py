@@ -73,7 +73,7 @@ LOG_LAMBDA = math.log(0.4)
 
 
 @lru_cache(maxsize=2048)
-def _splits(word):
+def _splits(word: str) -> List[Tuple[str, str]]:
     """ Return a list of all possible (first, rest) pairs that comprise word. """
     return [(word[:i], word[i:]) for i in range(len(word) + 1)]
 
@@ -399,6 +399,7 @@ class Corrector:
         else:
             if self._NGRAMS is None:
                 self.__class__._NGRAMS = Ngrams()
+            assert self._NGRAMS is not None
             self.ngrams = self._NGRAMS
         # Function for log probability of word
         self.logprob = self.ngrams.logprob
@@ -503,7 +504,7 @@ class Corrector:
             """ Return all strings that are zero edits away from word (i.e., just word itself). """
             return {word}
 
-        def edits1(pairs: Tuple[str, str]) -> Set[str]:
+        def edits1(pairs: Iterable[Tuple[str, str]]) -> Set[str]:
             """ Return all strings that are one edit away from this word. """
             # Deletes
             result = {a + b[1:] for (a, b) in pairs if b}
@@ -516,7 +517,7 @@ class Corrector:
             return result
 
         # pylint: disable=unused-variable
-        def edits2(pairs: Tuple[str, str]) -> Set[str]:
+        def edits2(pairs: Iterable[Tuple[str, str]]) -> Set[str]:
             """ Return all strings that are two edits away from this word. """
 
             def sub_edits1(word: str) -> Set[str]:
