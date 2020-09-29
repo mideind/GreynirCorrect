@@ -77,19 +77,22 @@
 
 """
 
-from typing import Dict, List, Optional, Union, Tuple, Iterable, cast, NamedTuple
+from typing import Dict, List, Optional, Union, Tuple, Iterable, cast, NamedTuple, Any
 
 import os
 from collections import defaultdict
 from datetime import datetime
 import glob
 import random
+import heapq
 import argparse
 import xml.etree.ElementTree as ET
 import multiprocessing
+
 # import multiprocessing.dummy as multiprocessing
 
 import reynir_correct as gc
+from reynir import _Sentence
 from tokenizer import detokenize, Tok, TOK
 
 
@@ -104,95 +107,99 @@ SentenceStatsDict = Dict[str, Union[float, int]]
 # content categories
 CategoryStatsDict = Dict[str, SentenceStatsDict]
 
+StatsTuple = Tuple[str, int, bool, bool]
+
 # Create a lock to ensure that only one process outputs at a time
 OUTPUT_LOCK = multiprocessing.Lock()
 
 # Content categories in iceErrorCorpus, embedded within the file paths
 CATEGORIES = (
-    "essays", "onlineNews", "wikipedia",
+    "essays",
+    "onlineNews",
+    "wikipedia",
 )
 
 # Error codes in iceErrorCorpus that are considered out of scope
 # for GreynirCorrect, at this stage at least
 OUT_OF_SCOPE = {
-    "agreement-pro",        # samræmi fornafns við undanfara	grammar	...vöðvahólf sem sé um dælinguna. Hann dælir blóðinu > Það dælir blóðinu
-    "aux",                  # meðferð vera og verða, hjálparsagna	wording	mun verða eftirminnilegt > mun vera eftirminnilegt
-    "bracket4square",       # svigi fyrir hornklofa	punctuation	(Portúgal) > [Portúgal]
-    "collocation-idiom",    # fast orðasamband með ógagnsæja merkingu	collocation	hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
-    "collocation",          # fast orðasamband	collocation	fram á þennan dag > fram til þessa dags
-    "comma4conjunction",    # komma fyrir samtengingu	punctuation	...fara með vald Guðs, öll löggjöf byggir... > ...fara með vald Guðs og öll löggjöf byggir...
-    "comma4dash",           # komma fyrir bandstrik	punctuation	, > -
-    "comma4ex",             # komma fyrir upphrópun	punctuation	Viti menn, almúginn... > Viti menn! Almúginn...
-    "comma4period",         # komma fyrir punkt	punctuation	...kynnast nýju fólki, er á þrítugsaldri > ...kynnast nýju fólki. Hann er á þrítugsaldri
-    "comma4qm",             # komma fyrir spurningarmerki	punctuation	Höfum við réttinn, eins og að... > Höfum við réttinn? Eins og að...
-    "conjunction4comma",    # samtenging fyrir kommu	punctuation	...geta orðið þröngvandi og erfitt getur verið... > ...geta orðið þröngvandi, erfitt getur verið...
-    "conjunction4period",   # samtenging fyrir punkt	punctuation	...tónlist ár hvert og tónlistarstefnurnar eru orðnar... > ...tónlist ár hvert. Tónlistarstefnurnar eru orðnar...
-    "context",              # rangt orð í samhengi	other	
-    "dash4semicolon",       # bandstrik fyrir semíkommu	punctuation	núna - þetta > núna; þetta
-    "def4ind",              # ákveðið fyrir óákveðið	grammar	skákinni > skák
-    "dem-pro",              # hinn í stað fyrir sá; sá ekki til eða ofnotað	grammar	hinn > sá
-    "dem4noun",             # ábendingarfornafn í stað nafnorðs	grammar	hinn > maðurinn
-    "dem4pers",             # ábendingarfornafn í stað persónufornafns	grammar	þessi > hún
-    "extra-comma",          # auka komma	punctuation	stríð, við náttúruna > stríð við náttúruna
-    "extra-number",         # tölustöfum ofaukið	other	139,0 > 139
-    "extra-period",         # auka punktur	punctuation	á morgun. Og ... > á morgun og...
-    "extra-punctuation",    # auka greinarmerki	punctuation	... að > að
-    "extra-space",          # bili ofaukið	spacing	4 . > 4.
-    "extra-symbol",         # tákn ofaukið	other	Dalvík + gaf... > Dalvík gaf...
-    "extra-word",           # orði ofaukið	insertion	augun á mótherja > augu mótherja
-    "extra-words",          # orðum ofaukið	insertion	...ég fer að hugsa... > ...ég hugsa...
-    "foreign-error",        # villa í útlendu orði	foreign	Supurbowl > Super Bowl
-    "fw4ice",               # erlent orð þýtt yfir á íslensku	style	Elba > Saxelfur
-    "gendered",             # kynjað mál, menn fyrir fólk	exclusion	menn hugsa oft > fólk hugsar oft
-    "ice4fw",               # íslenskt orð notað í stað erlends		Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
-    "ind4def",              # óákveðið fyrir ákveðið	grammar	gítartakta > gítartaktana
-    "ind4sub",              # framsöguháttur fyrir vh.	grammar	Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
-    "indef-pro",            # óákveðið fornafn	grammar	enginn > ekki neinn
-    "it4nonit",             # skáletrað fyrir óskáletrað		Studdi Isma'il > Studdi Isma'il
-    "loan-syntax",          # lánuð setningagerð	style	ég vaknaði upp > ég vaknaði
-    "missing-commas",       # kommur vantar utan um innskot	punctuation	Hún er jafn verðmæt ef ekki verðmætari en háskólapróf > Hún er verðmæt, ef ekki verðmætari, en háskólapróf
+    "agreement-pro",  # samræmi fornafns við undanfara	grammar	...vöðvahólf sem sé um dælinguna. Hann dælir blóðinu > Það dælir blóðinu
+    "aux",  # meðferð vera og verða, hjálparsagna	wording	mun verða eftirminnilegt > mun vera eftirminnilegt
+    "bracket4square",  # svigi fyrir hornklofa	punctuation	(Portúgal) > [Portúgal]
+    "collocation-idiom",  # fast orðasamband með ógagnsæja merkingu	collocation	hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
+    "collocation",  # fast orðasamband	collocation	fram á þennan dag > fram til þessa dags
+    "comma4conjunction",  # komma fyrir samtengingu	punctuation	...fara með vald Guðs, öll löggjöf byggir... > ...fara með vald Guðs og öll löggjöf byggir...
+    "comma4dash",  # komma fyrir bandstrik	punctuation	, > -
+    "comma4ex",  # komma fyrir upphrópun	punctuation	Viti menn, almúginn... > Viti menn! Almúginn...
+    "comma4period",  # komma fyrir punkt	punctuation	...kynnast nýju fólki, er á þrítugsaldri > ...kynnast nýju fólki. Hann er á þrítugsaldri
+    "comma4qm",  # komma fyrir spurningarmerki	punctuation	Höfum við réttinn, eins og að... > Höfum við réttinn? Eins og að...
+    "conjunction4comma",  # samtenging fyrir kommu	punctuation	...geta orðið þröngvandi og erfitt getur verið... > ...geta orðið þröngvandi, erfitt getur verið...
+    "conjunction4period",  # samtenging fyrir punkt	punctuation	...tónlist ár hvert og tónlistarstefnurnar eru orðnar... > ...tónlist ár hvert. Tónlistarstefnurnar eru orðnar...
+    "context",  # rangt orð í samhengi	other
+    "dash4semicolon",  # bandstrik fyrir semíkommu	punctuation	núna - þetta > núna; þetta
+    "def4ind",  # ákveðið fyrir óákveðið	grammar	skákinni > skák
+    "dem-pro",  # hinn í stað fyrir sá; sá ekki til eða ofnotað	grammar	hinn > sá
+    "dem4noun",  # ábendingarfornafn í stað nafnorðs	grammar	hinn > maðurinn
+    "dem4pers",  # ábendingarfornafn í stað persónufornafns	grammar	þessi > hún
+    "extra-comma",  # auka komma	punctuation	stríð, við náttúruna > stríð við náttúruna
+    "extra-number",  # tölustöfum ofaukið	other	139,0 > 139
+    "extra-period",  # auka punktur	punctuation	á morgun. Og ... > á morgun og...
+    "extra-punctuation",  # auka greinarmerki	punctuation	... að > að
+    "extra-space",  # bili ofaukið	spacing	4 . > 4.
+    "extra-symbol",  # tákn ofaukið	other	Dalvík + gaf... > Dalvík gaf...
+    "extra-word",  # orði ofaukið	insertion	augun á mótherja > augu mótherja
+    "extra-words",  # orðum ofaukið	insertion	...ég fer að hugsa... > ...ég hugsa...
+    "foreign-error",  # villa í útlendu orði	foreign	Supurbowl > Super Bowl
+    "fw4ice",  # erlent orð þýtt yfir á íslensku	style	Elba > Saxelfur
+    "gendered",  # kynjað mál, menn fyrir fólk	exclusion	menn hugsa oft > fólk hugsar oft
+    "ice4fw",  # íslenskt orð notað í stað erlends		Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
+    "ind4def",  # óákveðið fyrir ákveðið	grammar	gítartakta > gítartaktana
+    "ind4sub",  # framsöguháttur fyrir vh.	grammar	Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
+    "indef-pro",  # óákveðið fornafn	grammar	enginn > ekki neinn
+    "it4nonit",  # skáletrað fyrir óskáletrað		Studdi Isma'il > Studdi Isma'il
+    "loan-syntax",  # lánuð setningagerð	style	ég vaknaði upp > ég vaknaði
+    "missing-commas",  # kommur vantar utan um innskot	punctuation	Hún er jafn verðmæt ef ekki verðmætari en háskólapróf > Hún er verðmæt, ef ekki verðmætari, en háskólapróf
     "missing-conjunction",  # samtengingu vantar	punctuation	í Noregi suður að Gíbraltarsundi > í Noregi og suður að Gíbraltarsundi
-    "missing-ex",           # vantar upphrópunarmerki	punctuation	Viti menn ég komst af > Viti menn! Ég komst af
-    "missing-quot",         # gæsalöpp vantar	punctuation	„I'm winning > „I'm winning“
-    "missing-quots",        # gæsalappir vantar	punctuation	I'm winning > „I'm winning“
-    "missing-semicolon",    # vantar semíkommu	punctuation	Haukar Björgvin Páll > Haukar; Björgvin Páll
+    "missing-ex",  # vantar upphrópunarmerki	punctuation	Viti menn ég komst af > Viti menn! Ég komst af
+    "missing-quot",  # gæsalöpp vantar	punctuation	„I'm winning > „I'm winning“
+    "missing-quots",  # gæsalappir vantar	punctuation	I'm winning > „I'm winning“
+    "missing-semicolon",  # vantar semíkommu	punctuation	Haukar Björgvin Páll > Haukar; Björgvin Páll
     # "missing-space",        # vantar bil	spacing	eðlis-og efnafræði > eðlis- og efnafræði
-    "missing-square",       # vantar hornklofi	punctuation	þeir > [þeir]
-    "missing-symbol",       # tákn vantar	punctuation	0 > 0%
-    "missing-word",         # orð vantar	omission	í Donalda > í þorpinu Donalda
-    "missing-words",        # fleiri en eitt orð vantar	omission	því betri laun > því betri laun hlýtur maður
-    "nonit4it",             # óskáletrað fyrir skáletrað		orðið qibt > orðið qibt
-    "noun4dem",             # nafnorð í stað ábendingarfornafns	grammar	stærsta klukkan > sú stærsta
-    "noun4pro",             # nafnorð í stað fornafns	grammar	menntun má nálgast > hana má nálgast
-    "past4pres",            # sögn í þátíð í stað nútíðar	grammar	þegar hún leigði spólur > þegar hún leigir spólur
-    "period4comma",         # punktur fyrir kommu	punctuation	meira en áður. Hella meira í sig > meira en áður, hella meira í sig
-    "period4conjunction",   # punktur fyrir samtengingu	punctuation	...maður vill gera. Vissulega > ...maður vill gera en vissulega
-    "period4ex",            # punktur fyrir upphrópun	punctuation	Viti menn. > Viti menn!
-    "pers4dem",             # persónufornafn í staðinn fyrir ábendingarf.	grammar	það > þetta
-    "pres4past",            # sögn í nútíð í stað þátíðar	grammar	Þeir fara út > Þeir fóru út
-    "pro4noun",             # fornafn í stað nafnorðs	grammar	þau voru spurð > parið var spurt
-    "pro4reflexive",        # nafnorð í stað afturbeygðs fornafns	grammar	gefur orku til fólks í kringum það > gefur orku til fólks í kringum sig
-    "pro4reflexive",        # persónufornafn í stað afturbeygðs fn.	grammar	Fólk heldur að það geri það hamingjusamt > Fólk heldur að það geri sig hamingjusamt
-    "punctuation",          # greinarmerki	punctuation	hún mætti og hann var ekki tilbúinn > hún mætti en hann var ekki tilbúinn
-    "qm4ex",                # spurningarmerki fyrir upphrópun	punctuation	Algjört hrak sjálf? > Algjört hrak sjálf!
-    "reflexive4noun",       # afturbeygt fornafn í stað nafnorðs	grammar	félagið hélt aðalfund þess > félagið hélt aðalfund sinn
-    "reflexive4pro",        # afturbeygt fornafn í stað persónufornafns	grammar	gegnum líkama sinn > gegnum líkama hans
-    "simple4cont",          # nútíð í stað vera að + nafnh.	grammar	ók > var að aka
-    "square4bracket",       # hornklofi fyrir sviga	punctuation	[börnin] > (börnin)
-    "style",                # stíll	style	urðu ekkert frægir > urðu ekki frægir
-    "sub4ind",              # viðtengingarh. fyrir fh.	grammar	Stjórnvöld vildu auka rétt borgara og geri þeim kleift > Stjórnvöld vildu auka rétt borgara og gera þeim kleift
-    "unicelandic",          # óíslenskuleg málnotkun	style	...fer eftir persónunni... > ...fer eftir manneskjunni...
-    "upper4lower-proper",   # stór stafur í sérnafni þar sem hann á ekki að vera	capitalization	Mál og Menning > Mál og menning
-    "wording",              # orðalag	wording	...gerðum allt í raun... > ...gerðum í raun allt...
-    "xxx",                  # unclassified	unclassified	
-    "zzz",                  # to revisit	unannotated	
+    "missing-square",  # vantar hornklofi	punctuation	þeir > [þeir]
+    "missing-symbol",  # tákn vantar	punctuation	0 > 0%
+    "missing-word",  # orð vantar	omission	í Donalda > í þorpinu Donalda
+    "missing-words",  # fleiri en eitt orð vantar	omission	því betri laun > því betri laun hlýtur maður
+    "nonit4it",  # óskáletrað fyrir skáletrað		orðið qibt > orðið qibt
+    "noun4dem",  # nafnorð í stað ábendingarfornafns	grammar	stærsta klukkan > sú stærsta
+    "noun4pro",  # nafnorð í stað fornafns	grammar	menntun má nálgast > hana má nálgast
+    "past4pres",  # sögn í þátíð í stað nútíðar	grammar	þegar hún leigði spólur > þegar hún leigir spólur
+    "period4comma",  # punktur fyrir kommu	punctuation	meira en áður. Hella meira í sig > meira en áður, hella meira í sig
+    "period4conjunction",  # punktur fyrir samtengingu	punctuation	...maður vill gera. Vissulega > ...maður vill gera en vissulega
+    "period4ex",  # punktur fyrir upphrópun	punctuation	Viti menn. > Viti menn!
+    "pers4dem",  # persónufornafn í staðinn fyrir ábendingarf.	grammar	það > þetta
+    "pres4past",  # sögn í nútíð í stað þátíðar	grammar	Þeir fara út > Þeir fóru út
+    "pro4noun",  # fornafn í stað nafnorðs	grammar	þau voru spurð > parið var spurt
+    "pro4reflexive",  # nafnorð í stað afturbeygðs fornafns	grammar	gefur orku til fólks í kringum það > gefur orku til fólks í kringum sig
+    "pro4reflexive",  # persónufornafn í stað afturbeygðs fn.	grammar	Fólk heldur að það geri það hamingjusamt > Fólk heldur að það geri sig hamingjusamt
+    "punctuation",  # greinarmerki	punctuation	hún mætti og hann var ekki tilbúinn > hún mætti en hann var ekki tilbúinn
+    "qm4ex",  # spurningarmerki fyrir upphrópun	punctuation	Algjört hrak sjálf? > Algjört hrak sjálf!
+    "reflexive4noun",  # afturbeygt fornafn í stað nafnorðs	grammar	félagið hélt aðalfund þess > félagið hélt aðalfund sinn
+    "reflexive4pro",  # afturbeygt fornafn í stað persónufornafns	grammar	gegnum líkama sinn > gegnum líkama hans
+    "simple4cont",  # nútíð í stað vera að + nafnh.	grammar	ók > var að aka
+    "square4bracket",  # hornklofi fyrir sviga	punctuation	[börnin] > (börnin)
+    "style",  # stíll	style	urðu ekkert frægir > urðu ekki frægir
+    "sub4ind",  # viðtengingarh. fyrir fh.	grammar	Stjórnvöld vildu auka rétt borgara og geri þeim kleift > Stjórnvöld vildu auka rétt borgara og gera þeim kleift
+    "unicelandic",  # óíslenskuleg málnotkun	style	...fer eftir persónunni... > ...fer eftir manneskjunni...
+    "upper4lower-proper",  # stór stafur í sérnafni þar sem hann á ekki að vera	capitalization	Mál og Menning > Mál og menning
+    "wording",  # orðalag	wording	...gerðum allt í raun... > ...gerðum í raun allt...
+    "xxx",  # unclassified	unclassified
+    "zzz",  # to revisit	unannotated
 }
 
 # Default glob path of the development corpus TEI XML files to be processed
-_DEV_PATH = 'iceErrorCorpus/data/**/*.xml'
+_DEV_PATH = "iceErrorCorpus/data/**/*.xml"
 
 # Default glob path of the test corpus TEI XML files to be processed
-_TEST_PATH = 'iceErrorCorpus/testCorpus/**/*.xml'
+_TEST_PATH = "iceErrorCorpus/testCorpus/**/*.xml"
 
 # Define the command line arguments
 
@@ -204,46 +211,49 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument(
-    'path',
-    nargs='?',
+    "path",
+    nargs="?",
     type=str,
     help=f"glob path of XML files to process (default: {_DEV_PATH})",
 )
 
 parser.add_argument(
-    "-n", "--number",
+    "-n",
+    "--number",
     type=int,
     default=0,
     help="number of files to process (default=all)",
 )
 
 parser.add_argument(
-    "-c", "--cores",
+    "-c",
+    "--cores",
     type=int,
     help=f"number of CPU cores to use (default=all, i.e. {os.cpu_count() or 1})",
 )
 
 parser.add_argument(
-    "-m", "--measure",
+    "-m",
+    "--measure",
     action="store_true",
     help="run measurements on test corpus and output results only",
 )
 
 parser.add_argument(
-    "-r", "--randomize",
-    action="store_true",
-    help="process a random subset of files",
+    "-r", "--randomize", action="store_true", help="process a random subset of files",
 )
 
 parser.add_argument(
-    "-q", "--quiet",
+    "-q",
+    "--quiet",
     default=None,
     action="store_true",
     help="output results only, not individual sentences",
 )
 
 parser.add_argument(
-    "-v", "--verbose",
+    "-v",
+    "--verbose",
     default=None,
     action="store_true",
     help="output individual sentences as well as results, even for the test corpus",
@@ -269,15 +279,30 @@ class Stats:
         self._starttime = datetime.utcnow()
         self._files: Dict[str, int] = defaultdict(int)
         self._sentences: CategoryStatsDict = defaultdict(lambda: defaultdict(int))
+        self._true_positives: Dict[str, int] = defaultdict(int)
+        self._false_negatives: Dict[str, int] = defaultdict(int)
 
     def add_file(self, category: str) -> None:
         """ Add a processed file in a given content category """
         self._files[category] += 1
 
-    def add_sentence(
+    def add_result(
         self,
-        category: str, num_tokens: int,
-        ice_error: bool, gc_error: bool
+        *,
+        stats: List[StatsTuple],
+        true_positives: Dict[str, int],
+        false_negatives: Dict[str, int],
+    ) -> None:
+        """ Add the result of a process() call to the statistics collection """
+        for sent_result in stats:
+            self.add_sentence(*sent_result)
+        for k, v in true_positives.items():
+            self._true_positives[k] += v
+        for k, v in false_negatives.items():
+            self._false_negatives[k] += v
+
+    def add_sentence(
+        self, category: str, num_tokens: int, ice_error: bool, gc_error: bool
     ) -> None:
         """ Add a processed sentence in a given content category """
         d = self._sentences[category]
@@ -304,7 +329,7 @@ class Stats:
         dur = int((datetime.utcnow() - self._starttime).total_seconds())
         h = dur // 3600
         m = (dur % 3600) // 60
-        s = (dur % 60)
+        s = dur % 60
         # Output a summary banner
         print("\n" + "=" * 7)
         print("Summary")
@@ -334,25 +359,33 @@ class Stats:
 
         # Total number of true negatives found
         true_negatives = sum(d["true_negatives"] for d in self._sentences.values())
-        print(f"\nTrue negatives:             {true_negatives:6} {perc(true_negatives):>6}%")
+        print(
+            f"\nTrue negatives:             {true_negatives:6} {perc(true_negatives):>6}%"
+        )
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['true_negatives']:6}")
 
         # Total number of true positives found
         true_positives = sum(d["true_positives"] for d in self._sentences.values())
-        print(f"\nTrue positives:             {true_positives:6} {perc(true_positives):>6}%")
+        print(
+            f"\nTrue positives:             {true_positives:6} {perc(true_positives):>6}%"
+        )
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['true_positives']:6}")
 
         # Total number of false negatives found
         false_negatives = sum(d["false_negatives"] for d in self._sentences.values())
-        print(f"\nFalse negatives:            {false_negatives:6} {perc(false_negatives):>6}%")
+        print(
+            f"\nFalse negatives:            {false_negatives:6} {perc(false_negatives):>6}%"
+        )
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['false_negatives']:6}")
 
         # Total number of false positives found
         false_positives = sum(d["false_positives"] for d in self._sentences.values())
-        print(f"\nFalse positives:            {false_positives:6} {perc(false_positives):>6}%")
+        print(
+            f"\nFalse positives:            {false_positives:6} {perc(false_positives):>6}%"
+        )
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['false_positives']:6}")
 
@@ -430,6 +463,15 @@ class Stats:
             else:
                 print(f"   {c:<13}:           N/A")
 
+        total = sum(self._false_negatives.values())
+        if total > 0:
+            print("\nMost common false negative error types")
+            print("--------------------------------------\n")
+            for index, (xtype, cnt) in enumerate(
+                heapq.nlargest(20, self._false_negatives.items(), key=lambda x: x[1])
+            ):
+                print(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
+
 
 def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
     """ Returns a string with a reasonably correct concatenation
@@ -440,9 +482,7 @@ def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
     )
 
 
-def process(
-    fpath_and_category: Tuple[str, str],
-) -> List[Tuple]:
+def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
 
     """ Process a single error corpus file in TEI XML format.
         This function is called within a multiprocessing pool
@@ -461,9 +501,12 @@ def process(
     # Namespace dictionary to be passed to ET functions
     ns = dict(ns=NS)
 
-    # Statistics about processed sentences. This list will
+    # Statistics about processed sentences. These data will
     # be returned back to the parent process.
-    stats: List[Tuple] = []
+    stats: List[StatsTuple] = []
+    # Counter of iceErrorCorpus error types (xtypes) encountered
+    true_positives: Dict[str, int] = defaultdict(int)
+    false_negatives: Dict[str, int] = defaultdict(int)
 
     # Accumulate standard output in a buffer, for writing in one fell
     # swoop at the end (after acquiring the output lock)
@@ -483,12 +526,12 @@ def process(
         # Parse the XML file into a tree
         try:
             tree = ET.parse(fpath)
-        except ET.ParseError:
+        except ET.ParseError as e:
             if QUIET:
                 bprint(f"000: *** Unable to parse XML file {fpath} ***")
             else:
                 bprint(f"000: *** Unable to parse XML file ***")
-            return stats
+            raise e
         # Obtain the root of the XML tree
         root = tree.getroot()
         # Iterate through the sentences in the file
@@ -517,8 +560,7 @@ def process(
                     if el_orig is not None:
                         # We have 0 or more original tokens embedded within the revision tag
                         orig_tokens = [
-                            (subel.tag[nl:], element_text(subel))
-                            for subel in el_orig
+                            (subel.tag[nl:], element_text(subel)) for subel in el_orig
                         ]
                         tokens.extend(orig_tokens)
                         original = " ".join(t[1] for t in orig_tokens).strip()
@@ -533,7 +575,7 @@ def process(
                     for el_err in el.findall("ns:errors/ns:error", ns):
                         attr = el_err.attrib
                         # Collect relevant information into a dict
-                        xtype = attr["xtype"].lower()
+                        xtype: str = attr["xtype"].lower()
                         error: ErrorDict = dict(
                             start=start,
                             end=end,
@@ -561,7 +603,9 @@ def process(
                             else:
                                 if QUIET:
                                     bprint(f"In file {fpath}:")
-                                bprint(f"\n{index}: *** 'depId' attribute missing for dependency ***")
+                                bprint(
+                                    f"\n{index}: *** 'depId' attribute missing for dependency ***"
+                                )
                 else:
                     tokens.append((tag, element_text(el)))
             # Fix up the dependencies, if any
@@ -579,7 +623,14 @@ def process(
                 # Nothing to do: drop this and go to the next sentence
                 continue
             # Pass it to GreynirCorrect
-            s = gc.check_single(text)
+            pg = [list(p) for p in gc.check(text)]
+            s: Optional[_Sentence] = None
+            if len(pg) >= 1 and len(pg[0]) >= 1:
+                s = pg[0][0]
+            if len(pg) > 1 or (len(pg) == 1 and len(pg[0]) > 1):
+                if QUIET:
+                    bprint(f"In file {fpath}:")
+                bprint(f"\n{index}: *** Input contains more than one sentence *** {text}")
             if s is None:
                 if QUIET:
                     bprint(f"In file {fpath}:")
@@ -601,22 +652,31 @@ def process(
                 if not QUIET:
                     bprint(f">>> {ann}")
             # Output iceErrorCorpus annotations
+            xtypes: Dict[str, int] = defaultdict(int)
             for err in errors:
                 asterisk = "*"
+                xtype = cast(str, err["xtype"])
                 if err["in_scope"]:
                     # This is an in-scope error
                     asterisk = ""
                     ice_error = True
+                    # Count the errors of each xtype
+                    if xtype != "dep":
+                        xtypes[xtype] += 1
                 if not QUIET:
-                    bprint(f"<<< {err['start']:03}-{err['end']:03}: {asterisk}{err['xtype']}")
+                    bprint(f"<<< {err['start']:03}-{err['end']:03}: {asterisk}{xtype}")
             if not QUIET:
                 # Output true/false positive/negative result
                 if ice_error and gc_error:
                     bprint("=++ True positive")
+                    for xtype in xtypes:
+                        true_positives[xtype] += 1
                 elif not ice_error and not gc_error:
                     bprint("=-- True negative")
                 elif ice_error and not gc_error:
                     bprint("!-- False negative")
+                    for xtype in xtypes:
+                        false_negatives[xtype] += 1
                 else:
                     assert gc_error and not ice_error
                     bprint("!++ False positive")
@@ -624,6 +684,10 @@ def process(
             # to the parent process
             if stats is not None:
                 stats.append((category, len(tokens), ice_error, gc_error))
+
+    except ET.ParseError:
+        # Already handled the exception: exit as gracefully as possible
+        pass
 
     finally:
         # Print the accumulated output before exiting
@@ -634,7 +698,9 @@ def process(
                 print("", flush=True)
 
     # This return value will be pickled and sent back to the parent process
-    return stats
+    return dict(
+        stats=stats, true_positives=true_positives, false_negatives=false_negatives
+    )
 
 
 def main() -> None:
@@ -684,7 +750,9 @@ def main() -> None:
                 if category in fpath:
                     break
             else:
-                assert False, f"File path does not contain a recognized category: {fpath}"
+                assert (
+                    False
+                ), f"File path does not contain a recognized category: {fpath}"
             # Add the file to the statistics under its category
             stats.add_file(category)
             # Yield the file information to the multiprocessing pool
@@ -700,10 +768,9 @@ def main() -> None:
         # Iterate through the TEI XML files in turn and call the process()
         # function on each file, in a child process within the pool
         for result in pool.imap_unordered(process, gen_files()):
-            # Results come back as lists of arguments (tuples) that
-            # we pass to Stats.add_sentence()
-            for sent_result in result:
-                stats.add_sentence(*sent_result)
+            # Results come back as a dict of arguments that
+            # we pass to Stats.add_result()
+            stats.add_result(**result)
         # Done: close the pool in an orderly manner
         pool.close()
         pool.join()
