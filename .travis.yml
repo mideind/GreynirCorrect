@@ -2,7 +2,11 @@ language: python
 
 cache: pip
 
-dist: xenial
+os: linux
+virt: lxd 
+dist: focal
+arch: arm64
+group: edge
 
 python:
   - "3.6"
