@@ -372,6 +372,7 @@ class ErrorFinder(ParseForestNavigator):
         wrong_pronoun = self._node_text(node, original_case=True)
         correct_case = variants.split("_")[0]
         pronoun_node = next(node.enum_child_nodes())
+        assert pronoun_node is not None
         p = self._simple_tree(pronoun_node)
         correct_pronoun = self.cast_to_case(correct_case, p)
         return dict(
@@ -439,10 +440,12 @@ class ErrorFinder(ParseForestNavigator):
         # Sögn á að vera í sömu tölu og frumlag
         children = list(node.enum_child_nodes())
         assert len(children) == 2
+        assert children[0] is not None
         subject = self._node_text(children[0])
         # verb_phrase = self._node_text(children[1])
         number = "eintölu" if "et" in variants else "fleirtölu"
         # Annotate the verb phrase
+        assert children[1] is not None
         start, end = self._node_span(children[1])
         return dict(
             text="Sögn á sennilega að vera í {1} eins og frumlagið '{0}'".format(
