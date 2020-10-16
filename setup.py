@@ -104,6 +104,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python :: Implementation :: PyPy",
         "Topic :: Software Development :: Libraries :: Python Modules",
@@ -112,7 +113,7 @@ setup(
     ],
     keywords=["nlp", "parser", "icelandic"],
     setup_requires=[],
-    install_requires=["reynir>=2.5.0", "icegrams>=0.6.0", "typing_extensions"],
+    install_requires=["reynir>=2.5.0", "icegrams>=1.1.0", "typing_extensions"],
     # Set up a 'correct' command ('correct.exe' on Windows),
     # which calls main() in src/reynir-correct/main.py
     entry_points={
