@@ -11,7 +11,7 @@ GreynirCorrect: A spelling and grammar corrector for Icelandic
 Overview
 ********
 
-**GreynirCorrect** is a Python 3 (>= 3.5) package and command line tool for
+**GreynirCorrect** is a Python 3 (>= 3.6) package and command line tool for
 **checking and correcting spelling and grammar** in Icelandic text.
 
 GreynirCorrect relies on the `Greynir <https://pypi.org/project/reynir/>`_ package,
@@ -112,7 +112,7 @@ and last tokens to which the annotation applies.
 Prerequisites
 *************
 
-GreynirCorrect runs on CPython 3.5 or newer, and on PyPy 3.5 or newer. It has
+GreynirCorrect runs on CPython 3.6 or newer, and on PyPy 3.6 or newer. It has
 been tested on Linux, MacOS and Windows. The
 `PyPi package <https://pypi.org/project/reynir-correct/>`_
 includes binary wheels for common environments, but if the setup on your OS
@@ -248,7 +248,7 @@ virtualenv), then run:
 Copyright and License
 *********************
 
-.. image:: https://github.com/mideind/ReynirPackage/raw/master/doc/_static/MideindLogoVert100.png?raw=true
+.. image:: https://github.com/mideind/GreynirPackage/raw/master/doc/_static/MideindLogoVert100.png?raw=true
    :target: https://mideind.is
    :align: right
    :alt: Miðeind ehf.

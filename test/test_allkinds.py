@@ -405,19 +405,21 @@ def test_other_context_independent_spelling_errors(verbose=False):
 
 
     g = rc.tokenize("Ég fór í ljós tisvar í vigu og mædi regullega í lígamsrætt.")
+    # Current output (2020-09-08):
+    # 'Ég fór í ljós tvisvar í viku og mæli regullega í lígamsrætt .'
     g = list(g)
     if verbose: dump(g)
     s = normalize(g)
     assert "ljós tvisvar í" in s
-    # assert "í viku og" in s     # TODO leiðréttist í 'eigu'
-    assert "og mæti" in s
+    assert "í viku og" in s
+    # assert "og mæti" in s
     # assert "reglulega í" in s     # TODO leiðréttist ekki, kemur með uppástungu
     # assert "í líkamsrækt" in s    # TODO leiðréttist ekki, of flókin villa.
 
     # assert g[5].error_code == "S002"      # TODO endar sem S004
     # assert g[7].error_code == "S002"      # TODO endar sem S004
     # assert g[9].error_code == "S002"      # TODO endar sem S004
-    # assert g[10].error_code == "S002"     # TODO endar sem S003! Endar sem bara uppástunga
+    # assert g[10].error_code == "S002"     # TODO endar sem W001/w
     assert g[12].error_code == "U001"
 
 

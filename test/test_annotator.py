@@ -79,7 +79,7 @@ def dump(tokens):
             print("   {0}: {1}".format(token.error_code, err))
 
 
-def check_sentence(rc, s, annotations, is_foreign=False):
+def check_sentence(rc, s, annotations, is_foreign=False, ignore_warnings=False):
     """ Check whether a given single sentence gets the
         specified annotations when checked """
 
@@ -93,16 +93,31 @@ def check_sentence(rc, s, annotations, is_foreign=False):
         assert annotations is not None
         if not is_foreign:
             assert sent.tree is not None
+        # Compile a list of error annotations, omitting warnings
+        if not hasattr(sent, "annotations"):
+            sent_errors = []
+        else:
+            sent_errors = [a for a in sent.annotations if not a.code.endswith("/w")]
         if not annotations:
             # This sentence is not supposed to have any annotations
-            assert (not hasattr(sent, "annotations")) or len(sent.annotations) == 0
+            if ignore_warnings:
+                assert len(sent_errors) == 0
+            else:
+                assert (not hasattr(sent, "annotations")) or len(sent.annotations) == 0
             return
         assert hasattr(sent, "annotations")
-        assert len(sent.annotations) == len(annotations)
-        for a, (start, end, code) in zip(sent.annotations, annotations):
-            assert a.start == start
-            assert a.end == end
-            assert a.code == code
+        if ignore_warnings:
+            assert len(sent_errors) == len(annotations)
+            for a, (start, end, code) in zip(sent_errors, annotations):
+                assert a.start == start
+                assert a.end == end
+                assert a.code == code
+        else:
+            assert len(sent.annotations) == len(annotations)
+            for a, (start, end, code) in zip(sent.annotations, annotations):
+                assert a.start == start
+                assert a.end == end
+                assert a.code == code
 
     # Test check_single()
     check_sent(rc.parse_single(s))
@@ -160,6 +175,33 @@ def test_error_finder(rc):
     check_sentence(rc, s, [(5, 5, "P_NT_Heldur/w")])
 
 
+def test_ordinals(rc):
+    # NOTE: Commented out as this functionality increases the number of
+    # false positives on the iceErrorCorpus test set.
+    # s = "4. barnið fæddist í gær, en það er 3. strákur þeirra hjóna."
+    # check_sentence(rc, s, [(0, 0, "X_number4word"), (8, 8, "X_number4word")])
+    # sent = rc.parse_single(s)
+    # assert sent.annotations[0].suggest == "Fjórða"
+    # assert sent.annotations[1].suggest == "þriðji"
+    s = "5. Ákæran beinist gegn Jóni og Friðberti."
+    check_sentence(rc, s, [])
+    # s = "2. deildin fer vel af stað í vetur."
+    # check_sentence(rc, s, [(0, 0, "X_number4word")])
+    s = "XVII. kafli: Um landsins gagn og nauðsynjar."
+    check_sentence(rc, s, [])
+
+
+def test_pronoun_annara(rc):
+    s = (
+        "Allir í hans bekk, auk nokkurra nemenda úr öðrum bekkjum, "
+        "umsjónakennara og fjögurra annara kennara "
+        "hafa verið sendir í sjö daga sóttkví."
+    )
+    check_sentence(rc, s, [(12, 12, "S004"), (15, 15, "P_NT_Annara")])
+    s = " Mér er annara um símann minn en orðspor mitt."
+    check_sentence(rc, s, [])
+
+
 def test_impersonal_verbs(rc):
     s = "Mig hlakkaði til."
     check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_þf_nf")])
@@ -212,7 +254,7 @@ def test_foreign_sentences(rc):
     )
     check_sentence(
         rc,
-        "Borðaðu Magnyl og Xanax out in Rushmore.",
+        "Borðaðu Magnyl og Xanax eagerly in Rushmore.",
         [(0, 7, "E004")],
         is_foreign=True
     )
@@ -239,7 +281,12 @@ def test_number(rc):
 def test_correct_sentences(rc):
     check_sentence(rc, "Pál langaði að horfa á sjónvarpið.", [])
     check_sentence(rc, "Mig dreymdi mús sem var að elta kött.", [])
-    check_sentence(rc, "Ég held að músin hafi kviðið fyrir að hitta köttinn.", [])
+    check_sentence(
+        rc,
+        "Ég held að músin hafi kviðið fyrir að hitta köttinn.",
+        [],
+        ignore_warnings=True
+    )
     check_sentence(rc, "Músin kveið fyrir að hitta köttinn.", [])
     check_sentence(rc,
         "Páll hlakkaði til jólanna og að hitta strákinn sem hlakkaði til páskanna.",

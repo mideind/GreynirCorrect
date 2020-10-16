@@ -35,7 +35,8 @@
 
 """
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Set, Optional, Iterable, Callable
+from typing import TYPE_CHECKING
 
 import os
 import math
@@ -47,9 +48,14 @@ from functools import lru_cache
 
 from reynir import tokenize, correct_spaces, TOK
 from reynir.bindb import BIN_Db
+from reynir.bintokenizer import StringIterable
+from icegrams import Ngrams, MAX_ORDER
 
-from icegrams import Ngrams, MAX_ORDER  # type: ignore
-from .settings import Settings
+if __name__ == "__main__":
+    if not TYPE_CHECKING:
+        from settings import Settings  # pylint: disable=no-name-in-module
+else:
+    from .settings import Settings
 
 
 _PATH = os.path.dirname(__file__) or "."
@@ -67,9 +73,85 @@ LOG_LAMBDA = math.log(0.4)
 
 
 @lru_cache(maxsize=2048)
-def _splits(word):
+def _splits(word: str) -> List[Tuple[str, str]]:
     """ Return a list of all possible (first, rest) pairs that comprise word. """
     return [(word[:i], word[i:]) for i in range(len(word) + 1)]
+
+
+def levenshtein_distance(s1: str, s2: str) -> int:
+    """ Return the Levenshtein distance between two strings,
+        using the Wagner-Fischer iterative algorithm.
+
+        This function is based on code from https://github.com/toastdriven/pylev:
+
+        Copyright (c) 2012, Daniel Lindsley
+        All rights reserved.
+
+        Redistribution and use in source and binary forms, with or without
+        modification, are permitted provided that the following conditions are met:
+
+            * Redistributions of source code must retain the above copyright
+            notice, this list of conditions and the following disclaimer.
+            * Redistributions in binary form must reproduce the above copyright
+            notice, this list of conditions and the following disclaimer in the
+            documentation and/or other materials provided with the distribution.
+            * Neither the name of the pylev nor the
+            names of its contributors may be used to endorse or promote products
+            derived from this software without specific prior written permission.
+
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+        ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+        WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+        DISCLAIMED. IN NO EVENT SHALL pylev BE LIABLE FOR ANY
+        DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+        (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+        LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+        ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+        (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+        SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+    """
+    if s1 == s2:
+        return 0
+
+    len_1 = len(s1)
+    len_2 = len(s2)
+
+    if len_1 == 0:
+        return len_2
+    if len_2 == 0:
+        return len_1
+
+    if len_1 > len_2:
+        s2, s1 = s1, s2
+        len_2, len_1 = len_1, len_2
+
+    d0 = [i for i in range(len_2 + 1)]
+    d1 = [j for j in range(len_2 + 1)]
+
+    for i in range(len_1):
+        d1[0] = i + 1
+        for j in range(len_2):
+            cost = d0[j]
+
+            if s1[i] != s2[j]:
+                # Substitution
+                cost += 1
+
+                # Insertion
+                x_cost = d1[j] + 1
+                if x_cost < cost:
+                    cost = x_cost
+
+                # Deletion
+                y_cost = d0[j + 1] + 1
+                if y_cost < cost:
+                    cost = y_cost
+
+            d1[j + 1] = cost
+
+        d0, d1 = d1, d0
+
+    return d0[-1]
 
 
 class Corrector:
@@ -79,9 +161,10 @@ class Corrector:
     # The characters used to form variants of words by insertion
     _ALPHABET = "aábcdðeéfghiíjklmnoópqrstuúvwxyýzþæö"
 
-    # Translate wrongly accented characters before correcting
+    # Translate wrongly accented or encoded characters before correcting
     _TRANSLATE = {
         "à": "á",
+        "đ": "ð",
         "è": "é",
         "ì": "í",
         "ò": "ó",
@@ -165,7 +248,7 @@ class Corrector:
         # ,/ø, f/ø í innstöðu
         ("á", ["ág", "áf"]),
         ("í", ["íg"]),
-        ("æ", ["æg", "ei"]), # áræðanlegur->áreiðanlegur
+        ("æ", ["æg", "ei"]),  # áræðanlegur->áreiðanlegur
         ("ú", ["úg", "úf"]),
         ("ó", ["óg", "óf"]),
         # einfaldir/tvöfaldir samhljóðar
@@ -305,10 +388,9 @@ class Corrector:
     _KNOWN_WORD_MIN_FREQUENCY = 3
 
     # Singleton Ngrams dictionary
-    _NGRAMS = None  # type: Optional[Ngrams]
+    _NGRAMS: Optional[Ngrams] = None
 
-
-    def __init__(self, db, dictionary=None):
+    def __init__(self, db: BIN_Db, dictionary: Optional[Ngrams] = None) -> None:
         # Word database
         self._db = db
         # N-gram frequency dictionary
@@ -317,6 +399,7 @@ class Corrector:
         else:
             if self._NGRAMS is None:
                 self.__class__._NGRAMS = Ngrams()
+            assert self._NGRAMS is not None
             self.ngrams = self._NGRAMS
         # Function for log probability of word
         self.logprob = self.ngrams.logprob
@@ -324,15 +407,21 @@ class Corrector:
         self.freq = self.ngrams.adj_freq
 
     @property
-    def db(self):
+    def db(self) -> BIN_Db:
         """ Return the associated word database """
         return self._db
 
-    def lookup_word(self, word, *, at_sentence_start=False, auto_uppercase=False):
+    def lookup_word(
+        self,
+        word: str,
+        *,
+        at_sentence_start: bool = False,
+        auto_uppercase: bool = False
+    ):
         """ Look up the given word in the associated word database """
         return self._db.lookup_word(word, at_sentence_start, auto_uppercase)
 
-    def subs(self, word):
+    def subs(self, word: str) -> Iterable[str]:
         """ Return all combinations of potential substitutions into the word. """
         # The following yields a list of tuples, for instance
         # [('gl', 'gl'), ('er', 'r'), ('aug', 'g')] for the word "gleraugu"
@@ -348,7 +437,7 @@ class Corrector:
             if len(frag) > len(sub):
                 # The fragment has a constant (fixed) part in front of
                 # the combination slot
-                combs.append([frag[0:-len(sub)]])
+                combs.append([frag[0 : -len(sub)]])
             # Collect all combinations for this slot
             subs = [sub] + list(self._SUBSTITUTE[sub])
             combs.append(subs)
@@ -375,7 +464,13 @@ class Corrector:
             # print(result)
             yield "".join(result)
 
-    def _correct(self, original_word, word, context, at_sentence_start):
+    def _correct(
+        self,
+        original_word: str,
+        word: str,
+        context: Tuple[str, ...],
+        at_sentence_start: bool,
+    ) -> str:
         """ Find the best spelling correction for this word.
             Credits for parts of this elegant code are due to Peter Norvig,
             cf. http://nbviewer.jupyter.org/url/norvig.com/ipython/
@@ -386,60 +481,62 @@ class Corrector:
 
         alphabet = self._ALPHABET
 
-        def in_dictionary(w):
+        def in_dictionary(w: str) -> bool:
             """ Consider a word to be in-dictionary if it occurs in
                 BÍN (potentially also in title case) or
                 frequently enough in the trigrams database """
             if w in self._db or self.freq(w) >= self._KNOWN_WORD_MIN_FREQUENCY:
                 return True
             wt = w.title()
-            return False if wt == w else (
-                wt in self._db or self.freq(wt) >= self._KNOWN_WORD_MIN_FREQUENCY
+            return (
+                False
+                if wt == w
+                else (wt in self._db or self.freq(wt) >= self._KNOWN_WORD_MIN_FREQUENCY)
             )
 
-        def known(words):
+        def known(words: Iterable[str]) -> Iterable[str]:
             """ Return a generator of words that are actually in the dictionary. """
             # A word is known if its lower case form is in the dictionary or
             # if its title form is in the dictionary (for example 'Ísland')
             return (w for w in words if in_dictionary(w))
 
-        def edits0(word):
+        def edits0(word: str) -> Set[str]:
             """ Return all strings that are zero edits away from word (i.e., just word itself). """
             return {word}
 
-        def edits1(pairs):
+        def edits1(pairs: Iterable[Tuple[str, str]]) -> Set[str]:
             """ Return all strings that are one edit away from this word. """
             # Deletes
-            result = {a + b[1:]                 for (a, b) in pairs if b}
+            result = {a + b[1:] for (a, b) in pairs if b}
             # Transposes
-            result |= {a + b[1] + b[0] + b[2:]  for (a, b) in pairs if len(b) > 1}
+            result |= {a + b[1] + b[0] + b[2:] for (a, b) in pairs if len(b) > 1}
             # Replaces
-            result |= {a + c + b[1:]            for (a, b) in pairs for c in alphabet if b}
+            result |= {a + c + b[1:] for (a, b) in pairs for c in alphabet if b}
             # Inserts
-            result |= {a + c + b                for (a, b) in pairs for c in alphabet}
+            result |= {a + c + b for (a, b) in pairs for c in alphabet}
             return result
 
         # pylint: disable=unused-variable
-        def edits2(pairs):
+        def edits2(pairs: Iterable[Tuple[str, str]]) -> Set[str]:
             """ Return all strings that are two edits away from this word. """
 
-            def sub_edits1(word):
+            def sub_edits1(word: str) -> Set[str]:
                 pairs = _splits(word)
                 return edits1(pairs)
 
             return {e2 for e1 in edits1(pairs) for e2 in sub_edits1(e1)}
 
-        def gen_candidates(original_word, word):
+        def gen_candidates(original_word: str, word: str) -> Iterable[Tuple[str, float]]:
             """ Generate candidates in order of generally decreasing likelihood """
 
-            def logprob_title(*args):
+            def logprob_title(*args: str) -> float:
                 """ Return the log probability of an n-gram as a maximum of
                     the log probability of the lower case n-gram and the title case
                     n-gram, respectively """
                 ctx, w = args[:-1], args[-1]
                 return max(self.logprob(*ctx, w), self.logprob(*ctx, w.title()))
 
-            def freq_title(*args):
+            def freq_title(*args: str) -> int:
                 """ Return the frequency of an n-gram as a maximum of
                     the frequency of the lower case n-gram and the title case
                     n-gram, respectively """
@@ -460,7 +557,7 @@ class Corrector:
                 logprob = self.logprob
                 freq = self.freq
 
-            def stupid_backoff(w):
+            def stupid_backoff(w: str) -> float:
                 # !!! TODO: We may need a more sophisticated probability function
                 # !!! TODO: here, such as Kneser-Ney or Katz
                 ctx = context
@@ -477,12 +574,14 @@ class Corrector:
                         # We have a meaningful frequency here:
                         # return the logprob multiplied with the current lambda
                         if Settings.DEBUG:
-                            print("stupid_backoff() returning logprob of '{0}' "
-                                "which is {1:.3} + {2:.3} = {3:.3}"
-                                .format(cw, logprob(*cw), lamb, logprob(*cw) + lamb)
+                            print(
+                                "stupid_backoff() returning logprob of '{0}' "
+                                "which is {1:.3} + {2:.3} = {3:.3}".format(
+                                    cw, logprob(*cw), lamb, logprob(*cw) + lamb
+                                )
                             )
                         return logprob(*cw) + lamb
-                    # Zero count: back off to a simpler context
+                    # Insignificant frequency: back off to a simpler context
                     # and use the 'stupid backoff' to reduce the probability
                     ctx = ctx[1:]
                     # Multiply the prob by 0.4, i.e. add log(0.4) to the logprob
@@ -490,8 +589,7 @@ class Corrector:
 
             P = stupid_backoff
             e0 = edits0(word)  # | edits0(original_word)
-            # -- Note that we do not put the e0 set through the known() filter
-            for c in known(e0):  # e0
+            for c in known(e0):
                 yield (c, P(c) + EDIT_0_FACTOR)
             for c in known(self.subs(word)):
                 yield (c, P(c) + EDIT_S_FACTOR)
@@ -509,8 +607,11 @@ class Corrector:
         # we don't bother checking it further and just assume it's fine
         log_prob = self.logprob(word)
         if Settings.DEBUG:
-            print("Ctx {0}, word '{1}' has logprob {2:.3f}, threshold is {3:.3f}"
-                .format(context, original_word, log_prob, self._UNIGRAM_ACCEPT_THRESHOLD))
+            print(
+                "Ctx {0}, word '{1}' has logprob {2:.3f}, threshold is {3:.3f}".format(
+                    context, original_word, log_prob, self._UNIGRAM_ACCEPT_THRESHOLD
+                )
+            )
         if log_prob > self._UNIGRAM_ACCEPT_THRESHOLD:
             # print(f"The original word {word} is above the threshold, returning it")
             return word
@@ -523,16 +624,17 @@ class Corrector:
         # Return the highest probability candidate
         if Settings.DEBUG:
             for i, (c, log_prob) in enumerate(
-                sorted(candidates, key=lambda t:t[1], reverse=True)[0:5]
+                sorted(candidates, key=lambda t: t[1], reverse=True)[0:5]
             ):
-                print("Candidate {0} for {1} is {2} with log_prob {3:.3f}"
-                    .format(i+1, word, c, log_prob)
+                print(
+                    "Candidate {0} for {1} is {2} with log_prob {3:.3f}".format(
+                        i + 1, word, c, log_prob
+                    )
                 )
         # Find the candidate with the highest probability
         m = max(candidates, key=lambda t: t[1])
-        if (
-            m[1] < self._MIN_LOG_PROBABILITY
-            and (word in self.ngrams or original_word in self.ngrams)
+        if m[1] < self._MIN_LOG_PROBABILITY and (
+            word in self.ngrams or original_word in self.ngrams
         ):
             # Best candidate is very unlikely: return the original word
             # print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
@@ -541,7 +643,7 @@ class Corrector:
         return m[0]
 
     @staticmethod
-    def _case_of(text):
+    def _case_of(text: str) -> Callable[[str], str]:
         """ Return the case-function appropriate for text: upper, lower, title, or just str. """
         if text.isupper():
             return str.upper
@@ -551,7 +653,7 @@ class Corrector:
             return lambda s: s[0].upper() + s[1:]
         return str
 
-    def _cast(self, word):
+    def _cast(self, word: str) -> str:
         """ Cast the word to lowercase and correct accents """
         return re.sub(
             self._TRANSLATE_REGEX,
@@ -559,7 +661,7 @@ class Corrector:
             word.lower(),
         )
 
-    def is_rare(self, word, *, sentence_is_uppercase=False):
+    def is_rare(self, word: str, *, sentence_is_uppercase: bool=False) -> bool:
         """ Return True if the word is so rare as to be suspicious """
         wl = word.lower()
         if wl != word:
@@ -577,7 +679,13 @@ class Corrector:
         # Return True if the lower case version is rare
         return self.logprob(wl) < self._RARE_THRESHOLD
 
-    def correct(self, word: str, *, context: Tuple=(), at_sentence_start: bool=False) -> str:
+    def correct(
+        self,
+        word: str,
+        *,
+        context: Tuple[str, ...] = (),
+        at_sentence_start: bool = False
+    ) -> str:
         """ Correct a single word, keeping its case (lower/upper/title) intact.
             The optional context parameter contains a tuple of preceding
             words, used to enable a more accurate probability prediction. """
@@ -585,15 +693,16 @@ class Corrector:
             self._correct(word, self._cast(word), context, at_sentence_start)
         )
 
-    def __getitem__(self, word):
+    def __getitem__(self, word: str) -> str:
         """ For the fun of it, support corrector["myword"] syntax """
         return self.correct(word)
 
-    def __contains__(self, word):
+    def __contains__(self, word: str) -> bool:
         """ Support "word" in corrector """
         return self._db.__contains__(word)
 
-    def correct_text(self, text, *, only_rare=False):
+    # pylint: disable=used-before-assignment
+    def correct_text(self, text: StringIterable, *, only_rare: bool = False) -> str:
         """ Attempt to correct all words within a text, returning the corrected text.
             If only_rare is True, correction is only attempted on rare words. """
         result = []
@@ -671,7 +780,7 @@ def test():
                 The lines are joined by newlines ('\n') but there is no trailing
                 newline. """
             result = []
-            line = []  # type: List[str]
+            line: List[str] = []
             len_line = 0
             for wrd in txt.split():
                 if len_line + 1 + len(wrd) > margin:
@@ -688,13 +797,33 @@ def test():
 
         for t in txts:
             print("\nOriginal:\n")
-            print(t)
+            print(linebreak(t, left_margin=8))
             print("\nCorrected:\n")
             print(linebreak(c.correct_text(t), left_margin=8))
 
         t1 = time.time()
         print("\nTotal time: {0:.2f} seconds".format(t1 - t0))
 
+        # Test cases to check:
+        # sjalsögðu -> sjálfsögðu
+        # olikur -> blikur
+        # sb -> b (should probably be sbr.)
+        # þe -> þá (should probably be þ.e.)
+        # sona -> svona
+        # orettlæti -> orettlæti
+        # politiskum -> politiskum
+        # a -> að (should probably be á)
+        # rettlatara -> rettlatara
+        # hæg -> hægt
+        # biddu -> biddu
+        # þjoðfelagið -> þjoðfelagið
+        # ertu i alvoru -> ertu alvöru
+        # þo -> þá (should probably be þó)
+        # FF -> FÉ
+        # rasisku -> fasisku
+        # íhaldið -> haldið
+        # áfalla -> falla
+        # mikil munur -> mikill munur
 
 if __name__ == "__main__":
 

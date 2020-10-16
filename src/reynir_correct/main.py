@@ -147,7 +147,7 @@ def main():
     json_dumps = partial(json.dumps, ensure_ascii=False, separators=(',', ':'))
 
     # Initialize sentence accumulator list
-    curr_sent = []  # type: List[CorrectToken]
+    curr_sent: List[CorrectToken] = []
 
     for t in tokenize(gen(args.infile), **options):
         if args.csv:
