@@ -303,8 +303,8 @@ class Stats:
 
     def add_sentence(
         self, category: str, num_tokens: int, ice_error: bool, gc_error: bool,
-        tp: int, tn: int, fp: int, fn: int, right_corr: int, wrong_corr: int,
-        right_span: int, wrong_span: int
+        #tp: int, tn: int, fp: int, fn: int, right_corr: int, wrong_corr: int,
+        #right_span: int, wrong_span: int
     ) -> None:
         """ Add a processed sentence in a given content category """
         d = self._sentences[category]
@@ -325,6 +325,7 @@ class Stats:
         false_positive = gc_error and not ice_error
         d["false_positives"] += 1 if false_positive else 0
 
+        """
         # Stats for error detection for sentence
         d["tp"] += tp
         d["tn"] += tn
@@ -336,6 +337,7 @@ class Stats:
         # Stats for error span
         d["right_span"] += right_span
         d["wrong_span"] += wrong_span
+        """
 
     def output(self, cores: int) -> None:
         """ Write the statistics to stdout """
@@ -495,7 +497,7 @@ class Stats:
             ):
                 print(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
 
-        print("Results for error detection  within sentences")
+        print("Results for error detection within sentences")
         num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
         print(f"\nTokens processed:           {num_tokens:6}")
         for c in CATEGORIES:
@@ -688,11 +690,14 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                 else:
                     # Copy the in_scope attribute from the original error
                     error["in_scope"] = error_indexes[dep_id]["in_scope"]
+            
             # Reconstruct the original sentence
+            # TODO switch for sentence from original text file
             text = correct_spaces(tokens)
             if not text:
                 # Nothing to do: drop this and go to the next sentence
                 continue
+            
             # Pass it to GreynirCorrect
             pg = [list(p) for p in gc.check(text)]
             s: Optional[_Sentence] = None
@@ -714,122 +719,124 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                 if QUIET:
                     bprint(f"In file {fpath}:")
                 bprint("000: *** Sentence identifier is missing ('n' attribute) ***")
-            gc_error = False
-            ice_error = False
-            # Output GreynirCorrect annotations
-            for ann in s.annotations:
-                if ann.is_error:
-                    gc_error = True
+
+
+            def sentence_results(hyp_annotations, ref_annotations):
+                gc_error = False
+                ice_error = False
+                # Output GreynirCorrect annotations
+                for ann in hyp_annotations:
+                    if ann.is_error:
+                        gc_error = True
+                    if not QUIET:
+                        bprint(f">>> {ann}")
+                # Output iceErrorCorpus annotations
+                xtypes: Dict[str, int] = defaultdict(int)
+                for err in ref_annotations:
+                    asterisk = "*"
+                    xtype = cast(str, err["xtype"])
+                    if err["in_scope"]:
+                        # This is an in-scope error
+                        asterisk = ""
+                        ice_error = True
+                        # Count the errors of each xtype
+                        if xtype != "dep":
+                            xtypes[xtype] += 1
+                    if not QUIET:
+                        bprint(f"<<< {err['start']:03}-{err['end']:03}: {asterisk}{xtype}")
                 if not QUIET:
-                    bprint(f">>> {ann}")
-            # Output iceErrorCorpus annotations
-            xtypes: Dict[str, int] = defaultdict(int)
-            for err in errors:
-                asterisk = "*"
-                xtype = cast(str, err["xtype"])
-                if err["in_scope"]:
-                    # This is an in-scope error
-                    asterisk = ""
-                    ice_error = True
-                    # Count the errors of each xtype
-                    if xtype != "dep":
-                        xtypes[xtype] += 1
-                if not QUIET:
-                    bprint(f"<<< {err['start']:03}-{err['end']:03}: {asterisk}{xtype}")
-            if not QUIET:
-                # Output true/false positive/negative result
-                if ice_error and gc_error:
-                    bprint("=++ True positive")
-                    for xtype in xtypes:
-                        true_positives[xtype] += 1
-                elif not ice_error and not gc_error:
-                    bprint("=-- True negative")
-                elif ice_error and not gc_error:
-                    bprint("!-- False negative")
-                    for xtype in xtypes:
-                        false_negatives[xtype] += 1
-                else:
-                    assert gc_error and not ice_error
-                    bprint("!++ False positive")
-            # print(" ".join(tokens))
-            # for gg in s.annotations:
-            #     print(gg)
-            # for ii in errors:
-            #     print(ii)
-            # print("===========Úrvinnsla===========")
-            tp, tn, fp, fn = 0, 0, 0, 0
-            right_corr, wrong_corr = 0, 0
-            right_span, wrong_span = 0, 0
-            if ice_error and gc_error:
-                gcoutput = iter(x for x in s.annotations)
-                iecoutput = iter(y for y in errors if y["in_scope"])
-                # Use a kind of a merging algorithm for comparing the errors
-                x = next(gcoutput)
-                y = next(iecoutput)
-                while True:
-                    # print("Ber saman:\n\t{}\n\t{}".format(x, y))
-                    if x.start == y["start"]:  
-                        # Errors start in same place
-                        # Can check for same span
-                        # and same correction
-                        # print("\tByrja á sama stað")
-                        tp += 1
-                        if x.end == y["end"]:
-                            # Found exact same span
-                            # Can check for same correction
-                            right_span +=1
-                            if x.suggest == y["correction"]:
-                                # print("\tFann allt eins!")
-                                right_corr +=1
-                                # TODO Tékka hér hvort er bara viðvörun, x.is_warning()
-                                # Ákveða hvernig það spilar inn í niðurstöðurnar
-                            else:
-                                # print("\tRöng leiðrétting en allt annað rétt")
-                                wrong_corr +=1
-                            # print("\tFann sömu spönn")
-                        else:
-                            # Found error with wrong span
-                            wrong_span +=1
-                        x = next(gcoutput)
-                        y = next(iecoutput)
-                        continue
-                    elif x.start < y["start"]:
-                        # Found error not found in gold standard
-                        # print("\tFann FP")
-                        fp +=1
-                        x = next(gcoutput)
-                        continue
-                    elif x.start > y["start"]:
-                        # Didn't find error present in gold standard
-                        #print("\tFann FN")
-                        fn +=1
-                        y = next(iecoutput)
+                    # Output true/false positive/negative result
+                    if ice_error and gc_error:
+                        bprint("=++ True positive")
+                        for xtype in xtypes:
+                            true_positives[xtype] += 1
+                    elif not ice_error and not gc_error:
+                        bprint("=-- True negative")
+                    elif ice_error and not gc_error:
+                        bprint("!-- False negative")
+                        for xtype in xtypes:
+                            false_negatives[xtype] += 1
                     else:
-                        print("\tHvað gerist hér???")
-                # TODO vinna úr rest af listum ef eitthvað er eftir. Get tékkað á lengdinni í upphafi?
-            elif ice_error:
-                # Only errors in gold standard
-                for each in errors:
-                    if each["in_scope"]:
-                        #print(each)
-                        fn +=1
-                        #print("\tFann FN")
-            elif gc_error:
-                # Only errors in output
-                for each in s.annotations:
-                    #print(each)
-                    fp +=1
-                    #print("\tFann FP")
-            else:
-                # Nothing found
-                pass
-            # TODO Finna fágaðri lausn, sem tekur tillit til villuspana.
-            tn = len(tokens)-fp-fn-tp
+                        assert gc_error and not ice_error
+                        bprint("!++ False positive")
+                return gc_error, ice_error
+
+            gc_error, ice_error = sentence_results(s.annotations, errors)
+
+            def token_results(hyp_annotations, ref_annotations):
+                # TODO safna villunum í generatora og taka eitt stak í einu og bera saman?
+                x = ( d for d in hyp_annotations) # GreynirCorrect annotations
+                y = ( l for l in ref_annotations) # iEC annotations
+                
+                xtok = None
+                ytok = None
+                try:
+                    xtok = next(x)
+                    ytok = next(y)
+                    while True:
+                        # gera stöff
+                        bprint("SKOÐA VILLUR")
+                        bprint("\tGreynir: {}".format(xtok))
+                        bprint("\tVkorpus: {}".format(ytok))
+                        # Er lengdin rétt? ErrorDetection; fyrst
+                            # En það mælir Error Boundaries. Ekki alveg sama.
+                            # Fyrir Error detection gæti ég tékkað hvort einhver sameiginleg gildi í range.
+                        # Er leiðréttingin sú sama? ErrorCorrection; svo
+                        # Er flokkunin sú sama? Error Classification; síðast, þegar búið að samræma villuflokkana.
+
+                        # 1. Error detection
+                        xtoks = set(range(xtok.start, xtok.end+1))
+                        ytoks = set(range(ytok["start"], ytok["end"]+1))
+                        bprint("\txtoks: {}".format(xtoks))
+                        bprint("\ttoks: {}".format(ytoks))
+                        if xtoks & ytoks:
+                            bprint("\t1. Í svipuðu rými!")
+                            # Vista sem fundna villu
+
+                            if xtoks == ytoks:
+                                bprint("\t2. Sama lengd!")
+                                # Vista í error boundaries; gera else og vista sem rangt
+                            try:
+                                xcorr = xtok.corrected
+                                #bprint("\tcorrected:{}".format(xtok.corrected))
+                            except AttributeError:
+                                xcorr = xtok.suggest
+                                #bprint("\tsuggest: {}".format(xtok.suggest))
+                            #bprint("\txcorr: {}".format(xcorr))
+                            if xcorr == ytok["corrected"]: # Óþarfi að fara í þetta nema sé með sömu villuna
+                                # Ath. líka til xtok.suggest! Hver er munurinn? Halda utan um í sérgaur?
+                                bprint("3. Rétt leiðrétting!")
+                                # Vista í Error Correction
+                            xtok = next(x)
+                            ytok = next(y)
+                        else:
+                            #bprint("Ekki rétt; tékka á næsta")
+                            if xtok.start < ytok["start"]:  # Prófa næstu x-villu
+                                # Vista xvillu sem false positive
+                                xtok = next(x)
+                            elif xtok.start > ytok["start"]:
+                                # vista yvillu sem false negative
+                                ytok = next(y)
+                            else:
+                                # Ætti ekki að gerast
+                                xtok = next(x)
+                                ytok = next(y)                  
+                    # Þarf að gera eitthvað hér til að höndla síðustu?
+                except StopIteration:
+                    pass
+                if xtok and not ytok: # Because of exception to try
+
+                    pass
+                    # Gefa út sem false positive
+                if ytok and not xtok: # Because of exception to try
+                    pass
+                    # Gefa út sem false negative
+            token_results(s.annotations, errors)
+
             # Collect statistics into the stats list, to be returned
             # to the parent process
-            # TODO Bæta við stats sem skila
             if stats is not None:
-                stats.append((category, len(tokens), ice_error, gc_error, tp, tn, fp, fn, right_corr, wrong_corr, right_span, wrong_span))
+                stats.append((category, len(tokens), ice_error, gc_error))
 
     except ET.ParseError:
         # Already handled the exception: exit as gracefully as possible
@@ -921,12 +928,12 @@ def main() -> None:
         # Done: close the pool in an orderly manner
         pool.close()
         pool.join()
-
+    """
     # Finally, acquire the output lock and write the final statistics
     with OUTPUT_LOCK:
         stats.output(cores=args.cores or os.cpu_count() or 1)
         print("", flush=True)
-
+    """
 
 if __name__ == "__main__":
     main()
