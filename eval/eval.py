@@ -303,8 +303,8 @@ class Stats:
 
     def add_sentence(
         self, category: str, num_tokens: int, ice_error: bool, gc_error: bool,
-        #tp: int, tn: int, fp: int, fn: int, right_corr: int, wrong_corr: int,
-        #right_span: int, wrong_span: int
+        tp: int, tn: int, fp: int, fn: int, right_corr: int, wrong_corr: int,
+        right_span: int, wrong_span: int
     ) -> None:
         """ Add a processed sentence in a given content category """
         d = self._sentences[category]
@@ -325,7 +325,6 @@ class Stats:
         false_positive = gc_error and not ice_error
         d["false_positives"] += 1 if false_positive else 0
 
-        """
         # Stats for error detection for sentence
         d["tp"] += tp
         d["tn"] += tn
@@ -337,7 +336,6 @@ class Stats:
         # Stats for error span
         d["right_span"] += right_span
         d["wrong_span"] += wrong_span
-        """
 
     def output(self, cores: int) -> None:
         """ Write the statistics to stdout """
@@ -765,6 +763,10 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
 
             def token_results(hyp_annotations, ref_annotations):
                 # TODO safna villunum í generatora og taka eitt stak í einu og bera saman?
+                tp, fp, fn = 0, 0, 0 # tn comes from len(tokens)-(tp+fp+fn) later on
+                right_corr, wrong_corr = 0, 0
+                right_span, wrong_span = 0, 0
+
                 x = ( d for d in hyp_annotations) # GreynirCorrect annotations
                 y = ( l for l in ref_annotations) # iEC annotations
                 
@@ -787,15 +789,21 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                         # 1. Error detection
                         xtoks = set(range(xtok.start, xtok.end+1))
                         ytoks = set(range(ytok["start"], ytok["end"]+1))
-                        bprint("\txtoks: {}".format(xtoks))
-                        bprint("\ttoks: {}".format(ytoks))
+                        #bprint("\txtoks: {}".format(xtoks))
+                        #bprint("\ttoks: {}".format(ytoks))
                         if xtoks & ytoks:
                             bprint("\t1. Í svipuðu rými!")
                             # Vista sem fundna villu
+                            tp+=1
 
+                            # 2. Span detection
                             if xtoks == ytoks:
                                 bprint("\t2. Sama lengd!")
                                 # Vista í error boundaries; gera else og vista sem rangt
+                                right_span+=1
+                            else:
+                                wrong_span+=1
+                            # 3. Error correction
                             try:
                                 xcorr = xtok.corrected
                                 #bprint("\tcorrected:{}".format(xtok.corrected))
@@ -807,20 +815,27 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                                 # Ath. líka til xtok.suggest! Hver er munurinn? Halda utan um í sérgaur?
                                 bprint("3. Rétt leiðrétting!")
                                 # Vista í Error Correction
+                                right_corr+=1
+                            else:
+                                wrong_corr+=1
                             xtok = next(x)
                             ytok = next(y)
                         else:
                             #bprint("Ekki rétt; tékka á næsta")
                             if xtok.start < ytok["start"]:  # Prófa næstu x-villu
                                 # Vista xvillu sem false positive
+                                fp+=1
                                 xtok = next(x)
                             elif xtok.start > ytok["start"]:
                                 # vista yvillu sem false negative
                                 ytok = next(y)
+                                fn+=1
                             else:
                                 # Ætti ekki að gerast
                                 xtok = next(x)
-                                ytok = next(y)                  
+                                ytok = next(y)       
+                                fp+=1
+                                fn+=1           
                     # Þarf að gera eitthvað hér til að höndla síðustu?
                 except StopIteration:
                     pass
@@ -831,12 +846,14 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                 if ytok and not xtok: # Because of exception to try
                     pass
                     # Gefa út sem false negative
-            token_results(s.annotations, errors)
-
+                return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
+            tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span = token_results(s.annotations, errors)
+            tn = len(tokens) - tp - fp - fn
+            bprint("\t{}-{}-{}-{}-{}-{}-{}-{}".format(tp, tn, fp, fn, right_corr, wrong_corr, right_span, wrong_span))
             # Collect statistics into the stats list, to be returned
             # to the parent process
             if stats is not None:
-                stats.append((category, len(tokens), ice_error, gc_error))
+                stats.append((category, len(tokens), ice_error, gc_error, tp, tn, fp, fn, right_corr, wrong_corr, right_span, wrong_span))
 
     except ET.ParseError:
         # Already handled the exception: exit as gracefully as possible
@@ -928,12 +945,10 @@ def main() -> None:
         # Done: close the pool in an orderly manner
         pool.close()
         pool.join()
-    """
     # Finally, acquire the output lock and write the final statistics
     with OUTPUT_LOCK:
         stats.output(cores=args.cores or os.cpu_count() or 1)
         print("", flush=True)
-    """
 
 if __name__ == "__main__":
     main()
