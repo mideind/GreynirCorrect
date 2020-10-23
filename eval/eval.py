@@ -281,7 +281,15 @@ class Stats:
         self._sentences: CategoryStatsDict = defaultdict(lambda: defaultdict(int))
         self._true_positives: Dict[str, int] = defaultdict(int)
         self._false_negatives: Dict[str, int] = defaultdict(int)
-
+        self._tp: Dict[str, int] = defaultdict(int)
+        self._tn: Dict[str, int] = defaultdict(int)
+        self._fp: Dict[str, int] = defaultdict(int)
+        self._fn: Dict[str, int] = defaultdict(int)
+        self._right_corr: Dict[str, int] = defaultdict(int)
+        self._wrong_corr: Dict[str, int] = defaultdict(int)
+        self._right_span: Dict[str, int] = defaultdict(int)
+        self._wrong_span: Dict[str, int] = defaultdict(int)
+        self.sent_tp_cause: Dict[str, int] = defaultdict(int)  # reference error code : freq - for hypotheses with the unparsable error code
     def add_file(self, category: str) -> None:
         """ Add a processed file in a given content category """
         self._files[category] += 1
@@ -339,6 +347,8 @@ class Stats:
 
     def output(self, cores: int) -> None:
         """ Write the statistics to stdout """
+
+        
         # Calculate the duration of the processing
         dur = int((datetime.utcnow() - self._starttime).total_seconds())
         h = dur // 3600
@@ -445,7 +455,7 @@ class Stats:
             if denominator == 0:
                 print(f"   {c:<13}:              N/A")
             else:
-                rc = d["recall"] = d["true_positives"] / denominator
+                rc = d["sentrecall"] = d["true_positives"] / denominator
                 print(f"   {c:<13}:           {rc:1.4f}")
 
         # Precision
@@ -462,7 +472,7 @@ class Stats:
             if denominator == 0:
                 print(f"   {c:<13}:              N/A")
             else:
-                p = d["precision"] = d["true_positives"] / denominator
+                p = d["sentprecision"] = d["true_positives"] / denominator
                 print(f"   {c:<13}:           {p:1.4f}")
 
         # F1 score
@@ -475,11 +485,11 @@ class Stats:
         print(f"\nF1 score:                   {result}")
         for c in CATEGORIES:
             d = self._sentences[c]
-            if "recall" not in d or "precision" not in d:
+            if "sentrecall" not in d or "sentprecision" not in d:
                 print(f"   {c:<13}:              N/A")
                 continue
-            rc = d["recall"]
-            p = d["precision"]
+            rc = d["sentrecall"]
+            p = d["sentprecision"]
             if p + rc > 0.0:
                 f1 = 2 * p * rc / (p + rc)
                 print(f"   {c:<13}:           {f1:1.4f}")
@@ -495,33 +505,95 @@ class Stats:
             ):
                 print(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
 
-        print("Results for error detection within sentences")
+
+        ### TOKEN ERROR SCORES
+
+        print("\n\nResults for error detection within sentences")
         num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
         print(f"\nTokens processed:           {num_tokens:6}")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
 
         tp = sum(d["tp"] for d in self._sentences.values())
-        print(f"\nTrue positives:           {tp:6}")
+        print(f"\nTrue positives:             {tp:6} {perc(tp):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['tp']:6}")
 
         tn = sum(d["tn"] for d in self._sentences.values())
-        print(f"\nTrue negatives:           {tn:6}")
+        print(f"\nTrue negatives:             {tn:6} {perc(tn):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['tn']:6}")
 
         fp = sum(d["fp"] for d in self._sentences.values())
-        print(f"\nFalse positives:           {fp:6}")
+        print(f"\nFalse positives:            {fp:6} {perc(fp):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['fp']:6}")
 
         fn = sum(d["fn"] for d in self._sentences.values())
-        print(f"\nFalse negatives:           {fn:6}")
+        print(f"\nFalse negatives:            {fn:6} {perc(fn):>6}%")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['fn']:6}")
 
-        print("Results for error correction")
+        # Recall
+        if tp + fn == 0:
+            result = "N/A"
+            recall = 0.0
+        else:
+            recall = tp / (tp+fn)
+            result = f"{recall:1.4f}"
+        print(f"\nRecall:                     {result}")
+        for c in CATEGORIES:
+            d = self._sentences[c]
+            denominator = d["tp"] + d["fn"]
+            if denominator == 0:
+                print(f"   {c:<13}:              N/A")
+            else:
+                rc = d["detectrecall"] = d["tp"] / denominator
+                print(f"   {c:<13}:           {rc:1.4f}")
+        # Precision
+        if tp + fp == 0:
+            result = "N/A"
+            precision = 0.0
+        else:
+            precision = tp / (tp + fp)
+            result = f"{precision:1.4f}"
+        print(f"\nPrecision:                  {result}")
+        for c in CATEGORIES:
+            d = self._sentences[c]
+            denominator = d["tp"] + d["fp"]
+            if denominator == 0:
+                print(f"   {c:<13}:              N/A")
+            else:
+                p = d["detectprecision"] = d["tp"] / denominator
+                print(f"   {c:<13}:           {p:1.4f}")
+        # F1 score
+        if precision + recall > 0.0:
+            f1 = 2 * precision * recall / (precision + recall)
+            result = f"{f1:1.4f}"
+        else:
+            f1 = 0.0
+            result = "N/A"
+        print(f"\nF1 score:                   {result}")
+        for c in CATEGORIES:
+            d = self._sentences[c]
+            if "detectrecall" not in d or "detectprecision" not in d:
+                print(f"   {c:<13}:              N/A")
+                continue
+            rc = d["detectrecall"]
+            p = d["detectprecision"]
+            if p + rc > 0.0:
+                f1 = 2 * p * rc / (p + rc)
+                print(f"   {c:<13}:           {f1:1.4f}")
+            else:
+                print(f"   {c:<13}:           N/A")
+
+
+        # TODO should error correction and error span use metrics for the whole dataset,
+        # or should they only use metrics for the set of errors?
+        # I.e. is true negative = all tokens not marked as errors,
+        # or does it perhaps not exist? Check how BEA 2019 does this.
+        # Can always do both!
+        print("Results for error correction")  
         right_corr = sum(d["right_corr"] for d in self._sentences.values())
         print(f"\nRight correction:           {right_corr:6}")
         for c in CATEGORIES:
@@ -531,6 +603,7 @@ class Stats:
         print(f"\nWrong correction:           {wrong_corr:6}")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['wrong_corr']:6}")
+
 
         print("Results for error span")
         right_span = sum(d["right_span"] for d in self._sentences.values())
@@ -542,6 +615,7 @@ class Stats:
         print(f"\nWrong span:           {wrong_span:6}")
         for c in CATEGORIES:
             print(f"   {c:<13}:           {self._sentences[c]['wrong_span']:6}")
+
 
 
 def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
@@ -748,6 +822,8 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                         bprint("=++ True positive")
                         for xtype in xtypes:
                             true_positives[xtype] += 1
+                        # TODO Check if unparsable error and collect causes and their frequencies
+
                     elif not ice_error and not gc_error:
                         bprint("=-- True negative")
                     elif ice_error and not gc_error:
@@ -868,7 +944,6 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                 print("", flush=True)
 
     # This return value will be pickled and sent back to the parent process
-    #TODO uppfæra þetta
     return dict(
         stats=stats, true_positives=true_positives, false_negatives=false_negatives
     )
