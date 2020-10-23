@@ -201,6 +201,21 @@ _DEV_PATH = "iceErrorCorpus/data/**/*.xml"
 # Default glob path of the test corpus TEI XML files to be processed
 _TEST_PATH = "iceErrorCorpus/testCorpus/**/*.xml"
 
+NAMES = {
+    "tp" : "True positives",
+    "tn" : "True negatives",
+    "fp" : "False positives",
+    "fn" : "False negatives",
+    "true_positives" : "True positives",
+    "true_negatives" : "True negatives",
+    "false_positives" : "False positives",
+    "false_negatives" : "False negatives",
+    "right_corr" : "Right correction",
+    "wrong_corr" : "Wrong correction",
+    "right_span" : "Right span",
+    "wrong_span" : "Wrong span"
+}
+
 # Define the command line arguments
 
 parser = argparse.ArgumentParser(
@@ -348,275 +363,241 @@ class Stats:
     def output(self, cores: int) -> None:
         """ Write the statistics to stdout """
 
-        
-        # Calculate the duration of the processing
-        dur = int((datetime.utcnow() - self._starttime).total_seconds())
-        h = dur // 3600
-        m = (dur % 3600) // 60
-        s = dur % 60
-        # Output a summary banner
-        print("\n" + "=" * 7)
-        print("Summary")
-        print("=" * 7 + "\n")
-        # Total number of files processed, and timing stats
-        print(f"Processing started at {str(self._starttime)[0:19]}")
-        print(f"Total processing time {h}h {m:02}m {s:02}s, using {cores} cores")
-        print(f"\nFiles processed:            {sum(self._files.values()):6}")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._files[c]:6}")
-        # Total number of tokens processed
-        num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
-        print(f"\nTokens processed:           {num_tokens:6}")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
-        # Total number of sentences processed
         num_sentences = sum(d["count"] for d in self._sentences.values())
-        print(f"\nSentences processed:        {num_sentences:6}")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['count']:6}")
+
+        def output_duration() -> None:
+            """ Calculate the duration of the processing """
+            dur = int((datetime.utcnow() - self._starttime).total_seconds())
+            h = dur // 3600
+            m = (dur % 3600) // 60
+            s = dur % 60
+            # Output a summary banner
+            print("\n" + "=" * 7)
+            print("Summary")
+            print("=" * 7 + "\n")
+            # Total number of files processed, and timing stats
+            print(f"Processing started at {str(self._starttime)[0:19]}")
+            print(f"Total processing time {h}h {m:02}m {s:02}s, using {cores} cores")
+            print(f"\nFiles processed:            {sum(self._files.values()):6}")
+            for c in CATEGORIES:
+                print(f"   {c:<13}:           {self._files[c]:6}")
+            # Total number of tokens processed
+            num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
+            print(f"\nTokens processed:           {num_tokens:6}")
+            for c in CATEGORIES:
+                print(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
+            # Total number of sentences processed
+            print(f"\nSentences processed:        {num_sentences:6}")
+            for c in CATEGORIES:
+                print(f"   {c:<13}:           {self._sentences[c]['count']:6}")
 
         def perc(n):
             """ Return a percentage of total sentences, formatted as 3.2f """
             if num_sentences == 0:
                 return "N/A"
             return f"{100.0*n/num_sentences:3.2f}"
-            
-        ### SENTENCE SCORES
-        # TODO Setja útreikning á P, R og F í sérfall, 
-        # Fær sent inn TN, TP, FP og FN - er þá búin að summa það upp
-        # Get sent inn aukagildi, sem segir t.d. hvort nota á F0,5 eða F1
-        # Og hvað er verið að reikna?
-        # Get líka sent inn texta sem segir hvað er verið að reikna,
-        # s.s. "Results for Error detection" eða "Results for sentence correctness"?
+        
+        def calc_basic_value(bv) -> None:
+            """ Write basic values for sentences and their freqs to stdout """
+            val = sum(d[bv] for d in self._sentences.values())
+            print(
+                f"\n{NAMES[bv]}:             {val:6} {perc(val):>6}%"
+            )
+            for c in CATEGORIES:
+                print(f"   {c:<13}:           {self._sentences[c][bv]:6}")
+            return val
 
-        # Total number of true negatives found
-        print("\nResults for error detection in sentences")
-        true_negatives = sum(d["true_negatives"] for d in self._sentences.values())
-        print(
-            f"\nTrue negatives:             {true_negatives:6} {perc(true_negatives):>6}%"
-        )
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['true_negatives']:6}")
+        def calc_PRF(tp, tn, fp, fn, tps, tns, fps, fns, recs, precs) -> None:
+            """ Calculate precision, recall and F1-score"""
+            # Recall
+            if tp + fn == 0:
+                result = "N/A"
+                recall = 0.0
+            else:
+                recall = tp / (tp+fn)
+                result = f"{recall:1.4f}"
+            print(f"\nRecall:                     {result}")
+            for c in CATEGORIES:
+                d = self._sentences[c]
+                denominator = d[tps] + d[fns]
+                if denominator == 0:
+                    print(f"   {c:<13}:              N/A")
+                else:
+                    rc = d[recs] = d[tps] / denominator
+                    print(f"   {c:<13}:           {rc:1.4f}")
+            # Precision
+            if tp + fp == 0:
+                result = "N/A"
+                precision = 0.0
+            else:
+                precision = tp / (tp + fp)
+                result = f"{precision:1.4f}"
+            print(f"\nPrecision:                  {result}")
+            for c in CATEGORIES:
+                d = self._sentences[c]
+                denominator = d[tps] + d[fps]
+                if denominator == 0:
+                    print(f"   {c:<13}:              N/A")
+                else:
+                    p = d[precs] = d[tps] / denominator
+                    print(f"   {c:<13}:           {p:1.4f}")
+            # F1 score
+            if precision + recall > 0.0:
+                f1 = 2 * precision * recall / (precision + recall)
+                result = f"{f1:1.4f}"
+            else:
+                f1 = 0.0
+                result = "N/A"
+            print(f"\nF1 score:                   {result}")
+            for c in CATEGORIES:
+                d = self._sentences[c]
+                if recs not in d or precs not in d:
+                    print(f"   {c:<13}:              N/A")
+                    continue
+                rc = d[recs]
+                p = d[precs]
+                if p + rc > 0.0:
+                    f1 = 2 * p * rc / (p + rc)
+                    print(f"   {c:<13}:           {f1:1.4f}")
+                else:
+                    print(f"   {c:<13}:           N/A")
 
-        # Total number of true positives found
-        true_positives = sum(d["true_positives"] for d in self._sentences.values())
-        print(
-            f"\nTrue positives:             {true_positives:6} {perc(true_positives):>6}%"
-        )
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['true_positives']:6}")
+        def output_sentence_scores() -> None:
+            """ Calculate and write sentence scores to stdout """
+            ### SENTENCE SCORES
+            # TODO Setja útreikning á P, R og F í sérfall, 
+            # Fær sent inn TN, TP, FP og FN - er þá búin að summa það upp
+            # Get sent inn aukagildi, sem segir t.d. hvort nota á F0,5 eða F1
+            # Og hvað er verið að reikna?
+            # Get líka sent inn texta sem segir hvað er verið að reikna,
+            # s.s. "Results for Error detection" eða "Results for sentence correctness"?
 
-        # Total number of false negatives found
-        false_negatives = sum(d["false_negatives"] for d in self._sentences.values())
-        print(
-            f"\nFalse negatives:            {false_negatives:6} {perc(false_negatives):>6}%"
-        )
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['false_negatives']:6}")
 
-        # Total number of false positives found
-        false_positives = sum(d["false_positives"] for d in self._sentences.values())
-        print(
-            f"\nFalse positives:            {false_positives:6} {perc(false_positives):>6}%"
-        )
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['false_positives']:6}")
+            # Total number of true negatives found
+            print("\nResults for error detection in sentences")
+            true_positives = calc_basic_value("true_positives")
+            true_negatives = calc_basic_value("true_negatives")
+            false_positives = calc_basic_value("false_positives")
+            false_negatives = calc_basic_value("false_negatives")
 
-        # Percentage of true vs. false
-        true_results = true_positives + true_negatives
-        false_results = false_positives + false_negatives
-        if num_sentences == 0:
-            result = "N/A"
-        else:
-            result = f"{100.0*true_results/num_sentences:3.2f}%/{100.0*false_results/num_sentences:3.2f}%"
-        print(f"\nTrue/false split: {result:>16}")
-        for c in CATEGORIES:
-            d = self._sentences[c]
-            num_sentences = d["count"]
-            true_results = d["true_positives"] + d["true_negatives"]
-            false_results = d["false_positives"] + d["false_negatives"]
+            # Percentage of true vs. false
+            true_results = true_positives + true_negatives
+            false_results = false_positives + false_negatives
             if num_sentences == 0:
                 result = "N/A"
             else:
                 result = f"{100.0*true_results/num_sentences:3.2f}%/{100.0*false_results/num_sentences:3.2f}%"
-            print(f"   {c:<13}: {result:>16}")
+            print(f"\nTrue/false split: {result:>16}")
+            for c in CATEGORIES:
+                d = self._sentences[c]
+                num_sents = d["count"]
+                true_results = d["true_positives"] + d["true_negatives"]
+                false_results = d["false_positives"] + d["false_negatives"]
+                if num_sents == 0:
+                    result = "N/A"
+                else:
+                    result = f"{100.0*true_results/num_sents:3.2f}%/{100.0*false_results/num_sents:3.2f}%"
+                print(f"   {c:<13}: {result:>16}")
 
-        # Recall
-        if true_positives + false_negatives == 0:
-            result = "N/A"
-            recall = 0.0
-        else:
-            recall = true_positives / (true_positives + false_negatives)
-            result = f"{recall:1.4f}"
-        print(f"\nRecall:                     {result}")
-        for c in CATEGORIES:
-            d = self._sentences[c]
-            denominator = d["true_positives"] + d["false_negatives"]
-            if denominator == 0:
-                print(f"   {c:<13}:              N/A")
+            # Recall
+            if true_positives + false_negatives == 0:
+                result = "N/A"
+                recall = 0.0
             else:
-                rc = d["sentrecall"] = d["true_positives"] / denominator
-                print(f"   {c:<13}:           {rc:1.4f}")
+                recall = true_positives / (true_positives + false_negatives)
+                result = f"{recall:1.4f}"
+            print(f"\nRecall:                     {result}")
+            for c in CATEGORIES:
+                d = self._sentences[c]
+                denominator = d["true_positives"] + d["false_negatives"]
+                if denominator == 0:
+                    print(f"   {c:<13}:              N/A")
+                else:
+                    rc = d["sentrecall"] = d["true_positives"] / denominator
+                    print(f"   {c:<13}:           {rc:1.4f}")
 
-        # Precision
-        if true_positives + false_positives == 0:
-            result = "N/A"
-            precision = 0.0
-        else:
-            precision = true_positives / (true_positives + false_positives)
-            result = f"{precision:1.4f}"
-        print(f"\nPrecision:                  {result}")
-        for c in CATEGORIES:
-            d = self._sentences[c]
-            denominator = d["true_positives"] + d["false_positives"]
-            if denominator == 0:
-                print(f"   {c:<13}:              N/A")
+            # Precision
+            if true_positives + false_positives == 0:
+                result = "N/A"
+                precision = 0.0
             else:
-                p = d["sentprecision"] = d["true_positives"] / denominator
-                print(f"   {c:<13}:           {p:1.4f}")
+                precision = true_positives / (true_positives + false_positives)
+                result = f"{precision:1.4f}"
+            print(f"\nPrecision:                  {result}")
+            for c in CATEGORIES:
+                d = self._sentences[c]
+                denominator = d["true_positives"] + d["false_positives"]
+                if denominator == 0:
+                    print(f"   {c:<13}:              N/A")
+                else:
+                    p = d["sentprecision"] = d["true_positives"] / denominator
+                    print(f"   {c:<13}:           {p:1.4f}")
 
-        # F1 score
-        if precision + recall > 0.0:
-            f1 = 2 * precision * recall / (precision + recall)
-            result = f"{f1:1.4f}"
-        else:
-            f1 = 0.0
-            result = "N/A"
-        print(f"\nF1 score:                   {result}")
-        for c in CATEGORIES:
-            d = self._sentences[c]
-            if "sentrecall" not in d or "sentprecision" not in d:
-                print(f"   {c:<13}:              N/A")
-                continue
-            rc = d["sentrecall"]
-            p = d["sentprecision"]
-            if p + rc > 0.0:
-                f1 = 2 * p * rc / (p + rc)
-                print(f"   {c:<13}:           {f1:1.4f}")
+            # F1 score
+            if precision + recall > 0.0:
+                f1 = 2 * precision * recall / (precision + recall)
+                result = f"{f1:1.4f}"
             else:
-                print(f"   {c:<13}:           N/A")
+                f1 = 0.0
+                result = "N/A"
+            print(f"\nF1 score:                   {result}")
+            for c in CATEGORIES:
+                d = self._sentences[c]
+                if "sentrecall" not in d or "sentprecision" not in d:
+                    print(f"   {c:<13}:              N/A")
+                    continue
+                rc = d["sentrecall"]
+                p = d["sentprecision"]
+                if p + rc > 0.0:
+                    f1 = 2 * p * rc / (p + rc)
+                    print(f"   {c:<13}:           {f1:1.4f}")
+                else:
+                    print(f"   {c:<13}:           N/A")
 
-        total = sum(self._false_negatives.values())
-        if total > 0:
-            print("\nMost common false negative error types")
-            print("--------------------------------------\n")
-            for index, (xtype, cnt) in enumerate(
-                heapq.nlargest(20, self._false_negatives.items(), key=lambda x: x[1])
-            ):
-                print(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
+            total = sum(self._false_negatives.values())
+            if total > 0:
+                print("\nMost common false negative error types")
+                print("--------------------------------------\n")
+                for index, (xtype, cnt) in enumerate(
+                    heapq.nlargest(20, self._false_negatives.items(), key=lambda x: x[1])
+                ):
+                    print(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
 
+        def output_token_scores() -> None:
+            """ Calculate and write token scores to stdout"""
 
-        ### TOKEN ERROR SCORES
+            ### TOKEN ERROR SCORES
 
-        print("\n\nResults for error detection within sentences")
-        num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
-        print(f"\nTokens processed:           {num_tokens:6}")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
+            print("\n\nResults for error detection within sentences")
 
-        tp = sum(d["tp"] for d in self._sentences.values())
-        print(f"\nTrue positives:             {tp:6} {perc(tp):>6}%")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['tp']:6}")
+            num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
+            print(f"\nTokens processed:           {num_tokens:6}")
+            for c in CATEGORIES:
+                print(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
 
-        tn = sum(d["tn"] for d in self._sentences.values())
-        print(f"\nTrue negatives:             {tn:6} {perc(tn):>6}%")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['tn']:6}")
+            tp = calc_basic_value("tp")
+            tn = calc_basic_value("tn")
+            fp = calc_basic_value("fp")
+            fn = calc_basic_value("fn")
 
-        fp = sum(d["fp"] for d in self._sentences.values())
-        print(f"\nFalse positives:            {fp:6} {perc(fp):>6}%")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['fp']:6}")
+            calc_PRF(tp, tn, fp, fn, "tp", "tn", "fp", "fn", "detectrecall", "detectprecision")
 
-        fn = sum(d["fn"] for d in self._sentences.values())
-        print(f"\nFalse negatives:            {fn:6} {perc(fn):>6}%")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['fn']:6}")
+            # TODO should error correction and error span use metrics for the whole dataset,
+            # or should they only use metrics for the set of errors?
+            # I.e. is true negative = all tokens not marked as errors,
+            # or does it perhaps not exist? Check how BEA 2019 does this.
+            # Can always do both!
+            print("Results for error correction")  
+            right_corr = calc_basic_value("right_corr")
+            wrong_corr = calc_basic_value("wrong_corr")
 
-        # Recall
-        if tp + fn == 0:
-            result = "N/A"
-            recall = 0.0
-        else:
-            recall = tp / (tp+fn)
-            result = f"{recall:1.4f}"
-        print(f"\nRecall:                     {result}")
-        for c in CATEGORIES:
-            d = self._sentences[c]
-            denominator = d["tp"] + d["fn"]
-            if denominator == 0:
-                print(f"   {c:<13}:              N/A")
-            else:
-                rc = d["detectrecall"] = d["tp"] / denominator
-                print(f"   {c:<13}:           {rc:1.4f}")
-        # Precision
-        if tp + fp == 0:
-            result = "N/A"
-            precision = 0.0
-        else:
-            precision = tp / (tp + fp)
-            result = f"{precision:1.4f}"
-        print(f"\nPrecision:                  {result}")
-        for c in CATEGORIES:
-            d = self._sentences[c]
-            denominator = d["tp"] + d["fp"]
-            if denominator == 0:
-                print(f"   {c:<13}:              N/A")
-            else:
-                p = d["detectprecision"] = d["tp"] / denominator
-                print(f"   {c:<13}:           {p:1.4f}")
-        # F1 score
-        if precision + recall > 0.0:
-            f1 = 2 * precision * recall / (precision + recall)
-            result = f"{f1:1.4f}"
-        else:
-            f1 = 0.0
-            result = "N/A"
-        print(f"\nF1 score:                   {result}")
-        for c in CATEGORIES:
-            d = self._sentences[c]
-            if "detectrecall" not in d or "detectprecision" not in d:
-                print(f"   {c:<13}:              N/A")
-                continue
-            rc = d["detectrecall"]
-            p = d["detectprecision"]
-            if p + rc > 0.0:
-                f1 = 2 * p * rc / (p + rc)
-                print(f"   {c:<13}:           {f1:1.4f}")
-            else:
-                print(f"   {c:<13}:           N/A")
+            print("Results for error span")
+            right_span = calc_basic_value("right_span")
+            wrong_span = calc_basic_value("wrong_span")
 
-
-        # TODO should error correction and error span use metrics for the whole dataset,
-        # or should they only use metrics for the set of errors?
-        # I.e. is true negative = all tokens not marked as errors,
-        # or does it perhaps not exist? Check how BEA 2019 does this.
-        # Can always do both!
-        print("Results for error correction")  
-        right_corr = sum(d["right_corr"] for d in self._sentences.values())
-        print(f"\nRight correction:           {right_corr:6}")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['right_corr']:6}")
-       
-        wrong_corr = sum(d["wrong_corr"] for d in self._sentences.values())
-        print(f"\nWrong correction:           {wrong_corr:6}")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['wrong_corr']:6}")
-
-
-        print("Results for error span")
-        right_span = sum(d["right_span"] for d in self._sentences.values())
-        print(f"\nRight span:           {right_span:6}")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['right_span']:6}")
-       
-        wrong_span = sum(d["wrong_span"] for d in self._sentences.values())
-        print(f"\nWrong span:           {wrong_span:6}")
-        for c in CATEGORIES:
-            print(f"   {c:<13}:           {self._sentences[c]['wrong_span']:6}")
-
-
+        output_duration()
+        output_sentence_scores()
+        output_token_scores()
 
 def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
     """ Returns a string with a reasonably correct concatenation
