@@ -304,7 +304,7 @@ class Stats:
         self._wrong_corr: Dict[str, int] = defaultdict(int)
         self._right_span: Dict[str, int] = defaultdict(int)
         self._wrong_span: Dict[str, int] = defaultdict(int)
-        self.sent_tp_cause: Dict[str, int] = defaultdict(int)  # reference error code : freq - for hypotheses with the unparsable error code
+        self._tp_unparsables: Dict[str, int] = defaultdict(int)  # reference error code : freq - for hypotheses with the unparsable error code
     def add_file(self, category: str) -> None:
         """ Add a processed file in a given content category """
         self._files[category] += 1
@@ -315,6 +315,7 @@ class Stats:
         stats: List[StatsTuple],
         true_positives: Dict[str, int],
         false_negatives: Dict[str, int],
+        ups: Dict[str, int],
     ) -> None:
         """ Add the result of a process() call to the statistics collection """
         for sent_result in stats:
@@ -323,6 +324,8 @@ class Stats:
             self._true_positives[k] += v
         for k, v in false_negatives.items():
             self._false_negatives[k] += v
+        for k, v in ups.items():
+            self._tp_unparsables[k] += v
 
     def add_sentence(
         self, category: str, num_tokens: int, ice_error: bool, gc_error: bool,
@@ -359,6 +362,8 @@ class Stats:
         # Stats for error span
         d["right_span"] += right_span
         d["wrong_span"] += wrong_span
+
+        # Causes of unparsable sentences
 
     def output(self, cores: int) -> None:
         """ Write the statistics to stdout """
@@ -399,7 +404,6 @@ class Stats:
         
         def write_basic_value(val, bv, whole, errwhole=None) -> None:
             """ Write basic values for sentences and their freqs to stdout """
-            #val = sum(d[bv] for d in self._sentences.values())
             if errwhole and errwhole != 0:
                 print(
                     f"\n{NAMES[bv]}:             {val:6} {perc(val, whole):>6}% / {perc(val, errwhole):>6}%"
@@ -542,6 +546,17 @@ class Stats:
                 ):
                     print(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
 
+            # Most common error types in unparsable sentences
+            tot = sum(self._tp_unparsables.values())
+            if tot > 0:
+                print("\nMost common error types for unparsable sentences")
+                print("--------------------------------------\n")
+                for index, (xtype, cnt) in enumerate(
+                    heapq.nlargest(20, self._tp_unparsables.items(), key=lambda x: x[1])
+                ):
+                    print(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
+
+
         def output_token_scores() -> None:
             """ Calculate and write token scores to stdout"""
 
@@ -627,6 +642,8 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
     # Counter of iceErrorCorpus error types (xtypes) encountered
     true_positives: Dict[str, int] = defaultdict(int)
     false_negatives: Dict[str, int] = defaultdict(int)
+    # Counter of iceErrorCorpus error types in unparsable sentences
+    ups: Dict[str, int] = defaultdict(int)
 
     # Accumulate standard output in a buffer, for writing in one fell
     # swoop at the end (after acquiring the output lock)
@@ -663,6 +680,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
             # A dictionary of errors by their index (idx field)
             error_indexes: Dict[str, ErrorDict] = {}
             dependencies: List[Tuple[str, ErrorDict]] = []
+            # Error corpora annotations for sentences marked as unparsable
             # Enumerate through the tokens in the sentence
             for el in sent:
                 tag = el.tag[nl:]
@@ -771,10 +789,14 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
             def sentence_results(hyp_annotations, ref_annotations):
                 gc_error = False
                 ice_error = False
+                unparsable = False
                 # Output GreynirCorrect annotations
                 for ann in hyp_annotations:
                     if ann.is_error:
                         gc_error = True
+                    if ann.code == "E001":
+                        #bprint("FANN UNPARSABLE")
+                        unparsable = True
                     if not QUIET:
                         bprint(f">>> {ann}")
                 # Output iceErrorCorpus annotations
@@ -782,6 +804,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                 for err in ref_annotations:
                     asterisk = "*"
                     xtype = cast(str, err["xtype"])
+
                     if err["in_scope"]:
                         # This is an in-scope error
                         asterisk = ""
@@ -789,6 +812,8 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                         # Count the errors of each xtype
                         if xtype != "dep":
                             xtypes[xtype] += 1
+                    if unparsable:
+                        ups[xtype] += 1
                     if not QUIET:
                         bprint(f"<<< {err['start']:03}-{err['end']:03}: {asterisk}{xtype}")
                 if not QUIET:
@@ -828,14 +853,9 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                     ytok = next(y)
                     while True:
                         # gera stöff
-                        bprint("SKOÐA VILLUR")
-                        bprint("\tGreynir: {}".format(xtok))
-                        bprint("\tVkorpus: {}".format(ytok))
-                        # Er lengdin rétt? ErrorDetection; fyrst
-                            # En það mælir Error Boundaries. Ekki alveg sama.
-                            # Fyrir Error detection gæti ég tékkað hvort einhver sameiginleg gildi í range.
-                        # Er leiðréttingin sú sama? ErrorCorrection; svo
-                        # Er flokkunin sú sama? Error Classification; síðast, þegar búið að samræma villuflokkana.
+                        #bprint("SKOÐA VILLUR")
+                        #bprint("\tGreynir: {}".format(xtok))
+                        #bprint("\tVkorpus: {}".format(ytok))
 
                         # 1. Error detection
                         xtoks = set(range(xtok.start, xtok.end+1))
@@ -843,13 +863,13 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                         #bprint("\txtoks: {}".format(xtoks))
                         #bprint("\ttoks: {}".format(ytoks))
                         if xtoks & ytoks:
-                            bprint("\t1. Í svipuðu rými!")
+                            #bprint("\t1. Í svipuðu rými!")
                             # Vista sem fundna villu
                             tp+=1
 
                             # 2. Span detection
                             if xtoks == ytoks:
-                                bprint("\t2. Sama lengd!")
+                                #bprint("\t2. Sama lengd!")
                                 # Vista í error boundaries; gera else og vista sem rangt
                                 right_span+=1
                             else:
@@ -864,7 +884,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                             #bprint("\txcorr: {}".format(xcorr))
                             if xcorr == ytok["corrected"]: # Óþarfi að fara í þetta nema sé með sömu villuna
                                 # Ath. líka til xtok.suggest! Hver er munurinn? Halda utan um í sérgaur?
-                                bprint("3. Rétt leiðrétting!")
+                                #bprint("3. Rétt leiðrétting!")
                                 # Vista í Error Correction
                                 right_corr+=1
                             else:
@@ -900,7 +920,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                 return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
             tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span = token_results(s.annotations, errors)
             tn = len(tokens) - tp - fp - fn
-            bprint("\t{}-{}-{}-{}-{}-{}-{}-{}".format(tp, tn, fp, fn, right_corr, wrong_corr, right_span, wrong_span))
+            #bprint("\t{}-{}-{}-{}-{}-{}-{}-{}".format(tp, tn, fp, fn, right_corr, wrong_corr, right_span, wrong_span))
             # Collect statistics into the stats list, to be returned
             # to the parent process
             if stats is not None:
@@ -920,7 +940,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
 
     # This return value will be pickled and sent back to the parent process
     return dict(
-        stats=stats, true_positives=true_positives, false_negatives=false_negatives
+        stats=stats, true_positives=true_positives, false_negatives=false_negatives, ups=ups
     )
 
 
