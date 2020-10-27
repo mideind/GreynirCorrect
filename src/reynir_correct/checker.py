@@ -103,8 +103,8 @@ class ErrorDetectionToken(BIN_Token):
         """ True if this token appears within a sentence """
         return self._cap == "in_sentence"
 
-    @staticmethod
-    def verb_is_strictly_impersonal(verb: str, form: str) -> bool:
+    @classmethod
+    def verb_is_strictly_impersonal(cls, verb: str, form: str) -> bool:
         """ Return True if the given verb should not be allowed to match
             with a normal (non _op) verb terminal """
         if "OP" in form and not VerbSubjects.is_strictly_impersonal(verb):
@@ -120,8 +120,8 @@ class ErrorDetectionToken(BIN_Token):
         # having a specified correction from nominative to accusative case.
         return False
 
-    @staticmethod
-    def verb_cannot_be_impersonal(verb: str, form: str) -> bool:
+    @classmethod
+    def verb_cannot_be_impersonal(cls, verb: str, form: str) -> bool:
         """ Return True if this verb cannot match an so_xxx_op terminal. """
         # We have a relaxed condition here because we want to catch
         # verbs being used impersonally that shouldn't be. So we don't
@@ -137,13 +137,14 @@ class ErrorDetectionToken(BIN_Token):
     # verbs to appear as normal verbs.
     _RESTRICTIVE_VARIANTS = ("sagnb", "lhþt", "bh")
 
-    def verb_subject_matches(self, verb: str, subj: str) -> bool:
+    @classmethod
+    def verb_subject_matches(cls, verb: str, subj: str) -> bool:
         """ Returns True if the given subject type/case is allowed
             for this verb or if it is an erroneous subject
             which we can flag """
         return (
-            subj in self._VERB_SUBJECTS.get(verb, set()) or
-            subj in self._VERB_ERROR_SUBJECTS.get(verb, set())
+            subj in cls._VERB_SUBJECTS.get(verb, set()) or
+            subj in cls._VERB_ERROR_SUBJECTS.get(verb, set())
         )
 
 

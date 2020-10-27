@@ -58,8 +58,6 @@ else:
     from .settings import Settings
 
 
-_PATH = os.path.dirname(__file__) or "."
-
 EDIT_0_FACTOR = math.log(1.0 / 1.0)
 EDIT_REPLACE_FACTOR = math.log(1.0 / 1.25)
 EDIT_S_FACTOR = math.log(1.0 / 8.0)

@@ -49,118 +49,15 @@ import threading
 from contextlib import contextmanager
 from collections import defaultdict
 
-from pkg_resources import resource_stream
+from reynir.basics import changedlocale, sort_strings, ConfigError, LineReader
 
 
-# The sorting locale used by default in the changedlocale function
-_DEFAULT_SORT_LOCALE = ("IS_is", "UTF-8")
 # A set of all valid argument cases
 _ALL_CASES = frozenset(("nf", "þf", "þgf", "ef"))
 _ALL_GENDERS = frozenset(("kk", "kvk", "hk"))
 
 # A set of all strings that should be interpreted as True
-TRUE = {"true", "True", "1", "yes", "Yes"}
-
-
-@contextmanager
-def changedlocale(new_locale=None):
-    """ Change locale for collation temporarily within a context (with-statement) """
-    # The newone locale parameter should be a tuple: ('is_IS', 'UTF-8')
-    old_locale = locale.getlocale(locale.LC_COLLATE)
-    try:
-        locale.setlocale(locale.LC_COLLATE, new_locale or _DEFAULT_SORT_LOCALE)
-        yield locale.strxfrm  # Function to transform string for sorting
-    finally:
-        locale.setlocale(locale.LC_COLLATE, old_locale)
-
-
-def sort_strings(strings, loc=None):
-    """ Sort a list of strings using the specified locale's collation order """
-    # Change locale temporarily for the sort
-    with changedlocale(loc) as strxfrm:
-        return sorted(strings, key=strxfrm)
-
-
-class ConfigError(Exception):
-
-    """ Exception class for configuration errors """
-
-    def __init__(self, s):
-        super().__init__(s)
-        self.fname = None
-        self.line = 0
-
-    def set_pos(self, fname, line):
-        """ Set file name and line information, if not already set """
-        if not self.fname:
-            self.fname = fname
-            self.line = line
-
-    def __str__(self):
-        """ Return a string representation of this exception """
-        s = Exception.__str__(self)
-        if not self.fname:
-            return s
-        return "File {0}, line {1}: {2}".format(self.fname, self.line, s)
-
-
-class LineReader:
-    """ Read lines from a text file, recognizing $include directives """
-
-    def __init__(self, fname, outer_fname=None, outer_line=0):
-        self._fname = fname
-        self._line = 0
-        self._inner_rdr = None
-        self._outer_fname = outer_fname
-        self._outer_line = outer_line
-
-    def fname(self):
-        return self._fname if self._inner_rdr is None else self._inner_rdr.fname()
-
-    def line(self):
-        return self._line if self._inner_rdr is None else self._inner_rdr.line()
-
-    def lines(self):
-        """ Generator yielding lines from a text file """
-        self._line = 0
-        try:
-            with resource_stream(__name__, self._fname) as inp:
-                # Read config file line-by-line
-                for b in inp:
-                    # We get byte strings; convert from utf-8 to strings
-                    s = b.decode("utf-8")
-                    self._line += 1
-                    # Check for include directive: $include filename.txt
-                    if s.startswith("$") and s.lower().startswith("$include "):
-                        iname = s.split(maxsplit=1)[1].strip()
-                        # Do some path magic to allow the included path
-                        # to be relative to the current file path, or a
-                        # fresh (absolute) path by itself
-                        head, _ = os.path.split(self._fname)
-                        iname = os.path.join(head, iname)
-                        rdr = self._inner_rdr = LineReader(
-                            iname, self._fname, self._line
-                        )
-                        for incl_s in rdr.lines():
-                            yield incl_s
-                        self._inner_rdr = None
-                    else:
-                        yield s
-        except (IOError, OSError):
-            if self._outer_fname:
-                # This is an include file within an outer config file
-                c = ConfigError(
-                    "Error while opening or reading include file '{0}'"
-                    .format(self._fname)
-                )
-                c.set_pos(self._outer_fname, self._outer_line)
-            else:
-                # This is an outermost config file
-                c = ConfigError(
-                    "Error while opening or reading config file '{0}'"
-                    .format(self._fname)
-                )
-            raise c
+TRUE = frozenset(("true", "True", "1", "yes", "Yes"))
 
 
 class AllowedMultiples:
@@ -179,7 +76,7 @@ class WrongCompounds:
     DICT: Dict[str, Tuple[str, ...]] = {}
 
     @staticmethod
-    def add(word, parts):
+    def add(word, parts: Tuple[str, ...]) -> None:
         if word in WrongCompounds.DICT:
             raise ConfigError("Multiple definition of '{0}' in wrong_compounds section".format(word))
         assert isinstance(parts, tuple)
@@ -192,7 +89,7 @@ class SplitCompounds:
     DICT: Dict[str, Set[str]] = defaultdict(set)
 
     @staticmethod
-    def add(first_part, second_part_stem):
+    def add(first_part: str, second_part_stem: str) -> None:
         if (
             first_part in SplitCompounds.DICT
             and second_part_stem in SplitCompounds.DICT[first_part]
@@ -210,7 +107,7 @@ class UniqueErrors:
     DICT: Dict[str, Tuple[str, ...]] = {}
 
     @staticmethod
-    def add(word, corr):
+    def add(word: str, corr: Tuple[str, ...]) -> None:
         if word in UniqueErrors.DICT:
             raise ConfigError("Multiple definition of '{0}' in unique_errors section".format(word))
         UniqueErrors.DICT[word] = corr
@@ -227,7 +124,7 @@ class MultiwordErrors:
     ERROR_DICT: Dict[Tuple[str, ...], str] = dict()
 
     @staticmethod
-    def add(words, error):
+    def add(words: Tuple[str, ...], error: str) -> None:
         if words in MultiwordErrors.ERROR_DICT:
             raise ConfigError(
                 "Multiple definition of '{0}' in multiword_errors section"
@@ -251,22 +148,22 @@ class MultiwordErrors:
         MultiwordErrors.DICT[words[0]].append((words[1:], ix))
 
     @staticmethod
-    def get_phrase(ix):
+    def get_phrase(ix: int) -> Tuple[str, ...]:
         """ Return the original phrase with index ix """
         return MultiwordErrors.LIST[ix][0]
 
     @staticmethod
-    def get_phrase_length(ix):
+    def get_phrase_length(ix: int) -> int:
         """ Return the count of words in the original phrase with index ix """
         return len(MultiwordErrors.LIST[ix][0])
 
     @staticmethod
-    def get_code(ix):
+    def get_code(ix: int) -> str:
         """ Return the error code with index ix """
         return MultiwordErrors.LIST[ix][1]
 
     @staticmethod
-    def get_replacement(ix):
+    def get_replacement(ix: int) -> List[str]:
         """ Return the replacement phrase with index ix """
         return MultiwordErrors.LIST[ix][2]
 
@@ -277,7 +174,7 @@ class TabooWords:
     DICT: Dict[str, str] = {}
 
     @staticmethod
-    def add(word, replacement):
+    def add(word: str, replacement: str) -> None:
         if word in TabooWords.DICT:
             raise ConfigError("Multiple definition of '{0}' in taboo_words section".format(word))
         TabooWords.DICT[word] = replacement
@@ -289,7 +186,7 @@ class Suggestions:
     DICT: Dict[str, List[str]] = {}
 
     @staticmethod
-    def add(word, replacements):
+    def add(word: str, replacements: List[str]) -> None:
         if word in Suggestions.DICT:
             raise ConfigError("Multiple definition of '{0}' in suggestions section".format(word))
         Suggestions.DICT[word] = replacements
@@ -303,7 +200,7 @@ class CapitalizationErrors:
     SET_REV: Set[str] = set()
 
     @staticmethod
-    def add(word):
+    def add(word: str) -> None:
         """ Add the given (wrongly capitalized) word stem to the stem set """
         if word in CapitalizationErrors.SET:
             raise ConfigError(
@@ -324,7 +221,7 @@ class OwForms:
     DICT: Dict[str, Tuple[str, str, int, str, str]] = dict()
 
     @staticmethod
-    def contains(word):
+    def contains(word: str) -> bool:
         """ Check whether the word form is in the error forms dictionary,
             either in its original casing or in a lower case form """
         d = OwForms.DICT
@@ -333,7 +230,7 @@ class OwForms:
         return word in d or word.lower() in d
 
     @staticmethod
-    def add(wrong_form, meaning):
+    def add(wrong_form: str, meaning: Tuple[str, str, int, str, str]) -> None:
         OwForms.DICT[wrong_form] = meaning
 
     @staticmethod
@@ -733,7 +630,7 @@ class Settings:
 
             rdr = None
             try:
-                rdr = LineReader(fname)
+                rdr = LineReader(fname, package_name=__name__)
                 for s in rdr.lines():
                     # Ignore comments
                     ix = s.find("#")

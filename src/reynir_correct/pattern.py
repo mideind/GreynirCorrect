@@ -48,7 +48,7 @@ import json
 
 from reynir import _Sentence, NounPhrase
 from reynir.simpletree import SimpleTree
-from reynir.settings import VerbObjects
+from reynir.verbframe import VerbErrors
 
 from .annotation import Annotation
 
@@ -350,11 +350,11 @@ class PatternMatcher:
         # Access the dictionary of verb+preposition attachment errors
         # from the settings (actually from the reynir settings),
         # read from config/Verbs.conf
-        prep_errors = VerbObjects.PREPOSITIONS_ERRORS
+        prep_errors = VerbErrors.PREPOSITIONS_ERRORS
 
         # Build a set of verbs with common af/að errors
-        verbs_af = set()
-        verbs_að = set()
+        verbs_af: Set[str] = set()
+        verbs_að: Set[str] = set()
 
         for verb, d in prep_errors.items():
 
