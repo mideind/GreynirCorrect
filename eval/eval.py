@@ -789,7 +789,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                 bprint("000: *** Sentence identifier is missing ('n' attribute) ***")
 
 
-            def sentence_results(hyp_annotations: List[Any], ref_annotations: List[ErrorDict]) -> Tuple[bool, bool]:
+            def sentence_results(hyp_annotations: List[gc.Annotation], ref_annotations: List[ErrorDict]) -> Tuple[bool, bool]:
                 gc_error = False
                 ice_error = False
                 unparsable = False
@@ -840,7 +840,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
 
             gc_error, ice_error = sentence_results(s.annotations, errors)
 
-            def token_results(hyp_annotations: List[Any], ref_annotations: List[ErrorDict]) -> Tuple[int, int, int, int, int, int, int]:
+            def token_results(hyp_annotations: List[gc.Annotation], ref_annotations: List[ErrorDict]) -> Tuple[int, int, int, int, int, int, int]:
                 # TODO safna villunum í generatora og taka eitt stak í einu og bera saman?
                 tp, fp, fn = 0, 0, 0 # tn comes from len(tokens)-(tp+fp+fn) later on
                 right_corr, wrong_corr = 0, 0
