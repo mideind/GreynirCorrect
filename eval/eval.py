@@ -396,15 +396,15 @@ class Stats:
             for c in CATEGORIES:
                 print(f"   {c:<13}:           {self._sentences[c]['count']:6}")
 
-        def perc(n, whole):
+        def perc(n: int, whole: int) -> str:
             """ Return a percentage of total sentences, formatted as 3.2f """
             if whole == 0:
                 return "N/A"
             return f"{100.0*n/whole:3.2f}"
         
-        def write_basic_value(val, bv, whole, errwhole=None) -> None:
+        def write_basic_value(val: int, bv: int, whole: int, errwhole: Optional[int]=None) -> None:
             """ Write basic values for sentences and their freqs to stdout """
-            if errwhole and errwhole != 0:
+            if errwhole:
                 print(
                     f"\n{NAMES[bv]}:             {val:6} {perc(val, whole):>6}% / {perc(val, errwhole):>6}%"
                 )
@@ -415,7 +415,10 @@ class Stats:
             for c in CATEGORIES:
                 print(f"   {c:<13}:           {self._sentences[c][bv]:6}")
 
-        def calc_PRF(tp, tn, fp, fn, tps, tns, fps, fns, recs, precs) -> None:
+        def calc_PRF(
+            tp: int, tn: int, fp: int, fn: int, tps: str, tns: str, 
+            fps: str, fns: str, recs: str, precs: str
+        ) -> None:
             """ Calculate precision, recall and F1-score"""
             # Recall
             if tp + fn == 0:
@@ -470,7 +473,7 @@ class Stats:
                 else:
                     print(f"   {c:<13}:           N/A")
 
-        def calc_recall(right, wrong, rights, wrongs, recs) -> None:
+        def calc_recall(right: int, wrong: int, rights: str, wrongs: str, recs: str) -> None:
             """ Calculate precision, recall and F1-score for binary classification"""
             # Recall
             if right + wrong == 0:
@@ -518,7 +521,7 @@ class Stats:
             if num_sentences == 0:
                 result = "N/A"
             else:
-                result = f"{100.0*true_results/num_sentences:3.2f}%/{100.0*false_results/num_sentences:3.2f}%"
+                result = perc(true_results, num_sentences) + "%/" + perc(false_results, num_sentences) + "%"
             print(f"\nTrue/false split: {result:>16}")
             for c in CATEGORIES:
                 d = self._sentences[c]
@@ -786,7 +789,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                 bprint("000: *** Sentence identifier is missing ('n' attribute) ***")
 
 
-            def sentence_results(hyp_annotations, ref_annotations):
+            def sentence_results(hyp_annotations: List[Any], ref_annotations: List[ErrorDict]) -> Tuple[bool, bool]:
                 gc_error = False
                 ice_error = False
                 unparsable = False
@@ -837,7 +840,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
 
             gc_error, ice_error = sentence_results(s.annotations, errors)
 
-            def token_results(hyp_annotations, ref_annotations):
+            def token_results(hyp_annotations: List[Any], ref_annotations: List[ErrorDict]) -> Tuple[int, int, int, int, int, int, int]:
                 # TODO safna villunum í generatora og taka eitt stak í einu og bera saman?
                 tp, fp, fn = 0, 0, 0 # tn comes from len(tokens)-(tp+fp+fn) later on
                 right_corr, wrong_corr = 0, 0
@@ -918,8 +921,9 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                     pass
                     # Gefa út sem false negative
                 return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
+
             tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span = token_results(s.annotations, errors)
-            tn = len(tokens) - tp - fp - fn
+            tn: int = len(tokens) - tp - fp - fn
             #bprint("\t{}-{}-{}-{}-{}-{}-{}-{}".format(tp, tn, fp, fn, right_corr, wrong_corr, right_span, wrong_span))
             # Collect statistics into the stats list, to be returned
             # to the parent process
