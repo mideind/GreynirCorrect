@@ -107,7 +107,8 @@ SentenceStatsDict = Dict[str, Union[float, int]]
 # content categories
 CategoryStatsDict = Dict[str, SentenceStatsDict]
 
-StatsTuple = Tuple[str, int, bool, bool]
+# This tuple should agree with the parameters of the add_sentence() function
+StatsTuple = Tuple[str, int, bool, bool, int, int, int, int, int, int, int, int]
 
 # Create a lock to ensure that only one process outputs at a time
 OUTPUT_LOCK = multiprocessing.Lock()
@@ -305,6 +306,7 @@ class Stats:
         self._right_span: Dict[str, int] = defaultdict(int)
         self._wrong_span: Dict[str, int] = defaultdict(int)
         self._tp_unparsables: Dict[str, int] = defaultdict(int)  # reference error code : freq - for hypotheses with the unparsable error code
+
     def add_file(self, category: str) -> None:
         """ Add a processed file in a given content category """
         self._files[category] += 1
@@ -368,7 +370,7 @@ class Stats:
     def output(self, cores: int) -> None:
         """ Write the statistics to stdout """
 
-        num_sentences = sum(d["count"] for d in self._sentences.values())
+        num_sentences: int = sum(cast(int, d["count"]) for d in self._sentences.values())
 
         def output_duration() -> None:
             """ Calculate the duration of the processing """
@@ -402,7 +404,7 @@ class Stats:
                 return "N/A"
             return f"{100.0*n/whole:3.2f}"
         
-        def write_basic_value(val: int, bv: int, whole: int, errwhole: Optional[int]=None) -> None:
+        def write_basic_value(val: int, bv: str, whole: int, errwhole: Optional[int]=None) -> None:
             """ Write basic values for sentences and their freqs to stdout """
             if errwhole:
                 print(
@@ -502,13 +504,12 @@ class Stats:
             # Get líka sent inn texta sem segir hvað er verið að reikna,
             # s.s. "Results for Error detection" eða "Results for sentence correctness"?
 
-
             # Total number of true negatives found
             print("\nResults for error detection for whole sentences")
-            true_positives = sum(d["true_positives"] for d in self._sentences.values())
-            true_negatives = sum(d["true_negatives"] for d in self._sentences.values())
-            false_positives = sum(d["false_positives"] for d in self._sentences.values())
-            false_negatives = sum(d["false_negatives"] for d in self._sentences.values())
+            true_positives: int = sum(cast(int, d["true_positives"]) for d in self._sentences.values())
+            true_negatives: int = sum(cast(int, d["true_negatives"]) for d in self._sentences.values())
+            false_positives: int = sum(cast(int, d["false_positives"]) for d in self._sentences.values())
+            false_negatives: int = sum(cast(int, d["false_negatives"]) for d in self._sentences.values())
 
             write_basic_value(true_positives, "true_positives", num_sentences)
             write_basic_value(true_negatives, "true_negatives", num_sentences)
@@ -526,8 +527,8 @@ class Stats:
             for c in CATEGORIES:
                 d = self._sentences[c]
                 num_sents = d["count"]
-                true_results = d["true_positives"] + d["true_negatives"]
-                false_results = d["false_positives"] + d["false_negatives"]
+                true_results = cast(int, d["true_positives"] + d["true_negatives"])
+                false_results = cast(int, d["false_positives"] + d["false_negatives"])
                 if num_sents == 0:
                     result = "N/A"
                 else:
@@ -553,7 +554,7 @@ class Stats:
             tot = sum(self._tp_unparsables.values())
             if tot > 0:
                 print("\nMost common error types for unparsable sentences")
-                print("--------------------------------------\n")
+                print(  "------------------------------------------------\n")
                 for index, (xtype, cnt) in enumerate(
                     heapq.nlargest(20, self._tp_unparsables.items(), key=lambda x: x[1])
                 ):
@@ -567,15 +568,15 @@ class Stats:
 
             print("\n\nResults for error detection within sentences")
 
-            num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
+            num_tokens = sum(cast(int, d["num_tokens"]) for d in self._sentences.values())
             print(f"\nTokens processed:           {num_tokens:6}")
             for c in CATEGORIES:
                 print(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
 
-            tp = sum(d["tp"] for d in self._sentences.values())
-            tn = sum(d["tn"] for d in self._sentences.values())
-            fp = sum(d["fp"] for d in self._sentences.values())
-            fn = sum(d["fn"] for d in self._sentences.values())
+            tp = sum(cast(int, d["tp"]) for d in self._sentences.values())
+            tn = sum(cast(int, d["tn"]) for d in self._sentences.values())
+            fp = sum(cast(int, d["fp"]) for d in self._sentences.values())
+            fn = sum(cast(int, d["fn"]) for d in self._sentences.values())
 
             all_ice_errs = tp+fn
             write_basic_value(tp, "tp", num_tokens, all_ice_errs)
@@ -588,9 +589,9 @@ class Stats:
             # Stiff: Of all errors in error corpora, how many get the right correction?
             # Loose: Of all errors the tool correctly finds, how many get the right correction?
             # Can only calculate recall.
-            print("Results for error correction")  
-            right_corr = sum(d["right_corr"] for d in self._sentences.values())
-            wrong_corr = sum(d["wrong_corr"] for d in self._sentences.values())
+            print("\nResults for error correction")  
+            right_corr = sum(cast(int, d["right_corr"]) for d in self._sentences.values())
+            wrong_corr = sum(cast(int, d["wrong_corr"]) for d in self._sentences.values())
             write_basic_value(right_corr, "right_corr", num_tokens, tp)
             write_basic_value(wrong_corr, "wrong_corr", num_tokens, tp)
             
@@ -600,9 +601,9 @@ class Stats:
             # Loose: Of all errors the tool correctly finds, how many get the right span?
             # Can only calculate recall.
 
-            print("Results for error span")
-            right_span = sum(d["right_span"] for d in self._sentences.values())
-            wrong_span = sum(d["wrong_span"] for d in self._sentences.values())
+            print("\nResults for error span")
+            right_span = sum(cast(int, d["right_span"]) for d in self._sentences.values())
+            wrong_span = sum(cast(int, d["wrong_span"]) for d in self._sentences.values())
             write_basic_value(right_span, "right_span", num_tokens, tp)
             write_basic_value(wrong_span, "wrong_span", num_tokens, tp)
             calc_recall(right_span, wrong_span, "right_span", "wrong_span", "spanrecall")
@@ -846,8 +847,8 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                 right_corr, wrong_corr = 0, 0
                 right_span, wrong_span = 0, 0
 
-                x = ( d for d in hyp_annotations) # GreynirCorrect annotations
-                y = ( l for l in ref_annotations) # iEC annotations
+                x = (d for d in hyp_annotations) # GreynirCorrect annotations
+                y = (l for l in ref_annotations) # iEC annotations
                 
                 xtok = None
                 ytok = None
@@ -862,7 +863,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
 
                         # 1. Error detection
                         xtoks = set(range(xtok.start, xtok.end+1))
-                        ytoks = set(range(ytok["start"], ytok["end"]+1))
+                        ytoks = set(range(cast(int, ytok["start"]), cast(int, ytok["end"])+1))
                         #bprint("\txtoks: {}".format(xtoks))
                         #bprint("\ttoks: {}".format(ytoks))
                         if xtoks & ytoks:
@@ -878,12 +879,9 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                             else:
                                 wrong_span+=1
                             # 3. Error correction
-                            try:
-                                xcorr = xtok.corrected
-                                #bprint("\tcorrected:{}".format(xtok.corrected))
-                            except AttributeError:
-                                xcorr = xtok.suggest
-                                #bprint("\tsuggest: {}".format(xtok.suggest))
+                            # Get the 'corrected' attribute if available,
+                            # otherwise use 'suggest'
+                            xcorr = getattr(xtok, "corrected", xtok.suggest)
                             #bprint("\txcorr: {}".format(xcorr))
                             if xcorr == ytok["corrected"]: # Óþarfi að fara í þetta nema sé með sömu villuna
                                 # Ath. líka til xtok.suggest! Hver er munurinn? Halda utan um í sérgaur?

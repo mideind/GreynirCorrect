@@ -49,6 +49,9 @@ from .checker import (
     check_with_custom_parser,
 )
 
+# Annotations
+from .annotation import Annotation
+
 
 __author__ = u"Miðeind ehf"
 __copyright__ = "(C) 2020 Miðeind ehf."
