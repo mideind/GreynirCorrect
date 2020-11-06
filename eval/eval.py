@@ -666,7 +666,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
     # Counter of iceErrorCorpus error types in unparsable sentences
     ups: Dict[str, int] = defaultdict(int)
     # Stats for each error type (xtypes)
-    errtypefreqs: ErrTypeStatsDict = defaultdict(lambda: TypeFreqs)
+    errtypefreqs: ErrTypeStatsDict = defaultdict(lambda: defaultdict(int))
 
     # Accumulate standard output in a buffer, for writing in one fell
     # swoop at the end (after acquiring the output lock)
