@@ -77,7 +77,7 @@
 
 """
 
-from typing import Dict, List, Optional, Union, Tuple, Iterable, cast, NamedTuple, Any
+from typing import Dict, List, Optional, Union, Tuple, Iterable, cast, NamedTuple, Any, DefaultDict
 
 import os
 from collections import defaultdict
@@ -88,6 +88,7 @@ import heapq
 import argparse
 import xml.etree.ElementTree as ET
 import multiprocessing
+from collections import namedtuple
 
 # import multiprocessing.dummy as multiprocessing
 
@@ -109,6 +110,14 @@ CategoryStatsDict = Dict[str, SentenceStatsDict]
 
 # This tuple should agree with the parameters of the add_sentence() function
 StatsTuple = Tuple[str, int, bool, bool, int, int, int, int, int, int, int, int]
+
+
+# Counter of tp, tn, right_corr, wrong_corr, right_span, wrong_span
+TypeFreqs = DefaultDict[str, int] 
+# Stats for each error type for each content category
+# tp, fn, right_corr, wrong_corr, right_span, wrong_span
+ErrTypeStatsDict = Dict[str, TypeFreqs]
+
 
 # Create a lock to ensure that only one process outputs at a time
 OUTPUT_LOCK = multiprocessing.Lock()
@@ -295,6 +304,7 @@ class Stats:
         self._starttime = datetime.utcnow()
         self._files: Dict[str, int] = defaultdict(int)
         self._sentences: CategoryStatsDict = defaultdict(lambda: defaultdict(int))
+        self._errtypes: ErrTypeStatsDict = defaultdict(lambda: TypeFreqs)
         self._true_positives: Dict[str, int] = defaultdict(int)
         self._false_negatives: Dict[str, int] = defaultdict(int)
         self._tp: Dict[str, int] = defaultdict(int)
@@ -317,7 +327,7 @@ class Stats:
         stats: List[StatsTuple],
         true_positives: Dict[str, int],
         false_negatives: Dict[str, int],
-        ups: Dict[str, int],
+        ups: Dict[str, int]
     ) -> None:
         """ Add the result of a process() call to the statistics collection """
         for sent_result in stats:
@@ -328,6 +338,13 @@ class Stats:
             self._false_negatives[k] += v
         for k, v in ups.items():
             self._tp_unparsables[k] += v
+
+    def add_errtypefreqs(
+        self, errtypefreqs: Dict[str, TypeFreqs] 
+    ) -> None:
+        for key in errtypefreqs:  # key = xtype/errortype
+            for metric in errtypefreqs[key]:   # metric = tp, fn, ...
+                self._errtypes[key][metric] += errtypefreqs[key][metric]
 
     def add_sentence(
         self, category: str, num_tokens: int, ice_error: bool, gc_error: bool,
@@ -648,6 +665,8 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
     false_negatives: Dict[str, int] = defaultdict(int)
     # Counter of iceErrorCorpus error types in unparsable sentences
     ups: Dict[str, int] = defaultdict(int)
+    # Stats for each error type (xtypes)
+    errtypefreqs: ErrTypeStatsDict = defaultdict(lambda: TypeFreqs)
 
     # Accumulate standard output in a buffer, for writing in one fell
     # swoop at the end (after acquiring the output lock)
@@ -864,20 +883,26 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                         # 1. Error detection
                         xtoks = set(range(xtok.start, xtok.end+1))
                         ytoks = set(range(cast(int, ytok["start"]), cast(int, ytok["end"])+1))
+                        ytype = ytok["xtype"]
                         #bprint("\txtoks: {}".format(xtoks))
                         #bprint("\ttoks: {}".format(ytoks))
                         if xtoks & ytoks:
                             #bprint("\t1. Í svipuðu rými!")
                             # Vista sem fundna villu
                             tp+=1
-
+                            bprint(errtypefreqs)
+                            bprint(errtypefreqs[ytype])
+                            bprint(errtypefreqs[ytype]["tp"])
+                            errtypefreqs[ytype]["tp"] += 1
                             # 2. Span detection
                             if xtoks == ytoks:
                                 #bprint("\t2. Sama lengd!")
                                 # Vista í error boundaries; gera else og vista sem rangt
                                 right_span+=1
+                                errtypefreqs[ytype]["right_span"] += 1
                             else:
                                 wrong_span+=1
+                                errtypefreqs[ytype]["wrong_span"] += 1
                             # 3. Error correction
                             # Get the 'corrected' attribute if available,
                             # otherwise use 'suggest'
@@ -888,8 +913,10 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                                 #bprint("3. Rétt leiðrétting!")
                                 # Vista í Error Correction
                                 right_corr+=1
+                                errtypefreqs[ytype]["right_corr"] += 1
                             else:
                                 wrong_corr+=1
+                                errtypefreqs[ytype]["wrong_corr"] += 1
                             xtok = next(x)
                             ytok = next(y)
                         else:
@@ -902,12 +929,14 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                                 # vista yvillu sem false negative
                                 ytok = next(y)
                                 fn+=1
+                                errtypefreqs[ytype]["fn"] += 1
                             else:
                                 # Ætti ekki að gerast
                                 xtok = next(x)
                                 ytok = next(y)       
                                 fp+=1
                                 fn+=1           
+                                errtypefreqs[ytype]["fn"] += 1
                     # Þarf að gera eitthvað hér til að höndla síðustu?
                 except StopIteration:
                     pass
@@ -942,7 +971,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
 
     # This return value will be pickled and sent back to the parent process
     return dict(
-        stats=stats, true_positives=true_positives, false_negatives=false_negatives, ups=ups
+        stats=stats, true_positives=true_positives, false_negatives=false_negatives, ups=ups, errtypefreqs=errtypefreqs
     )
 
 
