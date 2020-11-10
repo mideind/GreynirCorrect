@@ -116,7 +116,7 @@ StatsTuple = Tuple[str, int, bool, bool, int, int, int, int, int, int, int, int]
 TypeFreqs = DefaultDict[str, int] 
 # Stats for each error type for each content category
 # tp, fn, right_corr, wrong_corr, right_span, wrong_span
-ErrTypeStatsDict = Dict[str, TypeFreqs]
+ErrTypeStatsDict = DefaultDict[str, TypeFreqs]
 
 
 # Create a lock to ensure that only one process outputs at a time
@@ -304,7 +304,7 @@ class Stats:
         self._starttime = datetime.utcnow()
         self._files: Dict[str, int] = defaultdict(int)
         self._sentences: CategoryStatsDict = defaultdict(lambda: defaultdict(int))
-        self._errtypes: ErrTypeStatsDict = defaultdict(lambda: TypeFreqs)
+        self._errtypes: ErrTypeStatsDict = DefaultDict(TypeFreqs(int).copy)
         self._true_positives: Dict[str, int] = defaultdict(int)
         self._false_negatives: Dict[str, int] = defaultdict(int)
         self._tp: Dict[str, int] = defaultdict(int)
@@ -327,7 +327,8 @@ class Stats:
         stats: List[StatsTuple],
         true_positives: Dict[str, int],
         false_negatives: Dict[str, int],
-        ups: Dict[str, int]
+        ups: Dict[str, int],
+        errtypefreqs: ErrTypeStatsDict
     ) -> None:
         """ Add the result of a process() call to the statistics collection """
         for sent_result in stats:
@@ -339,12 +340,14 @@ class Stats:
         for k, v in ups.items():
             self._tp_unparsables[k] += v
 
-    def add_errtypefreqs(
-        self, errtypefreqs: Dict[str, TypeFreqs] 
-    ) -> None:
-        for key in errtypefreqs:  # key = xtype/errortype
-            for metric in errtypefreqs[key]:   # metric = tp, fn, ...
-                self._errtypes[key][metric] += errtypefreqs[key][metric]
+        #print(type(errtypefreqs))
+        #print(errtypefreqs.keys())
+        #print(errtypefreqs.values())
+        #print(self._errtypes.items())
+        for okey, d in errtypefreqs.items():        # okey = xtype; d = DefaultDict[str, int]
+            for ikey, v in d.items():               # ikey = tp, fn, ...
+                #print("{}---{}---{}".format(okey, ikey, v))
+                self._errtypes[okey][ikey] += v     # v = freq for each metric
 
     def add_sentence(
         self, category: str, num_tokens: int, ice_error: bool, gc_error: bool,
@@ -493,7 +496,7 @@ class Stats:
                     print(f"   {c:<13}:           N/A")
 
         def calc_recall(right: int, wrong: int, rights: str, wrongs: str, recs: str) -> None:
-            """ Calculate precision, recall and F1-score for binary classification"""
+            """ Calculate precision for binary classification"""
             # Recall
             if right + wrong == 0:
                 result = "N/A"
@@ -511,10 +514,47 @@ class Stats:
                     rc = d[recs] = d[rights] / denominator
                     print(f"   {c:<13}:           {rc:1.4f}")
 
+        def calc_error_category_metrics(cat: str) -> None:
+            """ Calculates precision, recall and f1-score for a single error category
+                N = Number of errors in category z in reference corpus, 
+                Nall =  number of tokens
+                TP = Errors correctly classified as category z
+                FP = Errors (or non-errors) incorrectly classified as category z
+                FN = Errors in category z in reference but not hypothesis
+                Recall = TPz/(TPz+FPz)
+                Precision = TPz/(TPz+FNz)
+            """ 
+            catdict = self._errtypes[cat]
+            tp : int = catdict["tp"]
+            fn : int = catdict["fn"]
+            fp : int = catdict["fp"]
+            recall : float = 0.0
+            precision : float = 0.0
+            catdict["freq"] = tp + fn
+
+            # Recall
+            if tp+fn != 0:
+                recall = catdict["recall"] = tp/(tp+fn)
+            # Precision
+            if tp+fp != 0:
+                precision = catdict["precision"] = tp/(tp+fp)
+
+            if recall + precision > 0.0:
+                catdict["fscore"] = 2 * precision * recall / (precision + recall)
+            else:
+                catdict["fscore"] = 0.0
+            # Correction recall
+            if catdict["right_corr"] > 0.0:
+                catdict["corr_rec"] = catdict["right_corr"] / (catdict["right_corr"] + catdict["wrong_corr"])
+            
+            # Span recall
+            if catdict["right_span"] > 0.0:
+                catdict["span_rec"] = catdict["right_span"] / (catdict["right_span"] + catdict["wrong_span"])
+
+
         def output_sentence_scores() -> None:
             """ Calculate and write sentence scores to stdout """
             ### SENTENCE SCORES
-            # TODO Setja útreikning á P, R og F í sérfall, 
             # Fær sent inn TN, TP, FP og FN - er þá búin að summa það upp
             # Get sent inn aukagildi, sem segir t.d. hvort nota á F0,5 eða F1
             # Og hvað er verið að reikna?
@@ -577,7 +617,6 @@ class Stats:
                 ):
                     print(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
 
-
         def output_token_scores() -> None:
             """ Calculate and write token scores to stdout"""
 
@@ -625,9 +664,51 @@ class Stats:
             write_basic_value(wrong_span, "wrong_span", num_tokens, tp)
             calc_recall(right_span, wrong_span, "right_span", "wrong_span", "spanrecall")
 
+        def output_error_cat_scores() -> None:
+            """ Calculate and write scores for each error category to stdout"""
+            print("\n\nResults for each error category in order by F1-score")
+            freqdict = defaultdict(float)
+            macro : float = 0.0
+            micro : float = 0.0
+            ncats : int = 0
+            nfreqs : int  = 0
+            macroall : float = 0.0
+            microall : float = 0.0
+            ncatsall : int = 0
+            nfreqsall : int = 0
+
+            for cat in self._errtypes.keys():
+                calc_error_category_metrics(cat)
+                freqdict[cat] = self._errtypes[cat]["freq"]
+                if cat not in OUT_OF_SCOPE:
+                    macro += self._errtypes[cat]["fscore"]
+                    micro += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
+                    ncats +=1
+                    nfreqs += self._errtypes[cat]["freq"]
+                macroall += self._errtypes[cat]["fscore"]
+                microall += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
+                ncatsall +=1
+                nfreqsall += self._errtypes[cat]["freq"]
+
+            for k in sorted(freqdict, key=freqdict.get, reverse=True):
+                print("{} (in_scope={})".format(k, k not in OUT_OF_SCOPE))
+                print("\tTP, FP, FN: {}, {}, {}".format(self._errtypes[k]["tp"], self._errtypes[k]["fp"], self._errtypes[k]["fn"]))
+                print("\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}".format(self._errtypes[k]["recall"]*100.0, self._errtypes[k]["precision"]*100.0, self._errtypes[k]["fscore"]*100.0))
+                print("\tCorr, span: {:3.2f}, {:3.2f}".format(self._errtypes[k]["corr_rec"]*100.0, self._errtypes[k]["span_rec"]*100.0))
+
+            # Macro and micro F1-score
+            # Results for in-scope categories and all categories
+            print("Macro F1-score: {:3.2f}  ({:3.2f})".format(macro/ncats*100.0, macroall/ncatsall*100.0))
+            print("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
+
+
+            # Micro F1-score
+
+
         output_duration()
         output_sentence_scores()
         output_token_scores()
+        output_error_cat_scores()
 
 def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
     """ Returns a string with a reasonably correct concatenation
@@ -666,7 +747,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
     # Counter of iceErrorCorpus error types in unparsable sentences
     ups: Dict[str, int] = defaultdict(int)
     # Stats for each error type (xtypes)
-    errtypefreqs: ErrTypeStatsDict = defaultdict(lambda: defaultdict(int))
+    errtypefreqs: ErrTypeStatsDict = DefaultDict(TypeFreqs(int).copy)
 
     # Accumulate standard output in a buffer, for writing in one fell
     # swoop at the end (after acquiring the output lock)
@@ -845,7 +926,6 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                         bprint("=++ True positive")
                         for xtype in xtypes:
                             true_positives[xtype] += 1
-                        # TODO Check if unparsable error and collect causes and their frequencies
 
                     elif not ice_error and not gc_error:
                         bprint("=-- True negative")
@@ -861,7 +941,6 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
             gc_error, ice_error = sentence_results(s.annotations, errors)
 
             def token_results(hyp_annotations: List[gc.Annotation], ref_annotations: List[ErrorDict]) -> Tuple[int, int, int, int, int, int, int]:
-                # TODO safna villunum í generatora og taka eitt stak í einu og bera saman?
                 tp, fp, fn = 0, 0, 0 # tn comes from len(tokens)-(tp+fp+fn) later on
                 right_corr, wrong_corr = 0, 0
                 right_span, wrong_span = 0, 0
@@ -890,9 +969,8 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                             #bprint("\t1. Í svipuðu rými!")
                             # Vista sem fundna villu
                             tp+=1
-                            bprint(errtypefreqs)
-                            bprint(errtypefreqs[ytype])
-                            bprint(errtypefreqs[ytype]["tp"])
+                            #bprint(errtypefreqs)
+                            #bprint(errtypefreqs[ytype])
                             errtypefreqs[ytype]["tp"] += 1
                             # 2. Span detection
                             if xtoks == ytoks:
@@ -924,6 +1002,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                             if xtok.start < ytok["start"]:  # Prófa næstu x-villu
                                 # Vista xvillu sem false positive
                                 fp+=1
+                                errtypefreqs[ytype]["fp"] += 1
                                 xtok = next(x)
                             elif xtok.start > ytok["start"]:
                                 # vista yvillu sem false negative
