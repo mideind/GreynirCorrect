@@ -666,7 +666,7 @@ class Stats:
 
         def output_error_cat_scores() -> None:
             """ Calculate and write scores for each error category to stdout"""
-            print("\n\nResults for each error category in order by F1-score")
+            print("\n\nResults for each error category in order by frequency")
             freqdict = defaultdict(float)
             macro : float = 0.0
             micro : float = 0.0
