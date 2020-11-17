@@ -308,7 +308,7 @@ SUPERCATEGORIES = {
         "noun4adj",
         "extra-subject",
         "missing-fin-verb",
-        "missing-subj",     # Ath. missing-sub
+        "missing-sub",
         "missing-obj",
         "acc4nom-sub",
         "að4af",
@@ -646,7 +646,7 @@ SIMCATEGORIES = {
         "noun4adj",
         "extra-subject",
         "missing-fin-verb",
-        "missing-subj",
+        "missing-sub",
         "missing-obj",
         "v3",
         "v3-subordinate",
@@ -1201,13 +1201,9 @@ class Stats:
             """ Calculate and write scores for each error category to stdout"""
             print("\n\nResults for each error category in order by frequency")
             freqdict = defaultdict(float)
-            macro : float = 0.0
             micro : float = 0.0
-            ncats : int = 0
             nfreqs : int  = 0
-            macroall : float = 0.0
             microall : float = 0.0
-            ncatsall : int = 0
             nfreqsall : int = 0
 
             # Iterate over category counts
@@ -1215,15 +1211,11 @@ class Stats:
                 # Get recall, precision and F1; recall for correction and span
                 calc_error_category_metrics(cat)
 
-                # Collect macro and micro scores, both overall and for in-scope categories
+                # Collect  micro scores, both overall and for in-scope categories
                 if cat not in OUT_OF_SCOPE:
-                    macro += self._errtypes[cat]["fscore"]
                     micro += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
-                    ncats +=1
                     nfreqs += self._errtypes[cat]["freq"]
-                macroall += self._errtypes[cat]["fscore"]
                 microall += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
-                ncatsall +=1
                 nfreqsall += self._errtypes[cat]["freq"]
 
                 # Create freqdict for sorting error categories by frequency
@@ -1236,12 +1228,8 @@ class Stats:
                 print("\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}".format(self._errtypes[k]["recall"]*100.0, self._errtypes[k]["precision"]*100.0, self._errtypes[k]["fscore"]*100.0))
                 print("\tCorr, span: {:3.2f}, {:3.2f}".format(self._errtypes[k]["corr_rec"]*100.0, self._errtypes[k]["span_rec"]*100.0))
            
-            # Macro and micro F1-score
+            # Micro F1-score
             # Results for in-scope categories and all categories
-            if ncats != 0:
-                print("Macro F1-score: {:3.2f}  ({:3.2f})".format(macro/ncats*100.0, macroall/ncatsall*100.0))
-            else:
-                print("Macro F1-score: N/A")
             if nfreqs != 0:
                 print("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
             else:
@@ -1250,36 +1238,24 @@ class Stats:
         def output_supercategory_scores(errorcats: Dict) -> None:
             # Results for each SÍM category
             for entry in errorcats:
-                macro : float = 0.0
                 micro : float = 0.0
-                ncats : int = 0
                 nfreqs : int  = 0
-                macroall : float = 0.0
                 microall : float = 0.0
-                ncatsall : int = 0
                 nfreqsall : int = 0
                 print("\n{}:".format(entry.capitalize()))
                 for cat in errorcats[entry]:
                     if self._errtypes[cat]["fscore"] == "N/A":
                         continue
                     if cat not in OUT_OF_SCOPE:
-                        macro += self._errtypes[cat]["fscore"]
                         micro += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
-                        ncats +=1
                         nfreqs += self._errtypes[cat]["freq"]
                         print("\t{}   {:3.2f}   {:3.2f}".format(cat, self._errtypes[cat]["fscore"]*100, self._errtypes[cat]["freq"]))
-                    macroall += self._errtypes[cat]["fscore"]
                     microall += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
-                    ncatsall +=1
                     nfreqsall += self._errtypes[cat]["freq"]
                 if nfreqs != 0:
                     print("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
                 else:
                     print("Micro F1-score: N/A")
-                if ncats != 0:
-                    print("Macro F1-score: {:3.2f}  ({:3.2f})".format(macro/ncats*100.0, macroall/ncatsall*100.0))
-                else:
-                    print("Macro F1-score: N/A")
 
         #output_duration()
         #output_sentence_scores()
