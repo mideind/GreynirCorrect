@@ -266,15 +266,13 @@ SUPERCATEGORIES = {
         "dative-sub",
         "dir4loc",
         "loc4dir",
-        "bad-contraction",
         "mid4act",
         "act4mid",
         "mid4pass",
         "pass4mid",
-        "active4passive",   # act4pass?
-        "passive4active",   # pass4act?
+        "act4pass",   
+        "pass4act",
         "new-passive",
-        "syntax",           # Or skip?
         "each",
         "noun4pro",
         "pro4noun",
@@ -285,6 +283,7 @@ SUPERCATEGORIES = {
         "tense4perfect",
         "perfect4tense",
         "pers4dem",
+        "dem4pers",
         "dem-pro",
         "missing-dem-pro",
         "extra-dem-pro",
@@ -296,8 +295,7 @@ SUPERCATEGORIES = {
         "cont4simple",
         "missing-inf-part",
         "want",
-        "dem4pers",
-        "nom4acc-subj",
+        "nom4acc-sub",
         "acc4nom-sub",
         "simple4cont",
         "extra-inf-part",
@@ -310,30 +308,35 @@ SUPERCATEGORIES = {
         "noun4adj",
         "extra-subject",
         "missing-fin-verb",
+        "missing-subj",     # Ath. missing-sub
+        "missing-obj",
+        "acc4nom-sub",
+        "að4af",
+        "af4að",
+        "wrong-prep",
+        "interr-pro",
+        "hypercorr",
     ],
     "syntax" : [
         "v3",
-        "v3-subordinate"
+        "v3-subordinate",
+        "syntax-other",
     ],
     "nonword" : [
         "compound-collocation",
         "compound-nonword",
-        "nonword"
+        "nonword",
     ],
     "omission" : [
-        "missing-letter",
         "missing-word",
         "missing-words",
-        "missing-accent",
-        "missing-prep"
-    ],
-    "omission/grammar" : [
-        "missing-subj",
-        "missing-obj",
+        "missing-prep",
     ],
     "typo" : [
         "swapped-letters",
         "letter-rep",
+        "missing-letter",
+        "missing-accent",
     ],
     "punctuation" : [
         "comma4period",
@@ -342,7 +345,7 @@ SUPERCATEGORIES = {
         "double-punctuation",
         "extra-abbreviation",
         "extra-dash",
-        "iteration-colon",       # red?
+        "iteration-colon",
         "missing-colon",
         "missing-comma",
         "missing-commas",
@@ -353,6 +356,7 @@ SUPERCATEGORIES = {
         "missing-quots",
         "misplaced-quot",
         "wrong-quots",
+        "extra-quot",
         "extra-quots",
         "extra-punctuation",
         "extra-comma",
@@ -417,11 +421,11 @@ SUPERCATEGORIES = {
         "period4dash",
         "missing-square",
         "slash4dash",
-        "wrong-accent",
         "extra-commas",
         "conjunction4semicolon",
         "missing-bracket",
-        "extra-bracket"
+        "extra-bracket",
+        "date-abbreviation",
     ],
     "spacing" : [
         "merged-words",
@@ -443,7 +447,7 @@ SUPERCATEGORIES = {
     ],
     "wording" : [
         "wording",
-        "aux"
+        "aux",
     ],
     "spelling" : [
         "ngnk",
@@ -451,18 +455,20 @@ SUPERCATEGORIES = {
         "y4i",
         "í4ý",
         "ý4í",
-        "n4nn"
+        "n4nn",
+        "nn4n",
         "pronun-writing",
         "kv4hv",
         "hv4kv",
-        "name-error"
+        "name-error",
+        "bad-contraction",
     ],
     "foreign" : [
         "fw",
         "foreign-error",
     ],
     "exclusion" : [
-        "gendered"
+        "gendered",
     ],
     "numbers" : [
         "number4word",
@@ -470,7 +476,7 @@ SUPERCATEGORIES = {
         "extra-number",
         "symbol4number",
         "number4symbol",
-        "number-fail"
+        "number-fail",
     ],
     "style" : [
         "style",
@@ -482,30 +488,22 @@ SUPERCATEGORIES = {
         "ice4fw",
         "nonit4it",
         "it4nonit",
-        "extra-munu"
+        "extra-munu",
+        "words4abbreviation",
+        "abbreviation4words",
     ],
     "other" : [
         "symbol4word",
         "extra-symbol",
-        "date-abbreviation",
         "dep",
-        "hypercorr",
-        "þar4það"
-    ],
-    "tradition" : [
-        "wrong-prep",
-        "að4af",
-        "af4að",
-        "words4abbreviation",
-        "abbreviation4words"
+        "þar4það",
     ],
     "lexical" : [
         "context",
-        "interr-pro"
     ],
     "unnannotated" : [
         "zzz",
-        "xxx"
+        "xxx",
     ]
 }
 
@@ -558,9 +556,9 @@ SIMCATEGORIES = {
         "collocation-idiom",
         "though",
         "extra-word",
-        "extra-words"
+        "extra-words",
         "extra-prep",
-        "repeat-word"
+        "repeat-word",
         "repeat-word-split",
         "interr-pro",
         "number4word",
@@ -569,9 +567,9 @@ SIMCATEGORIES = {
         "missing-word",
         "missing-prep",
         "þar4það",
-        "missing-conjunction"   # from punct!
+        "missing-conjunction",   # from punct!
         "extra-conjunction",     # from punct!
-        "missing-bracket"   # from punct,
+        "missing-bracket",   # from punct,
         "extra-bracket",    # from punct
         "split-compound",
         "split-word",
@@ -681,7 +679,7 @@ SIMCATEGORIES = {
         "wording",
         "aux"
     ],
-    "punct" : [
+    "punctuation" : [
         "extra-symbol",
         "nonsup4sup",
         "comma4colon",
@@ -1087,7 +1085,6 @@ class Stats:
                 if catdict["right_span"] > 0.0:
                     catdict["span_rec"] = catdict["right_span"] / (catdict["right_span"] + catdict["wrong_span"])
 
-
         def output_sentence_scores() -> None:
             """ Calculate and write sentence scores to stdout """
             ### SENTENCE SCORES
@@ -1238,40 +1235,7 @@ class Stats:
                 print("\tTP, FP, FN: {}, {}, {}".format(self._errtypes[k]["tp"], self._errtypes[k]["fp"], self._errtypes[k]["fn"]))
                 print("\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}".format(self._errtypes[k]["recall"]*100.0, self._errtypes[k]["precision"]*100.0, self._errtypes[k]["fscore"]*100.0))
                 print("\tCorr, span: {:3.2f}, {:3.2f}".format(self._errtypes[k]["corr_rec"]*100.0, self._errtypes[k]["span_rec"]*100.0))
-
-
-            # Results for each supercategory
-            superscores = 0.0
-            nsupercats = 0
-            print("Results for supercategories:")
-            for entry in SUPERCATEGORIES:
-                print("{}:".format(entry.capitalize()))
-                for each in SUPERCATEGORIES[entry]:
-                    superscores += self._errtypes[each]["fscore"]
-                    nsupercats += 1
-                    #print("\t{}:{:3.2f}".format(each, self._errtypes[each]["fscore"]))
-                if not nsupercats:
-                    print("\tOverall: N/A")
-                else:
-                    print("\tOverall: {:3.2f}".format(superscores/nsupercats*100))
-
-            # Results for each SÍM category
-            simscores = 0.0
-            nsimcats = 0
-            print("\n\nResults for SÍM-categories:")
-            for entry in SIMCATEGORIES:
-                print("{}:".format(entry.capitalize()))
-                for each in SIMCATEGORIES[entry]:
-                    if self._errtypes[each]["fscore"] == "N/A":
-                        continue
-                    simscores += self._errtypes[each]["fscore"]
-                    nsimcats += 1
-                    #print("\t{}:{:3.2f}".format(each, self._errtypes[each]["fscore"]))
-                if not nsimcats:
-                    print("\tOverall: N/A")
-                else:
-                    print("\tOverall: {:3.2f}".format(simscores/nsimcats*100))
-
+           
             # Macro and micro F1-score
             # Results for in-scope categories and all categories
             if ncats != 0:
@@ -1283,13 +1247,50 @@ class Stats:
             else:
                 print("Micro F1-score: N/A")
 
-            # Micro F1-score
+        def output_supercategory_scores(errorcats: Dict) -> None:
+            # Results for each SÍM category
+            for entry in errorcats:
+                macro : float = 0.0
+                micro : float = 0.0
+                ncats : int = 0
+                nfreqs : int  = 0
+                macroall : float = 0.0
+                microall : float = 0.0
+                ncatsall : int = 0
+                nfreqsall : int = 0
+                print("\n{}:".format(entry.capitalize()))
+                for cat in errorcats[entry]:
+                    if self._errtypes[cat]["fscore"] == "N/A":
+                        continue
+                    if cat not in OUT_OF_SCOPE:
+                        macro += self._errtypes[cat]["fscore"]
+                        micro += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
+                        ncats +=1
+                        nfreqs += self._errtypes[cat]["freq"]
+                        print("\t{}   {:3.2f}   {:3.2f}".format(cat, self._errtypes[cat]["fscore"]*100, self._errtypes[cat]["freq"]))
+                    macroall += self._errtypes[cat]["fscore"]
+                    microall += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
+                    ncatsall +=1
+                    nfreqsall += self._errtypes[cat]["freq"]
+                if nfreqs != 0:
+                    print("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
+                else:
+                    print("Micro F1-score: N/A")
+                if ncats != 0:
+                    print("Macro F1-score: {:3.2f}  ({:3.2f})".format(macro/ncats*100.0, macroall/ncatsall*100.0))
+                else:
+                    print("Macro F1-score: N/A")
 
-
-        output_duration()
-        output_sentence_scores()
-        output_token_scores()
+        #output_duration()
+        #output_sentence_scores()
+        #output_token_scores()
+        
         output_error_cat_scores()
+
+        print("\n\nResults for iEC-categories:")
+        output_supercategory_scores(SUPERCATEGORIES)
+        print("\n\nResults for SÍM-categories:")
+        output_supercategory_scores(SIMCATEGORIES)
 
 def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
     """ Returns a string with a reasonably correct concatenation
