@@ -337,6 +337,8 @@ SUPERCATEGORIES = {
         "missing-letter",
         "missing-accent",
         "wrong-accent",
+        "extra-accent",
+        "extra-letter",         
     ],
     "punctuation" : [
         "comma4period",
@@ -438,8 +440,6 @@ SUPERCATEGORIES = {
     "insertion" : [
         "extra-word",
         "extra-words",
-        "extra-accent", # TODO put undir Typo?
-        "extra-letter", # TODO put under Typo?
         "extra-prep",
         "repeat-word",
         "repeat-word-split",
