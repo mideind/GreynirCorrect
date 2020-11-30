@@ -135,8 +135,8 @@ OUT_OF_SCOPE = {
     "agreement-pro",  # samræmi fornafns við undanfara  grammar ...vöðvahólf sem sé um dælinguna. Hann dælir blóðinu > Það dælir blóðinu
     "aux",  # meðferð vera og verða, hjálparsagna   wording mun verða eftirminnilegt > mun vera eftirminnilegt
     "bracket4square",  # svigi fyrir hornklofa  punctuation (Portúgal) > [Portúgal]
-    "collocation-idiom",  # fast orðasamband með ógagnsæja merkingu collocation hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
-    "collocation",  # fast orðasamband  collocation fram á þennan dag > fram til þessa dags
+    #"collocation-idiom",  # fast orðasamband með ógagnsæja merkingu collocation hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
+    #"collocation",  # fast orðasamband  collocation fram á þennan dag > fram til þessa dags
     "comma4conjunction",  # komma fyrir samtengingu punctuation ...fara með vald Guðs, öll löggjöf byggir... > ...fara með vald Guðs og öll löggjöf byggir...
     "comma4dash",  # komma fyrir bandstrik  punctuation , > -
     "comma4ex",  # komma fyrir upphrópun    punctuation Viti menn, almúginn... > Viti menn! Almúginn...
@@ -173,7 +173,6 @@ OUT_OF_SCOPE = {
     "missing-quot",  # gæsalöpp vantar  punctuation „I'm winning > „I'm winning“
     "missing-quots",  # gæsalappir vantar   punctuation I'm winning > „I'm winning“
     "missing-semicolon",  # vantar semíkommu    punctuation Haukar Björgvin Páll > Haukar; Björgvin Páll
-    # "missing-space",        # vantar bil  spacing eðlis-og efnafræði > eðlis- og efnafræði
     "missing-square",  # vantar hornklofi   punctuation þeir > [þeir]
     "missing-symbol",  # tákn vantar    punctuation 0 > 0%
     "missing-word",  # orð vantar   omission    í Donalda > í þorpinu Donalda
@@ -270,8 +269,9 @@ SUPERCATEGORIES = {
         "act4mid",
         "mid4pass",
         "pass4mid",
-        "act4pass",   
+        "act4pass",
         "pass4act",
+        "passive",
         "new-passive",
         "each",
         "noun4pro",
@@ -283,7 +283,6 @@ SUPERCATEGORIES = {
         "tense4perfect",
         "perfect4tense",
         "pers4dem",
-        "dem4pers",
         "dem-pro",
         "missing-dem-pro",
         "extra-dem-pro",
@@ -295,6 +294,7 @@ SUPERCATEGORIES = {
         "cont4simple",
         "missing-inf-part",
         "want",
+        "dem4pers",
         "nom4acc-sub",
         "acc4nom-sub",
         "simple4cont",
@@ -306,11 +306,10 @@ SUPERCATEGORIES = {
         "geta",
         "adj4noun",
         "noun4adj",
-        "extra-subject",
+        "extra-sub",
         "missing-fin-verb",
         "missing-sub",
         "missing-obj",
-        "acc4nom-sub",
         "að4af",
         "af4að",
         "wrong-prep",
@@ -337,6 +336,7 @@ SUPERCATEGORIES = {
         "letter-rep",
         "missing-letter",
         "missing-accent",
+        "wrong-accent",
     ],
     "punctuation" : [
         "comma4period",
@@ -383,7 +383,6 @@ SUPERCATEGORIES = {
         "missing-slash",
         "comma4bracket",
         "qm4comma",
-        "bracket4slash",
         "missing-ex",
         "qm4ex",
         "qm4period",
@@ -439,8 +438,8 @@ SUPERCATEGORIES = {
     "insertion" : [
         "extra-word",
         "extra-words",
-        "extra-accent",
-        "extra-letter",
+        "extra-accent", # TODO put undir Typo?
+        "extra-letter", # TODO put under Typo?
         "extra-prep",
         "repeat-word",
         "repeat-word-split",
@@ -508,79 +507,69 @@ SUPERCATEGORIES = {
 }
 
 # Supercategories according to SÍM and corresponding subcategories
+# Errors go into the first possible category. Error categories that
+# can both be independent and dependent of context go under the former.
 SIMCATEGORIES = {
-    "context-independent" : [
+    "context-independent" : [ 
+        "caps4low",
+        "number-fail",
         "lower4upper-proper",
         "lower4upper-acro",
-        "caps4low",
-        "fw",
-        "foreign-error",
-        "extra-accent",
-        "extra-letter",
+        "though",
         "compound-collocation",
         "compound-nonword",
         "nonword",
-        "symbol4number",
-        "number4symbol",
-        "number-fail",
-        "hypercorr",        # or cd?
-        "abbreviation-period",
-        "abbreviation",
-        "missing-symbol",
-        "slash4dash",
+        "swapped-letters",
+        "letter-rep",
+        "missing-letter",
+        "missing-accent",
+        "wrong-accent",
         "merged-words",
-        "missing-space",
-        "extra-space",
+        "split-word",
+        "extra-accent",
+        "extra-letter",
         "ngnk",
         "i4y",
         "y4i",
         "í4ý",
         "ý4í",
         "n4nn",
+        "nn4n",
         "pronun-writing",
         "kv4hv",
         "hv4kv",
-        "name-error",
-        "missing-letter",
-        "missing-accent",
-        "swapped-letters",
-        "letter-rep",
-        "bad-contraction"
+        "bad-contraction",
+        "fw",
+        "foreign-error",
+        "abbreviation-period",
+        "abbreviation",
     ],
     "context-dependent" : [
-        "lower4upperinitial",
+        "lower4upper-initial",
         "upper4lower-common",
-        "upper4lower-noninitial",
         "upper4lower-proper",
+        "upper4lower-noninitial",
         "collocation",
         "collocation-idiom",
-        "though",
+        "missing-word",
+        "missing-words",
+        "missing-prep",
+        "split-compound",
+        "split-words",
+        "missing-dash",
+        "missing-space",
+        "extra-space",
         "extra-word",
         "extra-words",
         "extra-prep",
         "repeat-word",
         "repeat-word-split",
-        "interr-pro",
+        "name-error",
+        "gendered",
         "number4word",
         "word4number",
-        "missing-words",
-        "missing-word",
-        "missing-prep",
-        "þar4það",
-        "missing-conjunction",   # from punct!
-        "extra-conjunction",     # from punct!
-        "missing-bracket",   # from punct,
-        "extra-bracket",    # from punct
-        "split-compound",
-        "split-word",
-        "split-words",
-        "extra-dash",
-        "missing-dash",
-        "missing-space",
     ],
     "grammar" : [
-        "að4af",
-        "af4að",
         "agreement",
         "agreement-concord",
         "agreement-pred",
@@ -608,8 +597,9 @@ SIMCATEGORIES = {
         "act4mid",
         "mid4pass",
         "pass4mid",
-        "active4passive",
-        "passive4active",
+        "act4pass",
+        "pass4act",
+        "passive",
         "new-passive",
         "each",
         "noun4pro",
@@ -634,7 +624,7 @@ SIMCATEGORIES = {
         "want",
         "dem4pers",
         "nom4acc-sub",
-        "acc4nomsub",
+        "acc4nom-sub",
         "simple4cont",
         "extra-inf-part",
         "gen-escape",
@@ -644,28 +634,25 @@ SIMCATEGORIES = {
         "geta",
         "adj4noun",
         "noun4adj",
-        "extra-subject",
+        "extra-sub",
         "missing-fin-verb",
         "missing-sub",
         "missing-obj",
+        "að4af",
+        "af4að",
+        "wrong-prep",
+        "interr-pro",
+        "hypercorr",
         "v3",
         "v3-subordinate",
-        "wrong-prep"
+        "syntax-other",
+        "aux",
     ],
     "style" : [
-        "gendered",
-        "context",
+        "wording",
         "extra-number",
-        "symbol4word",
-        "date-abbreviation",
-        "comma4period",
-        "comma4qm",
-        "extra-abbreviation",
-        "period4comma",
-        "word4symbol",
-        "words4abbreviation",
-        "abbreviation4words",
-        "conjunction-drop",        
+        "symbol4number",
+        "number4symbol",
         "style",
         "unicelandic",
         "taboo-word",
@@ -676,20 +663,28 @@ SIMCATEGORIES = {
         "nonit4it",
         "it4nonit",
         "extra-munu",
-        "wording",
-        "aux"
+        "words4abbreviation",
+        "abbreviation4words",
+        "symbol4word",
+        "extra-symbol",
+        "dep",
+        "þar4það",
+        "context",
     ],
     "punctuation" : [
-        "extra-symbol",
-        "nonsup4sup",
+        "comma4period",
+        "comma4qm",
         "comma4colon",
         "double-punctuation",
+        "extra-abbreviation",
+        "extra-dash",
         "iteration-colon",
         "missing-colon",
         "missing-comma",
         "missing-commas",
         "missing-period",
         "missing-qm",
+        "missing-conjunction",
         "missing-quot",
         "missing-quots",
         "misplaced-quot",
@@ -698,10 +693,9 @@ SIMCATEGORIES = {
         "extra-quots",
         "extra-punctuation",
         "extra-comma",
-        "period4colon",
-        "extra-semicolon",
-        "semicolon4comma",
         "extra-period",
+        "period4comma",
+        "period4colon",
         "period4conjunction",
         "conjunction4period",
         "conjunction4comma",
@@ -712,12 +706,15 @@ SIMCATEGORIES = {
         "comma4ex",
         "period4ex",
         "semicolon4colon",
+        "extra-semicolon",
         "ordinal-period",
+        "conjunction-drop",
+        "extra-conjunction",
+        "semicolon4comma",
         "conjunction4qm",
         "missing-slash",
         "comma4bracket",
         "qm4comma",
-        "bracket4slash",
         "missing-ex",
         "qm4ex",
         "qm4period",
@@ -743,15 +740,22 @@ SIMCATEGORIES = {
         "wrong-dash",
         "dash4colon",
         "dots4comma",
+        "missing-symbol",
         "dots4period",
         "extra-square",
         "bracket4period",
-        "extra-commas",
+        "word4symbol",
+        "nonsup4sup",
         "semicolon4period",
         "period4semicolon",
         "period4dash",
         "missing-square",
+        "slash4dash",
+        "extra-commas",
         "conjunction4semicolon",
+        "missing-bracket",
+        "extra-bracket",
+        "date-abbreviation",
     ]
 }
 
@@ -1242,20 +1246,29 @@ class Stats:
                 nfreqs : int  = 0
                 microall : float = 0.0
                 nfreqsall : int = 0
+                correcs : float = 0.0
+                correcsall : float = 0.0   
+                # TODO taka saman corr_rec og span_rec; skoða hvernig fæ F-skor, svipað og fyrir hitt, þegar er ekki með TN inni
                 print("\n{}:".format(entry.capitalize()))
                 for cat in errorcats[entry]:
                     if self._errtypes[cat]["fscore"] == "N/A":
                         continue
                     if cat not in OUT_OF_SCOPE:
                         micro += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
+                        if self._errtypes[cat]["corr_rec]"] != "N/A":
+                            correcs += self._errtypes[cat]["corr_rec"]*self._errtypes[cat]["freq"]
                         nfreqs += self._errtypes[cat]["freq"]
                         print("\t{}   {:3.2f}   {:3.2f}".format(cat, self._errtypes[cat]["fscore"]*100, self._errtypes[cat]["freq"]))
                     microall += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
+                    if self._errtypes[cat]["corr_rec]"] != "N/A":
+                        correcsall += self._errtypes[cat]["corr_rec"]*self._errtypes[cat]["freq"]
                     nfreqsall += self._errtypes[cat]["freq"]
                 if nfreqs != 0:
                     print("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
+                    print("Error correction recall: {:3.2f} ({:3.2f})".format(correcs/nfreqs*100.0, correcsall/nfreqsall*100.0))
                 else:
                     print("Micro F1-score: N/A")
+                    print("Error correction recall: N/A")
 
         #output_duration()
         #output_sentence_scores()
@@ -1610,6 +1623,10 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
     return dict(
         stats=stats, true_positives=true_positives, false_negatives=false_negatives, ups=ups, errtypefreqs=errtypefreqs
     )
+
+def baseline():
+    """ Get a baseline for error detection; nothing is detected """
+
 
 
 def main() -> None:
