@@ -58,7 +58,7 @@ To perform token-level correction from Python code:
 
    >>> from reynir_correct import tokenize
    >>> g = tokenize("Af gefnu tilefni fékk fékk daninn vilja sýnum "
-   >>>     "framgengt við hana í auknu mæli.")
+   >>>     "framgengt í auknu mæli.")
    >>> for tok in g:
    >>>     print("{0:10} {1}".format(tok.txt or "", tok.error_description))
 
@@ -72,8 +72,6 @@ Output::
    vilja      Orðasambandið 'vilja sýnum framgengt' var leiðrétt í 'vilja sínum framgengt'
    sínum
    framgengt
-   við
-   hana
    í          Orðasambandið 'í auknu mæli' var leiðrétt í 'í auknum mæli'
    auknum
    mæli
