@@ -18,8 +18,8 @@ OUT_OF_SCOPE = {
     "agreement-pro",  # samræmi fornafns við undanfara  grammar ...vöðvahólf sem sé um dælinguna. Hann dælir blóðinu > Það dælir blóðinu
     "aux",  # meðferð vera og verða, hjálparsagna   wording mun verða eftirminnilegt > mun vera eftirminnilegt
     "bracket4square",  # svigi fyrir hornklofa  punctuation (Portúgal) > [Portúgal]
-    "collocation-idiom",  # fast orðasamband með ógagnsæja merkingu collocation hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
-    "collocation",  # fast orðasamband  collocation fram á þennan dag > fram til þessa dags
+    #"collocation-idiom",  # fast orðasamband með ógagnsæja merkingu collocation hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
+    #"collocation",  # fast orðasamband  collocation fram á þennan dag > fram til þessa dags
     "comma4conjunction",  # komma fyrir samtengingu punctuation ...fara með vald Guðs, öll löggjöf byggir... > ...fara með vald Guðs og öll löggjöf byggir...
     "comma4dash",  # komma fyrir bandstrik  punctuation , > -
     "comma4ex",  # komma fyrir upphrópun    punctuation Viti menn, almúginn... > Viti menn! Almúginn...
@@ -93,7 +93,7 @@ def element_text(element: ET.Element) -> str:
         including all its subelements, if any """
     return "".join(element.itertext())
 
-def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
+def correct_spaces(tokens: Iterable[Tuple[str, str]]) -> str:
     """ Returns a string with a reasonably correct concatenation
         of the tokens, where each token is a (tag, text) tuple. """
     return detokenize(
@@ -135,7 +135,7 @@ def get_examples(fpath: str) -> None:
             errors = []
             # A dictionary of errors by their index (idx field)
             # Error corpora annotations for sentences marked as unparsable
-            # Enumerate through the tokens in the sentence
+            # Enumerate through the tokens in the sentence 
             for el in sent:
                 tag = el.tag[nl:]
                 if tag == "revision":

@@ -88,7 +88,6 @@ import heapq
 import argparse
 import xml.etree.ElementTree as ET
 import multiprocessing
-from collections import namedtuple
 
 # import multiprocessing.dummy as multiprocessing
 
@@ -837,7 +836,7 @@ class Stats:
         self._starttime = datetime.utcnow()
         self._files: Dict[str, int] = defaultdict(int)
         self._sentences: CategoryStatsDict = defaultdict(lambda: defaultdict(int))
-        self._errtypes: ErrTypeStatsDict = DefaultDict(TypeFreqs(int).copy)
+        self._errtypes: ErrTypeStatsDict = DefaultDict(TypeFreqs(int).copy)   # DefaultDict(TypeFreqs(int).copy) 
         self._true_positives: Dict[str, int] = defaultdict(int)
         self._false_negatives: Dict[str, int] = defaultdict(int)
         self._tp: Dict[str, int] = defaultdict(int)
@@ -873,13 +872,8 @@ class Stats:
         for k, v in ups.items():
             self._tp_unparsables[k] += v
 
-        #print(type(errtypefreqs))
-        #print(errtypefreqs.keys())
-        #print(errtypefreqs.values())
-        #print(self._errtypes.items())
         for okey, d in errtypefreqs.items():        # okey = xtype; d = DefaultDict[str, int]
             for ikey, v in d.items():               # ikey = tp, fn, ...
-                #print("{}---{}---{}".format(okey, ikey, v))
                 self._errtypes[okey][ikey] += v     # v = freq for each metric
 
     def add_sentence(
@@ -923,6 +917,8 @@ class Stats:
     def output(self, cores: int) -> None:
         """ Write the statistics to stdout """
 
+        # Accumulate standard output in a buffer, for writing in one fell
+        # swoop at the end (after acquiring the output lock)
         num_sentences: int = sum(cast(int, d["count"]) for d in self._sentences.values())
 
         def output_duration() -> None:
@@ -932,24 +928,24 @@ class Stats:
             m = (dur % 3600) // 60
             s = dur % 60
             # Output a summary banner
-            print("\n" + "=" * 7)
-            print("Summary")
-            print("=" * 7 + "\n")
+            bprint(f"\n" + "=" * 7)
+            bprint(f"Summary")
+            bprint(f"=" * 7 + "\n")
             # Total number of files processed, and timing stats
-            print(f"Processing started at {str(self._starttime)[0:19]}")
-            print(f"Total processing time {h}h {m:02}m {s:02}s, using {cores} cores")
-            print(f"\nFiles processed:            {sum(self._files.values()):6}")
+            bprint(f"Processing started at {str(self._starttime)[0:19]}")
+            bprint(f"Total processing time {h}h {m:02}m {s:02}s, using {cores} cores")
+            bprint(f"\nFiles processed:            {sum(self._files.values()):6}")
             for c in CATEGORIES:
-                print(f"   {c:<13}:           {self._files[c]:6}")
+                bprint(f"   {c:<13}:           {self._files[c]:6}")
             # Total number of tokens processed
             num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
-            print(f"\nTokens processed:           {num_tokens:6}")
+            bprint(f"\nTokens processed:           {num_tokens:6}")
             for c in CATEGORIES:
-                print(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
+                bprint(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
             # Total number of sentences processed
-            print(f"\nSentences processed:        {num_sentences:6}")
+            bprint(f"\nSentences processed:        {num_sentences:6}")
             for c in CATEGORIES:
-                print(f"   {c:<13}:           {self._sentences[c]['count']:6}")
+                bprint(f"   {c:<13}:           {self._sentences[c]['count']:6}")
 
         def perc(n: int, whole: int) -> str:
             """ Return a percentage of total sentences, formatted as 3.2f """
@@ -960,21 +956,21 @@ class Stats:
         def write_basic_value(val: int, bv: str, whole: int, errwhole: Optional[int]=None) -> None:
             """ Write basic values for sentences and their freqs to stdout """
             if errwhole:
-                print(
+                bprint(
                     f"\n{NAMES[bv]}:             {val:6} {perc(val, whole):>6}% / {perc(val, errwhole):>6}%"
                 )
             else:
-                print(
+                bprint(
                     f"\n{NAMES[bv]}:             {val:6} {perc(val, whole):>6}%"
                 )
             for c in CATEGORIES:
-                print(f"   {c:<13}:           {self._sentences[c][bv]:6}")
+                bprint(f"   {c:<13}:           {self._sentences[c][bv]:6}")
 
         def calc_PRF(
             tp: int, tn: int, fp: int, fn: int, tps: str, tns: str, 
             fps: str, fns: str, recs: str, precs: str
         ) -> None:
-            """ Calculate precision, recall and F1-score"""
+            """ Calculate precision, recall and F1-score """
             # Recall
             if tp + fn == 0:
                 result = "N/A"
@@ -982,15 +978,15 @@ class Stats:
             else:
                 recall = tp / (tp+fn)
                 result = f"{recall:1.4f}"
-            print(f"\nRecall:                     {result}")
+            bprint(f"\nRecall:                     {result}")
             for c in CATEGORIES:
                 d = self._sentences[c]
                 denominator = d[tps] + d[fns]
                 if denominator == 0:
-                    print(f"   {c:<13}:              N/A")
+                    bprint(f"   {c:<13}:              N/A")
                 else:
                     rc = d[recs] = d[tps] / denominator
-                    print(f"   {c:<13}:           {rc:1.4f}")
+                    bprint(f"   {c:<13}:           {rc:1.4f}")
             # Precision
             if tp + fp == 0:
                 result = "N/A"
@@ -998,15 +994,15 @@ class Stats:
             else:
                 precision = tp / (tp + fp)
                 result = f"{precision:1.4f}"
-            print(f"\nPrecision:                  {result}")
+            bprint(f"\nPrecision:                  {result}")
             for c in CATEGORIES:
                 d = self._sentences[c]
                 denominator = d[tps] + d[fps]
                 if denominator == 0:
-                    print(f"   {c:<13}:              N/A")
+                    bprint(f"   {c:<13}:              N/A")
                 else:
                     p = d[precs] = d[tps] / denominator
-                    print(f"   {c:<13}:           {p:1.4f}")
+                    bprint(f"   {c:<13}:           {p:1.4f}")
             # F1 score
             if precision + recall > 0.0:
                 f1 = 2 * precision * recall / (precision + recall)
@@ -1014,22 +1010,22 @@ class Stats:
             else:
                 f1 = 0.0
                 result = "N/A"
-            print(f"\nF1 score:                   {result}")
+            bprint(f"\nF1 score:                   {result}")
             for c in CATEGORIES:
                 d = self._sentences[c]
                 if recs not in d or precs not in d:
-                    print(f"   {c:<13}:              N/A")
+                    bprint(f"   {c:<13}:              N/A")
                     continue
                 rc = d[recs]
                 p = d[precs]
                 if p + rc > 0.0:
                     f1 = 2 * p * rc / (p + rc)
-                    print(f"   {c:<13}:           {f1:1.4f}")
+                    bprint(f"   {c:<13}:           {f1:1.4f}")
                 else:
-                    print(f"   {c:<13}:           N/A")
+                    bprint(f"   {c:<13}:           N/A")
 
         def calc_recall(right: int, wrong: int, rights: str, wrongs: str, recs: str) -> None:
-            """ Calculate precision for binary classification"""
+            """ Calculate precision for binary classification """
             # Recall
             if right + wrong == 0:
                 result = "N/A"
@@ -1037,15 +1033,15 @@ class Stats:
             else:
                 recall = right / (right+wrong)
                 result = f"{recall:1.4f}"
-            print(f"\nRecall:                     {result}")
+            bprint(f"\nRecall:                     {result}")
             for c in CATEGORIES:
                 d = self._sentences[c]
                 denominator = d[rights] + d[wrongs]
                 if denominator == 0:
-                    print(f"   {c:<13}:              N/A")
+                    bprint(f"   {c:<13}:              N/A")
                 else:
                     rc = d[recs] = d[rights] / denominator
-                    print(f"   {c:<13}:           {rc:1.4f}")
+                    bprint(f"   {c:<13}:           {rc:1.4f}")
 
         def calc_error_category_metrics(cat: str) -> None:
             """ Calculates precision, recall and f1-score for a single error category
@@ -1099,7 +1095,7 @@ class Stats:
             # s.s. "Results for Error detection" eða "Results for sentence correctness"?
 
             # Total number of true negatives found
-            print("\nResults for error detection for whole sentences")
+            bprint(f"\nResults for error detection for whole sentences")
             true_positives: int = sum(cast(int, d["true_positives"]) for d in self._sentences.values())
             true_negatives: int = sum(cast(int, d["true_negatives"]) for d in self._sentences.values())
             false_positives: int = sum(cast(int, d["false_positives"]) for d in self._sentences.values())
@@ -1117,7 +1113,7 @@ class Stats:
                 result = "N/A"
             else:
                 result = perc(true_results, num_sentences) + "%/" + perc(false_results, num_sentences) + "%"
-            print(f"\nTrue/false split: {result:>16}")
+            bprint(f"\nTrue/false split: {result:>16}")
             for c in CATEGORIES:
                 d = self._sentences[c]
                 num_sents = d["count"]
@@ -1127,7 +1123,7 @@ class Stats:
                     result = "N/A"
                 else:
                     result = f"{100.0*true_results/num_sents:3.2f}%/{100.0*false_results/num_sents:3.2f}%"
-                print(f"   {c:<13}: {result:>16}")
+                bprint(f"   {c:<13}: {result:>16}")
 
             # Precision, recall, F1-score
             calc_PRF(true_positives, true_negatives, false_positives, false_negatives, 
@@ -1137,34 +1133,34 @@ class Stats:
             # Most common false negative error types
             total = sum(self._false_negatives.values())
             if total > 0:
-                print("\nMost common false negative error types")
-                print("--------------------------------------\n")
+                bprint(f"\nMost common false negative error types")
+                bprint(f"--------------------------------------\n")
                 for index, (xtype, cnt) in enumerate(
                     heapq.nlargest(20, self._false_negatives.items(), key=lambda x: x[1])
                 ):
-                    print(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
+                    bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
 
             # Most common error types in unparsable sentences
             tot = sum(self._tp_unparsables.values())
             if tot > 0:
-                print("\nMost common error types for unparsable sentences")
-                print(  "------------------------------------------------\n")
+                bprint(f"\nMost common error types for unparsable sentences")
+                bprint(f"------------------------------------------------\n")
                 for index, (xtype, cnt) in enumerate(
                     heapq.nlargest(20, self._tp_unparsables.items(), key=lambda x: x[1])
                 ):
-                    print(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
+                    bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
 
         def output_token_scores() -> None:
-            """ Calculate and write token scores to stdout"""
+            """ Calculate and write token scores to stdout """
 
             ### TOKEN ERROR SCORES
 
-            print("\n\nResults for error detection within sentences")
+            bprint(f"\n\nResults for error detection within sentences")
 
             num_tokens = sum(cast(int, d["num_tokens"]) for d in self._sentences.values())
-            print(f"\nTokens processed:           {num_tokens:6}")
+            bprint(f"\nTokens processed:           {num_tokens:6}")
             for c in CATEGORIES:
-                print(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
+                bprint(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
 
             tp = sum(cast(int, d["tp"]) for d in self._sentences.values())
             tn = sum(cast(int, d["tn"]) for d in self._sentences.values())
@@ -1182,7 +1178,7 @@ class Stats:
             # Stiff: Of all errors in error corpora, how many get the right correction?
             # Loose: Of all errors the tool correctly finds, how many get the right correction?
             # Can only calculate recall.
-            print("\nResults for error correction")  
+            bprint(f"\nResults for error correction")  
             right_corr = sum(cast(int, d["right_corr"]) for d in self._sentences.values())
             wrong_corr = sum(cast(int, d["wrong_corr"]) for d in self._sentences.values())
             write_basic_value(right_corr, "right_corr", num_tokens, tp)
@@ -1194,7 +1190,7 @@ class Stats:
             # Loose: Of all errors the tool correctly finds, how many get the right span?
             # Can only calculate recall.
 
-            print("\nResults for error span")
+            bprint(f"\nResults for error span")
             right_span = sum(cast(int, d["right_span"]) for d in self._sentences.values())
             wrong_span = sum(cast(int, d["wrong_span"]) for d in self._sentences.values())
             write_basic_value(right_span, "right_span", num_tokens, tp)
@@ -1202,8 +1198,8 @@ class Stats:
             calc_recall(right_span, wrong_span, "right_span", "wrong_span", "spanrecall")
 
         def output_error_cat_scores() -> None:
-            """ Calculate and write scores for each error category to stdout"""
-            print("\n\nResults for each error category in order by frequency")
+            """ Calculate and write scores for each error category to stdout """
+            bprint(f"\n\nResults for each error category in order by frequency")
             freqdict = defaultdict(float)
             micro : float = 0.0
             nfreqs : int  = 0
@@ -1227,21 +1223,21 @@ class Stats:
 
             # print results for each category by frequency
             for k in sorted(freqdict, key=freqdict.get, reverse=True):
-                print("{} (in_scope={})".format(k, k not in OUT_OF_SCOPE))
-                print("\tTP, FP, FN: {}, {}, {}".format(self._errtypes[k]["tp"], self._errtypes[k]["fp"], self._errtypes[k]["fn"]))
-                print("\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}".format(self._errtypes[k]["recall"]*100.0, self._errtypes[k]["precision"]*100.0, self._errtypes[k]["fscore"]*100.0))
-                print("\tCorr, span: {:3.2f}, {:3.2f}".format(self._errtypes[k]["corr_rec"]*100.0, self._errtypes[k]["span_rec"]*100.0))
+                bprint("{} (in_scope={})".format(k, k not in OUT_OF_SCOPE))
+                bprint("\tTP, FP, FN: {}, {}, {}".format(self._errtypes[k]["tp"], self._errtypes[k]["fp"], self._errtypes[k]["fn"]))
+                bprint("\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}".format(self._errtypes[k]["recall"]*100.0, self._errtypes[k]["precision"]*100.0, self._errtypes[k]["fscore"]*100.0))
+                bprint("\tCorr, span: {:3.2f}, {:3.2f}".format(self._errtypes[k]["corr_rec"]*100.0, self._errtypes[k]["span_rec"]*100.0))
            
             # Micro F1-score
             # Results for in-scope categories and all categories
             if nfreqs != 0:
-                print("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
+                bprint("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
             else:
-                print("Micro F1-score: N/A")
+                bprint(f"Micro F1-score: N/A")
 
-        def output_supercategory_scores(errorcats: Dict) -> None:
+        def output_supercategory_scores(errorcats: Dict[str, List[str]]) -> None:
             # Results for each SÍM category
-            for entry in errorcats:
+            for entry, catlist in errorcats.items():
                 micro : float = 0.0
                 nfreqs : int  = 0
                 microall : float = 0.0
@@ -1249,37 +1245,42 @@ class Stats:
                 correcs : float = 0.0
                 correcsall : float = 0.0   
                 # TODO taka saman corr_rec og span_rec; skoða hvernig fæ F-skor, svipað og fyrir hitt, þegar er ekki með TN inni
-                print("\n{}:".format(entry.capitalize()))
-                for cat in errorcats[entry]:
-                    if self._errtypes[cat]["fscore"] == "N/A":
+                bprint("\n{}:".format(entry.capitalize()))
+                for cat in catlist:
+                    et = self._errtypes[cat]
+                    if et["fscore"] == "N/A":
                         continue
                     if cat not in OUT_OF_SCOPE:
-                        micro += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
-                        if self._errtypes[cat]["corr_rec]"] != "N/A":
-                            correcs += self._errtypes[cat]["corr_rec"]*self._errtypes[cat]["freq"]
-                        nfreqs += self._errtypes[cat]["freq"]
-                        print("\t{}   {:3.2f}   {:3.2f}".format(cat, self._errtypes[cat]["fscore"]*100, self._errtypes[cat]["freq"]))
-                    microall += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
-                    if self._errtypes[cat]["corr_rec]"] != "N/A":
-                        correcsall += self._errtypes[cat]["corr_rec"]*self._errtypes[cat]["freq"]
-                    nfreqsall += self._errtypes[cat]["freq"]
+                        micro += et["fscore"]*et["freq"]
+                        if et["corr_rec"] != "N/A":
+                            correcs += et["corr_rec"]*et["freq"]
+                        nfreqs += et["freq"]
+                        bprint("\t{}   {:3.2f}   {:3.2f}".format(cat, et["fscore"]*100, et["freq"]))
+                    microall += et["fscore"]*et["freq"]
+                    if et["corr_rec]"] != "N/A":
+                        correcsall += et["corr_rec"]*et["freq"]
+                    nfreqsall += et["freq"]
                 if nfreqs != 0:
-                    print("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
-                    print("Error correction recall: {:3.2f} ({:3.2f})".format(correcs/nfreqs*100.0, correcsall/nfreqsall*100.0))
+                    bprint("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
+                    bprint("Error correction recall: {:3.2f} ({:3.2f})".format(correcs/nfreqs*100.0, correcsall/nfreqsall*100.0))
                 else:
-                    print("Micro F1-score: N/A")
-                    print("Error correction recall: N/A")
+                    bprint(f"Micro F1-score: N/A")
+                    bprint(f"Error correction recall: N/A")
 
-        #output_duration()
-        #output_sentence_scores()
-        #output_token_scores()
-        
+        output_duration()
+        output_sentence_scores()
+        output_token_scores()
         output_error_cat_scores()
 
-        print("\n\nResults for iEC-categories:")
+        bprint(f"\n\nResults for iEC-categories:")
         output_supercategory_scores(SUPERCATEGORIES)
-        print("\n\nResults for SÍM-categories:")
+        bprint(f"\n\nResults for SÍM-categories:")
         output_supercategory_scores(SIMCATEGORIES)
+
+        # Print the accumulated output before exiting
+        for s in buffer:
+            print(s)
+
 
 def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
     """ Returns a string with a reasonably correct concatenation
@@ -1289,6 +1290,13 @@ def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
         for tag, txt in tokens
     )
 
+# Accumulate standard output in a buffer, for writing in one fell
+# swoop at the end (after acquiring the output lock)
+buffer: List[str] = []
+
+def bprint(s: str):
+    """ Buffered print: accumulate output for printing at the end """
+    buffer.append(s)
 
 def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
 
@@ -1318,15 +1326,8 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
     # Counter of iceErrorCorpus error types in unparsable sentences
     ups: Dict[str, int] = defaultdict(int)
     # Stats for each error type (xtypes)
-    errtypefreqs: ErrTypeStatsDict = DefaultDict(TypeFreqs(int).copy)
+    errtypefreqs: ErrTypeStatsDict = DefaultDict(TypeFreqs(int).copy)  # DefaultDict(TypeFreqs(int).copy)
 
-    # Accumulate standard output in a buffer, for writing in one fell
-    # swoop at the end (after acquiring the output lock)
-    buffer: List[str] = []
-
-    def bprint(s: str):
-        """ Buffered print: accumulate output for printing at the end """
-        buffer.append(s)
 
     try:
 
@@ -1470,7 +1471,6 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                     if ann.is_error:
                         gc_error = True
                     if ann.code == "E001":
-                        #bprint("FANN UNPARSABLE")
                         unparsable = True
                     if not QUIET:
                         bprint(f">>> {ann}")
@@ -1525,28 +1525,16 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                     xtok = next(x)
                     ytok = next(y)
                     while True:
-                        # gera stöff
-                        #bprint("SKOÐA VILLUR")
-                        #bprint("\tGreynir: {}".format(xtok))
-                        #bprint("\tVkorpus: {}".format(ytok))
 
                         # 1. Error detection
                         xtoks = set(range(xtok.start, xtok.end+1))
                         ytoks = set(range(cast(int, ytok["start"]), cast(int, ytok["end"])+1))
                         ytype = ytok["xtype"]
-                        #bprint("\txtoks: {}".format(xtoks))
-                        #bprint("\ttoks: {}".format(ytoks))
                         if xtoks & ytoks:
-                            #bprint("\t1. Í svipuðu rými!")
-                            # Vista sem fundna villu
                             tp+=1
-                            #bprint(errtypefreqs)
-                            #bprint(errtypefreqs[ytype])
                             errtypefreqs[ytype]["tp"] += 1
                             # 2. Span detection
                             if xtoks == ytoks:
-                                #bprint("\t2. Sama lengd!")
-                                # Vista í error boundaries; gera else og vista sem rangt
                                 right_span+=1
                                 errtypefreqs[ytype]["right_span"] += 1
                             else:
@@ -1554,13 +1542,9 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                                 errtypefreqs[ytype]["wrong_span"] += 1
                             # 3. Error correction
                             # Get the 'corrected' attribute if available,
-                            # otherwise use 'suggest'
+                            # otherwise use xtok['suggest']
                             xcorr = getattr(xtok, "corrected", xtok.suggest)
-                            #bprint("\txcorr: {}".format(xcorr))
-                            if xcorr == ytok["corrected"]: # Óþarfi að fara í þetta nema sé með sömu villuna
-                                # Ath. líka til xtok.suggest! Hver er munurinn? Halda utan um í sérgaur?
-                                #bprint("3. Rétt leiðrétting!")
-                                # Vista í Error Correction
+                            if xcorr == ytok["corrected"]:
                                 right_corr+=1
                                 errtypefreqs[ytype]["right_corr"] += 1
                             else:
@@ -1569,39 +1553,32 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                             xtok = next(x)
                             ytok = next(y)
                         else:
-                            #bprint("Ekki rétt; tékka á næsta")
-                            if xtok.start < ytok["start"]:  # Prófa næstu x-villu
-                                # Vista xvillu sem false positive
+                            if xtok.start < ytok["start"]:
                                 fp+=1
                                 errtypefreqs[ytype]["fp"] += 1
                                 xtok = next(x)
                             elif xtok.start > ytok["start"]:
-                                # vista yvillu sem false negative
                                 ytok = next(y)
                                 fn+=1
                                 errtypefreqs[ytype]["fn"] += 1
                             else:
-                                # Ætti ekki að gerast
                                 xtok = next(x)
                                 ytok = next(y)       
                                 fp+=1
                                 fn+=1           
                                 errtypefreqs[ytype]["fn"] += 1
-                    # Þarf að gera eitthvað hér til að höndla síðustu?
                 except StopIteration:
                     pass
                 if xtok and not ytok: # Because of exception to try
-
                     pass
-                    # Gefa út sem false positive
+                    # false positive
                 if ytok and not xtok: # Because of exception to try
                     pass
-                    # Gefa út sem false negative
+                    # false negative
                 return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
 
             tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span = token_results(s.annotations, errors)
             tn: int = len(tokens) - tp - fp - fn
-            #bprint("\t{}-{}-{}-{}-{}-{}-{}-{}".format(tp, tn, fp, fn, right_corr, wrong_corr, right_span, wrong_span))
             # Collect statistics into the stats list, to be returned
             # to the parent process
             if stats is not None:
@@ -1623,10 +1600,6 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
     return dict(
         stats=stats, true_positives=true_positives, false_negatives=false_negatives, ups=ups, errtypefreqs=errtypefreqs
     )
-
-def baseline():
-    """ Get a baseline for error detection; nothing is detected """
-
 
 
 def main() -> None:
