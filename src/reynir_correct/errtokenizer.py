@@ -1595,7 +1595,6 @@ def fix_capitalization(
                 # An uppercase word at the beginning of a sentence can't be wrong
                 return False
             if word in ACRONYMS:
-                print(word)
                 return True
             # Danskur -> danskur
             rev_word = word.lower()
@@ -1679,7 +1678,6 @@ def fix_capitalization(
                         )
                     )
                 elif token.txt in ACRONYMS:
-                    print(token)
                     original_txt = token.txt
                     w, m = db.lookup_word(token.txt.upper(), False)
                     token = token_ctor.Word(w, m, token=token)

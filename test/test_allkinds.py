@@ -771,7 +771,6 @@ def test_acronyms(verbose=False):
     assert "RÚV" in s
     assert g[4].error_code == 'Z006'    #DV
     assert g[6].error_code == 'Z006'    #RÚV
-    print(s)
 
 
 def test_inflectional_errors(verbose=False):
