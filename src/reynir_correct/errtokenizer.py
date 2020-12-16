@@ -1613,7 +1613,6 @@ def fix_capitalization(
         # meanings in the corrected error set (SET_REV),
         # the word was correctly capitalized
         if all(m.stofn not in stems for m in meanings):
-            #print([m.stofn for m in meanings])
             return False
         # Potentially wrong, but check for a corner
         # case: the original word may exist in its
