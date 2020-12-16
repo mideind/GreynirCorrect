@@ -608,7 +608,7 @@ def test_capitalization(verbose=False):
     assert "aríi" in s
     assert "búddisti" in s
     assert "eskimói" in s
-    assert "gyðingur" in s
+    #assert "gyðingur" in s
     assert "Sjálfstæðismaður" in s
     assert "múslími" in s
     assert "sjíti" in s
@@ -616,7 +616,7 @@ def test_capitalization(verbose=False):
     assert g[2].error_code == "Z001"  # aríi
     assert g[4].error_code == "Z001"  # búddisti
     assert g[6].error_code == "Z001"  # eskimói
-    assert g[8].error_code == "Z001"  # gyðingur
+    #assert g[8].error_code == "Z001"  # gyðingur
     assert g[10].error_code == "Z002" # Sjálfstæðismaður
     assert g[12].error_code == "Z001" # múslími
     assert g[14].error_code == "Z001" # sjíti
@@ -677,7 +677,7 @@ def test_capitalization(verbose=False):
     assert g[14].error_code == "Z001"   #þriðjudögum
 
     g = rc.tokenize(
-        "Þau læra Íslensku og Landafræði með Allsherjarþinginu og Óbyggðanefnd en líka um Indóevrópsk mál."
+        "Þau læra Íslensku og Landafræði með Allsherjarþinginu og Öryggisráðinu en líka um Indóevrópsk mál og Óðinshana."
     )
     g = list(g)
     if verbose: dump(g)
@@ -685,16 +685,17 @@ def test_capitalization(verbose=False):
     assert "íslensku" in s
     assert "landafræði" in s
     assert "allsherjarþinginu" in s
-    assert "óbyggðanefnd" in s
+    assert "öryggisráðinu" in s
     assert "indóevrópsk" in s
     assert g[3].error_code == "Z001"    #íslensku
     assert g[5].error_code == "Z001"    #landafræði
     assert g[7].error_code == "Z001"    #allsherjarþinginu
-    assert g[9].error_code == "Z001"    #óbyggðanefnd
+    assert g[9].error_code == "Z001"    #öryggisráðinu
     assert g[13].error_code == "Z001"   #indóevrópsk
+    assert g[16].error_code == "Z001"   #óðinshana
 
     g = rc.tokenize(
-        "Í Vín má kaupa Vinartertu og Rínarvín en Póstmódernismi og Maríutásur eru vinsælar."
+        "Í Vín má kaupa Vínartertu og Rínarvín en Póstmódernismi og Maríutásur eru vinsælar."
     )
     g = list(g)
     if verbose: dump(g)
@@ -704,7 +705,6 @@ def test_capitalization(verbose=False):
     assert "rínarvín" in s
     assert "póstmódernismi" in s
     assert "maríutásur" in s
-    assert g[2].error_code == "Z001"    #Vín
     assert g[5].error_code == "Z001"    #vínartertu
     assert g[7].error_code == "Z001"    #rínarvín
     assert g[9].error_code == "Z001"    #póstmódernismi
