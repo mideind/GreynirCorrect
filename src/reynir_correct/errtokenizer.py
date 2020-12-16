@@ -104,7 +104,7 @@ MONTH_NAMES_CAPITALIZED = (
     "Desember",
 )
 
-ACRONYMS = (    # HÍ og HA ganga kannski ekki hér
+ACRONYMS = frozenset((    # HÍ og HA ganga kannski ekki hér
     "Dv",
     "Rúv",
     "Byko",
@@ -123,7 +123,7 @@ ACRONYMS = (    # HÍ og HA ganga kannski ekki hér
     "Ía",
     "Ka",
     "Hk"
-)
+))
 
 # Word categories and their names
 POS = {
