@@ -655,6 +655,33 @@ def test_acronyms(verbose=False):
     assert g[4].error_code == 'Z006'    #DV
     assert g[6].error_code == 'Z006'    #RÚV
 
+    g = rc.tokenize(
+        "Guðrún lék hlutverk Ms. Abercrombie í þáttunum"
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Ms." in s
+    assert g[4].error_code != "Z006"
+
+    g = rc.tokenize(
+        "Sigurður lék hlutverk Mr. Smith í leikritinu"
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Mr." in s
+    assert g[4].error_code != "Z006"
+
+    g = rc.tokenize(
+        "Hr. Hnetusmjör hélt tónleika í Kópavogi í kvöld"
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Hr." in s
+    assert g[1].error_code != "Z006"
+
 
 def test_inflectional_errors(verbose=False):
     # beygingarvillur
