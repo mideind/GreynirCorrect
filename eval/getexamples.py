@@ -3,7 +3,18 @@
 from collections import defaultdict
 import xml.etree.ElementTree as ET
 import glob
-from typing import Dict, List, Optional, Union, Tuple, Iterable, cast, NamedTuple, Any, DefaultDict
+from typing import (
+    Dict,
+    List,
+    Optional,
+    Union,
+    Tuple,
+    Iterable,
+    cast,
+    NamedTuple,
+    Any,
+    DefaultDict,
+)
 from tokenizer import detokenize, Tok, TOK
 
 # Default glob path of the development corpus TEI XML files to be processed
@@ -12,14 +23,14 @@ _DEV_PATH = "iceErrorCorpus/data/**/*.xml"
 # Default glob path of the test corpus TEI XML files to be processed
 _TEST_PATH = "iceErrorCorpus/testCorpus/**/*.xml"
 
-CATS = DefaultDict(list)
+CATS: DefaultDict[str, List[str]] = defaultdict(list)
 
 OUT_OF_SCOPE = {
     "agreement-pro",  # samræmi fornafns við undanfara  grammar ...vöðvahólf sem sé um dælinguna. Hann dælir blóðinu > Það dælir blóðinu
     "aux",  # meðferð vera og verða, hjálparsagna   wording mun verða eftirminnilegt > mun vera eftirminnilegt
     "bracket4square",  # svigi fyrir hornklofa  punctuation (Portúgal) > [Portúgal]
-    #"collocation-idiom",  # fast orðasamband með ógagnsæja merkingu collocation hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
-    #"collocation",  # fast orðasamband  collocation fram á þennan dag > fram til þessa dags
+    # "collocation-idiom",  # fast orðasamband með ógagnsæja merkingu collocation hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
+    # "collocation",  # fast orðasamband  collocation fram á þennan dag > fram til þessa dags
     "comma4conjunction",  # komma fyrir samtengingu punctuation ...fara með vald Guðs, öll löggjöf byggir... > ...fara með vald Guðs og öll löggjöf byggir...
     "comma4dash",  # komma fyrir bandstrik  punctuation , > -
     "comma4ex",  # komma fyrir upphrópun    punctuation Viti menn, almúginn... > Viti menn! Almúginn...
@@ -93,6 +104,7 @@ def element_text(element: ET.Element) -> str:
         including all its subelements, if any """
     return "".join(element.itertext())
 
+
 def correct_spaces(tokens: Iterable[Tuple[str, str]]) -> str:
     """ Returns a string with a reasonably correct concatenation
         of the tokens, where each token is a (tag, text) tuple. """
@@ -100,6 +112,7 @@ def correct_spaces(tokens: Iterable[Tuple[str, str]]) -> str:
         Tok(TOK.PUNCTUATION if tag == "c" else TOK.WORD, txt, None)
         for tag, txt in tokens
     )
+
 
 def get_examples(fpath: str) -> None:
 
@@ -135,7 +148,7 @@ def get_examples(fpath: str) -> None:
             errors = []
             # A dictionary of errors by their index (idx field)
             # Error corpora annotations for sentences marked as unparsable
-            # Enumerate through the tokens in the sentence 
+            # Enumerate through the tokens in the sentence
             for el in sent:
                 tag = el.tag[nl:]
                 if tag == "revision":
@@ -168,7 +181,7 @@ def get_examples(fpath: str) -> None:
                         attr = el_err.attrib
                         # Collect relevant information into a dict
                         xtype: str = attr["xtype"].lower()
-                        error = defaultdict(
+                        error: DefaultDict[str, Union[int, bool, str]] = defaultdict(
                             start=start,
                             end=end,
                             rev_id=rev_id,
@@ -181,7 +194,7 @@ def get_examples(fpath: str) -> None:
                         errors.append(error)
                 else:
                     tokens.append((tag, element_text(el)))
-            
+
             # Reconstruct the original sentence
             # TODO switch for sentence from original text file
             text = correct_spaces(tokens)
@@ -189,14 +202,17 @@ def get_examples(fpath: str) -> None:
                 # Nothing to do: drop this and go to the next sentence
                 continue
             for item in errors:
-                CATS[item["xtype"]].append('{}\t{}-{}\t{}\t{}\t{}\n'.format(
-                    text, 
-                    item["start"],
-                    item["end"],
-                    item["in_scope"],
-                    item["original"],
-                    item["corrected"],
-                    ))
+                xtype = cast(str, item["xtype"])
+                CATS[xtype].append(
+                    "{}\t{}-{}\t{}\t{}\t{}\n".format(
+                        text,
+                        item["start"],
+                        item["end"],
+                        item["in_scope"],
+                        item["original"],
+                        item["corrected"],
+                    )
+                )
 
     except ET.ParseError:
         # Already handled the exception: exit as gracefully as possible
@@ -209,6 +225,6 @@ if __name__ == "__main__":
         get_examples(fpath)
 
     for xtype in CATS:
-        with open('examples/'+xtype+'.txt', 'w') as myfile:
+        with open("examples/" + xtype + ".txt", "w") as myfile:
             for example in CATS[xtype]:
                 myfile.write(example)
