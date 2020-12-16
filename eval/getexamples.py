@@ -7,10 +7,10 @@ from typing import Dict, List, Optional, Union, Tuple, Iterable, cast, NamedTupl
 from tokenizer import detokenize, Tok, TOK
 
 # Default glob path of the development corpus TEI XML files to be processed
-_DEV_PATH = "../../mt/iceErrorCorpus/data/**/*.xml"
+_DEV_PATH = "iceErrorCorpus/data/**/*.xml"
 
 # Default glob path of the test corpus TEI XML files to be processed
-_TEST_PATH = "../../mt/iceErrorCorpus/testCorpus/**/*.xml"
+_TEST_PATH = "iceErrorCorpus/testCorpus/**/*.xml"
 
 CATS = DefaultDict(list)
 
