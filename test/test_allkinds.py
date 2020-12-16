@@ -642,6 +642,36 @@ def test_capitalization(verbose=False):
     assert g[12].error_code == "Z003"   # nóvember
 
     g = rc.tokenize(
+        "Hann er Suðurkóreskur og er suður-kóreumaður frá suður-kóreu."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "suðurkóreskur" in s
+    #assert "Suður-Kóreumaður" in s
+    #assert "Suður-Kóreu" in s
+
+    g = rc.tokenize(
+        "Hann er Norðurkóreskur og er norður-kóreumaður frá norður-kóreu."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "norðurkóreskur" in s
+    #assert "Norður-Kóreumaður" in s
+    #assert "Norður-Kóreu" in s
+
+    g = rc.tokenize(
+        "Hann er Nýsjálenskur og er nýsjálendingur frá nýja-sjálandi."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "nýsjálenskur" in s
+    assert "Nýsjálendingur" in s
+    #assert "Nýja-Sjálandi" in s
+
+    g = rc.tokenize(
         "Haldið er upp á Páskadag, Verslunarmannahelgina, Jólin og Bóndadag."
     )
     g = list(g)
@@ -1406,3 +1436,4 @@ def test_corrected_sentences(verbose=False):
 
 if __name__ == "__main__":
     #pass
+    test_capitalization()
