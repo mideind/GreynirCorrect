@@ -1575,8 +1575,6 @@ def fix_capitalization(
             # Danskur -> danskur
             rev_word = word.lower()
             lower = False
-            #if word == 'Óbyggðanefnd':
-            #    print(word)
         elif word.islower():
             if len(word) >= 3 and word[1] == "-":
                 if word[0] in "abcdefghijklmnopqrstuvwxyz":
