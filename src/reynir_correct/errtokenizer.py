@@ -1608,10 +1608,15 @@ def fix_capitalization(
             if state == "sentence_start":
                 # A lower case word at the beginning of a sentence is definitely wrong
                 return True
+            if "-" in word and word.split("-")[0] in {"norður", "suður", "austur", "vestur"}:
+               return True
             # íslendingur -> Íslendingur
             # finni -> Finni
             rev_word = word.title()
         else:
+            if "-" in word and word.split("-")[0] in {"norður", "suður", "austur", "vestur"} \
+                    and word.split("-")[1].istitle():
+                        return True
             # All upper case or other strange capitalization:
             # don't bother
             return False
@@ -1659,14 +1664,14 @@ def fix_capitalization(
         # !!! if token.error is not None
         if token.kind in {TOK.WORD, TOK.PERSON, TOK.ENTITY}:
             if is_wrong(token):
-                if token.txt.islower():
+                if token.txt.islower() or "-" in token.txt and token.txt.split("-")[0].islower():
                     # Token is lowercase but should be capitalized
                     original_txt = token.txt
                     # We set at_sentence_start to True because we want
                     # a fallback to lowercase matches
                     correct = (
                         token.txt.title()
-                        if " " in token.txt
+                        if " " in token.txt or "-" in token.txt
                         else token.txt.capitalize()
                     )
                     w, m = db.lookup_word(correct, True)
