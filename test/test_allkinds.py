@@ -672,6 +672,26 @@ def test_capitalization(verbose=False):
     #assert "Nýja-Sjálandi" in s
 
     g = rc.tokenize(
+        "Hann er Suðurafrískur og er suður-afríkumaður frá suður-afríku."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    #assert "suðurafrískur" in s
+    #assert "Suður-Afríkumaður" in s
+    #assert "Suður-Afríku" in s
+    print(s)
+
+    g = rc.tokenize(
+        "Þau heimsóttu norðurland og hittu norðlendinga."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Norðurland" in s
+    assert "Norðlendinga" in s
+
+    g = rc.tokenize(
         "Haldið er upp á Páskadag, Verslunarmannahelgina, Jólin og Bóndadag."
     )
     g = list(g)
