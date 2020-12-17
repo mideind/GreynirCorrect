@@ -1456,4 +1456,4 @@ def test_corrected_sentences(verbose=False):
 
 if __name__ == "__main__":
     #pass
-    test_capitalization()
+    
