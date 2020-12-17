@@ -1619,7 +1619,7 @@ def fix_capitalization(
         # original case in a non-noun/adjective category,
         # such as "finni" and "finna" as a verb
         tval = cast(Iterable[BIN_Meaning], token.val)
-        if lower and any(m.ordfl not in {"kk", "kvk", "hk"} for m in tval):
+        if lower and any(m.ordfl not in {"kk", "kvk", "hk", "lo"} for m in tval):
             # Not definitely wrong
             return False
         # Definitely wrong
