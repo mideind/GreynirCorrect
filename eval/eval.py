@@ -121,7 +121,6 @@ CategoryStatsDict = Dict[str, SentenceStatsDict]
 # This tuple should agree with the parameters of the add_sentence() function
 StatsTuple = Tuple[str, int, bool, bool, int, int, int, int, int, int, int, int]
 
-
 # Counter of tp, tn, right_corr, wrong_corr, right_span, wrong_span
 TypeFreqs = DefaultDict[str, int] 
 
@@ -851,7 +850,7 @@ class Stats:
         # We employ a trick to make the defaultdicts picklable between processes:
         # instead of the usual lambda: defaultdict(int), use defaultdict(int).copy
         self._sentences: CategoryStatsDict = CategoryStatsDict(SentenceStatsDict(int).copy)
-        self._errtypes: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs(int).copy) 
+        self._errtypes: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs(int).copy)
         self._true_positives: Dict[str, int] = defaultdict(int)
         self._false_negatives: Dict[str, int] = defaultdict(int)
         self._tp: Dict[str, int] = defaultdict(int)
@@ -1069,7 +1068,6 @@ class Stats:
                 FN = Errors in category z in reference but not hypothesis
                 Recall = TPz/(TPz+FPz)
                 Precision = TPz/(TPz+FNz)
-            """ 
             """
             catdict: CatResultDict = { k: v for k, v in self._errtypes[cat].items() }
             tp = cast(int, catdict.get("tp", 0))
@@ -1083,14 +1081,12 @@ class Stats:
                 catdict["precision"] = "N/A"
                 catdict["fscore"] = "N/A"
             else:
-
                 # Recall
                 if tp + fn != 0:
                     recall = catdict["recall"] = tp / (tp + fn)
                 # Precision
                 if tp + fp != 0:
                     precision = catdict["precision"] = tp / (tp + fp)
-
                 if recall + precision > 0.0:
                     catdict["fscore"] = 2 * precision * recall / (precision + recall)
                 else:
@@ -1378,7 +1374,6 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
     ups: Dict[str, int] = defaultdict(int)
     # Stats for each error type (xtypes)
     errtypefreqs: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs(int).copy)
-
 
     try:
 
