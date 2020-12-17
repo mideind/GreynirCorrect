@@ -77,7 +77,18 @@
 
 """
 
-from typing import Dict, List, Optional, Union, Tuple, Iterable, cast, NamedTuple, Any, DefaultDict
+from typing import (
+    Dict,
+    List,
+    Optional,
+    Union,
+    Tuple,
+    Iterable,
+    cast,
+    NamedTuple,
+    Any,
+    DefaultDict,
+)
 
 import os
 from collections import defaultdict
@@ -113,10 +124,12 @@ StatsTuple = Tuple[str, int, bool, bool, int, int, int, int, int, int, int, int]
 
 # Counter of tp, tn, right_corr, wrong_corr, right_span, wrong_span
 TypeFreqs = DefaultDict[str, int] 
+
 # Stats for each error type for each content category
 # tp, fn, right_corr, wrong_corr, right_span, wrong_span
 ErrTypeStatsDict = DefaultDict[str, TypeFreqs]
 
+CatResultDict = Dict[str, Union[int, float, str]]
 
 # Create a lock to ensure that only one process outputs at a time
 OUTPUT_LOCK = multiprocessing.Lock()
@@ -134,8 +147,8 @@ OUT_OF_SCOPE = {
     "agreement-pro",  # samræmi fornafns við undanfara  grammar ...vöðvahólf sem sé um dælinguna. Hann dælir blóðinu > Það dælir blóðinu
     "aux",  # meðferð vera og verða, hjálparsagna   wording mun verða eftirminnilegt > mun vera eftirminnilegt
     "bracket4square",  # svigi fyrir hornklofa  punctuation (Portúgal) > [Portúgal]
-    #"collocation-idiom",  # fast orðasamband með ógagnsæja merkingu collocation hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
-    #"collocation",  # fast orðasamband  collocation fram á þennan dag > fram til þessa dags
+    # "collocation-idiom",  # fast orðasamband með ógagnsæja merkingu collocation hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
+    # "collocation",  # fast orðasamband  collocation fram á þennan dag > fram til þessa dags
     "comma4conjunction",  # komma fyrir samtengingu punctuation ...fara með vald Guðs, öll löggjöf byggir... > ...fara með vald Guðs og öll löggjöf byggir...
     "comma4dash",  # komma fyrir bandstrik  punctuation , > -
     "comma4ex",  # komma fyrir upphrópun    punctuation Viti menn, almúginn... > Viti menn! Almúginn...
@@ -835,8 +848,10 @@ class Stats:
         """ Initialize empty defaults for the stats collection """
         self._starttime = datetime.utcnow()
         self._files: Dict[str, int] = defaultdict(int)
-        self._sentences: CategoryStatsDict = defaultdict(lambda: defaultdict(int))
-        self._errtypes: ErrTypeStatsDict = DefaultDict(TypeFreqs(int).copy)   # DefaultDict(TypeFreqs(int).copy) 
+        # We employ a trick to make the defaultdicts picklable between processes:
+        # instead of the usual lambda: defaultdict(int), use defaultdict(int).copy
+        self._sentences: CategoryStatsDict = CategoryStatsDict(SentenceStatsDict(int).copy)
+        self._errtypes: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs(int).copy) 
         self._true_positives: Dict[str, int] = defaultdict(int)
         self._false_negatives: Dict[str, int] = defaultdict(int)
         self._tp: Dict[str, int] = defaultdict(int)
@@ -860,7 +875,7 @@ class Stats:
         true_positives: Dict[str, int],
         false_negatives: Dict[str, int],
         ups: Dict[str, int],
-        errtypefreqs: ErrTypeStatsDict
+        errtypefreqs: ErrTypeStatsDict,
     ) -> None:
         """ Add the result of a process() call to the statistics collection """
         for sent_result in stats:
@@ -872,9 +887,9 @@ class Stats:
         for k, v in ups.items():
             self._tp_unparsables[k] += v
 
-        for okey, d in errtypefreqs.items():        # okey = xtype; d = DefaultDict[str, int]
-            for ikey, v in d.items():               # ikey = tp, fn, ...
-                self._errtypes[okey][ikey] += v     # v = freq for each metric
+        for okey, d in errtypefreqs.items():  # okey = xtype; d = DefaultDict[str, int]
+            for ikey, vv in d.items():  # ikey = tp, fn, ...
+                self._errtypes[okey][ikey] += vv  # v = freq for each metric
 
     def add_sentence(
         self, category: str, num_tokens: int, ice_error: bool, gc_error: bool,
@@ -919,7 +934,9 @@ class Stats:
 
         # Accumulate standard output in a buffer, for writing in one fell
         # swoop at the end (after acquiring the output lock)
-        num_sentences: int = sum(cast(int, d["count"]) for d in self._sentences.values())
+        num_sentences: int = sum(
+            cast(int, d["count"]) for d in self._sentences.values()
+        )
 
         def output_duration() -> None:
             """ Calculate the duration of the processing """
@@ -957,12 +974,10 @@ class Stats:
             """ Write basic values for sentences and their freqs to stdout """
             if errwhole:
                 bprint(
-                    f"\n{NAMES[bv]}:             {val:6} {perc(val, whole):>6}% / {perc(val, errwhole):>6}%"
+                    f"\n{NAMES[bv]+':':<20}        {val:6} {perc(val, whole):>6}% / {perc(val, errwhole):>6}%"
                 )
             else:
-                bprint(
-                    f"\n{NAMES[bv]}:             {val:6} {perc(val, whole):>6}%"
-                )
+                bprint(f"\n{NAMES[bv]+':':<20}        {val:6} {perc(val, whole):>6}%")
             for c in CATEGORIES:
                 bprint(f"   {c:<13}:           {self._sentences[c][bv]:6}")
 
@@ -1024,7 +1039,9 @@ class Stats:
                 else:
                     bprint(f"   {c:<13}:           N/A")
 
-        def calc_recall(right: int, wrong: int, rights: str, wrongs: str, recs: str) -> None:
+        def calc_recall(
+            right: int, wrong: int, rights: str, wrongs: str, recs: str
+        ) -> None:
             """ Calculate precision for binary classification """
             # Recall
             if right + wrong == 0:
@@ -1043,7 +1060,7 @@ class Stats:
                     rc = d[recs] = d[rights] / denominator
                     bprint(f"   {c:<13}:           {rc:1.4f}")
 
-        def calc_error_category_metrics(cat: str) -> None:
+        def calc_error_category_metrics(cat: str) -> CatResultDict:
             """ Calculates precision, recall and f1-score for a single error category
                 N = Number of errors in category z in reference corpus, 
                 Nall =  number of tokens
@@ -1053,37 +1070,48 @@ class Stats:
                 Recall = TPz/(TPz+FPz)
                 Precision = TPz/(TPz+FNz)
             """ 
-            catdict = self._errtypes[cat]
-            tp : int = catdict["tp"]
-            fn : int = catdict["fn"]
-            fp : int = catdict["fp"]
-            recall : float = 0.0
-            precision : float = 0.0
+            """
+            catdict: CatResultDict = { k: v for k, v in self._errtypes[cat].items() }
+            tp = cast(int, catdict.get("tp", 0))
+            fn = cast(int, catdict.get("fn", 0))
+            fp = cast(int, catdict.get("fp", 0))
+            recall: float = 0.0
+            precision: float = 0.0
             catdict["freq"] = tp + fn
-            if tp + fn + fp == 0: # No values in category
+            if tp + fn + fp == 0:  # No values in category
                 catdict["recall"] = "N/A"
                 catdict["precision"] = "N/A"
                 catdict["fscore"] = "N/A"
             else:
 
                 # Recall
-                if tp+fn != 0:
-                    recall = catdict["recall"] = tp/(tp+fn)
+                if tp + fn != 0:
+                    recall = catdict["recall"] = tp / (tp + fn)
                 # Precision
-                if tp+fp != 0:
-                    precision = catdict["precision"] = tp/(tp+fp)
+                if tp + fp != 0:
+                    precision = catdict["precision"] = tp / (tp + fp)
 
                 if recall + precision > 0.0:
                     catdict["fscore"] = 2 * precision * recall / (precision + recall)
                 else:
                     catdict["fscore"] = 0.0
                 # Correction recall
-                if catdict["right_corr"] > 0.0:
-                    catdict["corr_rec"] = catdict["right_corr"] / (catdict["right_corr"] + catdict["wrong_corr"])
-                
+                right_corr = cast(int, catdict.get("right_corr", 0))
+                if right_corr > 0:
+                    catdict["corr_rec"] = right_corr / (
+                        right_corr + cast(int, catdict.get("wrong_corr", 0))
+                    )
+                else:
+                    catdict["corr_rec"] = "N/A"
                 # Span recall
-                if catdict["right_span"] > 0.0:
-                    catdict["span_rec"] = catdict["right_span"] / (catdict["right_span"] + catdict["wrong_span"])
+                right_span = cast(int, catdict.get("right_span", 0))
+                if right_span > 0:
+                    catdict["span_rec"] = right_span / (
+                        right_span + cast(int, catdict.get("wrong_span", 0))
+                    )
+                else:
+                    catdict["span_rec"] = "N/A"
+            return catdict
 
         def output_sentence_scores() -> None:
             """ Calculate and write sentence scores to stdout """
@@ -1096,10 +1124,18 @@ class Stats:
 
             # Total number of true negatives found
             bprint(f"\nResults for error detection for whole sentences")
-            true_positives: int = sum(cast(int, d["true_positives"]) for d in self._sentences.values())
-            true_negatives: int = sum(cast(int, d["true_negatives"]) for d in self._sentences.values())
-            false_positives: int = sum(cast(int, d["false_positives"]) for d in self._sentences.values())
-            false_negatives: int = sum(cast(int, d["false_negatives"]) for d in self._sentences.values())
+            true_positives: int = sum(
+                cast(int, d["true_positives"]) for d in self._sentences.values()
+            )
+            true_negatives: int = sum(
+                cast(int, d["true_negatives"]) for d in self._sentences.values()
+            )
+            false_positives: int = sum(
+                cast(int, d["false_positives"]) for d in self._sentences.values()
+            )
+            false_negatives: int = sum(
+                cast(int, d["false_negatives"]) for d in self._sentences.values()
+            )
 
             write_basic_value(true_positives, "true_positives", num_sentences)
             write_basic_value(true_negatives, "true_negatives", num_sentences)
@@ -1112,7 +1148,12 @@ class Stats:
             if num_sentences == 0:
                 result = "N/A"
             else:
-                result = perc(true_results, num_sentences) + "%/" + perc(false_results, num_sentences) + "%"
+                result = (
+                    perc(true_results, num_sentences)
+                    + "%/"
+                    + perc(false_results, num_sentences)
+                    + "%"
+                )
             bprint(f"\nTrue/false split: {result:>16}")
             for c in CATEGORIES:
                 d = self._sentences[c]
@@ -1157,7 +1198,9 @@ class Stats:
 
             bprint(f"\n\nResults for error detection within sentences")
 
-            num_tokens = sum(cast(int, d["num_tokens"]) for d in self._sentences.values())
+            num_tokens = sum(
+                cast(int, d["num_tokens"]) for d in self._sentences.values()
+            )
             bprint(f"\nTokens processed:           {num_tokens:6}")
             for c in CATEGORIES:
                 bprint(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
@@ -1178,9 +1221,13 @@ class Stats:
             # Stiff: Of all errors in error corpora, how many get the right correction?
             # Loose: Of all errors the tool correctly finds, how many get the right correction?
             # Can only calculate recall.
-            bprint(f"\nResults for error correction")  
-            right_corr = sum(cast(int, d["right_corr"]) for d in self._sentences.values())
-            wrong_corr = sum(cast(int, d["wrong_corr"]) for d in self._sentences.values())
+            bprint(f"\nResults for error correction")
+            right_corr = sum(
+                cast(int, d["right_corr"]) for d in self._sentences.values()
+            )
+            wrong_corr = sum(
+                cast(int, d["wrong_corr"]) for d in self._sentences.values()
+            )
             write_basic_value(right_corr, "right_corr", num_tokens, tp)
             write_basic_value(wrong_corr, "wrong_corr", num_tokens, tp)
             
@@ -1191,8 +1238,12 @@ class Stats:
             # Can only calculate recall.
 
             bprint(f"\nResults for error span")
-            right_span = sum(cast(int, d["right_span"]) for d in self._sentences.values())
-            wrong_span = sum(cast(int, d["wrong_span"]) for d in self._sentences.values())
+            right_span = sum(
+                cast(int, d["right_span"]) for d in self._sentences.values()
+            )
+            wrong_span = sum(
+                cast(int, d["wrong_span"]) for d in self._sentences.values()
+            )
             write_basic_value(right_span, "right_span", num_tokens, tp)
             write_basic_value(wrong_span, "wrong_span", num_tokens, tp)
             calc_recall(right_span, wrong_span, "right_span", "wrong_span", "spanrecall")
@@ -1326,7 +1377,7 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
     # Counter of iceErrorCorpus error types in unparsable sentences
     ups: Dict[str, int] = defaultdict(int)
     # Stats for each error type (xtypes)
-    errtypefreqs: ErrTypeStatsDict = DefaultDict(TypeFreqs(int).copy)  # DefaultDict(TypeFreqs(int).copy)
+    errtypefreqs: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs(int).copy)
 
 
     try:
@@ -1511,8 +1562,10 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
 
             gc_error, ice_error = sentence_results(s.annotations, errors)
 
-            def token_results(hyp_annotations: List[gc.Annotation], ref_annotations: List[ErrorDict]) -> Tuple[int, int, int, int, int, int, int]:
-                tp, fp, fn = 0, 0, 0 # tn comes from len(tokens)-(tp+fp+fn) later on
+            def token_results(
+                hyp_annotations: List[gc.Annotation], ref_annotations: List[ErrorDict]
+            ) -> Tuple[int, int, int, int, int, int, int]:
+                tp, fp, fn = 0, 0, 0  # tn comes from len(tokens)-(tp+fp+fn) later on
                 right_corr, wrong_corr = 0, 0
                 right_span, wrong_span = 0, 0
 
@@ -1527,52 +1580,54 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
                     while True:
 
                         # 1. Error detection
-                        xtoks = set(range(xtok.start, xtok.end+1))
-                        ytoks = set(range(cast(int, ytok["start"]), cast(int, ytok["end"])+1))
-                        ytype = ytok["xtype"]
+                        xtoks = set(range(xtok.start, xtok.end + 1))
+                        ytoks = set(
+                            range(cast(int, ytok["start"]), cast(int, ytok["end"]) + 1)
+                        )
+                        ytype = cast(str, ytok["xtype"])
                         if xtoks & ytoks:
-                            tp+=1
+                            tp += 1
                             errtypefreqs[ytype]["tp"] += 1
                             # 2. Span detection
                             if xtoks == ytoks:
-                                right_span+=1
+                                right_span += 1
                                 errtypefreqs[ytype]["right_span"] += 1
                             else:
-                                wrong_span+=1
+                                wrong_span += 1
                                 errtypefreqs[ytype]["wrong_span"] += 1
                             # 3. Error correction
                             # Get the 'corrected' attribute if available,
                             # otherwise use xtok['suggest']
                             xcorr = getattr(xtok, "corrected", xtok.suggest)
                             if xcorr == ytok["corrected"]:
-                                right_corr+=1
+                                right_corr += 1
                                 errtypefreqs[ytype]["right_corr"] += 1
                             else:
-                                wrong_corr+=1
+                                wrong_corr += 1
                                 errtypefreqs[ytype]["wrong_corr"] += 1
                             xtok = next(x)
                             ytok = next(y)
                         else:
                             if xtok.start < ytok["start"]:
-                                fp+=1
+                                fp += 1
                                 errtypefreqs[ytype]["fp"] += 1
                                 xtok = next(x)
                             elif xtok.start > ytok["start"]:
                                 ytok = next(y)
-                                fn+=1
+                                fn += 1
                                 errtypefreqs[ytype]["fn"] += 1
                             else:
                                 xtok = next(x)
-                                ytok = next(y)       
-                                fp+=1
-                                fn+=1           
+                                ytok = next(y)
+                                fp += 1
+                                fn += 1
                                 errtypefreqs[ytype]["fn"] += 1
                 except StopIteration:
                     pass
-                if xtok and not ytok: # Because of exception to try
+                if xtok and not ytok:  # Because of exception to try
                     pass
                     # false positive
-                if ytok and not xtok: # Because of exception to try
+                if ytok and not xtok:  # Because of exception to try
                     pass
                     # false negative
                 return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
@@ -1598,7 +1653,11 @@ def process(fpath_and_category: Tuple[str, str],) -> Dict[str, Any]:
 
     # This return value will be pickled and sent back to the parent process
     return dict(
-        stats=stats, true_positives=true_positives, false_negatives=false_negatives, ups=ups, errtypefreqs=errtypefreqs
+        stats=stats,
+        true_positives=true_positives,
+        false_negatives=false_negatives,
+        ups=ups,
+        errtypefreqs=errtypefreqs,
     )
 
 
