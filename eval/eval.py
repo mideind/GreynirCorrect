@@ -122,7 +122,7 @@ CategoryStatsDict = Dict[str, SentenceStatsDict]
 StatsTuple = Tuple[str, int, bool, bool, int, int, int, int, int, int, int, int]
 
 # Counter of tp, tn, right_corr, wrong_corr, right_span, wrong_span
-TypeFreqs = DefaultDict[str, int] 
+TypeFreqs = DefaultDict[str, int]
 
 # Stats for each error type for each content category
 # tp, fn, right_corr, wrong_corr, right_span, wrong_span
