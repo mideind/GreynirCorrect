@@ -641,6 +641,24 @@ def test_capitalization(verbose=False):
     assert g[10].error_code == "Z002"   # Danir
     assert g[12].error_code == "Z003"   # nóvember
 
+    g = rc.tokenize(
+        "Í norður-Belfast og norður-belfast er rigning en ekki í suður-Afríku."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Norður-Belfast" in s
+    assert "Suður-Afríku" in s
+
+    g = rc.tokenize(
+        "Þau gengu frá norður-noregi og þaðan á norður-hliðina og norður- og suðurhlutann."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Norður-Noregi" in s
+    #assert "norðurhliðina" in s     #verður að Norður-Hliðina, vandamál sem tengist frekar extra-dash?
+    print(s)
 
 def test_acronyms(verbose=False):
 
@@ -1379,3 +1397,4 @@ def test_corrected_sentences(verbose=False):
 
 if __name__ == "__main__":
     #pass
+    test_capitalization()
