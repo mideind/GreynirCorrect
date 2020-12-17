@@ -658,7 +658,7 @@ def test_capitalization(verbose=False):
     s = normalize(g)
     assert "Norður-Noregi" in s
     #assert "norðurhliðina" in s     #verður að Norður-Hliðina, vandamál sem tengist frekar extra-dash?
-    print(s)
+    assert "norður-" in s
 
 def test_acronyms(verbose=False):
 
