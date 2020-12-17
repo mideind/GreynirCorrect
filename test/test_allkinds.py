@@ -677,19 +677,19 @@ def test_capitalization(verbose=False):
     g = list(g)
     if verbose: dump(g)
     s = normalize(g)
-    #assert "suðurafrískur" in s
+    assert "suðurafrískur" in s
     #assert "Suður-Afríkumaður" in s
     #assert "Suður-Afríku" in s
-    print(s)
 
     g = rc.tokenize(
-        "Þau heimsóttu norðurland og hittu norðlendinga."
+        "Þau heimsóttu norðurland og hittu norðlendinga í Meistaradeild."
     )
     g = list(g)
     if verbose: dump(g)
     s = normalize(g)
     assert "Norðurland" in s
     assert "Norðlendinga" in s
+    assert "meistaradeild" in s
 
     g = rc.tokenize(
         "Haldið er upp á Páskadag, Verslunarmannahelgina, Jólin og Bóndadag."
