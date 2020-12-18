@@ -195,6 +195,12 @@ def emulate_case(s: str, template: str) -> str:
     return s
 
 
+def is_cap(word: str) -> bool:
+    """ Return True if the word is capitalized, i.e. starts with an
+        uppercase character and is otherwise lowercase """
+    return word[0].isupper() and (len(word) == 1 or word[1:].islower())
+
+
 class CorrectToken:
 
     """ This class sneakily replaces the tokenizer.Tok tuple in the tokenization
@@ -303,6 +309,13 @@ class CorrectToken:
     def set_capitalization(self, cap: str) -> None:
         """ Set the capitalization state for this token """
         self._cap = cap
+
+    def copy_capitalization(self, other: "CorrectToken") -> None:
+        """ Copy the capitalization state from another CorrectToken instance """
+        if isinstance(other, list):
+            other = other[0]
+        if isinstance(other, CorrectToken):
+            self._cap = other._cap
 
     @property
     def cap_sentence_start(self) -> bool:
@@ -649,8 +662,8 @@ def parse_errors(
         """
         txt = token.txt
         next_txt = next_token.txt
-        if txt is None or next_txt is None or next_txt.istitle():
-            # If the latter part is in title case, we don't see it
+        if txt is None or next_txt is None or is_cap(next_txt):
+            # If the latter part is capitalized, we don't see it
             # as a part of split compound
             return False
         if next_txt.isupper() and not txt.isupper():
@@ -862,8 +875,8 @@ def parse_errors(
                     token = next_token
                     at_sentence_start = False
                     continue
-                if not next_token.txt or next_token.txt.istitle():
-                    # If the latter part is in title case, we don't see it
+                if not next_token.txt or is_cap(next_token.txt):
+                    # If the latter part is capitalized, we don't see it
                     # as a part of a split compound
                     yield token
                     token = next_token
@@ -1048,8 +1061,8 @@ class MultiwordErrorStream(MatchingStream):
             if i == 0:
                 # Fix capitalization of the first word
                 # !!! TODO: handle all-uppercase
-                if tq[0].txt.istitle():
-                    w = w.title()
+                if is_cap(tq[0].txt):
+                    w = w.capitalize()
             ct = cast(CorrectToken, token_ctor.Word(w, m))
             if i == 0:
                 ct.set_error(
@@ -1575,6 +1588,8 @@ def fix_capitalization(
     """ Annotate tokens with errors if they are capitalized incorrectly """
 
     stems = CapitalizationErrors.SET_REV
+    wrong_stems = CapitalizationErrors.SET
+
     # TODO STILLING - hér er blanda. Orð sem eiga alltaf að vera hástafa en birtast lágstafa eru ósh.,
     # TODO STILLING - orð sem eiga alltaf að vera lágstafa nema í byrjun setningar eru sh. leiðrétting.
 
@@ -1586,11 +1601,8 @@ def fix_capitalization(
     def is_wrong(token: CorrectToken) -> bool:
         """ Return True if the word is wrongly capitalized """
         word = token.txt
-        if " " in word:
-            # Multi-word token: can't be listed in [capitalization_errors]
-            return False
         lower = True
-        if word.istitle():
+        if is_cap(word):
             if state != "in_sentence":
                 # An uppercase word at the beginning of a sentence can't be wrong
                 return False
@@ -1610,7 +1622,7 @@ def fix_capitalization(
                 return True
             # íslendingur -> Íslendingur
             # finni -> Finni
-            rev_word = word.title()
+            rev_word = word.capitalize()
         else:
             # All upper case or other strange capitalization:
             # don't bother
@@ -1633,6 +1645,10 @@ def fix_capitalization(
                 # If the word has no non-composite meanings
                 # in its original case, this is probably an error
                 return True
+        # If we find any of the 'wrong' capitalizations in the error set,
+        # this is definiteluy an error
+        if any(emulate_case(m.stofn, word) in wrong_stems for m in meanings):
+            return True
         # If we don't find any of the stems of the "corrected"
         # meanings in the corrected error set (SET_REV),
         # the word was correctly capitalized
@@ -1662,8 +1678,7 @@ def fix_capitalization(
                 if token.txt.islower():
                     # Token is lowercase but should be capitalized
                     original_txt = token.txt
-                    # We set at_sentence_start to True because we want
-                    # a fallback to lowercase matches
+                    # !!! TODO: Maybe the following should be just token.txt.capitalize()
                     correct = (
                         token.txt.title()
                         if " " in token.txt
@@ -1773,13 +1788,37 @@ def late_fix_capitalization(
         return token
 
     at_sentence_start = False
+    stems = CapitalizationErrors.SET
 
     for token in token_stream:
         if token.kind == TOK.S_BEGIN:
             yield token
             at_sentence_start = True
             continue
-        if token.kind == TOK.NUMBER:
+        if token.kind == TOK.WORD:
+            if token.cap_in_sentence and " " in token.txt:
+                # Special check for compounds such as 'félags- og barnamálaráðherra'
+                # that were not checked in fix_capitalization because compounds hadn't
+                # been amalgamated at that point
+                tval = cast(Iterable[BIN_Meaning], token.val)
+                if all(m.stofn in stems for m in tval):
+                    if token.txt[0].isupper():
+                        code = "001"
+                        case = "lág"
+                        correct = token.txt.lower()
+                    else:
+                        code = "002"
+                        case = "há"
+                        correct = token.txt.capitalize()
+                    w, m = db.lookup_word(correct, True)
+                    token = token_ctor.Word(w, m, token = token)
+                    token.set_error(
+                        CapitalizationError(
+                            code,
+                            "Rita á '{0}' með {1}staf".format(token.txt, case)
+                        )
+                    )
+        elif token.kind == TOK.NUMBER:
             if re.match(r"[0-9.,]+$", token.txt) or token.txt.isupper():
                 # '1.234,56' or '24 MILLJÓNIR' is always OK
                 pass
@@ -1876,6 +1915,7 @@ class Correct_TOK(TOK):
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
             ct.copy_error(token)
+            ct.copy_capitalization(token)
         return ct
 
     @staticmethod

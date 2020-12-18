@@ -41,7 +41,7 @@
 
 """
 
-from typing import Dict, Set, List, Tuple
+from typing import Dict, Set, List, Tuple, Optional
 import os
 import locale
 import threading
@@ -50,6 +50,7 @@ from contextlib import contextmanager
 from collections import defaultdict
 
 from reynir.basics import changedlocale, sort_strings, ConfigError, LineReader
+from reynir.bindb import BIN_Db
 
 
 # A set of all valid argument cases
@@ -198,21 +199,73 @@ class CapitalizationErrors:
     SET: Set[str] = set()
     # Reverse capitalization (íslendingur -> Íslendingur, Danskur -> danskur)
     SET_REV: Set[str] = set()
+    _db: Optional[BIN_Db] = None
+
+    @staticmethod
+    def emulate_case(s: str, template: str) -> str:
+        """ Return the string s but emulating the case of the template
+            (lower/upper/capitalized) """
+        if template.isupper():
+            return s.upper()
+        elif template and template[0].isupper():
+            return s.capitalize()
+        return s
+
+    @staticmethod
+    def reverse_capitalization(word: str) -> str:
+        """ Return a word with its capitalization reversed (lower <-> upper case) """
+        if word.islower():
+            # Lowercase word
+            word_rev = word.capitalize()
+        elif word.isupper() and len(word) > 1:
+            # Multi-letter uppercase acronym
+            word_rev = word.capitalize()
+        elif word[0].isupper() and word[1:].islower():
+            # Uppercase word
+            word_rev = word.lower()
+        else:
+            raise ConfigError(
+                "'{0}' cannot have mixed capitalization".format(word)
+            )
+        return word_rev
 
     @staticmethod
     def add(word: str) -> None:
         """ Add the given (wrongly capitalized) word stem to the stem set """
+        # We support compound words such as 'félags- og barnamálaráðherra' here
+        if " " in word:
+            prefix, suffix = word.rsplit(" ", maxsplit=1)
+            prefix += " "
+        else:
+            prefix, suffix = "", word
+        if CapitalizationErrors._db is None:
+            CapitalizationErrors._db = BIN_Db()
+        # The suffix may not be in BÍN except as a compound, and in that
+        # case we want its hyphenated lemma
+        _, m = CapitalizationErrors._db.lookup_word(CapitalizationErrors.reverse_capitalization(suffix))
+        if not m:
+            raise ConfigError(
+                "No BÍN meaning for '{0}' in capitalization_errors section"
+                .format(word)
+            )
+        if not prefix:
+            # This might be something like 'barnamálaráðherra' which comes out
+            # with a lemma of 'barnamála-ráðherra'
+            word = CapitalizationErrors.emulate_case(m[0].stofn, word)
+        else:
+            # This might be something like 'félags- og barnamálaráðherra' which comes out
+            # with a lemma of 'félags- og barnamála-ráðherra'
+            word = prefix + m[0].stofn
         if word in CapitalizationErrors.SET:
             raise ConfigError(
                 "Multiple definition of '{0}' in capitalization_errors section"
                 .format(word)
             )
+        # Construct the reverse casing of the word
+        word_rev = CapitalizationErrors.reverse_capitalization(word)
+        # Add the word and its reverse case to the set of errors
         CapitalizationErrors.SET.add(word)
-        if word.islower():
-            CapitalizationErrors.SET_REV.add(word.title())
-        else:
-            assert word.istitle()
-            CapitalizationErrors.SET_REV.add(word.lower())
+        CapitalizationErrors.SET_REV.add(word_rev)
 
 
 class OwForms:
