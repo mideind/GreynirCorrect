@@ -4,7 +4,7 @@
 
     Error-correcting tokenization layer
 
-    Copyright (C) 2020 Miðeind ehf.
+    Copyright (C) 2021 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -1646,7 +1646,7 @@ def fix_capitalization(
                 # in its original case, this is probably an error
                 return True
         # If we find any of the 'wrong' capitalizations in the error set,
-        # this is definiteluy an error
+        # this is definitely an error
         if any(emulate_case(m.stofn, word) in wrong_stems for m in meanings):
             return True
         # If we don't find any of the stems of the "corrected"

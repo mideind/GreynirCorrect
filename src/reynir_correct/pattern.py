@@ -4,7 +4,7 @@
 
     Sentence tree pattern matching module
 
-    Copyright (C) 2020 Miðeind ehf.
+    Copyright (C) 2021 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -71,12 +71,12 @@ class IcelandicPlaces:
     # are based on convention, not rational rules. :/
     _SUFFIX2PREP = {
         "vík": "í",
-        # "fjörður": "á",  # Skip this since 'í Xfirði' is also common
+        # "fjörður": "á",  # Skip this since 'í *firði' is also common
         "eyri": "á",
         "vogur": "í",
         "brekka": "í",
         "staðir": "á",
-        # "höfn": "á",  # Skip this since 'í Xhöfn' is also common
+        # "höfn": "á",  # Skip this since 'í *höfn' is also common
         "eyjar": "í",
         "ey": "í",
         "nes": "á",
@@ -190,7 +190,7 @@ class PatternMatcher:
             Annotation(
                 start=start,
                 end=end,
-                code="P001",
+                code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
                 suggest=suggest,
@@ -222,7 +222,7 @@ class PatternMatcher:
             Annotation(
                 start=start,
                 end=end,
-                code="P001",
+                code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
                 suggest=suggest,
@@ -249,7 +249,7 @@ class PatternMatcher:
             Annotation(
                 start=start,
                 end=end,
-                code="P001",
+                code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
                 suggest=suggest,
@@ -275,7 +275,7 @@ class PatternMatcher:
             Annotation(
                 start=start,
                 end=end,
-                code="P001",
+                code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
                 suggest=suggest,
@@ -313,6 +313,26 @@ class PatternMatcher:
             )
         )
 
+    def wrong_noun_with_verb(self, match: SimpleTree) -> None:
+        """ Wrong noun used with a verb, for instance
+            'bjóða e-m birginn' instead of 'byrginn' """
+        # TODO: This code is provisional, intended as a placeholder for similar cases
+        start, end = match.span
+        text = "Mælt er með að rita 'bjóða e-m byrginn' í stað 'birginn'."
+        detail = text
+        tidy_text = match.tidy_text
+        suggest = tidy_text.replace("birginn", "byrginn", 1)
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_WRONG_NOUN_WITH_VERB",
+                text=text,
+                detail=detail,
+                suggest=suggest,
+            )
+        )
+
     def wrong_verb_use(
         self, match: SimpleTree, correct_verb: str, context: ContextType,
     ) -> None:
@@ -335,7 +355,7 @@ class PatternMatcher:
             Annotation(
                 start=start,
                 end=end,
-                code="P002",
+                code="P_WRONG_VERB_USE",
                 text=text,
                 detail=detail,
                 suggest=suggest,
@@ -549,6 +569,17 @@ class PatternMatcher:
                 "PP > { P > ('á' | 'í') NP > %maybe_place }",
                 lambda self, match: self.check_pp_with_place(match),
                 cls.ctx_place_names,
+            )
+        )
+
+        # Check use of 'bjóða e-m birginn' instead of 'bjóða e-m byrginn'
+        # !!! TODO: This is a provisional placeholder for similar cases
+        p.append(
+            (
+                "birgir",  # Trigger lemma for this pattern
+                "VP > [ VP > { 'bjóða' } .* NP-IOBJ .* NP-OBJ > { \"birginn\" } ]",
+                cls.wrong_noun_with_verb,
+                None,
             )
         )
 

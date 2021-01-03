@@ -4,7 +4,7 @@
 
     Tests for GreynirCorrect module
 
-    Copyright (C) 2020 by Miðeind ehf.
+    Copyright (C) 2021 by Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -51,31 +51,31 @@ def rc():
 
 def test_verb_af(rc):
     s = "Ráðherrann dáðist af hugrekki stjórnarandstöðunnar."
-    check_sentence(rc, s, [(1, 2, "P001")])
+    check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AF")])
 
     s = (
         "Mig langaði að leita af bílnum, en dáðist svo af hugrekki lögreglukonunnar "
         "að ég gerði það ekki."
     )
-    check_sentence(rc, s, [(3, 4, "P001"), (8, 10, "P001")])
+    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF"), (8, 10, "P_WRONG_PREP_AF")])
 
     s = "Við höfum leitað í allan dag af kettinum, en fundum hann ekki."
-    check_sentence(rc, s, [(2, 4, "P001")])
+    check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AF")])
 
     s = "Allan daginn höfum við leitað af kettinum."
-    check_sentence(rc, s, [(4, 5, "P001")])
+    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AF")])
 
     s = "Páll brosti af töktunum í Gunnu."
-    check_sentence(rc, s, [(1, 2, "P001")], ignore_warnings=True)
+    check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AF")], ignore_warnings=True)
 
     s = "Ég var leitandi af kettinum í allan dag."
-    check_sentence(rc, s, [(2, 3, "P001")])
+    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AF")])
 
     s = "Ég vildi leita af mér allan grun."
     check_sentence(rc, s, [])
 
     s = "Hver er að leita af skrifstofuhúsnæði?"
-    check_sentence(rc, s, [(3, 4, "P001")])
+    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
 
 
 def test_placename_pp(rc):
