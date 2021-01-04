@@ -632,7 +632,7 @@ def test_wrong_abbreviations(verbose=False):
     assert "a.m.k. " in s
     assert "amk. " not in s
     assert g[3].error_code == "A001"
-    assert g[5].error_code == "A001"
+    assert g[5].error_code == "A002"
 
     g = rc.tokenize("Eftir ca 10 mínútur datt hann í pollinn.")
     g = list(g)
@@ -650,7 +650,16 @@ def test_wrong_abbreviations(verbose=False):
     s = normalize(g)
     assert "o.fl. " in s  # TODO býr þetta til en setur aukapunkt aftan við!
     assert "ofl. " not in s
-    assert g[2].error_code == "A001"
+    assert g[2].error_code == "A002"
+
+    g = rc.tokenize("Ríkissjóður tók m.a 30 ma lán.")
+    g = list(g)
+    if verbose:
+        dump(g)
+    s = normalize(g)
+    assert "m.a. " in s
+    assert "m.a " not in s
+    assert g[3].error_code == "A002"
 
 
 def test_capitalization(verbose=False):

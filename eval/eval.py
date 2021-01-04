@@ -88,6 +88,7 @@ from typing import (
     NamedTuple,
     Any,
     DefaultDict,
+    Counter,
 )
 
 import os
@@ -122,7 +123,7 @@ CategoryStatsDict = DefaultDict[str, SentenceStatsDict]
 StatsTuple = Tuple[str, int, bool, bool, int, int, int, int, int, int, int, int]
 
 # Counter of tp, tn, right_corr, wrong_corr, right_span, wrong_span
-TypeFreqs = DefaultDict[str, int]
+TypeFreqs = Counter[str]
 
 # Stats for each error type for each content category
 # tp, fn, right_corr, wrong_corr, right_span, wrong_span
@@ -816,19 +817,19 @@ class Stats:
         # We employ a trick to make the defaultdicts picklable between processes:
         # instead of the usual lambda: defaultdict(int), use defaultdict(int).copy
         self._sentences: CategoryStatsDict = CategoryStatsDict(SentenceStatsDict(int).copy)
-        self._errtypes: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs(int).copy)
-        self._true_positives: Dict[str, int] = defaultdict(int)
-        self._false_negatives: Dict[str, int] = defaultdict(int)
-        self._tp: Dict[str, int] = defaultdict(int)
-        self._tn: Dict[str, int] = defaultdict(int)
-        self._fp: Dict[str, int] = defaultdict(int)
-        self._fn: Dict[str, int] = defaultdict(int)
-        self._right_corr: Dict[str, int] = defaultdict(int)
-        self._wrong_corr: Dict[str, int] = defaultdict(int)
-        self._right_span: Dict[str, int] = defaultdict(int)
-        self._wrong_span: Dict[str, int] = defaultdict(int)
+        self._errtypes: ErrTypeStatsDict = ErrTypeStatsDict(Counter)
+        self._true_positives: DefaultDict[str, int] = defaultdict(int)
+        self._false_negatives: DefaultDict[str, int] = defaultdict(int)
+        self._tp: DefaultDict[str, int] = defaultdict(int)
+        self._tn: DefaultDict[str, int] = defaultdict(int)
+        self._fp: DefaultDict[str, int] = defaultdict(int)
+        self._fn: DefaultDict[str, int] = defaultdict(int)
+        self._right_corr: DefaultDict[str, int] = defaultdict(int)
+        self._wrong_corr: DefaultDict[str, int] = defaultdict(int)
+        self._right_span: DefaultDict[str, int] = defaultdict(int)
+        self._wrong_span: DefaultDict[str, int] = defaultdict(int)
         # reference error code : freq - for hypotheses with the unparsable error code
-        self._tp_unparsables: Dict[str, int] = defaultdict(int)
+        self._tp_unparsables: DefaultDict[str, int] = defaultdict(int)
 
     def add_file(self, category: str) -> None:
         """ Add a processed file in a given content category """
@@ -1434,7 +1435,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
     # Counter of iceErrorCorpus error types in unparsable sentences
     ups: Dict[str, int] = defaultdict(int)
     # Stats for each error type (xtypes)
-    errtypefreqs: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs(int).copy)
+    errtypefreqs: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs().copy)
 
     try:
 

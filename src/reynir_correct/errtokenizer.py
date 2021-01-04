@@ -104,26 +104,27 @@ MONTH_NAMES_CAPITALIZED = (
     "Desember",
 )
 
-ACRONYMS = frozenset((    # HÍ og HA ganga kannski ekki hér
-    "Dv",
-    "Rúv",
-    "Byko",
-    "Íbv",
-    "Pga",
-    "Em",
-    "Ví",
-    "Mr",
-    "Mh",
-    "Ms"
-    "Hr",
-    "Ísí",
-    "Ksí",
-    "Kr",
-    "Fh",
-    "Ía",
-    "Ka",
-    "Hk"
-))
+ACRONYMS = frozenset(
+    (  # HÍ og HA ganga kannski ekki hér
+        "Dv",
+        "Rúv",
+        "Byko",
+        "Íbv",
+        "Pga",
+        "Em",
+        "Ví",
+        "Mr",
+        "Mh",
+        "Ms" "Hr",
+        "Ísí",
+        "Ksí",
+        "Kr",
+        "Fh",
+        "Ía",
+        "Ka",
+        "Hk",
+    )
+)
 
 # Word categories and their names
 POS = {
@@ -143,33 +144,23 @@ SINGLE_LETTER_CORRECTIONS = {
     (True, "I"): "Í",
 }
 
-# Correction of abbreviations
+# Correction of abbreviations that are not present in Abbreviations.WRONGDOTS
 # !!! TODO: Move this to a config file
 WRONG_ABBREVS = {
-    "amk.": "a.m.k.",
     "Amk.": "A.m.k.",
-    "a.m.k": "a.m.k.",
     "A.m.k": "A.m.k.",
-    "etv.": "e.t.v.",
     "Etv.": "E.t.v.",
-    "eþh.": "e.þ.h.",
-    "ofl.": "o.fl.",
-    "mtt.": "m.t.t.",
     "Mtt.": "M.t.t.",
     "n.k.": "nk.",
-    "omfl.": "o.m.fl.",
-    "osfrv.": "o.s.frv.",
-    "oþh.": "o.þ.h.",
-    "t.d": "t.d.",
     "T.d": "T.d.",
-    "uþb.": "u.þ.b.",
     "Uþb.": "U.þ.b.",
     "þ.á.m.": "þ. á m.",
     "Þ.á.m.": "Þ. á m.",
     "þeas.": "þ.e.a.s.",
     "Þeas.": "Þ.e.a.s.",
-    "þmt.": "þ.m.t.",
+    "Þmt.": "Þ.m.t.",
     "ca": "ca.",
+    "Ca": "Ca.",
 }
 
 # A dictionary of token error classes, used in serialization
@@ -728,7 +719,12 @@ def parse_errors(
                 continue
 
             # Check abbreviations with missing dots
-            if not token.val and token.txt in Abbreviations.WRONGDOTS:
+            # If the missing dot leads to a word without periods that is
+            # found in BÍN (token.val is truthy), it's not safe to assume
+            # that it's an error.
+            if (
+                not token.val or "." in token.txt
+            ) and token.txt in Abbreviations.WRONGDOTS:
                 # Multiple periods in original, some subset missing here
                 # We suggest the first alternative meaning here, out of
                 # potentially multiple such meanings
@@ -748,6 +744,8 @@ def parse_errors(
                     if not token_m:
                         # No meaning in BÍN: allow ourselves to correct it
                         # as an abbreviation
+                        # !!! TODO: Amalgamate more than one potential correction
+                        # !!! of the abbreviation (ma. -> 'meðal annars' or 'milljarðar')
                         am = Abbreviations.get_meaning(corrected)
                         m = list(map(BIN_Meaning._make, am))
                         token = CorrectToken.word(corrected, m)
@@ -1515,14 +1513,17 @@ def lookup_unknown_words(
                     # The correction simply removed "ó" from the start of the
                     # word: probably not a good idea
                     pass
+                elif token.txt[0] == "-" and corrected_txt == token.txt[1:]:
+                    # The correction simply removed "-" from the start of the
+                    # word: probably not a good idea
+                    pass
                 elif not m and token.txt[0].isupper():
                     # Don't correct uppercase words if the suggested correction
                     # is not in BÍN
                     pass
-                elif len(
-                    token.txt
-                ) == 1 and corrected_txt != SINGLE_LETTER_CORRECTIONS.get(
-                    (at_sentence_start, token.txt)
+                elif len(token.txt) == 1 and (
+                    corrected_txt
+                    != SINGLE_LETTER_CORRECTIONS.get((at_sentence_start, token.txt))
                 ):
                     # Only allow single-letter corrections of a->á and i->í
                     pass
@@ -1699,7 +1700,9 @@ def fix_capitalization(
                     token.set_error(
                         CapitalizationError(
                             "006",
-                            "Hánefni á að samanstanda af hástöfum: '{0}'".format(original_txt),
+                            "Hánefni á að samanstanda af hástöfum: '{0}'".format(
+                                original_txt
+                            ),
                         )
                     )
                 else:
@@ -1811,11 +1814,10 @@ def late_fix_capitalization(
                         case = "há"
                         correct = token.txt.capitalize()
                     w, m = db.lookup_word(correct, True)
-                    token = token_ctor.Word(w, m, token = token)
+                    token = token_ctor.Word(w, m, token=token)
                     token.set_error(
                         CapitalizationError(
-                            code,
-                            "Rita á '{0}' með {1}staf".format(token.txt, case)
+                            code, "Rita á '{0}' með {1}staf".format(token.txt, case)
                         )
                     )
         elif token.kind == TOK.NUMBER:
