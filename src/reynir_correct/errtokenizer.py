@@ -4,7 +4,7 @@
 
     Error-correcting tokenization layer
 
-    Copyright (C) 2020 Miðeind ehf.
+    Copyright (C) 2021 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -104,6 +104,28 @@ MONTH_NAMES_CAPITALIZED = (
     "Desember",
 )
 
+ACRONYMS = frozenset(
+    (  # HÍ og HA ganga kannski ekki hér
+        "Dv",
+        "Rúv",
+        "Byko",
+        "Íbv",
+        "Pga",
+        "Em",
+        "Ví",
+        "Mr",
+        "Mh",
+        "Ms" "Hr",
+        "Ísí",
+        "Ksí",
+        "Kr",
+        "Fh",
+        "Ía",
+        "Ka",
+        "Hk",
+    )
+)
+
 # Word categories and their names
 POS = {
     "lo": "lýsingarorð",
@@ -122,33 +144,23 @@ SINGLE_LETTER_CORRECTIONS = {
     (True, "I"): "Í",
 }
 
-# Correction of abbreviations
+# Correction of abbreviations that are not present in Abbreviations.WRONGDOTS
 # !!! TODO: Move this to a config file
 WRONG_ABBREVS = {
-    "amk.": "a.m.k.",
     "Amk.": "A.m.k.",
-    "a.m.k": "a.m.k.",
     "A.m.k": "A.m.k.",
-    "etv.": "e.t.v.",
     "Etv.": "E.t.v.",
-    "eþh.": "e.þ.h.",
-    "ofl.": "o.fl.",
-    "mtt.": "m.t.t.",
     "Mtt.": "M.t.t.",
     "n.k.": "nk.",
-    "omfl.": "o.m.fl.",
-    "osfrv.": "o.s.frv.",
-    "oþh.": "o.þ.h.",
-    "t.d": "t.d.",
     "T.d": "T.d.",
-    "uþb.": "u.þ.b.",
     "Uþb.": "U.þ.b.",
     "þ.á.m.": "þ. á m.",
     "Þ.á.m.": "Þ. á m.",
     "þeas.": "þ.e.a.s.",
     "Þeas.": "Þ.e.a.s.",
-    "þmt.": "þ.m.t.",
+    "Þmt.": "Þ.m.t.",
     "ca": "ca.",
+    "Ca": "Ca.",
 }
 
 # A dictionary of token error classes, used in serialization
@@ -172,6 +184,12 @@ def emulate_case(s: str, template: str) -> str:
     elif template and template[0].isupper():
         return s.capitalize()
     return s
+
+
+def is_cap(word: str) -> bool:
+    """ Return True if the word is capitalized, i.e. starts with an
+        uppercase character and is otherwise lowercase """
+    return word[0].isupper() and (len(word) == 1 or word[1:].islower())
 
 
 class CorrectToken:
@@ -282,6 +300,13 @@ class CorrectToken:
     def set_capitalization(self, cap: str) -> None:
         """ Set the capitalization state for this token """
         self._cap = cap
+
+    def copy_capitalization(self, other: "CorrectToken") -> None:
+        """ Copy the capitalization state from another CorrectToken instance """
+        if isinstance(other, list):
+            other = other[0]
+        if isinstance(other, CorrectToken):
+            self._cap = other._cap
 
     @property
     def cap_sentence_start(self) -> bool:
@@ -484,6 +509,7 @@ class CapitalizationError(Error):
     # Z003: Month name should begin with lowercase letter
     # Z004: Numbers should be written in lowercase ('24 milljónir')
     # Z005: Amounts should be written in lowercase ('24 milljónir króna')
+    # Z006: Acronyms should be written in uppercase ('RÚV')
 
     def __init__(self, code: str, txt: str) -> None:
         # Capitalization error codes start with "Z"
@@ -627,8 +653,8 @@ def parse_errors(
         """
         txt = token.txt
         next_txt = next_token.txt
-        if txt is None or next_txt is None or next_txt.istitle():
-            # If the latter part is in title case, we don't see it
+        if txt is None or next_txt is None or is_cap(next_txt):
+            # If the latter part is capitalized, we don't see it
             # as a part of split compound
             return False
         if next_txt.isupper() and not txt.isupper():
@@ -693,7 +719,12 @@ def parse_errors(
                 continue
 
             # Check abbreviations with missing dots
-            if not token.val and token.txt in Abbreviations.WRONGDOTS:
+            # If the missing dot leads to a word without periods that is
+            # found in BÍN (token.val is truthy), it's not safe to assume
+            # that it's an error.
+            if (
+                not token.val or "." in token.txt
+            ) and token.txt in Abbreviations.WRONGDOTS:
                 # Multiple periods in original, some subset missing here
                 # We suggest the first alternative meaning here, out of
                 # potentially multiple such meanings
@@ -713,6 +744,8 @@ def parse_errors(
                     if not token_m:
                         # No meaning in BÍN: allow ourselves to correct it
                         # as an abbreviation
+                        # !!! TODO: Amalgamate more than one potential correction
+                        # !!! of the abbreviation (ma. -> 'meðal annars' or 'milljarðar')
                         am = Abbreviations.get_meaning(corrected)
                         m = list(map(BIN_Meaning._make, am))
                         token = CorrectToken.word(corrected, m)
@@ -840,8 +873,8 @@ def parse_errors(
                     token = next_token
                     at_sentence_start = False
                     continue
-                if not next_token.txt or next_token.txt.istitle():
-                    # If the latter part is in title case, we don't see it
+                if not next_token.txt or is_cap(next_token.txt):
+                    # If the latter part is capitalized, we don't see it
                     # as a part of a split compound
                     yield token
                     token = next_token
@@ -1026,8 +1059,8 @@ class MultiwordErrorStream(MatchingStream):
             if i == 0:
                 # Fix capitalization of the first word
                 # !!! TODO: handle all-uppercase
-                if tq[0].txt.istitle():
-                    w = w.title()
+                if is_cap(tq[0].txt):
+                    w = w.capitalize()
             ct = cast(CorrectToken, token_ctor.Word(w, m))
             if i == 0:
                 ct.set_error(
@@ -1480,14 +1513,17 @@ def lookup_unknown_words(
                     # The correction simply removed "ó" from the start of the
                     # word: probably not a good idea
                     pass
+                elif token.txt[0] == "-" and corrected_txt == token.txt[1:]:
+                    # The correction simply removed "-" from the start of the
+                    # word: probably not a good idea
+                    pass
                 elif not m and token.txt[0].isupper():
                     # Don't correct uppercase words if the suggested correction
                     # is not in BÍN
                     pass
-                elif len(
-                    token.txt
-                ) == 1 and corrected_txt != SINGLE_LETTER_CORRECTIONS.get(
-                    (at_sentence_start, token.txt)
+                elif len(token.txt) == 1 and (
+                    corrected_txt
+                    != SINGLE_LETTER_CORRECTIONS.get((at_sentence_start, token.txt))
                 ):
                     # Only allow single-letter corrections of a->á and i->í
                     pass
@@ -1553,6 +1589,8 @@ def fix_capitalization(
     """ Annotate tokens with errors if they are capitalized incorrectly """
 
     stems = CapitalizationErrors.SET_REV
+    wrong_stems = CapitalizationErrors.SET
+
     # TODO STILLING - hér er blanda. Orð sem eiga alltaf að vera hástafa en birtast lágstafa eru ósh.,
     # TODO STILLING - orð sem eiga alltaf að vera lágstafa nema í byrjun setningar eru sh. leiðrétting.
 
@@ -1564,14 +1602,13 @@ def fix_capitalization(
     def is_wrong(token: CorrectToken) -> bool:
         """ Return True if the word is wrongly capitalized """
         word = token.txt
-        if " " in word:
-            # Multi-word token: can't be listed in [capitalization_errors]
-            return False
         lower = True
-        if word.istitle():
+        if is_cap(word):
             if state != "in_sentence":
                 # An uppercase word at the beginning of a sentence can't be wrong
                 return False
+            if word in ACRONYMS:
+                return True
             # Danskur -> danskur
             rev_word = word.lower()
             lower = False
@@ -1586,7 +1623,7 @@ def fix_capitalization(
                 return True
             # íslendingur -> Íslendingur
             # finni -> Finni
-            rev_word = word.title()
+            rev_word = word.capitalize()
         else:
             # All upper case or other strange capitalization:
             # don't bother
@@ -1609,6 +1646,10 @@ def fix_capitalization(
                 # If the word has no non-composite meanings
                 # in its original case, this is probably an error
                 return True
+        # If we find any of the 'wrong' capitalizations in the error set,
+        # this is definitely an error
+        if any(emulate_case(m.stofn, word) in wrong_stems for m in meanings):
+            return True
         # If we don't find any of the stems of the "corrected"
         # meanings in the corrected error set (SET_REV),
         # the word was correctly capitalized
@@ -1638,8 +1679,7 @@ def fix_capitalization(
                 if token.txt.islower():
                     # Token is lowercase but should be capitalized
                     original_txt = token.txt
-                    # We set at_sentence_start to True because we want
-                    # a fallback to lowercase matches
+                    # !!! TODO: Maybe the following should be just token.txt.capitalize()
                     correct = (
                         token.txt.title()
                         if " " in token.txt
@@ -1651,6 +1691,18 @@ def fix_capitalization(
                         CapitalizationError(
                             "002",
                             "Orð á að byrja á hástaf: '{0}'".format(original_txt),
+                        )
+                    )
+                elif token.txt in ACRONYMS:
+                    original_txt = token.txt
+                    w, m = db.lookup_word(token.txt.upper(), False)
+                    token = token_ctor.Word(w, m, token=token)
+                    token.set_error(
+                        CapitalizationError(
+                            "006",
+                            "Hánefni á að samanstanda af hástöfum: '{0}'".format(
+                                original_txt
+                            ),
                         )
                     )
                 else:
@@ -1739,13 +1791,36 @@ def late_fix_capitalization(
         return token
 
     at_sentence_start = False
+    stems = CapitalizationErrors.SET
 
     for token in token_stream:
         if token.kind == TOK.S_BEGIN:
             yield token
             at_sentence_start = True
             continue
-        if token.kind == TOK.NUMBER:
+        if token.kind == TOK.WORD:
+            if token.cap_in_sentence and " " in token.txt:
+                # Special check for compounds such as 'félags- og barnamálaráðherra'
+                # that were not checked in fix_capitalization because compounds hadn't
+                # been amalgamated at that point
+                tval = cast(Iterable[BIN_Meaning], token.val)
+                if all(m.stofn in stems for m in tval):
+                    if token.txt[0].isupper():
+                        code = "001"
+                        case = "lág"
+                        correct = token.txt.lower()
+                    else:
+                        code = "002"
+                        case = "há"
+                        correct = token.txt.capitalize()
+                    w, m = db.lookup_word(correct, True)
+                    token = token_ctor.Word(w, m, token=token)
+                    token.set_error(
+                        CapitalizationError(
+                            code, "Rita á '{0}' með {1}staf".format(token.txt, case)
+                        )
+                    )
+        elif token.kind == TOK.NUMBER:
             if re.match(r"[0-9.,]+$", token.txt) or token.txt.isupper():
                 # '1.234,56' or '24 MILLJÓNIR' is always OK
                 pass
@@ -1842,6 +1917,7 @@ class Correct_TOK(TOK):
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
             ct.copy_error(token)
+            ct.copy_capitalization(token)
         return ct
 
     @staticmethod

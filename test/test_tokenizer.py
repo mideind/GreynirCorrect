@@ -4,7 +4,7 @@
 
     Tests for GreynirCorrect module
 
-    Copyright (C) 2020 by Miðeind ehf.
+    Copyright (C) 2021 by Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -275,6 +275,18 @@ def test_error_forms(verbose=False):
 
 def test_capitalization_errors(verbose=False):
     """ Check capitalization_errors """
+
+    g = rc.tokenize(
+        "Umhverfis- og auðlindaráðherra hitti Félags- og barnamálaráðherra í gær "
+        "ásamt Fjármála- og Efnahagsráðherra en hann var á fundi með Fjármálaráðherra."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = gen_to_string(g)
+    assert "Umhverfis- og auðlindaráðherra" in s
+    assert "félags- og barnamálaráðherra" in s
+    assert "fjármála- og efnahagsráðherra" in s
+    assert "fjármálaráðherra" in s
 
     g = rc.tokenize(
         "Íslenskir menn drápu Danska menn og Gyðinga í evrópu gegn mótmælum "
