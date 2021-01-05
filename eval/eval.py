@@ -217,10 +217,10 @@ OUT_OF_SCOPE = {
 }
 
 # Default glob path of the development corpus TEI XML files to be processed
-_DEV_PATH = "iceErrorCorpus/data/**/*.xml"
+_DEV_PATH = "../../mt/iceErrorCorpus/data/**/*.xml"
 
 # Default glob path of the test corpus TEI XML files to be processed
-_TEST_PATH = "iceErrorCorpus/testCorpus/**/*.xml"
+_TEST_PATH = "../../mt/iceErrorCorpus/testCorpus/**/*.xml"
 
 NAMES = {
     "tp": "True positives",
@@ -735,6 +735,540 @@ SIMCATEGORIES = {
         "extra-bracket",
         "date-abbreviation",
     ],
+}
+
+# Supercategories in iceErrorCorpus and corresponding subcategories
+SUPERCATEGORIES = {
+    "capitalization" : [
+        "lower4upper-initial", 
+        "lower4upper-proper",
+        "lower4upper-acro",
+        "upper4lower-common",
+        "upper4lower-proper",
+        "upper4lower-noninitial",
+        "caps4low"
+    ],
+    "collocation" : [
+        "collocation",
+        "collocation-idiom",
+        "though",
+    ],
+    "grammar" : [
+        "agreement",
+        "agreement-concord",
+        "agreement-pred",
+        "agreement-pro",
+        "case-verb",
+        "case-prep",
+        "case-adj",
+        "case-collocation",
+        "ind4def",
+        "def4ind",
+        "ind4sub",
+        "sub4ind",
+        "verb-inflection",
+        "nominal-inflection",
+        "numeral-inflection",
+        "pro-inflection",
+        "plural4singular",
+        "singular4plural",
+        "conjunction",
+        "adjective-inflection",
+        "dative-sub",
+        "dir4loc",
+        "loc4dir",
+        "mid4act",
+        "act4mid",
+        "mid4pass",
+        "pass4mid",
+        "act4pass",
+        "pass4act",
+        "passive",
+        "new-passive",
+        "each",
+        "noun4pro",
+        "pro4noun",
+        "reflexive4pro",
+        "pro4reflexive",
+        "pres4past",
+        "past4pres",
+        "tense4perfect",
+        "perfect4tense",
+        "pers4dem",
+        "dem-pro",
+        "missing-dem-pro",
+        "extra-dem-pro",
+        "indef-pro",
+        "marked4unmarked",
+        "adj4adv",
+        "adv4adj",
+        "have",
+        "cont4simple",
+        "missing-inf-part",
+        "want",
+        "dem4pers",
+        "nom4acc-sub",
+        "acc4nom-sub",
+        "simple4cont",
+        "extra-inf-part",
+        "gen-escape",
+        "genitive",
+        "dem4noun",
+        "noun4dem",
+        "geta",
+        "adj4noun",
+        "noun4adj",
+        "extra-sub",
+        "missing-fin-verb",
+        "missing-sub",
+        "missing-obj",
+        "að4af",
+        "af4að",
+        "wrong-prep",
+        "interr-pro",
+        "hypercorr",
+    ],
+    "syntax" : [
+        "v3",
+        "v3-subordinate",
+        "syntax-other",
+    ],
+    "nonword" : [
+        "compound-collocation",
+        "compound-nonword",
+        "nonword",
+    ],
+    "omission" : [
+        "missing-word",
+        "missing-words",
+        "missing-prep",
+    ],
+    "typo" : [
+        "swapped-letters",
+        "letter-rep",
+        "missing-letter",
+        "missing-accent",
+        "wrong-accent",
+        "extra-accent",
+        "extra-letter",         
+    ],
+    "punctuation" : [
+        "comma4period",
+        "comma4qm",
+        "comma4colon",
+        "double-punctuation",
+        "extra-abbreviation",
+        "extra-dash",
+        "iteration-colon",
+        "missing-colon",
+        "missing-comma",
+        "missing-commas",
+        "missing-period",
+        "missing-qm",
+        "missing-conjunction",
+        "missing-quot",
+        "missing-quots",
+        "misplaced-quot",
+        "wrong-quots",
+        "extra-quot",
+        "extra-quots",
+        "extra-punctuation",
+        "extra-comma",
+        "extra-period",
+        "period4comma",
+        "period4colon",
+        "period4conjunction",
+        "conjunction4period",
+        "conjunction4comma",
+        "comma4conjunction",
+        "period4qm",
+        "period-plus-conjunction",
+        "comma-plus-conjunction",
+        "abbreviation-period",
+        "comma4ex",
+        "period4ex",
+        "semicolon4colon",
+        "extra-semicolon",
+        "ordinal-period",
+        "conjunction-drop",
+        "extra-conjunction",
+        "semicolon4comma",
+        "conjunction4qm",
+        "missing-slash",
+        "comma4bracket",
+        "qm4comma",
+        "missing-ex",
+        "qm4ex",
+        "qm4period",
+        "bracket4square",
+        "square4bracket",
+        "dash4comma",
+        "date-period",
+        "comma4semicolon",
+        "word4dash",
+        "dash4word",
+        "missing-semicolon",
+        "abbreviation",
+        "slash4or",
+        "dash4period",
+        "ex4comma",
+        "colon4period",
+        "colon4comma",
+        "ex4period",
+        "extra-colon",
+        "bracket4comma",
+        "extra-qm",
+        "comma4dash",
+        "dash4semicolon",
+        "wrong-dash",
+        "dash4colon",
+        "dots4comma",
+        "missing-symbol",
+        "dots4period",
+        "extra-square",
+        "bracket4period",
+        "word4symbol",
+        "nonsup4sup",
+        "semicolon4period",
+        "period4semicolon",
+        "period4dash",
+        "missing-square",
+        "slash4dash",
+        "extra-commas",
+        "conjunction4semicolon",
+        "missing-bracket",
+        "extra-bracket",
+        "date-abbreviation",
+    ],
+    "spacing" : [
+        "merged-words",
+        "split-compound",
+        "split-word",
+        "split-words",
+        "missing-dash",
+        "missing-space",
+        "extra-space",
+    ],
+    "insertion" : [
+        "extra-word",
+        "extra-words",
+        "extra-prep",
+        "repeat-word",
+        "repeat-word-split",
+    ],
+    "wording" : [
+        "wording",
+        "aux",
+    ],
+    "spelling" : [
+        "ngnk",
+        "i4y",
+        "y4i",
+        "í4ý",
+        "ý4í",
+        "n4nn",
+        "nn4n",
+        "pronun-writing",
+        "kv4hv",
+        "hv4kv",
+        "name-error",
+        "bad-contraction",
+    ],
+    "foreign" : [
+        "fw",
+        "foreign-error",
+    ],
+    "exclusion" : [
+        "gendered",
+    ],
+    "numbers" : [
+        "number4word",
+        "word4number",
+        "extra-number",
+        "symbol4number",
+        "number4symbol",
+        "number-fail",
+    ],
+    "style" : [
+        "style",
+        "unicelandic",
+        "taboo-word",
+        "loan-syntax",
+        "u4y",
+        "fw4ice",
+        "ice4fw",
+        "nonit4it",
+        "it4nonit",
+        "extra-munu",
+        "words4abbreviation",
+        "abbreviation4words",
+    ],
+    "other" : [
+        "symbol4word",
+        "extra-symbol",
+        "dep",
+        "þar4það",
+    ],
+    "lexical" : [
+        "context",
+    ],
+    "unnannotated" : [
+        "zzz",
+        "xxx",
+    ]
+}
+
+# Supercategories according to SÍM and corresponding subcategories
+# Errors go into the first possible category. Error categories that
+# can both be independent and dependent of context go under the former.
+SIMCATEGORIES = {
+    "context-independent" : [ 
+        "caps4low",
+        "number-fail",
+        "lower4upper-proper",
+        "lower4upper-acro",
+        "though",
+        "compound-collocation",
+        "compound-nonword",
+        "nonword",
+        "swapped-letters",
+        "letter-rep",
+        "missing-letter",
+        "missing-accent",
+        "wrong-accent",
+        "merged-words",
+        "split-word",
+        "extra-accent",
+        "extra-letter",
+        "ngnk",
+        "i4y",
+        "y4i",
+        "í4ý",
+        "ý4í",
+        "n4nn",
+        "nn4n",
+        "pronun-writing",
+        "kv4hv",
+        "hv4kv",
+        "bad-contraction",
+        "fw",
+        "foreign-error",
+        "abbreviation-period",
+        "abbreviation",
+    ],
+    "context-dependent" : [
+        "lower4upper-initial",
+        "upper4lower-common",
+        "upper4lower-proper",
+        "upper4lower-noninitial",
+        "collocation",
+        "collocation-idiom",
+        "missing-word",
+        "missing-words",
+        "missing-prep",
+        "split-compound",
+        "split-words",
+        "missing-dash",
+        "missing-space",
+        "extra-space",
+        "extra-word",
+        "extra-words",
+        "extra-prep",
+        "repeat-word",
+        "repeat-word-split",
+        "name-error",
+        "gendered",
+        "number4word",
+        "word4number",
+    ],
+    "grammar" : [
+        "agreement",
+        "agreement-concord",
+        "agreement-pred",
+        "agreement-pro",
+        "case-verb",
+        "case-prep",
+        "case-adj",
+        "case-collocation",
+        "ind4def",
+        "def4ind",
+        "ind4sub",
+        "sub4ind",
+        "verb-inflection",
+        "nominal-inflection",
+        "numeral-inflection",
+        "pro-inflection",
+        "plural4singular",
+        "singular4plural",
+        "conjunction",
+        "adjective-inflection",
+        "dative-sub",
+        "dir4loc",
+        "loc4dir",
+        "mid4act",
+        "act4mid",
+        "mid4pass",
+        "pass4mid",
+        "act4pass",
+        "pass4act",
+        "passive",
+        "new-passive",
+        "each",
+        "noun4pro",
+        "pro4noun",
+        "reflexive4pro",
+        "pro4reflexive",
+        "pres4past",
+        "past4pres",
+        "tense4perfect",
+        "perfect4tense",
+        "pers4dem",
+        "dem-pro",
+        "missing-dem-pro",
+        "extra-dem-pro",
+        "indef-pro",
+        "marked4unmarked",
+        "adj4adv",
+        "adv4adj",
+        "have",
+        "cont4simple",
+        "missing-inf-part",
+        "want",
+        "dem4pers",
+        "nom4acc-sub",
+        "acc4nom-sub",
+        "simple4cont",
+        "extra-inf-part",
+        "gen-escape",
+        "genitive",
+        "dem4noun",
+        "noun4dem",
+        "geta",
+        "adj4noun",
+        "noun4adj",
+        "extra-sub",
+        "missing-fin-verb",
+        "missing-sub",
+        "missing-obj",
+        "að4af",
+        "af4að",
+        "wrong-prep",
+        "interr-pro",
+        "hypercorr",
+        "v3",
+        "v3-subordinate",
+        "syntax-other",
+        "aux",
+    ],
+    "style" : [
+        "wording",
+        "extra-number",
+        "symbol4number",
+        "number4symbol",
+        "style",
+        "unicelandic",
+        "taboo-word",
+        "loan-syntax",
+        "u4y",
+        "fw4ice",
+        "ice4fw",
+        "nonit4it",
+        "it4nonit",
+        "extra-munu",
+        "words4abbreviation",
+        "abbreviation4words",
+        "symbol4word",
+        "extra-symbol",
+        "dep",
+        "þar4það",
+        "context",
+    ],
+    "punctuation" : [
+        "comma4period",
+        "comma4qm",
+        "comma4colon",
+        "double-punctuation",
+        "extra-abbreviation",
+        "extra-dash",
+        "iteration-colon",
+        "missing-colon",
+        "missing-comma",
+        "missing-commas",
+        "missing-period",
+        "missing-qm",
+        "missing-conjunction",
+        "missing-quot",
+        "missing-quots",
+        "misplaced-quot",
+        "wrong-quots",
+        "extra-quot",
+        "extra-quots",
+        "extra-punctuation",
+        "extra-comma",
+        "extra-period",
+        "period4comma",
+        "period4colon",
+        "period4conjunction",
+        "conjunction4period",
+        "conjunction4comma",
+        "comma4conjunction",
+        "period4qm",
+        "period-plus-conjunction",
+        "comma-plus-conjunction",
+        "comma4ex",
+        "period4ex",
+        "semicolon4colon",
+        "extra-semicolon",
+        "ordinal-period",
+        "conjunction-drop",
+        "extra-conjunction",
+        "semicolon4comma",
+        "conjunction4qm",
+        "missing-slash",
+        "comma4bracket",
+        "qm4comma",
+        "missing-ex",
+        "qm4ex",
+        "qm4period",
+        "bracket4square",
+        "square4bracket",
+        "dash4comma",
+        "date-period",
+        "comma4semicolon",
+        "word4dash",
+        "dash4word",
+        "missing-semicolon",
+        "slash4or",
+        "dash4period",
+        "ex4comma",
+        "colon4period",
+        "colon4comma",
+        "ex4period",
+        "extra-colon",
+        "bracket4comma",
+        "extra-qm",
+        "comma4dash",
+        "dash4semicolon",
+        "wrong-dash",
+        "dash4colon",
+        "dots4comma",
+        "missing-symbol",
+        "dots4period",
+        "extra-square",
+        "bracket4period",
+        "word4symbol",
+        "nonsup4sup",
+        "semicolon4period",
+        "period4semicolon",
+        "period4dash",
+        "missing-square",
+        "slash4dash",
+        "extra-commas",
+        "conjunction4semicolon",
+        "missing-bracket",
+        "extra-bracket",
+        "date-abbreviation",
+    ]
 }
 
 # Define the command line arguments
@@ -1373,6 +1907,76 @@ class Stats:
                     bprint(f"Micro F1-score: N/A")
                     bprint(f"Error correction recall: N/A")
 
+        def output_error_cat_scores() -> None:
+            """ Calculate and write scores for each error category to stdout """
+            bprint(f"\n\nResults for each error category in order by frequency")
+            freqdict = defaultdict(float)
+            micro : float = 0.0
+            nfreqs : int  = 0
+            microall : float = 0.0
+            nfreqsall : int = 0
+
+            # Iterate over category counts
+            for cat in self._errtypes.keys():
+                # Get recall, precision and F1; recall for correction and span
+                calc_error_category_metrics(cat)
+
+                # Collect  micro scores, both overall and for in-scope categories
+                if cat not in OUT_OF_SCOPE:
+                    micro += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
+                    nfreqs += self._errtypes[cat]["freq"]
+                microall += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
+                nfreqsall += self._errtypes[cat]["freq"]
+
+                # Create freqdict for sorting error categories by frequency
+                freqdict[cat] = self._errtypes[cat]["freq"]
+
+            # print results for each category by frequency
+            for k in sorted(freqdict, key=freqdict.get, reverse=True):
+                bprint("{} (in_scope={})".format(k, k not in OUT_OF_SCOPE))
+                bprint("\tTP, FP, FN: {}, {}, {}".format(self._errtypes[k]["tp"], self._errtypes[k]["fp"], self._errtypes[k]["fn"]))
+                bprint("\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}".format(self._errtypes[k]["recall"]*100.0, self._errtypes[k]["precision"]*100.0, self._errtypes[k]["fscore"]*100.0))
+                bprint("\tCorr, span: {:3.2f}, {:3.2f}".format(self._errtypes[k]["corr_rec"]*100.0, self._errtypes[k]["span_rec"]*100.0))
+           
+            # Micro F1-score
+            # Results for in-scope categories and all categories
+            if nfreqs != 0:
+                bprint("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
+            else:
+                bprint(f"Micro F1-score: N/A")
+
+        def output_supercategory_scores(errorcats: Dict[str, List[str]]) -> None:
+            # Results for each SÍM category
+            for entry, catlist in errorcats.items():
+                micro : float = 0.0
+                nfreqs : int  = 0
+                microall : float = 0.0
+                nfreqsall : int = 0
+                correcs : float = 0.0
+                correcsall : float = 0.0   
+                # TODO taka saman corr_rec og span_rec; skoða hvernig fæ F-skor, svipað og fyrir hitt, þegar er ekki með TN inni
+                bprint("\n{}:".format(entry.capitalize()))
+                for cat in catlist:
+                    et = self._errtypes[cat]
+                    if et["fscore"] == "N/A":
+                        continue
+                    if cat not in OUT_OF_SCOPE:
+                        micro += et["fscore"]*et["freq"]
+                        if et["corr_rec"] != "N/A":
+                            correcs += et["corr_rec"]*et["freq"]
+                        nfreqs += et["freq"]
+                        bprint("\t{}   {:3.2f}   {:3.2f}".format(cat, et["fscore"]*100, et["freq"]))
+                    microall += et["fscore"]*et["freq"]
+                    if et["corr_rec]"] != "N/A":
+                        correcsall += et["corr_rec"]*et["freq"]
+                    nfreqsall += et["freq"]
+                if nfreqs != 0:
+                    bprint("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
+                    bprint("Error correction recall: {:3.2f} ({:3.2f})".format(correcs/nfreqs*100.0, correcsall/nfreqsall*100.0))
+                else:
+                    bprint(f"Micro F1-score: N/A")
+                    bprint(f"Error correction recall: N/A")
+
         output_duration()
         output_sentence_scores()
         output_token_scores()
@@ -1396,6 +2000,13 @@ def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
         for tag, txt in tokens
     )
 
+# Accumulate standard output in a buffer, for writing in one fell
+# swoop at the end (after acquiring the output lock)
+buffer: List[str] = []
+
+def bprint(s: str):
+    """ Buffered print: accumulate output for printing at the end """
+    buffer.append(s)
 
 # Accumulate standard output in a buffer, for writing in one fell
 # swoop at the end (after acquiring the output lock)

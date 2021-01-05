@@ -745,6 +745,124 @@ def test_acronyms(verbose=False):
     assert "Hr." in s
     assert g[1].error_code != "Z006"
 
+    g = rc.tokenize(
+        "Hann er Suðurkóreskur og er suður-kóreumaður frá suður-kóreu."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "suðurkóreskur" in s
+    #assert "Suður-Kóreumaður" in s
+    #assert "Suður-Kóreu" in s
+
+    g = rc.tokenize(
+        "Hann er Norðurkóreskur og er norður-kóreumaður frá norður-kóreu."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "norðurkóreskur" in s
+    #assert "Norður-Kóreumaður" in s
+    #assert "Norður-Kóreu" in s
+
+    g = rc.tokenize(
+        "Hann er Nýsjálenskur og er nýsjálendingur frá nýja-sjálandi."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "nýsjálenskur" in s
+    assert "Nýsjálendingur" in s
+    #assert "Nýja-Sjálandi" in s
+
+    g = rc.tokenize(
+        "Hann er Suðurafrískur og er suður-afríkumaður frá suður-afríku."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "suðurafrískur" in s
+    #assert "Suður-Afríkumaður" in s
+    #assert "Suður-Afríku" in s
+
+    g = rc.tokenize(
+        "Þau heimsóttu norðurland og hittu norðlendinga í Meistaradeild."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Norðurland" in s
+    assert "Norðlendinga" in s
+    assert "meistaradeild" in s
+
+    g = rc.tokenize(
+        "Haldið er upp á Páskadag, Verslunarmannahelgina, Jólin og Bóndadag."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "páskadag" in s
+    assert "verslunarmannahelgina" in s
+    assert "jólin" in s
+    assert "bóndadag" in s
+    assert g[5].error_code == "Z001"    #páskadag
+    assert g[7].error_code == "Z001"    #verslunarmannahelgina
+    assert g[9].error_code == "Z001"    #jólin
+    assert g[11].error_code == "Z001"   #bóndadag
+
+    g = rc.tokenize(
+        "Talað var við Dómsmálaráðherra, Ríkissaksóknara, Biskupinn og Doktorinn "
+        "á Mánudögum og Þriðjudögum."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "dómsmálaráðherra" in s
+    assert "ríkissaksóknara" in s
+    assert "biskupinn" in s
+    assert "doktorinn" in s
+    assert "mánudögum" in s
+    assert "þriðjudögum" in s
+    assert g[4].error_code == "Z001"    #dómsmálaráðherra
+    assert g[6].error_code == "Z001"    #ríkissaksóknara
+    assert g[8].error_code == "Z001"    #biskupinn
+    assert g[10].error_code == "Z001"   #doktorinn
+    assert g[12].error_code == "Z001"   #mánudögum
+    assert g[14].error_code == "Z001"   #þriðjudögum
+
+    g = rc.tokenize(
+        "Þau læra Íslensku og Landafræði með Allsherjarþinginu og Öryggisráðinu en líka um Indóevrópsk mál og Óðinshana."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "íslensku" in s
+    assert "landafræði" in s
+    assert "allsherjarþinginu" in s
+    assert "öryggisráðinu" in s
+    assert "indóevrópsk" in s
+    assert g[3].error_code == "Z001"    #íslensku
+    assert g[5].error_code == "Z001"    #landafræði
+    assert g[7].error_code == "Z001"    #allsherjarþinginu
+    assert g[9].error_code == "Z001"    #öryggisráðinu
+    assert g[13].error_code == "Z001"   #indóevrópsk
+    assert g[16].error_code == "Z001"   #óðinshana
+
+    g = rc.tokenize(
+        "Í Vín má kaupa Vínartertu og Rínarvín en Póstmódernismi og Maríutásur eru vinsælar."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Vín" in s
+    assert "vínartertu" in s
+    assert "rínarvín" in s
+    assert "póstmódernismi" in s
+    assert "maríutásur" in s
+    assert g[5].error_code == "Z001"    #vínartertu
+    assert g[7].error_code == "Z001"    #rínarvín
+    assert g[9].error_code == "Z001"    #póstmódernismi
+    assert g[11].error_code == "Z001"   #maríutásur
 
 def test_inflectional_errors(verbose=False):
     # beygingarvillur
