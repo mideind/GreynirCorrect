@@ -242,11 +242,12 @@ class CapitalizationErrors:
             CapitalizationErrors._db = BIN_Db()
         # The suffix may not be in BÍN except as a compound, and in that
         # case we want its hyphenated lemma
-        _, m = CapitalizationErrors._db.lookup_word(CapitalizationErrors.reverse_capitalization(suffix))
+        suffix_rev = CapitalizationErrors.reverse_capitalization(suffix)
+        _, m = CapitalizationErrors._db.lookup_word(suffix_rev)
         if not m:
             raise ConfigError(
-                "No BÍN meaning for '{0}' in capitalization_errors section"
-                .format(word)
+                "No BÍN meaning for '{0}' (from error word '{1}') in capitalization_errors section"
+                .format(suffix_rev, word)
             )
         if not prefix:
             # This might be something like 'barnamálaráðherra' which comes out

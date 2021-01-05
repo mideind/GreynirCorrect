@@ -104,7 +104,7 @@ MONTH_NAMES_CAPITALIZED = (
     "Desember",
 )
 
-ACRONYMS = frozenset(
+WRONG_ACRONYMS = frozenset(
     (  # HÍ og HA ganga kannski ekki hér
         "Dv",
         "Rúv",
@@ -1600,35 +1600,35 @@ def fix_capitalization(
     state = "sentence_start"
 
     def is_wrong(token: CorrectToken) -> bool:
-        """ Return True if the word is wrongly capitalized """
+        """ Return True if the token's text is wrongly capitalized """
         word = token.txt
         lower = True
         if is_cap(word):
             if state != "in_sentence":
                 # An uppercase word at the beginning of a sentence can't be wrong
                 return False
-            if word in ACRONYMS:
+            if word in WRONG_ACRONYMS:
                 return True
             # Danskur -> danskur
             rev_word = word.lower()
             lower = False
         elif word.islower():
+            if state == "sentence_start":
+                # A lower case word at the beginning of a sentence is definitely wrong
+                return True
             if len(word) >= 3 and word[1] == "-":
                 if word[0] in "abcdefghijklmnopqrstuvwxyz":
                     # Something like 'b-deildin' or 'a-flokki' which should probably
                     # be 'B-deildin' or 'A-flokki'
                     return True
-            if state == "sentence_start":
-                # A lower case word at the beginning of a sentence is definitely wrong
-                return True
             # íslendingur -> Íslendingur
             # finni -> Finni
             rev_word = word.capitalize()
         else:
-            # All upper case or other strange capitalization:
+            # All upper case or other strange/mixed capitalization:
             # don't bother
             return False
-        meanings = db.meanings(rev_word) or []
+        rev_meanings = db.meanings(rev_word) or []
         # If this is a word without BÍN meanings ('ástralía') but
         # an reversed-case version is in BÍN (without being a compound),
         # consider that an error. Also, we don't correct to a
@@ -1636,7 +1636,7 @@ def fix_capitalization(
         # besides, the current person name logic in bintokenizer.py
         # would erase the error annotation on the token.
         if lower and any(
-            "-" not in m.stofn and m.fl not in {"ism", "erm"} for m in meanings
+            "-" not in m.stofn and m.fl not in {"ism", "erm"} for m in rev_meanings
         ):
             # We find reversed-case meanings in BÍN: do a further check
             if all(
@@ -1648,12 +1648,12 @@ def fix_capitalization(
                 return True
         # If we find any of the 'wrong' capitalizations in the error set,
         # this is definitely an error
-        if any(emulate_case(m.stofn, word) in wrong_stems for m in meanings):
+        if any(emulate_case(m.stofn, word) in wrong_stems for m in rev_meanings):
             return True
         # If we don't find any of the stems of the "corrected"
         # meanings in the corrected error set (SET_REV),
         # the word was correctly capitalized
-        if all(m.stofn not in stems for m in meanings):
+        if all(m.stofn not in stems for m in rev_meanings):
             return False
         # Potentially wrong, but check for a corner
         # case: the original word may exist in its
@@ -1693,7 +1693,7 @@ def fix_capitalization(
                             "Orð á að byrja á hástaf: '{0}'".format(original_txt),
                         )
                     )
-                elif token.txt in ACRONYMS:
+                elif token.txt in WRONG_ACRONYMS:
                     original_txt = token.txt
                     w, m = db.lookup_word(token.txt.upper(), False)
                     token = token_ctor.Word(w, m, token=token)
@@ -1821,8 +1821,8 @@ def late_fix_capitalization(
                         )
                     )
         elif token.kind == TOK.NUMBER:
-            if re.match(r"[0-9.,]+$", token.txt) or token.txt.isupper():
-                # '1.234,56' or '24 MILLJÓNIR' is always OK
+            if re.match(r"[0-9.,/]+$", token.txt) or token.txt.isupper():
+                # '1.234,56' or '3/4' or '24 MILLJÓNIR' is always OK
                 pass
             elif at_sentence_start:
                 if token.txt[0].isnumeric() and not token.txt[1:].islower():

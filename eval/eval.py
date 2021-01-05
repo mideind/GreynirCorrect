@@ -217,10 +217,11 @@ OUT_OF_SCOPE = {
 }
 
 # Default glob path of the development corpus TEI XML files to be processed
-_DEV_PATH = "../../mt/iceErrorCorpus/data/**/*.xml"
+# Using a symlink (ln -s /my/location/of/iceErrorCorpus .) can be a good idea
+_DEV_PATH = "iceErrorCorpus/data/**/*.xml"
 
 # Default glob path of the test corpus TEI XML files to be processed
-_TEST_PATH = "../../mt/iceErrorCorpus/testCorpus/**/*.xml"
+_TEST_PATH = "iceErrorCorpus/testCorpus/**/*.xml"
 
 NAMES = {
     "tp": "True positives",
@@ -1907,76 +1908,6 @@ class Stats:
                     bprint(f"Micro F1-score: N/A")
                     bprint(f"Error correction recall: N/A")
 
-        def output_error_cat_scores() -> None:
-            """ Calculate and write scores for each error category to stdout """
-            bprint(f"\n\nResults for each error category in order by frequency")
-            freqdict = defaultdict(float)
-            micro : float = 0.0
-            nfreqs : int  = 0
-            microall : float = 0.0
-            nfreqsall : int = 0
-
-            # Iterate over category counts
-            for cat in self._errtypes.keys():
-                # Get recall, precision and F1; recall for correction and span
-                calc_error_category_metrics(cat)
-
-                # Collect  micro scores, both overall and for in-scope categories
-                if cat not in OUT_OF_SCOPE:
-                    micro += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
-                    nfreqs += self._errtypes[cat]["freq"]
-                microall += self._errtypes[cat]["fscore"]*self._errtypes[cat]["freq"]
-                nfreqsall += self._errtypes[cat]["freq"]
-
-                # Create freqdict for sorting error categories by frequency
-                freqdict[cat] = self._errtypes[cat]["freq"]
-
-            # print results for each category by frequency
-            for k in sorted(freqdict, key=freqdict.get, reverse=True):
-                bprint("{} (in_scope={})".format(k, k not in OUT_OF_SCOPE))
-                bprint("\tTP, FP, FN: {}, {}, {}".format(self._errtypes[k]["tp"], self._errtypes[k]["fp"], self._errtypes[k]["fn"]))
-                bprint("\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}".format(self._errtypes[k]["recall"]*100.0, self._errtypes[k]["precision"]*100.0, self._errtypes[k]["fscore"]*100.0))
-                bprint("\tCorr, span: {:3.2f}, {:3.2f}".format(self._errtypes[k]["corr_rec"]*100.0, self._errtypes[k]["span_rec"]*100.0))
-           
-            # Micro F1-score
-            # Results for in-scope categories and all categories
-            if nfreqs != 0:
-                bprint("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
-            else:
-                bprint(f"Micro F1-score: N/A")
-
-        def output_supercategory_scores(errorcats: Dict[str, List[str]]) -> None:
-            # Results for each SÍM category
-            for entry, catlist in errorcats.items():
-                micro : float = 0.0
-                nfreqs : int  = 0
-                microall : float = 0.0
-                nfreqsall : int = 0
-                correcs : float = 0.0
-                correcsall : float = 0.0   
-                # TODO taka saman corr_rec og span_rec; skoða hvernig fæ F-skor, svipað og fyrir hitt, þegar er ekki með TN inni
-                bprint("\n{}:".format(entry.capitalize()))
-                for cat in catlist:
-                    et = self._errtypes[cat]
-                    if et["fscore"] == "N/A":
-                        continue
-                    if cat not in OUT_OF_SCOPE:
-                        micro += et["fscore"]*et["freq"]
-                        if et["corr_rec"] != "N/A":
-                            correcs += et["corr_rec"]*et["freq"]
-                        nfreqs += et["freq"]
-                        bprint("\t{}   {:3.2f}   {:3.2f}".format(cat, et["fscore"]*100, et["freq"]))
-                    microall += et["fscore"]*et["freq"]
-                    if et["corr_rec]"] != "N/A":
-                        correcsall += et["corr_rec"]*et["freq"]
-                    nfreqsall += et["freq"]
-                if nfreqs != 0:
-                    bprint("Micro F1-score: {:3.2f}  ({:3.2f})".format(micro/nfreqs*100.0, microall/nfreqsall*100.0))
-                    bprint("Error correction recall: {:3.2f} ({:3.2f})".format(correcs/nfreqs*100.0, correcsall/nfreqsall*100.0))
-                else:
-                    bprint(f"Micro F1-score: N/A")
-                    bprint(f"Error correction recall: N/A")
-
         output_duration()
         output_sentence_scores()
         output_token_scores()
@@ -2005,15 +1936,6 @@ def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
 buffer: List[str] = []
 
 def bprint(s: str):
-    """ Buffered print: accumulate output for printing at the end """
-    buffer.append(s)
-
-# Accumulate standard output in a buffer, for writing in one fell
-# swoop at the end (after acquiring the output lock)
-buffer: List[str] = []
-
-
-def bprint(s: str) -> None:
     """ Buffered print: accumulate output for printing at the end """
     buffer.append(s)
 

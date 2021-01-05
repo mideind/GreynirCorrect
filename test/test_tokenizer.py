@@ -300,15 +300,15 @@ def test_capitalization_errors(verbose=False):
     assert s.startswith("Íslenskir ")
     assert "Danska" not in s
     assert "danska" in s
-    assert "Gyðinga" not in s
-    assert "gyðinga" in s
+    # !!! This is presenly commented out in GreynirCorrect.conf
+    # assert "Gyðinga" not in s
+    # assert "gyðinga" in s
     assert "evrópu" not in s
     assert "Evrópu" in s
     assert "Eistneskra" not in s
     assert "eistneskra" in s
-    # 'sjálfstæðismanna' is in BÍN and is not flagged as an error
-    # assert "sjálfstæðismanna" not in s
-    # assert "Sjálfstæðismanna" in s
+    assert "sjálfstæðismanna" not in s
+    assert "Sjálfstæðismanna" in s
 
     g = rc.tokenize(
         "finnar finna Finna hvar sem þeir leita en finnarnir fóru "
@@ -326,7 +326,7 @@ def test_capitalization_errors(verbose=False):
 
     g = rc.tokenize(
         "Gyðingurinn sagði að Lenínisminn tröllriði öllu en Eskimóinn taldi að "
-        "það ætti fremur við um Marxismann."
+        "það ætti fremur við um Marxismann en Sjítann."
     )
     g = list(g)
     if verbose: dump(g)
@@ -336,8 +336,8 @@ def test_capitalization_errors(verbose=False):
     assert "lenínisminn" in s
     assert "Eskimóinn" not in s
     assert "eskimóinn" in s
-    # assert "Sjítinn" not in s  # !!! TODO: Ranglega 'leiðrétt' í Skítinn
-    # assert "sjítinn" in s
+    assert "Sjítann" not in s
+    assert "sjítann" in s
     assert "Marxismann" not in s
     assert "marxismann" in s
 
