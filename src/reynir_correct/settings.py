@@ -79,7 +79,9 @@ class WrongCompounds:
     @staticmethod
     def add(word, parts: Tuple[str, ...]) -> None:
         if word in WrongCompounds.DICT:
-            raise ConfigError("Multiple definition of '{0}' in wrong_compounds section".format(word))
+            raise ConfigError(
+                "Multiple definition of '{0}' in wrong_compounds section".format(word)
+            )
         assert isinstance(parts, tuple)
         WrongCompounds.DICT[word] = parts
 
@@ -96,8 +98,9 @@ class SplitCompounds:
             and second_part_stem in SplitCompounds.DICT[first_part]
         ):
             raise ConfigError(
-                "Multiple definition of '{0}' in split_compounds section"
-                .format(first_part + " " + second_part_stem)
+                "Multiple definition of '{0}' in split_compounds section".format(
+                    first_part + " " + second_part_stem
+                )
             )
         SplitCompounds.DICT[first_part].add(second_part_stem)
 
@@ -110,7 +113,9 @@ class UniqueErrors:
     @staticmethod
     def add(word: str, corr: Tuple[str, ...]) -> None:
         if word in UniqueErrors.DICT:
-            raise ConfigError("Multiple definition of '{0}' in unique_errors section".format(word))
+            raise ConfigError(
+                "Multiple definition of '{0}' in unique_errors section".format(word)
+            )
         UniqueErrors.DICT[word] = corr
 
 
@@ -128,8 +133,9 @@ class MultiwordErrors:
     def add(words: Tuple[str, ...], error: str) -> None:
         if words in MultiwordErrors.ERROR_DICT:
             raise ConfigError(
-                "Multiple definition of '{0}' in multiword_errors section"
-                .format(" ".join(words))
+                "Multiple definition of '{0}' in multiword_errors section".format(
+                    " ".join(words)
+                )
             )
         MultiwordErrors.ERROR_DICT[words] = error
 
@@ -177,7 +183,9 @@ class TabooWords:
     @staticmethod
     def add(word: str, replacement: str) -> None:
         if word in TabooWords.DICT:
-            raise ConfigError("Multiple definition of '{0}' in taboo_words section".format(word))
+            raise ConfigError(
+                "Multiple definition of '{0}' in taboo_words section".format(word)
+            )
         TabooWords.DICT[word] = replacement
 
 
@@ -189,7 +197,9 @@ class Suggestions:
     @staticmethod
     def add(word: str, replacements: List[str]) -> None:
         if word in Suggestions.DICT:
-            raise ConfigError("Multiple definition of '{0}' in suggestions section".format(word))
+            raise ConfigError(
+                "Multiple definition of '{0}' in suggestions section".format(word)
+            )
         Suggestions.DICT[word] = replacements
 
 
@@ -212,8 +222,14 @@ class CapitalizationErrors:
         return s
 
     @staticmethod
-    def reverse_capitalization(word: str) -> str:
+    def reverse_capitalization(word: str, *, split_on_hyphen: bool = False) -> str:
         """ Return a word with its capitalization reversed (lower <-> upper case) """
+        if split_on_hyphen and "-" in word:
+            # 'norður-kórea' -> 'Norður-Kórea'
+            return "-".join(
+                CapitalizationErrors.reverse_capitalization(part)
+                for part in word.split("-")
+            )
         if word.islower():
             # Lowercase word
             word_rev = word.capitalize()
@@ -224,30 +240,34 @@ class CapitalizationErrors:
             # Uppercase word
             word_rev = word.lower()
         else:
-            raise ConfigError(
-                "'{0}' cannot have mixed capitalization".format(word)
-            )
+            raise ConfigError("'{0}' cannot have mixed capitalization".format(word))
         return word_rev
 
     @staticmethod
     def add(word: str) -> None:
         """ Add the given (wrongly capitalized) word stem to the stem set """
         # We support compound words such as 'félags- og barnamálaráðherra' here
+        split_on_hyphen = False
         if " " in word:
             prefix, suffix = word.rsplit(" ", maxsplit=1)
             prefix += " "
         else:
             prefix, suffix = "", word
+            # Split_on_hyphen is True for e.g. 'norður-kórea' and 'nýja-sjáland'
+            split_on_hyphen = "-" in word
         if CapitalizationErrors._db is None:
             CapitalizationErrors._db = BIN_Db()
         # The suffix may not be in BÍN except as a compound, and in that
         # case we want its hyphenated lemma
-        suffix_rev = CapitalizationErrors.reverse_capitalization(suffix)
+        suffix_rev = CapitalizationErrors.reverse_capitalization(
+            suffix, split_on_hyphen=split_on_hyphen
+        )
         _, m = CapitalizationErrors._db.lookup_word(suffix_rev)
         if not m:
             raise ConfigError(
-                "No BÍN meaning for '{0}' (from error word '{1}') in capitalization_errors section"
-                .format(suffix_rev, word)
+                "No BÍN meaning for '{0}' (from error word '{1}') in capitalization_errors section".format(
+                    suffix_rev, word
+                )
             )
         if not prefix:
             # This might be something like 'barnamálaráðherra' which comes out
@@ -259,11 +279,14 @@ class CapitalizationErrors:
             word = prefix + m[0].stofn
         if word in CapitalizationErrors.SET:
             raise ConfigError(
-                "Multiple definition of '{0}' in capitalization_errors section"
-                .format(word)
+                "Multiple definition of '{0}' in capitalization_errors section".format(
+                    word
+                )
             )
         # Construct the reverse casing of the word
-        word_rev = CapitalizationErrors.reverse_capitalization(word)
+        word_rev = CapitalizationErrors.reverse_capitalization(
+            word, split_on_hyphen=split_on_hyphen
+        )
         # Add the word and its reverse case to the set of errors
         CapitalizationErrors.SET.add(word)
         CapitalizationErrors.SET_REV.add(word_rev)
@@ -335,7 +358,7 @@ class CIDErrorForms:
         """ Check whether the word form is in the error forms dictionary,
             either in its original casing or in a lower case form """
         d = CIDErrorForms.DICT
-        if word.islower():      # TODO isn't this if-clause unnecessary?
+        if word.islower():  # TODO isn't this if-clause unnecessary?
             return word in d
         return word in d or word.lower() in d
 
@@ -488,9 +511,13 @@ class Settings:
         """ Handle config parameters in the allowed_multiples section """
         assert s
         if len(s.split()) != 1:
-            raise ConfigError("Only one word per line allowed in allowed_multiples section")
+            raise ConfigError(
+                "Only one word per line allowed in allowed_multiples section"
+            )
         if s in AllowedMultiples.SET:
-            raise ConfigError("'{0}' is repeated in allowed_multiples section".format(s))
+            raise ConfigError(
+                "'{0}' is repeated in allowed_multiples section".format(s)
+            )
         AllowedMultiples.add(s)
 
     @staticmethod
@@ -499,14 +526,18 @@ class Settings:
         a = s.lower().split(",", maxsplit=1)
         if len(a) != 2:
             raise ConfigError("Expected comma between compound word and its parts")
-        word = a[0].strip().strip("\"")
-        parts = a[1].strip().strip("\"").split()
+        word = a[0].strip().strip('"')
+        parts = a[1].strip().strip('"').split()
         if not word:
-            raise ConfigError("Expected word before the comma in wrong_compounds section")
+            raise ConfigError(
+                "Expected word before the comma in wrong_compounds section"
+            )
         if len(parts) < 2:
             raise ConfigError("Missing word part(s) in wrong_compounds section")
         if len(word.split()) != 1:
-            raise ConfigError("Multiple words not allowed before comma in wrong_compounds section")
+            raise ConfigError(
+                "Multiple words not allowed before comma in wrong_compounds section"
+            )
         WrongCompounds.add(word, tuple(parts))
 
     @staticmethod
@@ -525,21 +556,29 @@ class Settings:
             raise ConfigError("Expected comma between error word and its correction")
         word = a[0].strip()
         if len(word) < 3:
-            raise ConfigError("Expected nonempty word before comma in unique_errors section")
-        if word[0] != "\"" or word[-1] != "\"":
+            raise ConfigError(
+                "Expected nonempty word before comma in unique_errors section"
+            )
+        if word[0] != '"' or word[-1] != '"':
             raise ConfigError("Expected word in double quotes in unique_errors section")
         word = word[1:-1]
         corr = a[1].strip()
         if len(corr) < 3:
-            raise ConfigError("Expected nonempty word after comma in unique_errors section")
-        if corr[0] != "\"" or corr[-1] != "\"":
-            raise ConfigError("Expected word in double quotes after comma in unique_errors section")
+            raise ConfigError(
+                "Expected nonempty word after comma in unique_errors section"
+            )
+        if corr[0] != '"' or corr[-1] != '"':
+            raise ConfigError(
+                "Expected word in double quotes after comma in unique_errors section"
+            )
         corr = corr[1:-1]
         corr = tuple(corr.split())
         if not word:
             raise ConfigError("Expected word before the comma in unique_errors section")
         if len(word.split()) != 1:
-            raise ConfigError("Multiple words not allowed before the comma in unique_errors section")
+            raise ConfigError(
+                "Multiple words not allowed before the comma in unique_errors section"
+            )
         UniqueErrors.add(word, corr)
 
     @staticmethod
@@ -554,7 +593,9 @@ class Settings:
         if len(a) != 2:
             raise ConfigError("Expected taboo word and a suggested replacement")
         if a[1].count("_") != 1:
-            raise ConfigError("Suggested replacement should include word category (_xx)")
+            raise ConfigError(
+                "Suggested replacement should include word category (_xx)"
+            )
         TabooWords.add(a[0].strip(), a[1].strip())
 
     @staticmethod
@@ -562,9 +603,13 @@ class Settings:
         """ Handle config parameters in the suggestions section """
         a = s.lower().split()
         if len(a) < 2:
-            raise ConfigError("Expected bad word and at least one suggested replacement")
+            raise ConfigError(
+                "Expected bad word and at least one suggested replacement"
+            )
         if any(w.count("_") != 1 for w in a[1:]):
-            raise ConfigError("Suggested replacements should include word category (_xx)")
+            raise ConfigError(
+                "Suggested replacements should include word category (_xx)"
+            )
         Suggestions.add(a[0].strip(), [w.strip() for w in a[1:]])
 
     @staticmethod
@@ -599,7 +644,7 @@ class Settings:
             # )
         meaning = (
             split[1].strip(),  # Lemma (stofn)
-            correct_form,      # Correct form (ordmynd)
+            correct_form,  # Correct form (ordmynd)
             split[3].strip(),  # Id (utg)
             split[4].strip(),  # Category (ordfl)
             split[5].strip(),  # Tag (beyging)
@@ -611,7 +656,9 @@ class Settings:
         """ Handle config parameters in the error_forms section """
         split = s.strip().split(";")
         if len(split) != 7:
-            raise ConfigError("Expected wrong form;lemma;correct form;id;category;tag;errortype")
+            raise ConfigError(
+                "Expected wrong form;lemma;correct form;id;category;tag;errortype"
+            )
         wrong_form = split[0].strip()
         correct_form = split[2].strip()
         if wrong_form == correct_form:
@@ -621,7 +668,7 @@ class Settings:
             )
         meaning = (
             split[1].strip(),  # Lemma (stofn)
-            correct_form,      # Correct form (ordmynd)
+            correct_form,  # Correct form (ordmynd)
             split[3].strip(),  # Id (utg)
             split[4].strip(),  # Category (ordfl)
             split[5].strip(),  # Tag (beyging)
@@ -630,7 +677,7 @@ class Settings:
         if etype == "cid":
             CIDErrorForms.add(wrong_form, meaning)  # context-independent errors
         elif etype == "cd":
-            CDErrorForms.add(wrong_form, meaning)   # context-dependent errors
+            CDErrorForms.add(wrong_form, meaning)  # context-dependent errors
         else:
             raise ConfigError("Wrong error type given, expected 'cid' or 'cd'")
 

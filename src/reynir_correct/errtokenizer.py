@@ -104,8 +104,10 @@ MONTH_NAMES_CAPITALIZED = (
     "Desember",
 )
 
+# Acronyms that should be all-uppercase
 WRONG_ACRONYMS = frozenset(
-    (  # HÍ og HA ganga kannski ekki hér
+    (
+        # HÍ og HA ganga kannski ekki hér
         "Dv",
         "Rúv",
         "Byko",
@@ -115,9 +117,11 @@ WRONG_ACRONYMS = frozenset(
         "Ví",
         "Mr",
         "Mh",
-        "Ms" "Hr",
+        "Ms",
+        "Hr",
         "Ísí",
         "Ksí",
+        "Así",
         "Kr",
         "Fh",
         "Ía",
@@ -181,7 +185,7 @@ def emulate_case(s: str, template: str) -> str:
         (lower/upper/capitalized) """
     if template.isupper():
         return s.upper()
-    elif template and template[0].isupper():
+    if template and template[0].isupper():
         return s.capitalize()
     return s
 
@@ -1609,6 +1613,13 @@ def fix_capitalization(
                 return False
             if word in WRONG_ACRONYMS:
                 return True
+            if token.val and any(
+                is_cap(m.stofn) and "-" not in m.stofn
+                for m in cast(Iterable[BIN_Meaning], token.val)
+            ):
+                # The token has a proper BÍN meaning as-is, i.e. upper case:
+                # it's probably correct
+                return False
             # Danskur -> danskur
             rev_word = word.lower()
             lower = False
@@ -1621,9 +1632,13 @@ def fix_capitalization(
                     # Something like 'b-deildin' or 'a-flokki' which should probably
                     # be 'B-deildin' or 'A-flokki'
                     return True
-            # íslendingur -> Íslendingur
-            # finni -> Finni
-            rev_word = word.capitalize()
+            if "-" in word:
+                # norður-kórea -> Norður-Kórea
+                rev_word = "-".join(part.capitalize() for part in word.split("-"))
+            else:
+                # íslendingur -> Íslendingur
+                # finni -> Finni
+                rev_word = word.capitalize()
         else:
             # All upper case or other strange/mixed capitalization:
             # don't bother
@@ -1680,11 +1695,14 @@ def fix_capitalization(
                     # Token is lowercase but should be capitalized
                     original_txt = token.txt
                     # !!! TODO: Maybe the following should be just token.txt.capitalize()
-                    correct = (
-                        token.txt.title()
-                        if " " in token.txt
-                        else token.txt.capitalize()
-                    )
+                    if "-" in token.txt:
+                        correct = "-".join(
+                            part.capitalize() for part in token.txt.split("-")
+                        )
+                    elif " " in token.txt:
+                        correct = token.txt.title()
+                    else:
+                        correct = token.txt.capitalize()
                     w, m = db.lookup_word(correct, True)
                     token = token_ctor.Word(w, m, token=token)
                     token.set_error(
