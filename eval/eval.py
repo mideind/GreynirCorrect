@@ -61,6 +61,11 @@
 
     $ python eval.py -m
 
+    To measure GreynirCorrect's performance on the test set
+    excluding malformed sentences:
+
+    $ python eval.py -m -x
+
     To run GreynirCorrect on the entire development corpus
     (by default located in ./iceErrorCorpus/data):
 
