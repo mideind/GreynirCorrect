@@ -1330,6 +1330,14 @@ parser.add_argument(
     help="output individual sentences as well as results, even for the test corpus",
 )
 
+parser.add_argument(
+    "-x",
+    "--exclude",
+    action="store_true",
+    help="exclude sentences marked exclude"
+)
+
+
 # This boolean global is set to True for quiet output,
 # which is the default when processing the test corpus
 QUIET = False
@@ -1918,7 +1926,7 @@ class Stats:
                 bprint("\n{}:".format(entry.capitalize()))
                 for cat in catlist:
                     et = calc_error_category_metrics(cat)
-                    if et.get("fscore", "N/A") == "N/A":
+                    if et.get("f1score", "N/A") == "N/A":
                         continue
                     freq = cast(int, et["freq"])
                     if cat not in OUT_OF_SCOPE:
@@ -1928,15 +1936,11 @@ class Stats:
                             correcs += cast(float, et["corr_rec"]) * freq
                         nfreqs += freq
                         bprint(
-                            "\t{}   {:3.2f}   {:>6}".format(
-                                cat, cast(float, et["f1score"]) * 100.0, freq
+                            "\t{}   {:3.2f}|{:3.2f}   {:>6}".format(
+                                cat, cast(float, et["f1score"]) * 100.0, et["f05score"] * 100.0, freq
                             )
                         )
-                        bprint(
-                            "\t{}   {:3.2f}   {:>6}".format(
-                                cat, cast(float, et["f05score"]) * 100.0, freq
-                            )
-                        )
+
                     microf1all += cast(float, et["f1score"]) * freq
                     microf05all += cast(float, et["f05score"]) * freq
                     if et.get("corr_rec", "N/A") != "N/A":
@@ -1945,7 +1949,7 @@ class Stats:
                 if nfreqs != 0:
                     bprint(
                         "Micro F1-score: {:3.2f}  ({:3.2f})".format(
-                            micro / nfreqs * 100.0, microall / nfreqsall * 100.0
+                            microf1 / nfreqs * 100.0, microf1all / nfreqsall * 100.0
                         )
                     )
                     bprint(
@@ -2027,11 +2031,11 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
 
     try:
 
-        if not QUIET:
+        #if not QUIET:
             # Output a file header
-            bprint("-" * 64)
-            bprint(f"File: {fpath}")
-            bprint("-" * 64)
+            #bprint("-" * 64)
+            #bprint(f"File: {fpath}")
+            #bprint("-" * 64)
         # Parse the XML file into a tree
         try:
             tree = ET.parse(fpath)
@@ -2045,6 +2049,11 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
         root = tree.getroot()
         # Iterate through the sentences in the file
         for sent in root.findall("ns:text/ns:body/ns:p/ns:s", ns):
+            # Skip sentence if find exclude
+            if EXCLUDE:
+                exc = sent.attrib.get("exclude", "")
+                if exc:
+                    continue
             # Sentence identifier (index)
             index = sent.attrib.get("n", "")
             tokens: List[Tuple[str, str]] = []
@@ -2346,6 +2355,9 @@ def main() -> None:
     # --quiet has precedence over --verbose
     if args.quiet is not None:
         QUIET = True
+
+    global EXCLUDE
+    EXCLUDE = args.exclude
 
     # Maximum number of files to process (0=all files)
     max_count = args.number
