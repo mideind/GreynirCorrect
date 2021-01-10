@@ -176,6 +176,7 @@ OUT_OF_SCOPE = {
     "extra-word",  # orði ofaukið   insertion   augun á mótherja > augu mótherja
     "extra-words",  # orðum ofaukið insertion   ...ég fer að hugsa... > ...ég hugsa...
     "foreign-error",  # villa í útlendu orði    foreign Supurbowl > Super Bowl
+    "foreign-name",  # villa í erlendu nafni    foreign Warwixk > Warwick
     "fw4ice",  # erlent orð þýtt yfir á íslensku    style   Elba > Saxelfur
     "gendered",  # kynjað mál, menn fyrir fólk  exclusion   menn hugsa oft > fólk hugsar oft
     "ice4fw",  # íslenskt orð notað í stað erlends      Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
@@ -1342,6 +1343,13 @@ parser.add_argument(
     help="exclude sentences marked exclude"
 )
 
+parser.add_argument(
+    "-s",
+    "--single",
+    type=str,
+    default="",
+    help="Get results for single error category"
+)
 
 # This boolean global is set to True for quiet output,
 # which is the default when processing the test corpus
@@ -1459,6 +1467,10 @@ class Stats:
 
         # Accumulate standard output in a buffer, for writing in one fell
         # swoop at the end (after acquiring the output lock)
+        if SINGLE:
+            bprint(f"")
+
+
         num_sentences: int = sum(
             cast(int, d["count"]) for d in self._sentences.values()
         )
@@ -1876,7 +1888,7 @@ class Stats:
                     )
                 )
                 bprint(
-                    "\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}".format(
+                    "\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}|{:3.2f}".format(
                         cast(float, rk.get("recall", 0.0)) * 100.0,
                         cast(float, rk.get("precision", 0.0)) * 100.0,
                         cast(float, rk.get("f1score", 0.0)) * 100.0,
@@ -2036,11 +2048,11 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
 
     try:
 
-        #if not QUIET:
+        if not QUIET:
             # Output a file header
-            #bprint("-" * 64)
-            #bprint(f"File: {fpath}")
-            #bprint("-" * 64)
+            bprint("-" * 64)
+            bprint(f"File: {fpath}")
+            bprint("-" * 64)
         # Parse the XML file into a tree
         try:
             tree = ET.parse(fpath)
@@ -2059,6 +2071,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 exc = sent.attrib.get("exclude", "")
                 if exc:
                     continue
+            check = False    # When args.single, checking single error category
             # Sentence identifier (index)
             index = sent.attrib.get("n", "")
             tokens: List[Tuple[str, str]] = []
@@ -2131,6 +2144,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 bprint(
                                     f"\n{index}: *** 'depId' attribute missing for dependency ***"
                                 )
+                        if SINGLE and xtype == SINGLE:
+                            check = True
                 else:
                     tokens.append((tag, element_text(el)))
             # Fix up the dependencies, if any
@@ -2142,6 +2157,9 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 else:
                     # Copy the in_scope attribute from the original error
                     error["in_scope"] = error_indexes[dep_id]["in_scope"]
+
+            if SINGLE and not check:
+                continue
 
             # Reconstruct the original sentence
             # TODO switch for sentence from original text file
@@ -2363,6 +2381,9 @@ def main() -> None:
 
     global EXCLUDE
     EXCLUDE = args.exclude
+
+    global SINGLE
+    SINGLE = args.single
 
     # Maximum number of files to process (0=all files)
     max_count = args.number
