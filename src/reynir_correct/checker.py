@@ -274,6 +274,7 @@ class GreynirCorrect(Greynir):
                             end=ix + t.error_span - 1,
                             code=t.error_code,
                             text=t.error_description,
+                            detail=t.error_detail,
                         )
                     )
         # Then, look at the whole sentence

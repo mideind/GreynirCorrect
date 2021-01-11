@@ -379,6 +379,11 @@ class CorrectToken:
         """ Return the number of tokens affected by this error """
         return getattr(self._err, "span", 1)
 
+    @property
+    def error_detail(self) -> Optional[str]:
+        """ Return the detailed description of this error, if any """
+        return getattr(self._err, "detail")
+
 
 class Error(ABC):
 
@@ -551,14 +556,22 @@ class TabooWarning(Error):
 
     # T001: Taboo word usage warning, with suggested replacement
 
-    def __init__(self, code: str, txt: str) -> None:
+    def __init__(self, code: str, txt: str, detail: Optional[str]) -> None:
         # Taboo word warnings start with "T"
         super().__init__("T" + code, is_warning=True)
         self._txt = txt
+        self._detail = detail
 
     @property
     def description(self) -> str:
         return self._txt
+
+    @property
+    def detail(self) -> Optional[str]:
+        return self._detail
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"code": self.code, "descr": self.description, "detail": self.detail}
 
 
 @register_error_class
@@ -815,6 +828,24 @@ def parse_errors(
                         "'{0}' er að öllum líkindum ofaukið".format(next_token.txt),
                     )
                 )
+                yield token
+                token = next_token
+                at_sentence_start = False
+                continue
+
+            if token.txt and token.txt.endswith(("-og", "-eða")) and token.txt[0] != "-":
+                # Coalesced word, such as 'fjármála-og'
+                first, second = token.txt.rsplit("-", maxsplit=1)
+                new_token = CorrectToken.word(first)
+                new_token.set_error(
+                    CompoundError(
+                        "002",
+                        "Orðinu '{0}' var skipt upp".format(token.txt),
+                        span=2
+                    )
+                )
+                yield new_token
+                token = CorrectToken.word("-" + second)
                 yield token
                 token = next_token
                 at_sentence_start = False
@@ -1500,11 +1531,11 @@ def lookup_unknown_words(
                 yield token
                 at_sentence_start = False
                 continue
+            # TODO Consider limiting to words under 15 characters
             if Settings.DEBUG:
                 print("Checking rare word '{0}'".format(token.txt))
             # We use context[-3:-1] since the current token is the last item
             # in the context tuple, and we want the bigram preceding it.
-            # TODO Consider limiting to words under 15 characters
             corrected_txt = corrector.correct(
                 token.txt, context=context[-3:-1], at_sentence_start=at_sentence_start
             )
@@ -1897,6 +1928,8 @@ def late_fix_capitalization(
 def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectToken]:
     """ Annotate taboo words with warnings """
 
+    tdict = TabooWords.DICT
+
     for token in token_stream:
         # TODO STILLING - hér er ósamhengisháð leiðrétting EN er bara uppástunga.
         # Check taboo words
@@ -1905,17 +1938,33 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
             # !!! TODO: taboo word forms could be generated ahead of time
             # !!! TODO: and checked via a set lookup
             for m in token.val:
-                stofn = m.stofn.replace("-", "")
-                if stofn in TabooWords.DICT:
+                key = m.stofn.replace("-", "")
+                # First, look up the lemma + _ + word category
+                t = tdict.get(key + "_" + m.ordfl)
+                if t is None:
+                    # Then, look up the lemma only
+                    t = tdict.get(key)
+                if t is not None:
                     # Taboo word
-                    suggested_word = TabooWords.DICT[stofn].split("_")[0]
+                    suggested_word, detail = t
+                    suggested_word = suggested_word.split("_")[0]
+                    if suggested_word == key:
+                        # Suggested word is the same as the taboo word:
+                        # there is no suggestion, only a notification
+                        explanation = "Óheppilegt eða óviðurkvæmilegt orð"
+                    else:
+                        explanation = (
+                            "Óheppilegt eða óviðurkvæmilegt orð, "
+                            "skárra væri t.d. '{0}'".format(suggested_word)
+                        )
                     token.set_error(
                         TabooWarning(
                             "001",
-                            "Óheppilegt eða óviðurkvæmilegt orð, "
-                            "skárra væri t.d. '{0}'".format(suggested_word),
+                            explanation,
+                            detail or None
                         )
                     )
+                    # !!! TODO: Add correctly inflected suggestion here
                     break
 
         yield token

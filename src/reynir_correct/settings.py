@@ -61,6 +61,11 @@ _ALL_GENDERS = frozenset(("kk", "kvk", "hk"))
 TRUE = frozenset(("true", "True", "1", "yes", "Yes"))
 
 
+# Lazily initialized module-wide instance of BIN_Db for word lookups
+# during parsing of config files
+_db: Optional[BIN_Db] = None
+
+
 class AllowedMultiples:
 
     # Set of word forms allowed to appear more than once in a row
@@ -177,16 +182,25 @@ class MultiwordErrors:
 
 class TabooWords:
 
-    # Dictionary structure: dict { taboo_word : suggested_replacement }
-    DICT: Dict[str, str] = {}
+    # Dictionary structure: dict { taboo_word : (suggested_replacement, explanation) }
+    DICT: Dict[str, Tuple[str, str]] = {}
 
     @staticmethod
-    def add(word: str, replacement: str) -> None:
+    def add(word: str, replacement: str, explanation: str) -> None:
         if word in TabooWords.DICT:
             raise ConfigError(
                 "Multiple definition of '{0}' in taboo_words section".format(word)
             )
-        TabooWords.DICT[word] = replacement
+        global _db
+        if _db is None:
+            _db = BIN_Db()
+        a = word.split("_")
+        _, m = _db.lookup_word(a[0])
+        if not m or (len(a) >= 2 and all(mm.ordfl != a[1] for mm in m)):
+            raise ConfigError(
+                "The taboo word '{0}' is not found in BÍN".format(word)
+            )
+        TabooWords.DICT[word] = (replacement, explanation)
 
 
 class Suggestions:
@@ -209,7 +223,6 @@ class CapitalizationErrors:
     SET: Set[str] = set()
     # Reverse capitalization (íslendingur -> Íslendingur, Danskur -> danskur)
     SET_REV: Set[str] = set()
-    _db: Optional[BIN_Db] = None
 
     @staticmethod
     def emulate_case(s: str, template: str) -> str:
@@ -255,14 +268,15 @@ class CapitalizationErrors:
             prefix, suffix = "", word
             # Split_on_hyphen is True for e.g. 'norður-kórea' and 'nýja-sjáland'
             split_on_hyphen = "-" in word
-        if CapitalizationErrors._db is None:
-            CapitalizationErrors._db = BIN_Db()
+        global _db
+        if _db is None:
+            _db = BIN_Db()
         # The suffix may not be in BÍN except as a compound, and in that
         # case we want its hyphenated lemma
         suffix_rev = CapitalizationErrors.reverse_capitalization(
             suffix, split_on_hyphen=split_on_hyphen
         )
-        _, m = CapitalizationErrors._db.lookup_word(suffix_rev)
+        _, m = _db.lookup_word(suffix_rev)
         if not m:
             raise ConfigError(
                 "No BÍN meaning for '{0}' (from error word '{1}') in capitalization_errors section".format(
@@ -587,16 +601,35 @@ class Settings:
         CapitalizationErrors.add(s)
 
     @staticmethod
-    def _handle_taboo_words(s):
+    def _handle_taboo_words(s: str) -> None:
         """ Handle config parameters in the taboo_words section """
-        a = s.lower().split()
-        if len(a) != 2:
+        # Start by parsing explanation string off the end (right hand side), if present
+        lquote = s.find("\"")
+        rquote = s.rfind("\"")
+        if (lquote >= 0) != (rquote >= 0):
+            raise ConfigError("Explanation string for taboo word should be enclosed in double quotes")
+        if lquote >= 0:
+            # Obtain explanation from within quotes
+            explanation = s[lquote + 1:rquote].strip()
+            s = s[:lquote].rstrip()
+        else:
+            # No explanation
+            explanation = ""
+        if not s:
             raise ConfigError("Expected taboo word and a suggested replacement")
-        if a[1].count("_") != 1:
+        a = s.lower().split()
+        if len(a) > 2:
+            raise ConfigError("Expected taboo word and a suggested replacement")
+        taboo = a[0].strip()
+        if len(a) == 2:
+            replacement = a[1].strip()
+        else:
+            replacement = taboo
+        if replacement.count("_") != 1:
             raise ConfigError(
                 "Suggested replacement should include word category (_xx)"
             )
-        TabooWords.add(a[0].strip(), a[1].strip())
+        TabooWords.add(taboo, replacement, explanation)
 
     @staticmethod
     def _handle_suggestions(s):
@@ -713,6 +746,8 @@ class Settings:
             if Settings.loaded:
                 return
 
+            global _db
+
             CONFIG_HANDLERS = {
                 "settings": Settings._handle_settings,
                 "allowed_multiples": Settings._handle_allowed_multiples,
@@ -767,3 +802,6 @@ class Settings:
                 raise e
 
             Settings.loaded = True
+            if _db is not None:
+                _db.close()
+                _db = None

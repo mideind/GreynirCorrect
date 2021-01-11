@@ -71,9 +71,9 @@ LOG_LAMBDA = math.log(0.4)
 
 
 @lru_cache(maxsize=2048)
-def _splits(word: str) -> List[Tuple[str, str]]:
+def _splits(word: str) -> Tuple[Tuple[str, str], ...]:
     """ Return a list of all possible (first, rest) pairs that comprise word. """
-    return [(word[:i], word[i:]) for i in range(len(word) + 1)]
+    return tuple((word[:i], word[i:]) for i in range(len(word) + 1))
 
 
 def levenshtein_distance(s1: str, s2: str) -> int:
@@ -507,7 +507,7 @@ class Corrector:
             # Deletes
             result = {a + b[1:] for (a, b) in pairs if b}
             # Transposes
-            result |= {a + b[1] + b[0] + b[2:] for (a, b) in pairs if len(b) > 1}
+            result |= {a + b[1] + b[0] + b[2:] for (a, b) in pairs if len(b) >= 2}
             # Replaces
             result |= {a + c + b[1:] for (a, b) in pairs for c in alphabet if b}
             # Inserts
@@ -703,7 +703,7 @@ class Corrector:
     def correct_text(self, text: StringIterable, *, only_rare: bool = False) -> str:
         """ Attempt to correct all words within a text, returning the corrected text.
             If only_rare is True, correction is only attempted on rare words. """
-        result = []
+        result: List[str] = []
         look_back = -MAX_ORDER + 1
         for token in tokenize(text):
             if token.kind == TOK.WORD:
@@ -722,7 +722,7 @@ class Corrector:
         return correct_spaces(" ".join(result))
 
 
-def test():
+def test() -> None:
 
     with BIN_Db.get_db() as db:
         c = Corrector(db)
@@ -771,13 +771,13 @@ def test():
             """,
         ]
 
-        def linebreak(txt, margin=80, left_margin=0):
+        def linebreak(txt: str, margin: int=80, left_margin: int=0) -> str:
             """ Return a nicely column-formatted string representation of the given text,
                 where each line is not longer than the given margin (if possible).
                 A left margin can be optionally added, as a sequence of spaces.
                 The lines are joined by newlines ('\n') but there is no trailing
                 newline. """
-            result = []
+            result: List[str] = []
             line: List[str] = []
             len_line = 0
             for wrd in txt.split():
