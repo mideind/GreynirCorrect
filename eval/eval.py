@@ -61,6 +61,11 @@
 
     $ python eval.py -m
 
+    To measure GreynirCorrect's performance on the test set
+    excluding malformed sentences:
+
+    $ python eval.py -m -x
+
     To run GreynirCorrect on the entire development corpus
     (by default located in ./iceErrorCorpus/data):
 
@@ -171,6 +176,7 @@ OUT_OF_SCOPE = {
     "extra-word",  # orði ofaukið   insertion   augun á mótherja > augu mótherja
     "extra-words",  # orðum ofaukið insertion   ...ég fer að hugsa... > ...ég hugsa...
     "foreign-error",  # villa í útlendu orði    foreign Supurbowl > Super Bowl
+    "foreign-name",  # villa í erlendu nafni    foreign Warwixk > Warwick
     "fw4ice",  # erlent orð þýtt yfir á íslensku    style   Elba > Saxelfur
     "gendered",  # kynjað mál, menn fyrir fólk  exclusion   menn hugsa oft > fólk hugsar oft
     "ice4fw",  # íslenskt orð notað í stað erlends      Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
@@ -1330,6 +1336,21 @@ parser.add_argument(
     help="output individual sentences as well as results, even for the test corpus",
 )
 
+parser.add_argument(
+    "-x",
+    "--exclude",
+    action="store_true",
+    help="exclude sentences marked exclude"
+)
+
+parser.add_argument(
+    "-s",
+    "--single",
+    type=str,
+    default="",
+    help="Get results for single error category"
+)
+
 # This boolean global is set to True for quiet output,
 # which is the default when processing the test corpus
 QUIET = False
@@ -1446,6 +1467,10 @@ class Stats:
 
         # Accumulate standard output in a buffer, for writing in one fell
         # swoop at the end (after acquiring the output lock)
+        if SINGLE:
+            bprint(f"")
+
+
         num_sentences: int = sum(
             cast(int, d["count"]) for d in self._sentences.values()
         )
@@ -1507,7 +1532,7 @@ class Stats:
             recs: str,
             precs: str,
         ) -> None:
-            """ Calculate precision, recall and F1-score """
+            """ Calculate precision, recall, F1-score and F0.5-score """
             # Recall
             if tp + fn == 0:
                 result = "N/A"
@@ -1560,6 +1585,29 @@ class Stats:
                     bprint(f"   {c:<13}:           {f1:1.4f}")
                 else:
                     bprint(f"   {c:<13}:           N/A")
+            
+            # F0.5 score
+            if precision + recall > 0.0:
+                f05 = 1.25 * (precision * recall) / (0.25 * precision + recall)
+                result = f"{f05:1.4f}"
+            else:
+                f05 = 0.0
+                result = "N/A"
+
+            bprint(f"\nF0.5 score:                   {result}")
+            for c in CATEGORIES:
+                d = self._sentences[c]
+                if recs not in d or precs not in d:
+                    bprint(f"   {c:<13}:              N/A")
+                    continue
+                rc = d[recs]
+                p = d[precs]
+                if p + rc > 0.0:
+                    f05 = 1.25 * (p * rc) / (0.25 * p + rc)
+                    bprint(f"   {c:<13}:           {f1:1.4f}")
+                else:
+                    bprint(f"   {c:<13}:           N/A")
+
 
         def calc_recall(
             right: int, wrong: int, rights: str, wrongs: str, recs: str
@@ -1583,7 +1631,7 @@ class Stats:
                     bprint(f"   {c:<13}:           {rc:1.4f}")
 
         def calc_error_category_metrics(cat: str) -> CatResultDict:
-            """ Calculates precision, recall and f1-score for a single error category
+            """ Calculates precision, recall, f1-score and f0.5-score for a single error category
                 N = Number of errors in category z in reference corpus, 
                 Nall =  number of tokens
                 TP = Errors correctly classified as category z
@@ -1591,7 +1639,9 @@ class Stats:
                 FN = Errors in category z in reference but not hypothesis
                 Recall = TPz/(TPz+FPz)
                 Precision = TPz/(TPz+FNz)
-            """
+                F1-score = 2*(P*R)/(P+R)
+                F0.5-score = 1.25*(P*R)/(0.25*P+R)
+            """ 
             catdict: CatResultDict = { k: v for k, v in self._errtypes[cat].items() }
             tp = cast(int, catdict.get("tp", 0))
             fn = cast(int, catdict.get("fn", 0))
@@ -1602,7 +1652,8 @@ class Stats:
             if tp + fn + fp == 0:  # No values in category
                 catdict["recall"] = "N/A"
                 catdict["precision"] = "N/A"
-                catdict["fscore"] = "N/A"
+                catdict["f1score"] = "N/A"
+                catdict["f05score"] = "N/A"
             else:
                 # Recall
                 if tp + fn != 0:
@@ -1610,10 +1661,13 @@ class Stats:
                 # Precision
                 if tp + fp != 0:
                     precision = catdict["precision"] = tp / (tp + fp)
+                # F1 score and F0.5 score
                 if recall + precision > 0.0:
-                    catdict["fscore"] = 2 * precision * recall / (precision + recall)
+                    catdict["f1score"] = 2 * precision * recall / (precision + recall)
+                    catdict["f05score"] = 1.25 * (precision * recall) / (0.25*precision + recall)
                 else:
-                    catdict["fscore"] = 0.0
+                    catdict["f1score"] = 0.0
+                    catdict["f05score"] = 0.0
                 # Correction recall
                 right_corr = cast(int, catdict.get("right_corr", 0))
                 if right_corr > 0:
@@ -1634,12 +1688,6 @@ class Stats:
 
         def output_sentence_scores() -> None:
             """ Calculate and write sentence scores to stdout """
-            ### SENTENCE SCORES
-            # Fær sent inn TN, TP, FP og FN - er þá búin að summa það upp
-            # Get sent inn aukagildi, sem segir t.d. hvort nota á F0,5 eða F1
-            # Og hvað er verið að reikna?
-            # Get líka sent inn texta sem segir hvað er verið að reikna,
-            # s.s. "Results for Error detection" eða "Results for sentence correctness"?
 
             # Total number of true negatives found
             bprint(f"\nResults for error detection for whole sentences")
@@ -1685,7 +1733,7 @@ class Stats:
                     result = f"{100.0*true_results/num_sents:3.2f}%/{100.0*false_results/num_sents:3.2f}%"
                 bprint(f"   {c:<13}: {result:>16}")
 
-            # Precision, recall, F1-score
+            # Precision, recall, F1-score, F0.5-score
             calc_PRF(
                 true_positives,
                 true_negatives,
@@ -1797,26 +1845,32 @@ class Stats:
             """ Calculate and write scores for each error category to stdout """
             bprint(f"\n\nResults for each error category in order by frequency")
             freqdict: Dict[str, int] = dict()
-            micro: float = 0.0
+            microf1 : float = 0.0
+            microf05 : float = 0.0
             nfreqs: int = 0
-            microall: float = 0.0
+            microf1all : float = 0.0
+            microf05all : float = 0.0
             nfreqsall: int = 0
             resultdict: Dict[str, CatResultDict] = dict()
 
             # Iterate over category counts
             for cat in self._errtypes.keys():
-                # Get recall, precision and F1; recall for correction and span
+                # Get recall, precision, F1 and F0.5; recall for correction and span
                 catdict = resultdict[cat] = calc_error_category_metrics(cat)
 
                 # Collect micro scores, both overall and for in-scope categories
                 freq = cast(int, catdict["freq"])
                 assert isinstance(freq, int)
-                fscore = cast(float, catdict["fscore"])
-                assert isinstance(fscore, float)
+                f1score = cast(float, catdict["f1score"])
+                f05score = cast(float, catdict["f05score"])
+                assert isinstance(f1score, float)
+                assert isinstance(f05score, float)
                 if cat not in OUT_OF_SCOPE:
-                    micro += fscore * freq
+                    microf1 += f1score * freq
+                    microf05 += f05score * freq
                     nfreqs += freq
-                microall += fscore * freq
+                microf1all += f1score * freq
+                microf05all += f05score * freq
                 nfreqsall += freq
 
                 # Create freqdict for sorting error categories by frequency
@@ -1834,10 +1888,11 @@ class Stats:
                     )
                 )
                 bprint(
-                    "\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}".format(
+                    "\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}|{:3.2f}".format(
                         cast(float, rk.get("recall", 0.0)) * 100.0,
                         cast(float, rk.get("precision", 0.0)) * 100.0,
-                        cast(float, rk.get("fscore", 0.0)) * 100.0,
+                        cast(float, rk.get("f1score", 0.0)) * 100.0,
+                        cast(float, rk.get("f05score", 0.0)) * 100.0,
                     )
                 )
                 if rk.get("corr_rec", "N/A") == "N/A" or rk.get("span_rec", "N/A") == "N/A":
@@ -1855,19 +1910,31 @@ class Stats:
             if nfreqs != 0:
                 bprint(
                     "Micro F1-score: {:3.2f}  ({:3.2f})".format(
-                        micro / nfreqs * 100.0, microall / nfreqsall * 100.0
+                        microf1 / nfreqs * 100.0, microf1all / nfreqsall * 100.0
                     )
                 )
             else:
                 bprint(f"Micro F1-score: N/A")
+            # Micro F0.5-score
+            # Results for in-scope categories and all categories
+            if nfreqs != 0:
+                bprint(
+                    "Micro F0.5-score: {:3.2f}  ({:3.2f})".format(
+                        microf05 / nfreqs * 100.0, microf05all / nfreqsall * 100.0
+                    )
+                )
+            else:
+                bprint(f"Micro F0.5-score: N/A")
 
         def output_supercategory_scores(errorcats: Dict[str, List[str]]) -> None:
             """ Results for each SÍM category
                 (context-dependent, context-independent, grammar, style) """
             for entry, catlist in errorcats.items():
-                micro = 0.0
+                microf1 = 0.0
+                microf05 = 0.0
                 nfreqs = 0
-                microall = 0.0
+                microf1all = 0.0
+                microf05all = 0.0
                 nfreqsall = 0
                 correcs = 0.0
                 correcsall = 0.0
@@ -1876,29 +1943,37 @@ class Stats:
                 bprint("\n{}:".format(entry.capitalize()))
                 for cat in catlist:
                     et = calc_error_category_metrics(cat)
-                    if et.get("fscore", "N/A") == "N/A":
+                    if et.get("f1score", "N/A") == "N/A":
                         continue
                     freq = cast(int, et["freq"])
                     if cat not in OUT_OF_SCOPE:
-                        micro += cast(float, et["fscore"]) * freq
+                        microf1 += cast(float, et["f1score"]) * freq
+                        microf05 += cast(float, et["f05score"]) * freq
                         if et["corr_rec"] != "N/A":
                             correcs += cast(float, et["corr_rec"]) * freq
                         nfreqs += freq
                         bprint(
-                            "\t{}   {:3.2f}   {:>6}".format(
-                                cat, cast(float, et["fscore"]) * 100.0, freq
+                            "\t{}   {:3.2f}|{:3.2f}   {:>6}".format(
+                                cat, cast(float, et["f1score"]) * 100.0, et["f05score"] * 100.0, freq
                             )
                         )
-                    microall += cast(float, et["fscore"]) * freq
+
+                    microf1all += cast(float, et["f1score"]) * freq
+                    microf05all += cast(float, et["f05score"]) * freq
                     if et.get("corr_rec", "N/A") != "N/A":
                         correcsall += cast(float, et["corr_rec"]) * freq
                     nfreqsall += freq
                 if nfreqs != 0:
                     bprint(
                         "Micro F1-score: {:3.2f}  ({:3.2f})".format(
-                            micro / nfreqs * 100.0, microall / nfreqsall * 100.0
+                            microf1 / nfreqs * 100.0, microf1all / nfreqsall * 100.0
                         )
                     )
+                    bprint(
+                        "Micro F0.5-score: {:3.2f}  ({:3.2f})".format(
+                            microf05 / nfreqs * 100.0, microf05all / nfreqsall * 100.0
+                        )
+                    )                    
                     bprint(
                         "Error correction recall: {:3.2f} ({:3.2f})".format(
                             correcs / nfreqs * 100.0, correcsall / nfreqsall * 100.0
@@ -1906,6 +1981,7 @@ class Stats:
                     )
                 else:
                     bprint(f"Micro F1-score: N/A")
+                    bprint(f"Micro F0.5-score: N/A")
                     bprint(f"Error correction recall: N/A")
 
         output_duration()
@@ -1990,6 +2066,12 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
         root = tree.getroot()
         # Iterate through the sentences in the file
         for sent in root.findall("ns:text/ns:body/ns:p/ns:s", ns):
+            # Skip sentence if find exclude
+            if EXCLUDE:
+                exc = sent.attrib.get("exclude", "")
+                if exc:
+                    continue
+            check = False    # When args.single, checking single error category
             # Sentence identifier (index)
             index = sent.attrib.get("n", "")
             tokens: List[Tuple[str, str]] = []
@@ -2062,6 +2144,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 bprint(
                                     f"\n{index}: *** 'depId' attribute missing for dependency ***"
                                 )
+                        if SINGLE and xtype == SINGLE:
+                            check = True
                 else:
                     tokens.append((tag, element_text(el)))
             # Fix up the dependencies, if any
@@ -2073,6 +2157,9 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 else:
                     # Copy the in_scope attribute from the original error
                     error["in_scope"] = error_indexes[dep_id]["in_scope"]
+
+            if SINGLE and not check:
+                continue
 
             # Reconstruct the original sentence
             # TODO switch for sentence from original text file
@@ -2291,6 +2378,12 @@ def main() -> None:
     # --quiet has precedence over --verbose
     if args.quiet is not None:
         QUIET = True
+
+    global EXCLUDE
+    EXCLUDE = args.exclude
+
+    global SINGLE
+    SINGLE = args.single
 
     # Maximum number of files to process (0=all files)
     max_count = args.number
