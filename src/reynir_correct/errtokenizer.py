@@ -382,7 +382,7 @@ class CorrectToken:
     @property
     def error_detail(self) -> Optional[str]:
         """ Return the detailed description of this error, if any """
-        return getattr(self._err, "detail")
+        return getattr(self._err, "detail", None)
 
 
 class Error(ABC):

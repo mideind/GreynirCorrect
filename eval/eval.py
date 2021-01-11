@@ -1340,7 +1340,7 @@ parser.add_argument(
     "-x",
     "--exclude",
     action="store_true",
-    help="exclude sentences marked exclude"
+    help="Exclude sentences marked exclude"
 )
 
 parser.add_argument(
@@ -1348,12 +1348,20 @@ parser.add_argument(
     "--single",
     type=str,
     default="",
-    help="Get results for single error category"
+    help="Get results for a single error category"
 )
 
 # This boolean global is set to True for quiet output,
 # which is the default when processing the test corpus
 QUIET = False
+
+# This boolean global is set to True if only a single
+# error category should be analyzed
+SINGLE = False
+
+# This boolean global is set to True if sentences marked
+# with an exclusion flag should be excluded from processing
+EXCLUDE = False
 
 
 def element_text(element: ET.Element) -> str:
@@ -1469,7 +1477,6 @@ class Stats:
         # swoop at the end (after acquiring the output lock)
         if SINGLE:
             bprint(f"")
-
 
         num_sentences: int = sum(
             cast(int, d["count"]) for d in self._sentences.values()
@@ -1954,7 +1961,8 @@ class Stats:
                         nfreqs += freq
                         bprint(
                             "\t{}   {:3.2f}|{:3.2f}   {:>6}".format(
-                                cat, cast(float, et["f1score"]) * 100.0, et["f05score"] * 100.0, freq
+                                cat, cast(float, et["f1score"]) * 100.0,
+                                cast(float, et["f05score"]) * 100.0, freq
                             )
                         )
 
