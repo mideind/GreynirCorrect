@@ -378,7 +378,9 @@ class Corrector:
     # If a unigram is independently above this threshold,
     # just assume it's OK without further checking
     _UNIGRAM_ACCEPT_THRESHOLD = -12.0
-    _RARE_THRESHOLD = -16.5  # Approx frequency 8 in the trigrams database
+    # Words that appear approximately 8 or fewer times in the trigrams database
+    # are considered rare
+    _RARE_THRESHOLD = -16.5
     # For uppercase words, the rarity threshold is even lower,
     # or half the lowercase one
     _RARE_THRESHOLD_UPPERCASE = _RARE_THRESHOLD + math.log(0.5)
@@ -524,7 +526,9 @@ class Corrector:
 
             return {e2 for e1 in edits1(pairs) for e2 in sub_edits1(e1)}
 
-        def gen_candidates(original_word: str, word: str) -> Iterable[Tuple[str, float]]:
+        def gen_candidates(
+            original_word: str, word: str
+        ) -> Iterable[Tuple[str, float]]:
             """ Generate candidates in order of generally decreasing likelihood """
 
             def logprob_title(*args: str) -> float:
@@ -659,7 +663,7 @@ class Corrector:
             word.lower(),
         )
 
-    def is_rare(self, word: str, *, sentence_is_uppercase: bool=False) -> bool:
+    def is_rare(self, word: str, *, sentence_is_uppercase: bool = False) -> bool:
         """ Return True if the word is so rare as to be suspicious """
         wl = word.lower()
         if wl != word:
@@ -771,7 +775,7 @@ def test() -> None:
             """,
         ]
 
-        def linebreak(txt: str, margin: int=80, left_margin: int=0) -> str:
+        def linebreak(txt: str, margin: int = 80, left_margin: int = 0) -> str:
             """ Return a nicely column-formatted string representation of the given text,
                 where each line is not longer than the given margin (if possible).
                 A left margin can be optionally added, as a sequence of spaces.
@@ -822,6 +826,7 @@ def test() -> None:
         # íhaldið -> haldið
         # áfalla -> falla
         # mikil munur -> mikill munur
+
 
 if __name__ == "__main__":
 

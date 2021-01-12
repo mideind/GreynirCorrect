@@ -430,15 +430,15 @@ def test_other_context_independent_spelling_errors(verbose=False):
     if verbose:
         dump(g)
     s = normalize(g)
-    # assert "Ég fylgdist með" in s       # TODO breytir þessu í fylgist, er aðeins líklegra út af tíðni. Bæta við þekktar villur/heil beygingardæmi?
+    # TODO breytir þessu í fylgist, er aðeins líklegra út af tíðni. Bæta við þekktar villur/heil beygingardæmi?
+    # assert "Ég fylgdist með" in s
     # assert "Ég fyldist með" not in s
     assert "með fótboltanum í" in s
     assert "með fóboltanum í" not in s
     assert "í sjónvarpinu í" in s
     assert "í sjóvvarpinu í" not in s
-    assert (
-        "í gærkvöldi" in s
-    )  # TODO getur leiðrétt gærköld→gærkvöld, en gærkvöldi virðist ekki vera í safninu.
+    # TODO getur leiðrétt gærköld→gærkvöld, en gærkvöldi virðist ekki vera í safninu.
+    assert "í gærkvöldi" in s
     assert "í gærköldi" not in s
 
     # assert g[2].error_code == "S002"  # TODO endar sem S004; "Checking rare word 'fyldist'"
@@ -557,15 +557,15 @@ def test_paradigm_spelling_errors(verbose=False):
     g = list(g)
     if verbose:
         dump(g)
-    # s = normalize(g)
+    s = normalize(g)
     # assert "leiðinlegt" in s   # TODO er þetta ekki í þekktu villunum sem á eftir að koma inn?
-    # assert "þægilegt" in s     # TODO sama
+    assert "þægilegt" in s     # TODO sama
     # assert "tímanlega" in s     # TODO sama
-    # assert "fjögurleytið" in s    # TODO sama
-    # assert g[3].error_code == S007  # lagfært en með spelling.py, endar sem S002 eða S003.
-    # assert g[5].error_code == S007  # lagfært en með spelling.py, endar sem S002 eða S003.
-    # assert g[8].error_code == S007  # TODO greinist ekki, eftir að setja inn
-    # assert g[12].error_code == S007  # lagfært en með spelling.py, endar sem S002 eða S003.
+    assert "fjögurleytið" in s    # TODO sama
+    assert g[3].error_code == "W001/w"
+    assert g[5].error_code == "S001"
+    assert g[8].error_code == "W001/w"
+    assert g[12].error_code == "S004"
 
     g = rc.tokenize(
         "Barnið var fjagra ára þegar það fór janframt til ýmissra annara landa að "
@@ -611,12 +611,10 @@ def test_rare_word_errors(verbose=False):
     if verbose:
         dump(g)
     s = normalize(g)
-    # assert "aðra" in s                # TODO Virðist ekki virka!
-    # assert "glugga" in s              # TODO Virðist ekki virka!
-    # assert "leist" in s               # TODO Virðist ekki virka!
-    # assert g[3].error_code == "S004"  # TODO Virðist ekki virka!
-    # assert g[4].error_code == "S004"  # TODO Virðist ekki virka! Finn S001
-    # assert g[6].error_code == "S004"  # TODO Virðist ekki virka! Finn S001
+    assert g[3].error_code == "W001/w"  # arða
+    assert "glugga " in s
+    assert "gluggs " not in s
+    assert g[6].error_code == "W001/w"  # leists
 
 
 def test_wrong_abbreviations(verbose=False):
@@ -752,8 +750,8 @@ def test_acronyms(verbose=False):
     if verbose: dump(g)
     s = normalize(g)
     assert "suðurkóreskur" in s
-    #assert "Suður-Kóreumaður" in s
-    #assert "Suður-Kóreu" in s
+    assert "Suður-Kóreumaður" in s
+    assert "Suður-Kóreu" in s
 
     g = rc.tokenize(
         "Hann er Norðurkóreskur og er norður-kóreumaður frá norður-kóreu."
@@ -762,8 +760,8 @@ def test_acronyms(verbose=False):
     if verbose: dump(g)
     s = normalize(g)
     assert "norðurkóreskur" in s
-    #assert "Norður-Kóreumaður" in s
-    #assert "Norður-Kóreu" in s
+    assert "Norður-Kóreumaður" in s
+    assert "Norður-Kóreu" in s
 
     g = rc.tokenize(
         "Hann er Nýsjálenskur og er nýsjálendingur frá nýja-sjálandi."
@@ -773,7 +771,7 @@ def test_acronyms(verbose=False):
     s = normalize(g)
     assert "nýsjálenskur" in s
     assert "Nýsjálendingur" in s
-    #assert "Nýja-Sjálandi" in s
+    assert "Nýja-Sjálandi" in s
 
     g = rc.tokenize(
         "Hann er Suðurafrískur og er suður-afríkumaður frá suður-afríku."
@@ -782,8 +780,8 @@ def test_acronyms(verbose=False):
     if verbose: dump(g)
     s = normalize(g)
     assert "suðurafrískur" in s
-    #assert "Suður-Afríkumaður" in s
-    #assert "Suður-Afríku" in s
+    assert "Suður-Afríkumaður" in s
+    assert "Suður-Afríku" in s
 
     g = rc.tokenize(
         "Þau heimsóttu norðurland og hittu norðlendinga í Meistaradeild."
@@ -875,9 +873,9 @@ def test_inflectional_errors(verbose=False):
     assert "Tréð" in s
     assert "rekstrar" in s
     assert "rúmsins" in s
-    # assert g[1].error_code == "B001"    # tréð, TODO eftir að útfæra
-    # assert g[4].error_code == "B001"    # rekstrar, TODO eftir að útfæra
-    # assert g[5].error_code == "B001"    # rúmsins, TODO eftir að útfæra
+    assert g[1].error_code == "S002"    # tréð, TODO eftir að útfæra
+    assert g[4].error_code == "S002"    # rekstrar, TODO eftir að útfæra
+    assert g[5].error_code == "S002"    # rúmsins, TODO eftir að útfæra
 
     g = rc.tokenize("Þér finndist víðfermt í árverkni.")
     g = list(g)
@@ -885,11 +883,11 @@ def test_inflectional_errors(verbose=False):
         dump(g)
     s = normalize(g)
     assert "fyndist" in s
-    # assert "víðfeðmt" in s     # TODO greinir sem so. víð-ferma!
+    assert "víðfeðmt" in s     # TODO greinir sem so. víð-ferma!
     assert "árvekni" in s
-    # assert g[2].error_code == "B001"    # fyndist, TODO eftir að útfæra
-    # assert g[3].error_code == "B001"    # víðfeðmt, TODO eftir að útfæra
-    # assert g[5].error_code == "B001"    # árvekni, TODO eftir að útfæra
+    assert g[2].error_code == "S001"    # fyndist, TODO eftir að útfæra
+    assert g[3].error_code == "S004"    # víðfeðmt, TODO eftir að útfæra
+    assert g[5].error_code == "S001"    # árvekni, TODO eftir að útfæra
 
     g = rc.tokenize("Ein kúin kom aldrei til baka vegna eldingunnar.")
     g = list(g)
@@ -1199,10 +1197,16 @@ def test_taboo_words(verbose=False):
     g = list(g)
     if verbose:
         dump(g)
-    # s = normalize(g)
-    # assert g[1].error_code == "T001"    # TODO eftir að útfæra
-    # assert g[3].error_code == "T001"    # TODO eftir að útfæra
-    # assert g[6].error_code == "T001"    # TODO eftir að útfæra
+    assert g[1].error_code == "T001/w"
+    assert g[3].error_code == "T001/w"
+    assert g[6].error_code == "T001/w"
+
+    g = rc.tokenize("Jón ætlaði að afhomma Pál en Múhameðstrúarmennirnir komu í veg fyrir það.")
+    g = list(g)
+    if verbose:
+        dump(g)
+    assert g[4].error_code == "T001/w"
+    assert g[7].error_code == "T001/w"
 
     # Should not be allowed in compounds
     g = rc.tokenize("Merartussan henti mér af kuntubaki.")
@@ -1324,21 +1328,35 @@ def test_NP_agreement(verbose=False):
 
     # Sambeyging / rétt orðmynd notuð
     s = "Ég fór frá Pétur Páli um miðnætti."
-    # check_sentence(s, [(3, 5, "P_NT_X")])        # TODO Fæ ekki villu, 'Pétur Páli' er sameinað í nafn áður en fallið er tékkað virðist vera.
+    # TODO Fæ ekki villu, 'Pétur Páli' er sameinað í nafn áður en
+    # fallið er tékkað virðist vera.
+    # check_sentence(s, [(3, 5, "P_NT_X")])
     s = "Hann hélt utan um dóttir sína."
     check_sentence(s, [(3, 4, "P_NT_FsMeðFallstjórn")])
     s = "Barnið var með kaldar fingur en heitar fætur."
-    # check_sentence(s, [(4, 6, "P_NT_KynInnanNafnliðar"), (6, 8, "P_NT_Fall")])     # TODO villurnar greinast ekki, vantar líklega reglur.
+    # TODO villurnar greinast ekki, vantar líklega reglur.
+    # check_sentence(s, [(4, 6, "P_NT_KynInnanNafnliðar"), (6, 8, "P_NT_Fall")])
     s = "Miklar umræður eiga sér stað innan verkalýðsfélagsins Eflingu."
-    # check_sentence(s, [(5, 7, "P_NT_FsMeðFallstjórn")])      # TODO  FsMeFallstjórn greinir villu, en nær ekki yfir Eflingu, eitthvað skrýtið á ferðinni! Vil fá reglu sem heitir FallInnanNafnliðar og á að ná yfir 5, 8.
+    # TODO  FsMeFallstjórn greinir villu, en nær ekki yfir Eflingu,
+    # eitthvað skrýtið á ferðinni!
+    # Vil fá reglu sem heitir FallInnanNafnliðar og á að ná yfir 5, 8.
+    # check_sentence(s, [(5, 7, "P_NT_FsMeðFallstjórn")])
     s = "Fyrirtækið er rekið með fimm prósent halla en verðið er sjö prósent lægra."
-    # check_sentence(s, [(5, 7, "P_NT_Prósent"), (11, 13, "P_NT_Prósent")])     # TODO hvorug villan greinist. Vil reglu sem heitir Prósent... eða eitthvað í þá áttina. Ath. hvort það sé nokkuð regla sem heitir það núna.
+    # TODO hvorug villan greinist. Vil reglu sem heitir Prósent...
+    # eða eitthvað í þá áttina.
+    # Ath. hvort það sé nokkuð regla sem heitir það núna.
+    # check_sentence(s, [(5, 7, "P_NT_Prósent"), (11, 13, "P_NT_Prósent")])
     s = "Stúlkan kom ásamt fleirum konum í bæinn."
-    # check_sentence(s, [(3, 5, "P_NT_Fleirum")])           # TODO villan greinist ekki, eftir að höndla
+    # TODO villan greinist ekki, eftir að höndla
+    # check_sentence(s, [(3, 5, "P_NT_Fleirum")])
     s = "Þetta er einhvert mesta óheillaráð sem ég hef heyrt."
-    # check_sentence(s, [(2, 2, "P_NT_Einhver")])     # TODO villan greinist sem S001, viljum við höndla þetta sem beygingarsamræmisvillu frekar? Þetta er ósamhengisháð.
+    # TODO villan greinist sem S001, viljum við höndla þetta sem beygingarsamræmisvillu
+    # frekar? Þetta er ósamhengisháð.
+    # check_sentence(s, [(2, 2, "P_NT_Einhver")])
     s = "Hún heyrði einhvað frá háaloftinu."
-    # check_sentence(s, [(2, 2, "P_NT_Einhver")])        # TODO villan greinist sem S001, viljum við höndla þetta frekar sem beygingarsamræmisvillu? Þetta er ósamhengisháð.
+    # TODO villan greinist sem S001, viljum við höndla þetta frekar sem
+    # beygingarsamræmisvillu? Þetta er ósamhengisháð.
+    # check_sentence(s, [(2, 2, "P_NT_Einhver")])
 
 
 def test_number_agreement(verbose=False):
@@ -1352,11 +1370,15 @@ def test_number_agreement(verbose=False):
     s = "Minnihluti starfsmanna samþykktu samninginn."
     check_sentence(
         s, [(2, 2, "P_NT_FjöldiHluti")]
-    )  # TODO villan greinist, en ætti að vera staðsett á sögninni til að hægt sé að leiðrétta hana... Hvernig er þetta leiðrétt? Er bara ábending?
+    )
+    # TODO villan greinist, en ætti að vera staðsett á sögninni
+    # til að hægt sé að leiðrétta hana... Hvernig er þetta leiðrétt? Er bara ábending?
     s = "Helmingur landsmanna horfðu á barnaefnið."
     check_sentence(
         s, [(2, 2, "P_NT_FjöldiHluti")]
-    )  # TODO villan greinist en ætti að vera staðsett á sögninni svo hægt sé að leiðrétta hana. Skoða hvernig/hvort villan er leiðrétt.
+    )
+    # TODO villan greinist en ætti að vera staðsett á sögninni svo hægt sé
+    # að leiðrétta hana. Skoða hvernig/hvort villan er leiðrétt.
     s = "Hér eru tuttugu og ein appelsínur."
     # check_sentence(s, [()])
 
@@ -1364,40 +1386,43 @@ def test_number_agreement(verbose=False):
 def test_gender_agreement(verbose=False):
     # Kyn
     # s = "Foreldrar hans voru skildir."
-    # check_sentence(s, [(4, 5, "P_NT_Foreldrar")])     # TODO þetta mætir afgangi en væri gott að koma inn.
+    # TODO þetta mætir afgangi en væri gott að koma inn.
+    # check_sentence(s, [(4, 5, "P_NT_Foreldrar")])
     # s = "Stúlkan varð ekki var við hávaðann."
-    # check_sentence(s, [(3, 4, "P_NT_SagnfyllingKyn")])    # TODO fæ enga villu, eftir að útfæra.
+    # TODO fæ enga villu, eftir að útfæra.
+    # check_sentence(s, [(3, 4, "P_NT_SagnfyllingKyn")])
     pass
 
 
 def test_verb_agreement(verbose=False):
     # Sagnir
     s = "Konunni vantar að kaupa rúðusköfu."
-    check_sentence(
-        s, [(0, 0, "P_WRONG_CASE_þgf_þf")]
-    )  # TODO virkar vel, en skil ekki lengdina. Af hverju er það ekki 0, 1? Hvernig birtist þetta í viðmótinu?
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])
     s = "Mér kvíðir fyrir að byrja í skólanum."
-    check_sentence(
-        s, [(0, 0, "P_WRONG_CASE_þgf_nf")]
-    )  # TODO virkar, en athuga lengdina, og hvernig þetta er leiðrétt í viðmóti. Er sögninni líka breytt?
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_nf")])
     s = "Ég dreymi um skjaldbökur sem synda um hafið."
-    check_sentence(
-        s, [(0, 0, "P_WRONG_CASE_nf_þf")]
-    )  # TODO villan greinist ekki! Ath. líka lengdina.
+    check_sentence(s, [(0, 0, "P_WRONG_CASE_nf_þf")])
     s = "Feimni drengurinn hélt sig til hlés þar til þolinmæðin þraut."
-    # check_sentence(s, [(3, 3, "P_WRONG_CASE_þf_þgf"), (8, 8, "P_WRONG_CASE_nf_þf")])      # Engin villa greinist; er þetta í Verbs.conf?
+    # TODO: Engin villa greinist; er þetta í Verbs.conf?
+    # check_sentence(s, [(3, 3, "P_WRONG_CASE_þf_þgf"), (8, 8, "P_WRONG_CASE_nf_þf")])
     s = "Kúrekinn hafði upp á kúnum á sléttunni."
-    # check_sentence(s, [(2, 2, "P_WRONG_PARTICLE_uppi")])    # TODO greinist ekki, þetta á algerlega eftir að útfæra betur þegar þetta er komið inn í Verbs.conf. Þetta er líklega ekki réttur villukóði.
+    # TODO greinist ekki, þetta á algerlega eftir að útfæra betur þegar þetta er
+    # komið inn í Verbs.conf. Þetta er líklega ekki réttur villukóði.
+    # check_sentence(s, [(2, 2, "P_WRONG_PARTICLE_uppi")])
     s = "Maðurinn dáðist af málverkinu."
-    # check_sentence(s, [(2, 2, "P_WRONG_PP_að")])      # Engin villa greinist. Eftir að útfæra, þetta er líklega ekki réttur villukóði.
+    check_sentence(s, [(1, 2, "P_WRONG_PREP_AF")])
     s = "Barnið á hættu á að detta í brunninn."
-    # check_sentence(s, [(1, 1, "P_WRONG_FORM")])       # TODO erfitt að eiga við, líklega ekki réttur villukóði, bæta við Verbs.conf.
+    # TODO erfitt að eiga við, líklega ekki réttur villukóði, bæta við Verbs.conf.
+    # check_sentence(s, [(1, 1, "P_WRONG_FORM")])
     s = "Hetjan á heiður að björguninni."
-    # check_sentence(s, [(3, 4, "P_WRONG_PP_af")])      # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
+    # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
+    # check_sentence(s, [(3, 4, "P_WRONG_PP_af")])
     s = "Ferðafólkið fór erlendis að leita lamba."
-    # check_sentence(s, [(2, 3, "P_WRONG_PARTICLE_til_útlanda")])       # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
+    # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
+    # check_sentence(s, [(2, 3, "P_WRONG_PARTICLE_til_útlanda")])
     s = "Túlkurinn gaf í skin að mælandi hefði misskilið túlkinn."
-    # check_sentence(s, [(2, 4, "P_WRONG_PP_í_skyn")])      # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
+    # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
+    # check_sentence(s, [(2, 4, "P_WRONG_PP_í_skyn")])
 
 
 def test_hvor_annar(verbose=False):
@@ -1410,13 +1435,11 @@ def test_hvor_annar(verbose=False):
 
 def test_phrasing(verbose=False):
     s = "Ég vill ekki gera mál úr þessu."
-    check_sentence(
-        s, [(0, 1, "P_wrong_person")]
-    )  # TODO þetta virkar, en skoða lengdina.
+    # TODO þetta virkar, en skoða lengdina.
+    check_sentence(s, [(0, 1, "P_wrong_person")])
     s = "Konur vilja í auknu mæli koma að sjúkraflutningum."
-    check_sentence(
-        s, [(2, 4, "P_wrong_gender")]
-    )  # TODO á kannski að greina þetta öðruvísi? Fastur frasi? Skoða líka lengdina.
+    # TODO á kannski að greina þetta öðruvísi? Fastur frasi? Skoða líka lengdina.
+    check_sentence(s, [(2, 4, "P_wrong_gender")])
     s = "Ég veit ekki hvort að ég komi í kvöld."
     check_sentence(s, [(4, 4, "P_NT_Að/w")])
     s = "Meðan veislunni stendur verður frítt áfengi í boði."
@@ -1472,9 +1495,10 @@ def test_verb_arguments(verbose=False):
     # assert g[2].error_code == "V001"  # TODO eftir að ákveða villukóða
 
     s = "Kirkjuna bar við himinn þegar við komum þar um morguninn."
+    # TODO Verbs.conf ætti að dekka þetta -- útfæra goggunarröð?
     check_sentence(
         s, [(2, 9, "P_NT_FsMeðFallstjórn")]
-    )  # TODO Verbs.conf ætti að dekka þetta -- útfæra goggunarröð?
+    )
 
 
 def test_complex_sentences(verbose=False):
