@@ -448,7 +448,7 @@ class PunctuationError(Error):
 
     # N001: Wrong quotation marks
     # N002: Three periods should be an ellipsis
-    # N003: Informal combination of punctuation (??!!)
+    # N003: Informal combination of punctuation marks (??!!)
 
     def __init__(self, code: str, txt: str, span: int = 1) -> None:
         # Punctuation error codes start with "N"
@@ -472,7 +472,7 @@ class CompoundError(Error):
     # C004: Duplicated word marked as a possible error.
     #       Should be pointed out but not deleted.
     # C005: Possible split compound, depends on meaning/PoS chosen by parser.
-    # C006: A part of a word compound word is wrong.
+    # C006: A part of a compound word is wrong.
 
     def __init__(self, code: str, txt: str, span: int = 1) -> None:
         # Compound error codes start with "C"
@@ -537,6 +537,8 @@ class AbbreviationError(Error):
         is not spelled out, punctuated or spaced correctly. """
 
     # A001: Abbreviation corrected
+    # A002: Token found in Abbreviations.WRONGDOTS and no
+    #       other meaning available; corrected as an acronym
 
     def __init__(self, code: str, txt: str) -> None:
         # Abbreviation error codes start with "A"
