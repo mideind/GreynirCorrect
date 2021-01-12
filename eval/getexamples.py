@@ -46,6 +46,8 @@
 from collections import defaultdict
 import xml.etree.ElementTree as ET
 import glob
+import argparse
+
 from typing import (
     Dict,
     List,
@@ -58,6 +60,7 @@ from typing import (
     Any,
     DefaultDict,
 )
+import reynir_correct as gc
 from tokenizer import detokenize, Tok, TOK
 
 from eval import OUT_OF_SCOPE
@@ -68,7 +71,23 @@ _DEV_PATH = "iceErrorCorpus/data/**/*.xml"
 # Default glob path of the test corpus TEI XML files to be processed
 _TEST_PATH = "iceErrorCorpus/testCorpus/**/*.xml"
 
-CATS: DefaultDict[str, List[str]] = defaultdict(list)
+IECCATS: DefaultDict[str, List[str]] = defaultdict(list)
+GCCATS: DefaultDict[str, List[str]] = defaultdict(list)
+
+# Define the command line arguments
+
+parser = argparse.ArgumentParser(
+    description=(
+        "This program collects examples of each error category"
+    )
+)
+
+parser.add_argument(
+    "-r",
+    "--ref",
+    action="store_true",
+    help="get examples only from reference corpora iEC",
+)
 
 
 def element_text(element: ET.Element) -> str:
@@ -168,14 +187,13 @@ def get_examples(fpath: str) -> None:
                     tokens.append((tag, element_text(el)))
 
             # Reconstruct the original sentence
-            # TODO switch for sentence from original text file
             text = correct_spaces(tokens)
             if not text:
                 # Nothing to do: drop this and go to the next sentence
                 continue
             for item in errors:
                 xtype = cast(str, item["xtype"])
-                CATS[xtype].append(
+                IECCATS[xtype].append(
                     "{}\t{}-{}\t{}\t{}\t{}\n".format(
                         text,
                         item["start"],
@@ -185,6 +203,31 @@ def get_examples(fpath: str) -> None:
                         item["corrected"],
                     )
                 )
+            # Pass it to GreynirCorrect
+            if ONLYREF:
+                continue
+
+            pg = [list(p) for p in gc.check(text)]
+            s: Optional[_Sentence] = None
+            if len(pg) >= 1 and len(pg[0]) >= 1:
+                s = pg[0][0]
+            if s is None:
+                continue
+            for item in s.annotations:
+                errcode = item.code
+                if "/" in errcode:
+                    errcode = errcode.replace("/", "_")
+                GCCATS[errcode].append(
+                    "{}\t{}-{}\t{}\t{}\n".format(
+                        text,
+                        item.start,
+                        item.end,
+                        item.text,
+                        item.suggest
+                    )
+
+                )    
+
 
     except ET.ParseError:
         # Already handled the exception: exit as gracefully as possible
@@ -192,11 +235,29 @@ def get_examples(fpath: str) -> None:
 
 
 if __name__ == "__main__":
-    it = glob.iglob(_DEV_PATH, recursive=True)
-    for fpath in it:
-        get_examples(fpath)
+    
+    # Parse the command line arguments
+    args = parser.parse_args()
 
-    for xtype in CATS:
-        with open("examples/" + xtype + ".txt", "w") as myfile:
-            for example in CATS[xtype]:
+    global ONLYREF
+    ONLYREF = args.ref
+
+
+    it = glob.iglob(_DEV_PATH, recursive=True)
+    j = 0
+    for fpath in it:
+        if j%10 == 0:
+            print("{} files done".format(j))
+        get_examples(fpath)
+        j+=1
+
+    for xtype in IECCATS:
+        with open("examples_iEC/" + xtype + ".txt", "w") as myfile:
+            for example in IECCATS[xtype]:
                 myfile.write(example)
+
+    if not ONLYREF:
+        for ytype in GCCATS.keys():
+            with open("examples_GC/" + ytype + ".txt", "w") as myfile:
+                for example in GCCATS[ytype]:
+                    myfile.write(example)
