@@ -41,7 +41,7 @@
 
 """
 
-from typing import Dict, Set, List, Tuple, Sequence, Optional
+from typing import Dict, Mapping, Set, List, Tuple, Sequence, Optional
 import os
 import locale
 import threading
@@ -51,6 +51,7 @@ from collections import defaultdict
 
 from reynir.basics import changedlocale, sort_strings, ConfigError, LineReader
 from reynir.bindb import BIN_Db
+from reynir.bintokenizer import StateDict
 
 
 # A set of all valid argument cases
@@ -130,7 +131,7 @@ class MultiwordErrors:
     # List of tuples of multiword error phrases and their word category lists
     LIST: List[Tuple[Tuple[str, ...], str, List[str]]] = []
     # Parsing dictionary keyed by first word of phrase
-    DICT: Dict[str, List[Tuple[Sequence[str], int]]] = defaultdict(list)
+    DICT: StateDict = defaultdict(list)
     # Error dictionary, { phrase : (error_code, right_phrase, right_parts_of_speech) }
     ERROR_DICT: Dict[Tuple[str, ...], str] = dict()
 
