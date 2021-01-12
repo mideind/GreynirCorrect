@@ -158,7 +158,7 @@ class MultiwordErrors:
         MultiwordErrors.LIST.append((words, code, replacement))
 
         # Dictionary structure: dict { firstword: [ (restword_list, phrase_index) ] }
-        MultiwordErrors.DICT[words[0]].append((words[1:], ix))
+        MultiwordErrors.DICT[words[0]].append((list(words[1:]), ix))
 
     @staticmethod
     def get_phrase(ix: int) -> Tuple[str, ...]:
