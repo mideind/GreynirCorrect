@@ -244,253 +244,6 @@ NAMES = {
     "wrong_span": "Wrong span",
 }
 
-# Supercategories in iceErrorCorpus and corresponding subcategories
-SUPERCATEGORIES = {
-    "capitalization": [
-        "lower4upper-initial",
-        "lower4upper-proper",
-        "lower4upper-acro",
-        "upper4lower-common",
-        "upper4lower-proper",
-        "upper4lower-noninitial",
-        "caps4low",
-    ],
-    "collocation": ["collocation", "collocation-idiom", "though",],
-    "grammar": [
-        "agreement",
-        "agreement-concord",
-        "agreement-pred",
-        "agreement-pro",
-        "case-verb",
-        "case-prep",
-        "case-adj",
-        "case-collocation",
-        "ind4def",
-        "def4ind",
-        "ind4sub",
-        "sub4ind",
-        "verb-inflection",
-        "nominal-inflection",
-        "numeral-inflection",
-        "pro-inflection",
-        "plural4singular",
-        "singular4plural",
-        "conjunction",
-        "adjective-inflection",
-        "dative-sub",
-        "dir4loc",
-        "loc4dir",
-        "mid4act",
-        "act4mid",
-        "mid4pass",
-        "pass4mid",
-        "act4pass",
-        "pass4act",
-        "passive",
-        "new-passive",
-        "each",
-        "noun4pro",
-        "pro4noun",
-        "reflexive4pro",
-        "pro4reflexive",
-        "pres4past",
-        "past4pres",
-        "tense4perfect",
-        "perfect4tense",
-        "pers4dem",
-        "dem-pro",
-        "missing-dem-pro",
-        "extra-dem-pro",
-        "indef-pro",
-        "marked4unmarked",
-        "adj4adv",
-        "adv4adj",
-        "have",
-        "cont4simple",
-        "missing-inf-part",
-        "want",
-        "dem4pers",
-        "nom4acc-sub",
-        "acc4nom-sub",
-        "simple4cont",
-        "extra-inf-part",
-        "gen-escape",
-        "genitive",
-        "dem4noun",
-        "noun4dem",
-        "geta",
-        "adj4noun",
-        "noun4adj",
-        "extra-sub",
-        "missing-fin-verb",
-        "missing-sub",
-        "missing-obj",
-        "að4af",
-        "af4að",
-        "wrong-prep",
-        "interr-pro",
-        "hypercorr",
-    ],
-    "syntax": ["v3", "v3-subordinate", "syntax-other",],
-    "nonword": ["compound-collocation", "compound-nonword", "nonword",],
-    "omission": ["missing-word", "missing-words", "missing-prep",],
-    "typo": [
-        "swapped-letters",
-        "letter-rep",
-        "missing-letter",
-        "missing-accent",
-        "wrong-accent",
-        "extra-accent",
-        "extra-letter",
-    ],
-    "punctuation": [
-        "comma4period",
-        "comma4qm",
-        "comma4colon",
-        "double-punctuation",
-        "extra-abbreviation",
-        "extra-dash",
-        "iteration-colon",
-        "missing-colon",
-        "missing-comma",
-        "missing-commas",
-        "missing-period",
-        "missing-qm",
-        "missing-conjunction",
-        "missing-quot",
-        "missing-quots",
-        "misplaced-quot",
-        "wrong-quots",
-        "extra-quot",
-        "extra-quots",
-        "extra-punctuation",
-        "extra-comma",
-        "extra-period",
-        "period4comma",
-        "period4colon",
-        "period4conjunction",
-        "conjunction4period",
-        "conjunction4comma",
-        "comma4conjunction",
-        "period4qm",
-        "period-plus-conjunction",
-        "comma-plus-conjunction",
-        "abbreviation-period",
-        "comma4ex",
-        "period4ex",
-        "semicolon4colon",
-        "extra-semicolon",
-        "ordinal-period",
-        "conjunction-drop",
-        "extra-conjunction",
-        "semicolon4comma",
-        "conjunction4qm",
-        "missing-slash",
-        "comma4bracket",
-        "qm4comma",
-        "missing-ex",
-        "qm4ex",
-        "qm4period",
-        "bracket4square",
-        "square4bracket",
-        "dash4comma",
-        "date-period",
-        "comma4semicolon",
-        "word4dash",
-        "dash4word",
-        "missing-semicolon",
-        "abbreviation",
-        "slash4or",
-        "dash4period",
-        "ex4comma",
-        "colon4period",
-        "colon4comma",
-        "ex4period",
-        "extra-colon",
-        "bracket4comma",
-        "extra-qm",
-        "comma4dash",
-        "dash4semicolon",
-        "wrong-dash",
-        "dash4colon",
-        "dots4comma",
-        "missing-symbol",
-        "dots4period",
-        "extra-square",
-        "bracket4period",
-        "word4symbol",
-        "nonsup4sup",
-        "semicolon4period",
-        "period4semicolon",
-        "period4dash",
-        "missing-square",
-        "slash4dash",
-        "extra-commas",
-        "conjunction4semicolon",
-        "missing-bracket",
-        "extra-bracket",
-        "date-abbreviation",
-    ],
-    "spacing": [
-        "merged-words",
-        "split-compound",
-        "split-word",
-        "split-words",
-        "missing-dash",
-        "missing-space",
-        "extra-space",
-    ],
-    "insertion": [
-        "extra-word",
-        "extra-words",
-        "extra-prep",
-        "repeat-word",
-        "repeat-word-split",
-    ],
-    "wording": ["wording", "aux",],
-    "spelling": [
-        "ngnk",
-        "i4y",
-        "y4i",
-        "í4ý",
-        "ý4í",
-        "n4nn",
-        "nn4n",
-        "pronun-writing",
-        "kv4hv",
-        "hv4kv",
-        "name-error",
-        "bad-contraction",
-    ],
-    "foreign": ["fw", "foreign-error",],
-    "exclusion": ["gendered",],
-    "numbers": [
-        "number4word",
-        "word4number",
-        "extra-number",
-        "symbol4number",
-        "number4symbol",
-        "number-fail",
-    ],
-    "style": [
-        "style",
-        "unicelandic",
-        "taboo-word",
-        "loan-syntax",
-        "u4y",
-        "fw4ice",
-        "ice4fw",
-        "nonit4it",
-        "it4nonit",
-        "extra-munu",
-        "words4abbreviation",
-        "abbreviation4words",
-    ],
-    "other": ["symbol4word", "extra-symbol", "dep", "þar4það",],
-    "lexical": ["context",],
-    "unnannotated": ["zzz", "xxx",],
-}
-
 # Supercategories according to SÍM and corresponding subcategories
 # Errors go into the first possible category. Error categories that
 # can both be independent and dependent of context go under the former.
@@ -1025,259 +778,82 @@ SUPERCATEGORIES = {
     ]
 }
 
-# Supercategories according to SÍM and corresponding subcategories
-# Errors go into the first possible category. Error categories that
-# can both be independent and dependent of context go under the former.
-SIMCATEGORIES = {
-    "context-independent" : [ 
-        "caps4low",
-        "number-fail",
-        "lower4upper-proper",
-        "lower4upper-acro",
-        "though",
-        "compound-collocation",
-        "compound-nonword",
-        "nonword",
-        "swapped-letters",
-        "letter-rep",
-        "missing-letter",
-        "missing-accent",
-        "wrong-accent",
-        "merged-words",
-        "split-word",
-        "extra-accent",
-        "extra-letter",
-        "ngnk",
-        "i4y",
-        "y4i",
-        "í4ý",
-        "ý4í",
-        "n4nn",
-        "nn4n",
-        "pronun-writing",
-        "kv4hv",
-        "hv4kv",
-        "bad-contraction",
-        "fw",
-        "foreign-error",
-        "abbreviation-period",
-        "abbreviation",
-    ],
-    "context-dependent" : [
-        "lower4upper-initial",
-        "upper4lower-common",
-        "upper4lower-proper",
-        "upper4lower-noninitial",
-        "collocation",
-        "collocation-idiom",
-        "missing-word",
-        "missing-words",
-        "missing-prep",
-        "split-compound",
-        "split-words",
-        "missing-dash",
-        "missing-space",
-        "extra-space",
-        "extra-word",
-        "extra-words",
-        "extra-prep",
-        "repeat-word",
-        "repeat-word-split",
-        "name-error",
-        "gendered",
-        "number4word",
-        "word4number",
-    ],
-    "grammar" : [
-        "agreement",
-        "agreement-concord",
-        "agreement-pred",
-        "agreement-pro",
-        "case-verb",
-        "case-prep",
-        "case-adj",
-        "case-collocation",
-        "ind4def",
-        "def4ind",
-        "ind4sub",
-        "sub4ind",
-        "verb-inflection",
-        "nominal-inflection",
-        "numeral-inflection",
-        "pro-inflection",
-        "plural4singular",
-        "singular4plural",
-        "conjunction",
-        "adjective-inflection",
-        "dative-sub",
-        "dir4loc",
-        "loc4dir",
-        "mid4act",
-        "act4mid",
-        "mid4pass",
-        "pass4mid",
-        "act4pass",
-        "pass4act",
-        "passive",
-        "new-passive",
-        "each",
-        "noun4pro",
-        "pro4noun",
-        "reflexive4pro",
-        "pro4reflexive",
-        "pres4past",
-        "past4pres",
-        "tense4perfect",
-        "perfect4tense",
-        "pers4dem",
-        "dem-pro",
-        "missing-dem-pro",
-        "extra-dem-pro",
-        "indef-pro",
-        "marked4unmarked",
-        "adj4adv",
-        "adv4adj",
-        "have",
-        "cont4simple",
-        "missing-inf-part",
-        "want",
-        "dem4pers",
-        "nom4acc-sub",
-        "acc4nom-sub",
-        "simple4cont",
-        "extra-inf-part",
-        "gen-escape",
-        "genitive",
-        "dem4noun",
-        "noun4dem",
-        "geta",
-        "adj4noun",
-        "noun4adj",
-        "extra-sub",
-        "missing-fin-verb",
-        "missing-sub",
-        "missing-obj",
-        "að4af",
-        "af4að",
-        "wrong-prep",
-        "interr-pro",
-        "hypercorr",
-        "v3",
-        "v3-subordinate",
-        "syntax-other",
-        "aux",
-    ],
-    "style" : [
-        "wording",
-        "extra-number",
-        "symbol4number",
-        "number4symbol",
-        "style",
-        "unicelandic",
-        "taboo-word",
-        "loan-syntax",
-        "u4y",
-        "fw4ice",
-        "ice4fw",
-        "nonit4it",
-        "it4nonit",
-        "extra-munu",
-        "words4abbreviation",
-        "abbreviation4words",
-        "symbol4word",
-        "extra-symbol",
-        "dep",
-        "þar4það",
-        "context",
-    ],
-    "punctuation" : [
-        "comma4period",
-        "comma4qm",
-        "comma4colon",
-        "double-punctuation",
-        "extra-abbreviation",
-        "extra-dash",
-        "iteration-colon",
-        "missing-colon",
-        "missing-comma",
-        "missing-commas",
-        "missing-period",
-        "missing-qm",
-        "missing-conjunction",
-        "missing-quot",
-        "missing-quots",
-        "misplaced-quot",
-        "wrong-quots",
-        "extra-quot",
-        "extra-quots",
-        "extra-punctuation",
-        "extra-comma",
-        "extra-period",
-        "period4comma",
-        "period4colon",
-        "period4conjunction",
-        "conjunction4period",
-        "conjunction4comma",
-        "comma4conjunction",
-        "period4qm",
-        "period-plus-conjunction",
-        "comma-plus-conjunction",
-        "comma4ex",
-        "period4ex",
-        "semicolon4colon",
-        "extra-semicolon",
-        "ordinal-period",
-        "conjunction-drop",
-        "extra-conjunction",
-        "semicolon4comma",
-        "conjunction4qm",
-        "missing-slash",
-        "comma4bracket",
-        "qm4comma",
-        "missing-ex",
-        "qm4ex",
-        "qm4period",
-        "bracket4square",
-        "square4bracket",
-        "dash4comma",
-        "date-period",
-        "comma4semicolon",
-        "word4dash",
-        "dash4word",
-        "missing-semicolon",
-        "slash4or",
-        "dash4period",
-        "ex4comma",
-        "colon4period",
-        "colon4comma",
-        "ex4period",
-        "extra-colon",
-        "bracket4comma",
-        "extra-qm",
-        "comma4dash",
-        "dash4semicolon",
-        "wrong-dash",
-        "dash4colon",
-        "dots4comma",
-        "missing-symbol",
-        "dots4period",
-        "extra-square",
-        "bracket4period",
-        "word4symbol",
-        "nonsup4sup",
-        "semicolon4period",
-        "period4semicolon",
-        "period4dash",
-        "missing-square",
-        "slash4dash",
-        "extra-commas",
-        "conjunction4semicolon",
-        "missing-bracket",
-        "extra-bracket",
-        "date-abbreviation",
-    ]
-}
 
+GCtoIEC = {
+    "A001" : ["abbreviation-period"],
+    "A002" : ["abbreviation-period"],
+    "Z001" : ["upper4lower-common", "upper4lower-proper", "upper4lower-noninitial"],
+    "Z002" : ["lower4upper-initial", "lower4upper-proper", "lower4upper-acro"],
+    "Z003" : ["upper4lower-common"],
+    "Z004" : ["upper4lower-common"],
+    "Z005" : ["upper4lower-common"],
+    "Z006" : ["lower4upper-acro"],
+    #"E001" : ["XXX"],
+    #"E002" : ["XXX"],
+    #"E003" : ["XXX"],
+    "E004" : ["fw"],
+    "C001" : ["repeat-word"],
+    "C002" : ["merged-words"],
+    "C003" : ["split-compound", "split-word", "split-words"],
+    "C004" : ["repeat-word"],
+    "C005" : ["split-compound", "split-word", "split-words"],
+    "C006" : ["compound-nonword"],
+    "P_NT_Að_w" : ["extra-conjunction"],
+    "P_NT_AnnaðHvort" : ["conjunction"],
+    "P_NT_Annaðhvort" : ["conjunction"],
+    "P_NT_Annara" : ["pro-inflection"],
+    "P_NT_Annarar" : ["pro-inflection"],
+    "P_NT_Annari" : ["pro-inflection"],
+    "P_NT_Einkunn" : ["agreement-concord"],
+    "P_NT_EinnAf" : ["agreement"],
+    "P_NT_EndingANA" : ["n4nn"],
+    "P_NT_EndingIR" : ["nominal-inflection"],
+    "P_NT_FjöldiHluti" : ["agreement"],
+    "P_NT_FráÞvíAð" : ["missing-conjunction"],
+    "P_NT_FsMeðFallstjórn" : ["case-prep"],
+    "P_NT_Heldur_w" : ["conjunction"],
+    "P_NT_ÍTölu" : ["plural4singular", "singular4plural"],
+    "P_NT_Komma_w" : ["extra-comma"],
+    "P_NT_Né" : ["conjunction"],
+    "P_NT_Sem_w" : ["extra-conjunction"],
+    "P_NT_Síðan_w" : ["extra-word"],
+    "P_NT_Síðastliðinn" : ["split-compound"],
+    "P_NT_SvigaInnihaldNl" : ["case-verb", "case-prep", "case-adj"],
+    "P_NT_TvípunkturFs" : ["extra-colon"],
+    "P_NT_VantarKommu" : ["missing-comma"],
+    "P_NT_VístAð" : ["conjunction"],
+    "P_NT_ÞóAð" : ["conjunction"],
+    "P_WRONG_CASE_nf_þf" : ["case-verb"],
+    "P_WRONG_CASE_nf_þgf" : ["case-verb"],
+    "P_WRONG_CASE_nf_ef" : ["case-verb"],
+    "P_WRONG_CASE_þf_nf" : ["case-verb"],
+    "P_WRONG_CASE_þf_þgf" : ["case-verb"],
+    "P_WRONG_CASE_þf_ef" : ["case-verb"],
+    "P_WRONG_CASE_þgf_nf" : ["case-verb"],
+    "P_WRONG_CASE_þgf_þf" : ["case-verb"],
+    "P_WRONG_CASE_þgf_ef" : ["case-verb"],
+    "P_WRONG_CASE_ef_nf" : ["case-verb"],
+    "P_WRONG_CASE_ef_þf" : ["case-verb"],
+    "P_WRONG_CASE_ef_þgf" : ["case-verb"],
+    "P_WRONG_NOUN_WITH_VERB" : ["collocation"],
+    #"P_WRONG_OP_FORM" : ["XXX"],
+    "P_WRONG_PLACE_PP" : ["wrong-prep"],
+    "P_WRONG_PREP_AÐ" : ["að4af"],
+    "P_WRONG_PREP_AF" : ["af4að"],
+    "P_WRONG_VERB_USE" : ["collocation"],
+    "X_number4word" : ["number4word"],
+    "N001" : ["wrong-quot"],
+    "N002" : ["extra-punctuation"],
+    "N003" : ["extra-punctuation"],
+    "S001" : ["nonword"],
+    "S002" : ["nonword"],
+    "S003" : ["nonword"],
+    "S004" : ["nonword"],
+    "W001_w" : ["nonword"],
+    "T001" : ["taboo-word"],
+    "U001" : ["fw"],
+    "U001_w " : ["fw"],
+}
 # Define the command line arguments
 
 parser = argparse.ArgumentParser(
@@ -1779,8 +1355,6 @@ class Stats:
         def output_token_scores() -> None:
             """ Calculate and write token scores to stdout """
 
-            ### TOKEN ERROR SCORES
-
             bprint(f"\n\nResults for error detection within sentences")
 
             num_tokens = sum(
@@ -2260,65 +1834,69 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 right_corr, wrong_corr = 0, 0
                 right_span, wrong_span = 0, 0
 
-                x = (d for d in hyp_annotations)  # GreynirCorrect annotations
-                y = (l for l in ref_annotations)  # iEC annotations
+                y = (d for d in hyp_annotations)  # GreynirCorrect annotations
+                x = (l for l in ref_annotations)  # iEC annotations
 
-                xtok = None
                 ytok = None
+                xtok = None
                 try:
-                    xtok = next(x)
                     ytok = next(y)
+                    xtok = next(x)
                     while True:
 
                         # 1. Error detection
-                        xtoks = set(range(xtok.start, xtok.end + 1))
-                        ytoks = set(
-                            range(cast(int, ytok["start"]), cast(int, ytok["end"]) + 1)
+                        ytoks = set(range(ytok.start, ytok.end + 1))
+                        xtoks = set(
+                            range(cast(int, xtok["start"]), cast(int, xtok["end"]) + 1)
                         )
-                        ytype = cast(str, ytok["xtype"])
+                        xtype = cast(str, xtok["xtype"])
+                        ytype = xtype
+                        if ytok.code in GCtoIEC and xtype not in GCtoIEC[ytok.code]:
+                            ytype = GCtoIEC[ytok.code][0] # TODO change?
+
                         if xtoks & ytoks:
                             tp += 1
-                            errtypefreqs[ytype]["tp"] += 1
+                            errtypefreqs[xtype]["tp"] += 1
                             # 2. Span detection
                             if xtoks == ytoks:
                                 right_span += 1
-                                errtypefreqs[ytype]["right_span"] += 1
+                                errtypefreqs[xtype]["right_span"] += 1
                             else:
                                 wrong_span += 1
-                                errtypefreqs[ytype]["wrong_span"] += 1
+                                errtypefreqs[xtype]["wrong_span"] += 1
                             # 3. Error correction
                             # Get the 'corrected' attribute if available,
-                            # otherwise use xtok['suggest']
-                            xcorr = getattr(xtok, "corrected", xtok.suggest)
-                            if xcorr == ytok["corrected"]:
+                            # otherwise use ytok['suggest']
+                            ycorr = getattr(ytok, "corrected", ytok.suggest)
+                            if ycorr == xtok["corrected"]:
                                 right_corr += 1
-                                errtypefreqs[ytype]["right_corr"] += 1
+                                errtypefreqs[xtype]["right_corr"] += 1
                             else:
                                 wrong_corr += 1
-                                errtypefreqs[ytype]["wrong_corr"] += 1
+                                errtypefreqs[xtype]["wrong_corr"] += 1
                             xtok = next(x)
                             ytok = next(y)
                         else:
-                            if xtok.start < ytok["start"]:
+                            if ytok.start < xtok["start"]:
                                 fp += 1
                                 errtypefreqs[ytype]["fp"] += 1
-                                xtok = next(x)
-                            elif xtok.start > ytok["start"]:
                                 ytok = next(y)
+                            elif ytok.start > xtok["start"]:
+                                xtok = next(x)
                                 fn += 1
-                                errtypefreqs[ytype]["fn"] += 1
+                                errtypefreqs[xtype]["fn"] += 1
                             else:
                                 xtok = next(x)
                                 ytok = next(y)
                                 fp += 1
                                 fn += 1
-                                errtypefreqs[ytype]["fn"] += 1
+                                errtypefreqs[xtype]["fn"] += 1
                 except StopIteration:
                     pass
-                if xtok and not ytok:  # Because of exception to try
+                if ytok and not xtok:  # Because of exception to try
                     pass
                     # false positive
-                if ytok and not xtok:  # Because of exception to try
+                if xtok and not ytok:  # Because of exception to try
                     pass
                     # false negative
                 return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
