@@ -60,7 +60,9 @@ from typing import (
     Any,
     DefaultDict,
 )
+from reynir_correct import Annotation
 import reynir_correct as gc
+from reynir import _Sentence
 from tokenizer import detokenize, Tok, TOK
 
 from eval import OUT_OF_SCOPE
@@ -213,17 +215,17 @@ def get_examples(fpath: str) -> None:
                 s = pg[0][0]
             if s is None:
                 continue
-            for item in s.annotations:
-                errcode = item.code
+            for ann in cast(Iterable[Annotation], s.annotations):
+                errcode = ann.code
                 if "/" in errcode:
                     errcode = errcode.replace("/", "_")
                 GCCATS[errcode].append(
                     "{}\t{}-{}\t{}\t{}\n".format(
                         text,
-                        item.start,
-                        item.end,
-                        item.text,
-                        item.suggest
+                        ann.start,
+                        ann.end,
+                        ann.text,
+                        ann.suggest
                     )
 
                 )    

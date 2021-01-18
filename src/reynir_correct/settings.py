@@ -626,9 +626,10 @@ class Settings:
             replacement = a[1].strip()
         else:
             replacement = taboo
-        if replacement.count("_") != 1:
+        # Check all replacement words, which are separated by slashes '/'
+        if any(r.count("_") != 1 for r in replacement.split("/")):
             raise ConfigError(
-                "Suggested replacement should include word category (_xx)"
+                "Suggested replacement(s) should include a word category (_xx)"
             )
         TabooWords.add(taboo, replacement, explanation)
 

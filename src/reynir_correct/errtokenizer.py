@@ -573,7 +573,9 @@ class TabooWarning(Error):
         return self._detail
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"code": self.code, "descr": self.description, "detail": self.detail}
+        d = super().to_dict()
+        d["detail"] = self.detail
+        return d
 
 
 @register_error_class
@@ -1948,16 +1950,23 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                     t = tdict.get(key)
                 if t is not None:
                     # Taboo word
-                    suggested_word, detail = t
-                    suggested_word = suggested_word.split("_")[0]
-                    if suggested_word == key:
-                        # Suggested word is the same as the taboo word:
-                        # there is no suggestion, only a notification
+                    replacement, detail = t
+                    # There can be multiple suggested replacements,
+                    # for instance 'þungunarrof_hk/meðgöngurof_hk'
+                    sw = replacement.split("/")
+                    if len(sw) == 1 and sw[0].split("_")[0] == key:
+                        # We have a single suggested word, which is the same as the
+                        # taboo word: there is no suggestion, only a notification
                         explanation = "Óheppilegt eða óviðurkvæmilegt orð"
                     else:
+                        suggestion = ", ".join(f"'{w.split('_')[0]}'" for w in sw)
+                        # Trick to replace the last ", " with " eða ":
+                        # replace the first " ," with " aðe " in a reversed string,
+                        # then re-reverse it
+                        suggestion = suggestion[::-1].replace(" ,", " aðe ", 1)[::-1]
                         explanation = (
-                            "Óheppilegt eða óviðurkvæmilegt orð, "
-                            "skárra væri t.d. '{0}'".format(suggested_word)
+                            f"Óheppilegt eða óviðurkvæmilegt orð, "
+                            f"skárra væri t.d. {suggestion}"
                         )
                     token.set_error(
                         TabooWarning(
