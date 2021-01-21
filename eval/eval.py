@@ -823,6 +823,7 @@ GCtoIEC = {
     "U001" : ["fw"],
     "U001_w " : ["fw"],
 }
+
 # Define the command line arguments
 
 parser = argparse.ArgumentParser(
@@ -1802,33 +1803,50 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             gc_error, ice_error = sentence_results(s.annotations, errors)
 
             def token_results(
-                hyp_annotations: List[gc.Annotation], ref_annotations: List[ErrorDict]
+                hyp_annotations: Iterable[gc.Annotation], ref_annotations: Iterable[ErrorDict]
             ) -> Tuple[int, int, int, int, int, int, int]:
+                """ Calculate statistics on annotations at the token span level """
                 tp, fp, fn = 0, 0, 0  # tn comes from len(tokens)-(tp+fp+fn) later on
                 right_corr, wrong_corr = 0, 0
                 right_span, wrong_span = 0, 0
 
-                y = (d for d in hyp_annotations)  # GreynirCorrect annotations
-                x = (l for l in ref_annotations)  # iEC annotations
+                y = iter(hyp_annotations)  # GreynirCorrect annotations
+                x = iter(ref_annotations)  # iEC annotations
+                ytok: Optional[gc.Annotation] = None
+                xtok: Optional[ErrorDict] = None
 
-                ytok = None
-                xtok = None
                 try:
                     ytok = next(y)
                     xtok = next(x)
                     while True:
 
+                        ystart, yend = ytok.start, ytok.end
+                        xstart, xend = cast(int, xtok["start"]), cast(int, xtok["end"])
+
                         # 1. Error detection
-                        ytoks = set(range(ytok.start, ytok.end + 1))
-                        xtoks = set(
-                            range(cast(int, xtok["start"]), cast(int, xtok["end"]) + 1)
-                        )
+                        # Token span in GreynirCorrect annotation
+                        ytoks = set(range(ystart, yend + 1))
+                        # Token span in iEC annotation
+                        xtoks = set(range(xstart, xend + 1))
+
+                        # iEC error subcategory
                         xtype = cast(str, xtok["xtype"])
+                        # By default, use iEC error category
+                        # on the GreynirCorrect side as well
                         ytype = xtype
-                        if ytok.code in GCtoIEC and xtype not in GCtoIEC[ytok.code]:
-                            ytype = GCtoIEC[ytok.code][0] # TODO change?
+                        if ytok.code in GCtoIEC:
+                            # We have a mapping of the GC code
+                            if xtype not in GCtoIEC[ytok.code]:
+                                # The iEC code is not one that could
+                                # correspond to a GC code.
+                                # We select the iEC code that most commonly
+                                # corresponds to the GC code;
+                                # we're going to get an error for
+                                # a wrong annotation type anyway, as ytype != xtype.
+                                ytype = GCtoIEC[ytok.code][0]
 
                         if xtoks & ytoks:
+                            # The annotation spans overlap
                             tp += 1
                             errtypefreqs[xtype]["tp"] += 1
                             # 2. Span detection
@@ -1848,37 +1866,55 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             else:
                                 wrong_corr += 1
                                 errtypefreqs[xtype]["wrong_corr"] += 1
+                            xtok, ytok = None, None
                             xtok = next(x)
                             ytok = next(y)
-                        else:
-                            if ytok.start < xtok["start"]:
-                                fp += 1
-                                errtypefreqs[ytype]["fp"] += 1
-                                ytok = next(y)
-                            elif ytok.start > xtok["start"]:
-                                xtok = next(x)
-                                fn += 1
-                                errtypefreqs[xtype]["fn"] += 1
-                            else:
-                                xtok = next(x)
-                                ytok = next(y)
-                                fp += 1
-                                fn += 1
-                                errtypefreqs[xtype]["fn"] += 1
+                            continue
+
+                        # The annotation spans do not overlap
+                        if yend < xstart:
+                            # Extraneous GC annotation before next iEC annotation
+                            fp += 1
+                            errtypefreqs[ytype]["fp"] += 1
+                            ytok = None
+                            ytok = next(y)
+                            continue
+
+                        if ystart > xend:
+                            # iEC annotation with no corresponding GC annotation
+                            fn += 1
+                            errtypefreqs[xtype]["fn"] += 1
+                            xtok = None
+                            xtok = next(x)
+                            continue
+
+                        # Should never get here
+                        assert False
+
                 except StopIteration:
                     pass
-                if ytok and not xtok:  # Because of exception to try
-                    pass
-                    # false positive
-                if xtok and not ytok:  # Because of exception to try
-                    pass
-                    # false negative
+
+                # At least one of the iterators has been exhausted
+                # Process the remainder
+                while ytok is not None:
+                    # This is a remaining GC annotation: false positive
+                    fp += 1
+                    ytype = GCtoIEC[ytok.code][0] if ytok.code in GCtoIEC else ytok.code
+                    errtypefreqs[ytype]["fp"] += 1
+                    ytok = next(y, None)
+                while xtok is not None:
+                    # This is a remaining iEC annotation: false negative
+                    fn += 1
+                    xtype = cast(str, xtok["xtype"])
+                    errtypefreqs[xtype]["fn"] += 1
+                    xtok = next(x, None)
+
                 return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
 
             tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span = token_results(
                 s.annotations, errors
             )
-            tn: int = len(tokens) - tp - fp - fn
+            tn = len(tokens) - tp - fp - fn
             # Collect statistics into the stats list, to be returned
             # to the parent process
             if stats is not None:
