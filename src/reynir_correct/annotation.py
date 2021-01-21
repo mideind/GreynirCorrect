@@ -34,14 +34,24 @@
 
 """
 
+from typing import Optional
+
 
 class Annotation:
 
     """ An annotation of a span of a token list for a sentence """
 
     def __init__(
-        self, *, start, end, code, text, detail=None, suggest=None, is_warning=False
-    ):
+        self,
+        *,
+        start: int,
+        end: int,
+        code: str,
+        text: str,
+        detail: Optional[str] = None,
+        suggest: Optional[str] = None,
+        is_warning: bool = False
+    ) -> None:
         assert isinstance(start, int)
         assert isinstance(end, int)
         self._start = start
@@ -63,52 +73,55 @@ class Annotation:
         # it before displaying it.
         self._suggest = suggest
 
-    def __str__(self):
+    def __str__(self) -> str:
         """ Return a string representation of this annotation """
         return "{0:03}-{1:03}: {2:6} {3}{4}".format(
-            self._start, self._end, self._code, self._text,
-            "" if self._suggest is None else " / [" + self._suggest + "]"
+            self._start,
+            self._end,
+            self._code,
+            self._text,
+            "" if self._suggest is None else " / [" + self._suggest + "]",
         )
 
     @property
-    def start(self):
+    def start(self) -> int:
         """ The index of the first token to which the annotation applies """
         return self._start
 
     @property
-    def end(self):
+    def end(self) -> int:
         """ The index of the last token to which the annotation applies """
         return self._end
 
     @property
-    def code(self):
+    def code(self) -> str:
         """ A code for the annotation type, usually an error or warning code """
         # If the code ends with "/w", it is a warning
         return self._code
 
     @property
-    def is_warning(self):
+    def is_warning(self) -> bool:
         """ Return True if this annotation is a warning only """
         return self._code.endswith("/w")
 
     @property
-    def is_error(self):
+    def is_error(self) -> bool:
         """ Return True if this annotation is an error """
         return not self._code.endswith("/w")
 
     @property
-    def text(self):
+    def text(self) -> str:
         """ A description of the annotation """
         return self._text
 
     @property
-    def detail(self):
+    def detail(self) -> Optional[str]:
         """ A detailed description of the annotation, possibly including
             links within <a>...</a> tags """
         return self._detail
 
     @property
-    def suggest(self):
+    def suggest(self) -> Optional[str]:
         """ A suggested correction for the token span, as a text string
             containing tokens delimited by spaces """
         return self._suggest

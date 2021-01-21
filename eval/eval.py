@@ -113,6 +113,10 @@ from reynir import _Sentence
 from tokenizer import detokenize, Tok, TOK
 
 
+# Disable Pylint warnings arising from Pylint not understanding the typing module
+# pylint: disable=no-member
+# pylint: disable=unsubscriptable-object
+
 # The type of a single error descriptor, extracted from a TEI XML file
 ErrorDict = Dict[str, Union[str, int, bool]]
 
@@ -746,21 +750,17 @@ SIMCATEGORIES = {
 
 # Supercategories in iceErrorCorpus and corresponding subcategories
 SUPERCATEGORIES = {
-    "capitalization" : [
-        "lower4upper-initial", 
+    "capitalization": [
+        "lower4upper-initial",
         "lower4upper-proper",
         "lower4upper-acro",
         "upper4lower-common",
         "upper4lower-proper",
         "upper4lower-noninitial",
-        "caps4low"
+        "caps4low",
     ],
-    "collocation" : [
-        "collocation",
-        "collocation-idiom",
-        "though",
-    ],
-    "grammar" : [
+    "collocation": ["collocation", "collocation-idiom", "though",],
+    "grammar": [
         "agreement",
         "agreement-concord",
         "agreement-pred",
@@ -835,31 +835,19 @@ SUPERCATEGORIES = {
         "interr-pro",
         "hypercorr",
     ],
-    "syntax" : [
-        "v3",
-        "v3-subordinate",
-        "syntax-other",
-    ],
-    "nonword" : [
-        "compound-collocation",
-        "compound-nonword",
-        "nonword",
-    ],
-    "omission" : [
-        "missing-word",
-        "missing-words",
-        "missing-prep",
-    ],
-    "typo" : [
+    "syntax": ["v3", "v3-subordinate", "syntax-other",],
+    "nonword": ["compound-collocation", "compound-nonword", "nonword",],
+    "omission": ["missing-word", "missing-words", "missing-prep",],
+    "typo": [
         "swapped-letters",
         "letter-rep",
         "missing-letter",
         "missing-accent",
         "wrong-accent",
         "extra-accent",
-        "extra-letter",         
+        "extra-letter",
     ],
-    "punctuation" : [
+    "punctuation": [
         "comma4period",
         "comma4qm",
         "comma4colon",
@@ -947,7 +935,7 @@ SUPERCATEGORIES = {
         "extra-bracket",
         "date-abbreviation",
     ],
-    "spacing" : [
+    "spacing": [
         "merged-words",
         "split-compound",
         "split-word",
@@ -956,18 +944,15 @@ SUPERCATEGORIES = {
         "missing-space",
         "extra-space",
     ],
-    "insertion" : [
+    "insertion": [
         "extra-word",
         "extra-words",
         "extra-prep",
         "repeat-word",
         "repeat-word-split",
     ],
-    "wording" : [
-        "wording",
-        "aux",
-    ],
-    "spelling" : [
+    "wording": ["wording", "aux",],
+    "spelling": [
         "ngnk",
         "i4y",
         "y4i",
@@ -981,14 +966,9 @@ SUPERCATEGORIES = {
         "name-error",
         "bad-contraction",
     ],
-    "foreign" : [
-        "fw",
-        "foreign-error",
-    ],
-    "exclusion" : [
-        "gendered",
-    ],
-    "numbers" : [
+    "foreign": ["fw", "foreign-error",],
+    "exclusion": ["gendered",],
+    "numbers": [
         "number4word",
         "word4number",
         "extra-number",
@@ -996,7 +976,7 @@ SUPERCATEGORIES = {
         "number4symbol",
         "number-fail",
     ],
-    "style" : [
+    "style": [
         "style",
         "unicelandic",
         "taboo-word",
@@ -1010,26 +990,16 @@ SUPERCATEGORIES = {
         "words4abbreviation",
         "abbreviation4words",
     ],
-    "other" : [
-        "symbol4word",
-        "extra-symbol",
-        "dep",
-        "þar4það",
-    ],
-    "lexical" : [
-        "context",
-    ],
-    "unnannotated" : [
-        "zzz",
-        "xxx",
-    ]
+    "other": ["symbol4word", "extra-symbol", "dep", "þar4það",],
+    "lexical": ["context",],
+    "unnannotated": ["zzz", "xxx",],
 }
 
 # Supercategories according to SÍM and corresponding subcategories
 # Errors go into the first possible category. Error categories that
 # can both be independent and dependent of context go under the former.
 SIMCATEGORIES = {
-    "context-independent" : [ 
+    "context-independent": [
         "caps4low",
         "number-fail",
         "lower4upper-proper",
@@ -1063,7 +1033,7 @@ SIMCATEGORIES = {
         "abbreviation-period",
         "abbreviation",
     ],
-    "context-dependent" : [
+    "context-dependent": [
         "lower4upper-initial",
         "upper4lower-common",
         "upper4lower-proper",
@@ -1088,7 +1058,7 @@ SIMCATEGORIES = {
         "number4word",
         "word4number",
     ],
-    "grammar" : [
+    "grammar": [
         "agreement",
         "agreement-concord",
         "agreement-pred",
@@ -1167,7 +1137,7 @@ SIMCATEGORIES = {
         "syntax-other",
         "aux",
     ],
-    "style" : [
+    "style": [
         "wording",
         "extra-number",
         "symbol4number",
@@ -1190,7 +1160,7 @@ SIMCATEGORIES = {
         "þar4það",
         "context",
     ],
-    "punctuation" : [
+    "punctuation": [
         "comma4period",
         "comma4qm",
         "comma4colon",
@@ -1275,7 +1245,7 @@ SIMCATEGORIES = {
         "missing-bracket",
         "extra-bracket",
         "date-abbreviation",
-    ]
+    ],
 }
 
 # Define the command line arguments
@@ -1337,10 +1307,7 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-x",
-    "--exclude",
-    action="store_true",
-    help="Exclude sentences marked exclude"
+    "-x", "--exclude", action="store_true", help="Exclude sentences marked exclude"
 )
 
 parser.add_argument(
@@ -1348,7 +1315,7 @@ parser.add_argument(
     "--single",
     type=str,
     default="",
-    help="Get results for a single error category"
+    help="Get results for a single error category",
 )
 
 # This boolean global is set to True for quiet output,
@@ -1380,7 +1347,9 @@ class Stats:
         self._files: Dict[str, int] = defaultdict(int)
         # We employ a trick to make the defaultdicts picklable between processes:
         # instead of the usual lambda: defaultdict(int), use defaultdict(int).copy
-        self._sentences: CategoryStatsDict = CategoryStatsDict(SentenceStatsDict(int).copy)
+        self._sentences: CategoryStatsDict = CategoryStatsDict(
+            SentenceStatsDict(int).copy
+        )
         self._errtypes: ErrTypeStatsDict = ErrTypeStatsDict(Counter)
         self._true_positives: DefaultDict[str, int] = defaultdict(int)
         self._false_negatives: DefaultDict[str, int] = defaultdict(int)
@@ -1592,7 +1561,7 @@ class Stats:
                     bprint(f"   {c:<13}:           {f1:1.4f}")
                 else:
                     bprint(f"   {c:<13}:           N/A")
-            
+
             # F0.5 score
             if precision + recall > 0.0:
                 f05 = 1.25 * (precision * recall) / (0.25 * precision + recall)
@@ -1614,7 +1583,6 @@ class Stats:
                     bprint(f"   {c:<13}:           {f1:1.4f}")
                 else:
                     bprint(f"   {c:<13}:           N/A")
-
 
         def calc_recall(
             right: int, wrong: int, rights: str, wrongs: str, recs: str
@@ -1648,8 +1616,8 @@ class Stats:
                 Precision = TPz/(TPz+FNz)
                 F1-score = 2*(P*R)/(P+R)
                 F0.5-score = 1.25*(P*R)/(0.25*P+R)
-            """ 
-            catdict: CatResultDict = { k: v for k, v in self._errtypes[cat].items() }
+            """
+            catdict: CatResultDict = {k: v for k, v in self._errtypes[cat].items()}
             tp = cast(int, catdict.get("tp", 0))
             fn = cast(int, catdict.get("fn", 0))
             fp = cast(int, catdict.get("fp", 0))
@@ -1671,7 +1639,9 @@ class Stats:
                 # F1 score and F0.5 score
                 if recall + precision > 0.0:
                     catdict["f1score"] = 2 * precision * recall / (precision + recall)
-                    catdict["f05score"] = 1.25 * (precision * recall) / (0.25*precision + recall)
+                    catdict["f05score"] = (
+                        1.25 * (precision * recall) / (0.25 * precision + recall)
+                    )
                 else:
                     catdict["f1score"] = 0.0
                     catdict["f05score"] = 0.0
@@ -1852,11 +1822,11 @@ class Stats:
             """ Calculate and write scores for each error category to stdout """
             bprint(f"\n\nResults for each error category in order by frequency")
             freqdict: Dict[str, int] = dict()
-            microf1 : float = 0.0
-            microf05 : float = 0.0
+            microf1: float = 0.0
+            microf05: float = 0.0
             nfreqs: int = 0
-            microf1all : float = 0.0
-            microf05all : float = 0.0
+            microf1all: float = 0.0
+            microf05all: float = 0.0
             nfreqsall: int = 0
             resultdict: Dict[str, CatResultDict] = dict()
 
@@ -1889,9 +1859,7 @@ class Stats:
                 bprint("{} (in_scope={})".format(k, k not in OUT_OF_SCOPE))
                 bprint(
                     "\tTP, FP, FN: {}, {}, {}".format(
-                        rk.get("tp", 0),
-                        rk.get("fp", 0),
-                        rk.get("fn", 0),
+                        rk.get("tp", 0), rk.get("fp", 0), rk.get("fn", 0),
                     )
                 )
                 bprint(
@@ -1902,7 +1870,10 @@ class Stats:
                         cast(float, rk.get("f05score", 0.0)) * 100.0,
                     )
                 )
-                if rk.get("corr_rec", "N/A") == "N/A" or rk.get("span_rec", "N/A") == "N/A":
+                if (
+                    rk.get("corr_rec", "N/A") == "N/A"
+                    or rk.get("span_rec", "N/A") == "N/A"
+                ):
                     bprint("\tCorr, span:    N/A,    N/A")
                 else:
                     bprint(
@@ -1961,8 +1932,10 @@ class Stats:
                         nfreqs += freq
                         bprint(
                             "\t{}   {:3.2f}|{:3.2f}   {:>6}".format(
-                                cat, cast(float, et["f1score"]) * 100.0,
-                                cast(float, et["f05score"]) * 100.0, freq
+                                cat,
+                                cast(float, et["f1score"]) * 100.0,
+                                cast(float, et["f05score"]) * 100.0,
+                                freq,
                             )
                         )
 
@@ -1981,7 +1954,7 @@ class Stats:
                         "Micro F0.5-score: {:3.2f}  ({:3.2f})".format(
                             microf05 / nfreqs * 100.0, microf05all / nfreqsall * 100.0
                         )
-                    )                    
+                    )
                     bprint(
                         "Error correction recall: {:3.2f} ({:3.2f})".format(
                             correcs / nfreqs * 100.0, correcsall / nfreqsall * 100.0
@@ -2015,9 +1988,11 @@ def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
         for tag, txt in tokens
     )
 
+
 # Accumulate standard output in a buffer, for writing in one fell
 # swoop at the end (after acquiring the output lock)
 buffer: List[str] = []
+
 
 def bprint(s: str):
     """ Buffered print: accumulate output for printing at the end """
@@ -2079,7 +2054,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 exc = sent.attrib.get("exclude", "")
                 if exc:
                     continue
-            check = False    # When args.single, checking single error category
+            check = False  # When args.single, checking single error category
             # Sentence identifier (index)
             index = sent.attrib.get("n", "")
             tokens: List[Tuple[str, str]] = []
@@ -2299,11 +2274,11 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             xtok = next(x)
                             ytok = next(y)
                         else:
-                            if xtok.start < ytok["start"]:
+                            if xtok.start < cast(int, ytok["start"]):
                                 fp += 1
                                 errtypefreqs[ytype]["fp"] += 1
                                 xtok = next(x)
-                            elif xtok.start > ytok["start"]:
+                            elif xtok.start > cast(int, ytok["start"]):
                                 ytok = next(y)
                                 fn += 1
                                 errtypefreqs[ytype]["fn"] += 1
