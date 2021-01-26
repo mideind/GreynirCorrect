@@ -80,6 +80,10 @@
 
     $ python eval.py -n 10 -r
 
+    To get an analysis report of token comparisons:
+
+    $ python eval.py -a
+
 """
 
 from typing import (
@@ -883,7 +887,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-x", "--exclude", action="store_true", help="Exclude sentences marked exclude"
+    "-x", 
+    "--exclude", 
+    action="store_true", 
+    help="Exclude sentences marked exclude",
 )
 
 parser.add_argument(
@@ -892,6 +899,13 @@ parser.add_argument(
     type=str,
     default="",
     help="Get results for a single error category",
+)
+
+parser.add_argument(
+    "-a", 
+    "--analysis", 
+    action="store_true", 
+    help="Create an analysis report for token results",
 )
 
 # This boolean global is set to True for quiet output,
@@ -1636,6 +1650,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             # A dictionary of errors by their index (idx field)
             error_indexes: Dict[str, ErrorDict] = {}
             dependencies: List[Tuple[str, ErrorDict]] = []
+            analysisblob: List[str] = []
             # Error corpora annotations for sentences marked as unparsable
             # Enumerate through the tokens in the sentence
             for el in sent:
@@ -1724,7 +1739,6 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             if not text:
                 # Nothing to do: drop this and go to the next sentence
                 continue
-
             # Pass it to GreynirCorrect
             pg = [list(p) for p in gc.check(text)]
             s: Optional[_Sentence] = None
@@ -1814,7 +1828,16 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 x = iter(ref_annotations)  # iEC annotations
                 ytok: Optional[gc.Annotation] = None
                 xtok: Optional[ErrorDict] = None
+                if ANALYSIS:
+                    analysisblob.append("\n{}".format(text))
+                    analysisblob.append("\tiEC:")
 
+                    for item in ref_annotations:
+                        analysisblob.append("\t\t{}".format(item))
+
+                    analysisblob.append("\tGC:")
+                    for item in hyp_annotations:
+                        analysisblob.append("\t\t{}".format(item))
                 try:
                     ytok = next(y)
                     xtok = next(x)
@@ -1825,15 +1848,20 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
 
                         # 1. Error detection
                         # Token span in GreynirCorrect annotation
-                        ytoks = set(range(ystart, yend + 1))
+                        yspan = set(range(ystart, yend + 1))
                         # Token span in iEC annotation
-                        xtoks = set(range(xstart, xend + 1))
+                        xspan = set(range(xstart, xend + 1))
+
+                        # Secondary search option:
+                        # Check if any common tokens
+                        ytoks = set(ytok.text)
+                        xtoks = set(xtok["original"])
 
                         # iEC error subcategory
                         xtype = cast(str, xtok["xtype"])
                         # By default, use iEC error category
                         # on the GreynirCorrect side as well
-                        ytype = xtype
+                        ytype = xtype            
                         if ytok.code in GCtoIEC:
                             # We have a mapping of the GC code
                             if xtype not in GCtoIEC[ytok.code]:
@@ -1845,12 +1873,23 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 # a wrong annotation type anyway, as ytype != xtype.
                                 ytype = GCtoIEC[ytok.code][0]
 
-                        if xtoks & ytoks:
+                        if ANALYSIS:
+                            analysisblob.append("\tComparing:\n\t          {}\n\t          {} - {} ({})".format(xtok, ytok, ytok.text, ytype))
+                        if ytok.code in ["E001"]:
+                            # Skip these errors, shouldn't be compared.
+                            if ANALYSIS:
+                                analysisblob.append("\t          Skip: {}".format(ytok.code))
+                            ytok = next(y, None)
+                            continue
+
+                        if xspan & yspan:
                             # The annotation spans overlap
                             tp += 1
                             errtypefreqs[xtype]["tp"] += 1
+                            if ANALYSIS:
+                                analysisblob.append("\t          TP: {}".format(xtype))
                             # 2. Span detection
-                            if xtoks == ytoks:
+                            if xspan == yspan:
                                 right_span += 1
                                 errtypefreqs[xtype]["right_span"] += 1
                             else:
@@ -1876,6 +1915,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             # Extraneous GC annotation before next iEC annotation
                             fp += 1
                             errtypefreqs[ytype]["fp"] += 1
+                            if ANALYSIS:
+                                analysisblob.append("\t          FP: {}".format(ytype))
                             ytok = None
                             ytok = next(y)
                             continue
@@ -1884,6 +1925,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             # iEC annotation with no corresponding GC annotation
                             fn += 1
                             errtypefreqs[xtype]["fn"] += 1
+                            if ANALYSIS:
+                                analysisblob.append("\t          FN: {}".format(xtype))
                             xtok = None
                             xtok = next(x)
                             continue
@@ -1896,17 +1939,32 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
 
                 # At least one of the iterators has been exhausted
                 # Process the remainder
+                if ANALYSIS:
+                    analysisblob.append("\tDumping rest of GC errors:")
                 while ytok is not None:
                     # This is a remaining GC annotation: false positive
+                    if ytok.code in ["E001"]:
+                        # Skip these errors, shouldn't be a part of the results.
+                        if ANALYSIS:
+                            analysisblob.append("\t          Skip: {}".format(ytok.code))
+                        ytok = next(y, None)
+                        continue
                     fp += 1
                     ytype = GCtoIEC[ytok.code][0] if ytok.code in GCtoIEC else ytok.code
                     errtypefreqs[ytype]["fp"] += 1
+                    if ANALYSIS:
+                        analysisblob.append("\t          FP: {}".format(ytype))
                     ytok = next(y, None)
+
+                if ANALYSIS:
+                    analysisblob.append("\tDumping rest of iEC errors:")
                 while xtok is not None:
                     # This is a remaining iEC annotation: false negative
                     fn += 1
                     xtype = cast(str, xtok["xtype"])
                     errtypefreqs[xtype]["fn"] += 1
+                    if ANALYSIS:
+                        analysisblob.append("\t          FN: {}".format(xtype))
                     xtok = next(x, None)
 
                 return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
@@ -1934,7 +1992,10 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         wrong_span,
                     )
                 )
-
+            if ANALYSIS:
+                with open("analysis.txt", 'a+') as analysis:
+                    analysis.write("\n".join(analysisblob))
+                analysisblob = []
     except ET.ParseError:
         # Already handled the exception: exit as gracefully as possible
         pass
@@ -1980,6 +2041,9 @@ def main() -> None:
 
     global SINGLE
     SINGLE = args.single
+
+    global ANALYSIS
+    ANALYSIS = args.analysis
 
     # Maximum number of files to process (0=all files)
     max_count = args.number
