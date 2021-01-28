@@ -1504,6 +1504,10 @@ class Stats:
                 nfreqsall = 0
                 correcs = 0.0
                 correcsall = 0.0
+                microrec = 0.0
+                microrecall = 0.0
+                microprec = 0.0
+                microprecall = 0.0
                 # TODO taka saman corr_rec og span_rec; skoða hvernig fæ F-skor,
                 # svipað og fyrir hitt, þegar er ekki með TN inni
                 bprint("\n{}:".format(entry.capitalize()))
@@ -1519,7 +1523,7 @@ class Stats:
                             correcs += cast(float, et["corr_rec"]) * freq
                         nfreqs += freq
                         bprint(
-                            "\t{}   {:3.2f}|{:3.2f}   {:>6}".format(
+                            "\t{}   {:3.2f}|{:3.2f}|{:>6}".format(
                                 cat,
                                 cast(float, et["f1score"]) * 100.0,
                                 cast(float, et["f05score"]) * 100.0,
@@ -1823,11 +1827,14 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 tp, fp, fn = 0, 0, 0  # tn comes from len(tokens)-(tp+fp+fn) later on
                 right_corr, wrong_corr = 0, 0
                 right_span, wrong_span = 0, 0
-
+                if not hyp_annotations and not ref_annotations:
+                    # No need to go any further
+                    return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
                 y = iter(hyp_annotations)  # GreynirCorrect annotations
                 x = iter(ref_annotations)  # iEC annotations
                 ytok: Optional[gc.Annotation] = None
                 xtok: Optional[ErrorDict] = None
+
                 if ANALYSIS:
                     analysisblob.append("\n{}".format(text))
                     analysisblob.append("\tiEC:")
@@ -1838,11 +1845,12 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     analysisblob.append("\tGC:")
                     for item in hyp_annotations:
                         analysisblob.append("\t\t{}".format(item))
+                
+                xspanlast = set([-1])
                 try:
                     ytok = next(y)
                     xtok = next(x)
                     while True:
-
                         ystart, yend = ytok.start, ytok.end
                         xstart, xend = cast(int, xtok["start"]), cast(int, xtok["end"])
 
@@ -1851,10 +1859,11 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         yspan = set(range(ystart, yend + 1))
                         # Token span in iEC annotation
                         xspan = set(range(xstart, xend + 1))
+                        
 
                         # Secondary search option:
                         # Check if any common tokens
-                        ytoks = set(ytok.text)
+                        ytoks = set(ytok.text) # TODO not ytok.text
                         xtoks = set(xtok["original"])
 
                         # iEC error subcategory
@@ -1875,11 +1884,20 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
 
                         if ANALYSIS:
                             analysisblob.append("\tComparing:\n\t          {}\n\t          {} - {} ({})".format(xtok, ytok, ytok.text, ytype))
-                        if ytok.code in ["E001"]:
+                            #analysisblob.append("\tXspans:   {} | {}".format(xspanlast, xspan))
+                        # Multiple tags for same error: Skip rest
+                        if xspan == xspanlast:
+                            if ANALYSIS:
+                                analysisblob.append("\t          Same span, skip: {}".format(cast(str, xtok["xtype"])))                                
+                            xtok = None
+                            xtok = next(x)
+                            continue
+                        if ytok.code in ["E001"] or "/w" in ytok.code:
                             # Skip these errors, shouldn't be compared.
                             if ANALYSIS:
                                 analysisblob.append("\t          Skip: {}".format(ytok.code))
-                            ytok = next(y, None)
+                            ytok = None
+                            ytok = next(y)
                             continue
 
                         if xspan & yspan:
@@ -1905,6 +1923,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             else:
                                 wrong_corr += 1
                                 errtypefreqs[xtype]["wrong_corr"] += 1
+                            xspanlast = xspan
                             xtok, ytok = None, None
                             xtok = next(x)
                             ytok = next(y)
@@ -1927,6 +1946,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             errtypefreqs[xtype]["fn"] += 1
                             if ANALYSIS:
                                 analysisblob.append("\t          FN: {}".format(xtype))
+                            xspanlast = xspan
                             xtok = None
                             xtok = next(x)
                             continue
@@ -1939,7 +1959,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
 
                 # At least one of the iterators has been exhausted
                 # Process the remainder
-                if ANALYSIS:
+                if ANALYSIS and ytok:
                     analysisblob.append("\tDumping rest of GC errors:")
                 while ytok is not None:
                     # This is a remaining GC annotation: false positive
@@ -1956,16 +1976,30 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         analysisblob.append("\t          FP: {}".format(ytype))
                     ytok = next(y, None)
 
-                if ANALYSIS:
+                if ANALYSIS and xtok:
                     analysisblob.append("\tDumping rest of iEC errors:")
+                if not xtok:
+                    # In case try fails on ytok = next(y)
+                    xtok = next(x, None)
+
                 while xtok is not None:
                     # This is a remaining iEC annotation: false negative
-                    fn += 1
+                    xstart, xend = cast(int, xtok["start"]), cast(int, xtok["end"])
+                    xspan = set(range(xstart, xend + 1))
                     xtype = cast(str, xtok["xtype"])
-                    errtypefreqs[xtype]["fn"] += 1
-                    if ANALYSIS:
-                        analysisblob.append("\t          FN: {}".format(xtype))
-                    xtok = next(x, None)
+                    if xspan == xspanlast:
+                        # Multiple tags for same error: Skip rest
+                        if ANALYSIS:
+                            analysisblob.append("\t          Same span, skip: {}".format(xtype))                                
+                        xtok = None
+                        xtok = next(x, None)
+                    else:
+                        if ANALYSIS:
+                            analysisblob.append("\t          FN: {}".format(xtype))
+                        fn += 1
+                        errtypefreqs[xtype]["fn"] += 1
+                        xspanlast = xspan
+                        xtok = next(x, None)
 
                 return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
 
