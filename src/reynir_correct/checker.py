@@ -275,6 +275,8 @@ class GreynirCorrect(Greynir):
                             code=t.error_code,
                             text=t.error_description,
                             detail=t.error_detail,
+                            original=t.error_original if hasattr(t, "original") else "",
+                            suggest=t.error_suggest if hasattr(t, "suggest") else ""
                         )
                     )
         # Then, look at the whole sentence
@@ -291,7 +293,9 @@ class GreynirCorrect(Greynir):
                     code="E004",
                     text="Málsgreinin er sennilega ekki á íslensku",
                     detail="{0:.0f}% orða í henni finnast ekki í íslenskri orðabók"
-                        .format(words_not_in_bin/num_words * 100.0)
+                        .format(words_not_in_bin/num_words * 100.0),
+                    original="",
+                    suggest="",
                 )
             ]
         elif sent.deep_tree is None:
@@ -312,7 +316,9 @@ class GreynirCorrect(Greynir):
                     code="E001",
                     text="Málsgreinin fellur ekki að reglum",
                     detail="Þáttun brást í kring um {0}. tóka ('{1}')"
-                        .format(err_index + 1, toktext)
+                        .format(err_index + 1, toktext),
+                    original="",
+                    suggest=""
                 )
             )
         else:

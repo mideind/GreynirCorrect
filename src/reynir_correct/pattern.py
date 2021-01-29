@@ -193,6 +193,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
+                correction="af",
                 suggest=suggest,
             )
         )
@@ -225,6 +226,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
+                original="að",
                 suggest=suggest,
             )
         )
@@ -252,6 +254,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
+                original="af",
                 suggest=suggest,
             )
         )
@@ -278,6 +281,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
+                original="að",
                 suggest=suggest,
             )
         )
@@ -309,6 +313,7 @@ class PatternMatcher:
                 code="P_WRONG_PLACE_PP",
                 text=text,
                 detail=detail,
+                original=preposition,
                 suggest=suggest,
             )
         )
@@ -329,6 +334,7 @@ class PatternMatcher:
                 code="P_WRONG_NOUN_WITH_VERB",
                 text=text,
                 detail=detail,
+                original="birginn",
                 suggest=suggest,
             )
         )
@@ -358,6 +364,7 @@ class PatternMatcher:
                 code="P_WRONG_VERB_USE",
                 text=text,
                 detail=detail,
+                original=verb,
                 suggest=suggest,
             )
         )

@@ -49,6 +49,7 @@ class Annotation:
         code: str,
         text: str,
         detail: Optional[str] = None,
+        original: Optional[str] = None,
         suggest: Optional[str] = None,
         is_warning: bool = False
     ) -> None:
@@ -72,15 +73,17 @@ class Annotation:
         # " " spaces, so correct_spaces() should be applied to
         # it before displaying it.
         self._suggest = suggest
+        self._original = original
 
     def __str__(self) -> str:
         """ Return a string representation of this annotation """
-        return "{0:03}-{1:03}: {2:6} {3}{4}".format(
+        return "{0:03}-{1:03}: {2:6} {3}|{4} → {5}".format(
             self._start,
             self._end,
             self._code,
             self._text,
-            "" if self._suggest is None else " / [" + self._suggest + "]",
+            self._original,
+            self._suggest,
         )
 
     @property
@@ -125,3 +128,15 @@ class Annotation:
         """ A suggested correction for the token span, as a text string
             containing tokens delimited by spaces """
         return self._suggest
+
+
+    @property
+    def original(self) -> Optional[str]:
+        """ The original text for the error """
+        return self._original
+
+    @property
+    def correction(self) -> Optional[str]:
+        """ A suggested correction for the token span, as a text string
+            containing tokens delimited by spaces """
+        return self._correction
