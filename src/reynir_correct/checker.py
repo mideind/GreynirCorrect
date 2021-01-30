@@ -275,8 +275,8 @@ class GreynirCorrect(Greynir):
                             code=t.error_code,
                             text=t.error_description,
                             detail=t.error_detail,
-                            original=t.error_original if hasattr(t, "error_original") else "",  # TODO or original
-                            suggest=t.error_suggest if hasattr(t, "error_suggest") else ""      # TODO or suggest
+                            original=t.getattr("error_original", "")
+                            suggest=t.getattr("error_suggest", "")
                         )
                     )
         # Then, look at the whole sentence

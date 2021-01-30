@@ -1748,7 +1748,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 # error with idx=dep_id
                                 dependencies.append((dep_id, error))
                             else:
-                                if not QUIET:
+                                if QUIET:
                                     bprint(f"In file {fpath}:")
                                     bprint(
                                         f"\n{index}: *** 'depId' attribute missing for dependency ***"
@@ -1760,7 +1760,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             # Fix up the dependencies, if any
             for dep_id, error in dependencies:
                 if dep_id not in error_indexes:
-                    if not QUIET:
+                    if QUIET:
                         bprint(f"In file {fpath}:")
                         bprint(f"\n{index}: *** No error has idx='{dep_id}' ***")
                 else:
@@ -1782,21 +1782,21 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 s = pg[0][0]
             if len(pg) > 1 or (len(pg) == 1 and len(pg[0]) > 1):
-                if not QUIET:
+                if QUIET:
                     bprint(f"In file {fpath}:")
                 #bprint(
                 #    f"\n{index}: *** Input contains more than one sentence *** {text}"
                 #)
             if s is None:
-                if not QUIET:
+                if QUIET:
                     bprint(f"In file {fpath}:")
                 #bprint(f"\n{index}: *** No parse for sentence *** {text}")
                 continue
-            if not QUIET:
+            if QUIET:
                 # Output the original sentence
                 bprint(f"\n{index}: {text}")
             if not index:
-                if not QUIET:
+                if QUIET:
                     bprint(f"In file {fpath}:")
                 #bprint("000: *** Sentence identifier is missing ('n' attribute) ***")
 
@@ -1812,7 +1812,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         gc_error = True
                     if ann.code == "E001":
                         unparsable = True
-                    if not QUIET:
+                    if QUIET:
                         bprint(f">>> {ann}")
                 # Output iceErrorCorpus annotations
                 xtypes: Dict[str, int] = defaultdict(int)
@@ -1829,11 +1829,11 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             xtypes[xtype] += 1
                     if unparsable:
                         ups[xtype] += 1
-                    if not QUIET:
+                    if QUIET:
                         bprint(
                             f"<<< {err['start']:03}-{err['end']:03}: {asterisk}{xtype}"
                         )
-                if not QUIET:
+                if QUIET:
                     # Output true/false positive/negative result
                     if ice_error and gc_error:
                         bprint("=++ True positive")
@@ -1898,10 +1898,10 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             yorig = None
                         xorig = set(xtok["original"].split())
                         if ytok.suggest:
-                            if type(ytok.suggest) == list:
-                                ysugg = set(ytok.suggest)
-                            else:
+                            if isinstance(ytok.suggest, str):
                                 ysugg = set(ytok.suggest.split())
+                            else:
+                                ysugg = set(ytok.suggest)
                         else:
                             ysugg = None
                         xsugg = set(xtok["corrected"].split())
@@ -2089,7 +2089,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
         with OUTPUT_LOCK:
             for s in buffer:
                 print(s)
-            if not QUIET:
+            if QUIET:
                 print("", flush=True)
 
     # This return value will be pickled and sent back to the parent process

@@ -911,7 +911,7 @@ def parse_errors(
                                 "002",
                                 "Orðinu '{0}' var skipt upp".format(token.txt),
                                 token.txt,
-                                correct_phrase,
+                                " ".join(correct_phrase,)
                                 span=len(correct_phrase),
                             )
                         )
@@ -1256,11 +1256,10 @@ def fix_compound_words(
             t1 = token_ctor.Word(w, m, token=token)
             t1.set_error(
                 CompoundError(
-                    "002",
-                    "Orðinu {0} var skipt upp".format(token.txt),
-                    token.txt,
-                    prefix+"-",
-                    "og",
+                    code="002",
+                    txt="Orðinu {0} var skipt upp".format(token.txt),
+                    original=token.txt,
+                    suggest=prefix+"- og",
                     span=2
                 )
             )
