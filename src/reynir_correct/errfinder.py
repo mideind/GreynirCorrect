@@ -210,7 +210,6 @@ class ErrorFinder(ParseForestNavigator):
             text="'{0}' er sennilega ofaukið".format(txt),
             detail="Yfirleitt nægir að nota 'en' í þessu samhengi.",
             original=txt,
-            suggest=""
         )
 
     def AðvörunSíðan(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -222,7 +221,6 @@ class ErrorFinder(ParseForestNavigator):
                 "'fyrir tveimur dögum'"
             ),
             original="síðan",
-            suggest="",
         )
 
     def VillaVístAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -438,7 +436,7 @@ class ErrorFinder(ParseForestNavigator):
         )
 
     def VillaNé(self, txt: str, variants: str, node: Node) -> AnnotationDict:
-        return dict(text="'né' gæti átt að vera 'eða'", original="", suggest="eða")
+        return dict(text="'né' gæti átt að vera 'eða'", original="né", suggest="eða")
 
     def VillaÞóAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # [jafnvel] þó' á sennilega að vera '[jafnvel] þó að

@@ -193,7 +193,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                correction="af",
+                original="af",
                 suggest=suggest,
             )
         )

@@ -372,12 +372,12 @@ class CorrectToken:
     @property
     def error_original(self) -> str:
         """ Return the original text of the token """
-        return getattr(self._err, "original", None)
+        return getattr(self._err, "original", "")
 
     @property
     def error_suggest(self) -> str:
         """ Return the text of a suggested replacement of this token, if any """
-        return getattr(self._err, "suggest", None)
+        return getattr(self._err, "suggest", "")
 
     @property
     def error_span(self) -> int:
@@ -401,8 +401,8 @@ class Error(ABC):
     def __init__(
         self, 
         code: str, 
-        original: str, 
-        suggest: str, 
+        original: str = "", 
+        suggest: str = "", 
         is_warning: bool = False, 
         span: int = 1
     ) -> None:
@@ -443,6 +443,16 @@ class Error(ABC):
         """ Return the number of tokens spanned by this error """
         return self._span
 
+    @property
+    def original(self) -> str:
+        """ Return original text of error """
+        return self._original
+
+    @property
+    def suggest(self) -> str:
+        """ Return suggestion for correctio """
+        return self._suggest
+
     def __str__(self) -> str:
         return "{0}: {1} | {2}->{3}".format(self.code, self.description, self._original, self._suggest)
 
@@ -452,8 +462,8 @@ class Error(ABC):
             self.description, 
             self.span, 
             self.__class__.__name__, 
-            self._original, 
-            self._suggest
+            self.original, 
+            self.suggest
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -473,20 +483,10 @@ class PunctuationError(Error):
         # Punctuation error codes start with "N"
         super().__init__("N" + code, span=span, original=original, suggest=suggest)
         self._txt = txt
-        self._original = original
-        self._suggest = suggest
 
     @property
     def description(self) -> str:
         return self._txt
-
-    @property
-    def get_original(self) -> str:
-        return self._original
-
-    @property
-    def get_suggest(self) -> str:
-        return self._suggest
 
 
 @register_error_class
@@ -510,20 +510,11 @@ class CompoundError(Error):
         is_warning = code == "004"
         super().__init__("C" + code, is_warning=is_warning, span=span, original=original, suggest=suggest)
         self._txt = txt
-        self._original = original
-        self._suggest = suggest
 
     @property
     def description(self) -> str:
         return self._txt
 
-    @property
-    def get_original(self) -> str:
-        return self._original
-
-    @property
-    def get_suggest(self) -> str:
-        return self._suggest
 
 
 @register_error_class
@@ -539,20 +530,10 @@ class UnknownWordError(Error):
         # Unknown word error codes start with "U"
         super().__init__("U" + code, is_warning=is_warning, original=original, suggest=suggest)
         self._txt = txt
-        self._original = original
-        self._suggest = suggest
 
     @property
     def description(self) -> str:
         return self._txt
-
-    @property
-    def get_original(self) -> str:
-        return self._original
-
-    @property
-    def get_suggest(self) -> str:
-        return self._suggest
 
 @register_error_class
 class CapitalizationError(Error):
@@ -573,21 +554,10 @@ class CapitalizationError(Error):
         # Capitalization error codes start with "Z"
         super().__init__("Z" + code, original=original, suggest=suggest)
         self._txt = txt
-        self._original = original
-        self._suggest = suggest
 
     @property
     def description(self) -> str:
         return self._txt
-
-    @property
-    def get_original(self) -> str:
-        return self._original
-
-    @property
-    def get_suggest(self) -> str:
-        return self._suggest
-
 
 @register_error_class
 class AbbreviationError(Error):
@@ -603,21 +573,10 @@ class AbbreviationError(Error):
         # Abbreviation error codes start with "A"
         super().__init__("A" + code, original=original, suggest=suggest)
         self._txt = txt
-        self._original = original
-        self._suggest = suggest
 
     @property
     def description(self) -> str:
         return self._txt
-
-    @property
-    def get_original(self) -> str:
-        return self._original
-
-    @property
-    def get_suggest(self) -> str:
-        return self._suggest
-
 
 @register_error_class
 class TabooWarning(Error):
@@ -632,8 +591,6 @@ class TabooWarning(Error):
         super().__init__("T" + code, is_warning=True, original=original, suggest=suggest)
         self._txt = txt
         self._detail = detail
-        self._original = original
-        self._suggest = suggest
 
 
     @property
@@ -648,16 +605,6 @@ class TabooWarning(Error):
         d = super().to_dict()
         d["detail"] = self.detail
         return d
-
-    @property
-    def get_original(self) -> str:
-        return self._original
-
-    @property
-    def get_suggest(self) -> str:
-        return self._suggest
-
-
 
 @register_error_class
 class SpellingError(Error):
@@ -676,21 +623,10 @@ class SpellingError(Error):
         # Spelling error codes start with "S"
         super().__init__("S" + code, original=original, suggest=suggest)
         self._txt = txt
-        self._original = original
-        self._suggest = suggest
 
     @property
     def description(self) -> str:
         return self._txt
-
-    @property
-    def get_original(self) -> str:
-        return self._original
-
-    @property
-    def get_suggest(self) -> str:
-        return self._suggest
-
 
 @register_error_class
 class SpellingSuggestion(Error):
@@ -704,20 +640,10 @@ class SpellingSuggestion(Error):
         # Spelling suggestion codes start with "W"
         super().__init__("W" + code, is_warning=True, original=original, suggest=suggest)
         self._txt = txt
-        self._original = original
-        self._suggest = suggest
 
     @property
     def description(self) -> str:
         return self._txt
-
-    @property
-    def get_original(self) -> str:
-        return self._original
-
-    @property
-    def suggest(self) -> str:
-        return self._suggest
 
     def to_dict(self) -> Dict[str, Any]:
         d = super().to_dict()
@@ -740,21 +666,10 @@ class PhraseError(Error):
         # a string indicating the type of error, i.e. YI for y/i, etc.
         super().__init__("P_" + code, is_warning=is_warning, span=span, original=original, suggest=suggest)
         self._txt = txt
-        self._original = original
-        self._suggest = suggest
 
     @property
     def description(self) -> str:
         return self._txt
-
-    @property
-    def get_original(self) -> str:
-        return self._original
-
-    @property
-    def suggest(self) -> str:
-        return self._suggest
-
 
 
 def parse_errors(

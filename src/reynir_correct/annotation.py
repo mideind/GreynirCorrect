@@ -77,7 +77,7 @@ class Annotation:
 
     def __str__(self) -> str:
         """ Return a string representation of this annotation """
-        return "{0:03}-{1:03}: {2:6} {3}|{4} → {5}".format(
+        return "{0:03}-{1:03}: {2:6} {3}|{4} -> {5}".format(
             self._start,
             self._end,
             self._code,
@@ -134,9 +134,3 @@ class Annotation:
     def original(self) -> Optional[str]:
         """ The original text for the error """
         return self._original
-
-    @property
-    def correction(self) -> Optional[str]:
-        """ A suggested correction for the token span, as a text string
-            containing tokens delimited by spaces """
-        return self._correction

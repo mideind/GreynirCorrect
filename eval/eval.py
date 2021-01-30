@@ -1748,11 +1748,11 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 # error with idx=dep_id
                                 dependencies.append((dep_id, error))
                             else:
-                                if QUIET:
+                                if not QUIET:
                                     bprint(f"In file {fpath}:")
-                                bprint(
-                                    f"\n{index}: *** 'depId' attribute missing for dependency ***"
-                                )
+                                    bprint(
+                                        f"\n{index}: *** 'depId' attribute missing for dependency ***"
+                                    )
                         if SINGLE and xtype == SINGLE:
                             check = True
                 else:
@@ -1760,9 +1760,9 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             # Fix up the dependencies, if any
             for dep_id, error in dependencies:
                 if dep_id not in error_indexes:
-                    if QUIET:
+                    if not QUIET:
                         bprint(f"In file {fpath}:")
-                    bprint(f"\n{index}: *** No error has idx='{dep_id}' ***")
+                        bprint(f"\n{index}: *** No error has idx='{dep_id}' ***")
                 else:
                     # Copy the in_scope attribute from the original error
                     error["in_scope"] = error_indexes[dep_id]["in_scope"]
@@ -1782,13 +1782,13 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 s = pg[0][0]
             if len(pg) > 1 or (len(pg) == 1 and len(pg[0]) > 1):
-                if QUIET:
+                if not QUIET:
                     bprint(f"In file {fpath}:")
                 #bprint(
                 #    f"\n{index}: *** Input contains more than one sentence *** {text}"
                 #)
             if s is None:
-                if QUIET:
+                if not QUIET:
                     bprint(f"In file {fpath}:")
                 #bprint(f"\n{index}: *** No parse for sentence *** {text}")
                 continue
@@ -1796,7 +1796,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 # Output the original sentence
                 bprint(f"\n{index}: {text}")
             if not index:
-                if QUIET:
+                if not QUIET:
                     bprint(f"In file {fpath}:")
                 #bprint("000: *** Sentence identifier is missing ('n' attribute) ***")
 
@@ -1889,7 +1889,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         samespan  = False
                         # 1. Error detection
                         # Token span in GreynirCorrect annotation
-                        yspan = set(range(ystart-1, yend + 2)) # TODO Usually ystart, yend+1, reset when secondary comparison works
+                        yspan = set(range(ystart, yend + 1)) # TODO Usually ystart, yend+1, reset when secondary comparison works
                         # Token span in iEC annotation
                         xspan = set(range(xstart, xend+1))
                         if ytok.original:
@@ -1898,7 +1898,10 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             yorig = None
                         xorig = set(xtok["original"].split())
                         if ytok.suggest:
-                            ysugg = set(ytok.suggest.split())
+                            if type(ytok.suggest) == list:
+                                ysugg = set(ytok.suggest)
+                            else:
+                                ysugg = set(ytok.suggest.split())
                         else:
                             ysugg = None
                         xsugg = set(xtok["corrected"].split())
@@ -1940,7 +1943,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             xtok = None
                             xtok = next(x)
                             continue
-                        if ytok.code in GCSKIPCODES or "/w" in ytok.code:
+                        if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
                             # Skip these errors, shouldn't be compared.
                             if ANALYSIS:
                                 analysisblob.append("\t          Skip: {}".format(ytok.code))
@@ -1963,7 +1966,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 wrong_span += 1
                                 errtypefreqs[xtype]["wrong_span"] += 1
                             # 3. Error correction
-                            ycorr = getattr(ytok, "suggest", ytok.suggest)
+                            ycorr = getattr(ytok, "suggest", "")
                             if ycorr == xtok["corrected"]:
                                 right_corr += 1
                                 errtypefreqs[xtype]["right_corr"] += 1
@@ -2010,7 +2013,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     analysisblob.append("\tDumping rest of GC errors:")
                 while ytok is not None:
                     # This is a remaining GC annotation: false positive
-                    if ytok.code in GCSKIPCODES or "/w" in ytok.code:
+                    if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
                         # Skip these errors, shouldn't be a part of the results.
                         if ANALYSIS:
                             analysisblob.append("\t          Skip: {}".format(ytok.code))
