@@ -1746,11 +1746,11 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 # error with idx=dep_id
                                 dependencies.append((dep_id, error))
                             else:
-                                if not QUIET:
+                                if QUIET:
                                     bprint(f"In file {fpath}:")
-                                    bprint(
-                                        f"\n{index}: *** 'depId' attribute missing for dependency ***"
-                                    )
+                                bprint(
+                                    f"\n{index}: *** 'depId' attribute missing for dependency ***"
+                                )
                         if SINGLE and xtype == SINGLE:
                             check = True
                 else:
@@ -1758,9 +1758,9 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             # Fix up the dependencies, if any
             for dep_id, error in dependencies:
                 if dep_id not in error_indexes:
-                    if not QUIET:
+                    if QUIET:
                         bprint(f"In file {fpath}:")
-                        bprint(f"\n{index}: *** No error has idx='{dep_id}' ***")
+                    bprint(f"\n{index}: *** No error has idx='{dep_id}' ***")
                 else:
                     # Copy the in_scope attribute from the original error
                     error["in_scope"] = error_indexes[dep_id]["in_scope"]
@@ -1780,23 +1780,24 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 s = pg[0][0]
             if len(pg) > 1 or (len(pg) == 1 and len(pg[0]) > 1):
-                if not QUIET:
-                    bprint(f"In file {fpath}:")
+                # if QUIET:
+                #     bprint(f"In file {fpath}:")
                 # bprint(
-                #    f"\n{index}: *** Input contains more than one sentence *** {text}"
+                #     f"\n{index}: *** Input contains more than one sentence *** {text}"
                 # )
+                pass
             if s is None:
-                if not QUIET:
-                    bprint(f"In file {fpath}:")
+                # if QUIET:
+                #     bprint(f"In file {fpath}:")
                 # bprint(f"\n{index}: *** No parse for sentence *** {text}")
-                continue
+                pass
             if not QUIET:
                 # Output the original sentence
                 bprint(f"\n{index}: {text}")
             if not index:
-                if not QUIET:
+                if QUIET:
                     bprint(f"In file {fpath}:")
-                # bprint("000: *** Sentence identifier is missing ('n' attribute) ***")
+                bprint("000: *** Sentence identifier is missing ('n' attribute) ***")
 
             def sentence_results(
                 hyp_annotations: List[gc.Annotation], ref_annotations: List[ErrorDict]
@@ -2104,8 +2105,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
         with OUTPUT_LOCK:
             for s in buffer:
                 print(s)
-            if not QUIET:
-                print("", flush=True)
+            print("", flush=True)
 
     # This return value will be pickled and sent back to the parent process
     return dict(

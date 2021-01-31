@@ -1300,7 +1300,7 @@ def fix_compound_words(
             t1.set_error(
                 CompoundError(
                     "002",
-                    "Orðinu {0} var skipt upp".format(token.txt),
+                    "Orðinu '{0}' var skipt upp".format(token.txt),
                     original=token.txt,
                     suggest=prefix + " og",
                     span=2,  # TODO: Should this be 1?
