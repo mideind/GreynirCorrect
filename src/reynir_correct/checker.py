@@ -262,23 +262,26 @@ class GreynirCorrect(Greynir):
             elif t.kind == TOK.PERSON:
                 # Person names count as recognized words
                 words_in_bin += 1
+            elif t.kind == TOK.ENTITY:
+                # Entity names do not count as recognized words;
+                # we count each enclosed word in the entity name
+                words_not_in_bin += t.txt.count(" ") + 1
             # Note: these tokens and indices are the original tokens from
             # the submitted text, including ones that are not understood
             # by the parser, such as quotation marks and exotic punctuation
-            if hasattr(t, "error_code"):
-                assert isinstance(t, CorrectToken)
-                if t.error_code:
-                    ann.append(
-                        Annotation(
-                            start=ix,
-                            end=ix + t.error_span - 1,
-                            code=t.error_code,
-                            text=t.error_description,
-                            detail=t.error_detail,
-                            original=t.error_original if hasattr(t, "error_original") else "",  # TODO or original
-                            suggest=t.error_suggest if hasattr(t, "error_suggest") else ""      # TODO or suggest
-                        )
+            if getattr(t, "error_code", None):
+                # This is a CorrectToken instance (or a duck typing equivalent)
+                ann.append(
+                    Annotation(
+                        start=ix,
+                        end=ix + t.error_span - 1,
+                        code=t.error_code,
+                        text=t.error_description,
+                        detail=t.error_detail,
+                        original=t.error_original,
+                        suggest=t.error_suggest,
                     )
+                )
         # Then, look at the whole sentence
         num_words = words_in_bin + words_not_in_bin
         if num_words > 2 and words_in_bin / num_words < ICELANDIC_RATIO:
