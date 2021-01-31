@@ -271,6 +271,7 @@ class GreynirCorrect(Greynir):
             # by the parser, such as quotation marks and exotic punctuation
             if getattr(t, "error_code", None):
                 # This is a CorrectToken instance (or a duck typing equivalent)
+                assert isinstance(t, CorrectToken)  # Satisfy Mypy
                 ann.append(
                     Annotation(
                         start=ix,
