@@ -36,7 +36,7 @@
 
 """
 
-from typing import List
+from typing import List, Iterable, cast
 
 import sys
 import argparse
@@ -183,13 +183,13 @@ def main():
             if t.kind in TOK.END:
                 # End of sentence/paragraph
                 if curr_sent:
-                    print(to_text(curr_sent), file=args.outfile)
+                    print(to_text(cast(Iterable[Tok], curr_sent)), file=args.outfile)
                     curr_sent = []
             else:
                 curr_sent.append(t)
 
     if curr_sent:
-        print(to_text(curr_sent), file=args.outfile)
+        print(to_text(cast(Iterable[Tok], curr_sent)), file=args.outfile)
 
 
 if __name__ == "__main__":

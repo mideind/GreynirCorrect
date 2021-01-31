@@ -1558,7 +1558,7 @@ def test_foreign_sentences(verbose=False):
         "with dogs going through woodlands in France or Italy."
     )
     check_sentence(s, [(0, 31, "E004")], is_foreign=True)
-    s = "Rock and roll er great fun."
+    s = "Rock and roll er rollicking great fun."
     check_sentence(s, [(0, 6, "E004")], is_foreign=True)
 
 

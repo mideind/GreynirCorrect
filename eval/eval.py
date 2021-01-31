@@ -159,7 +159,9 @@ CATEGORIES = (
 OUT_OF_SCOPE = {
     "agreement-pro",  # samræmi fornafns við undanfara  grammar ...vöðvahólf sem sé um dælinguna. Hann dælir blóðinu > Það dælir blóðinu
     "aux",  # meðferð vera og verða, hjálparsagna   wording mun verða eftirminnilegt > mun vera eftirminnilegt
+    "bad-contraction",
     "bracket4square",  # svigi fyrir hornklofa  punctuation (Portúgal) > [Portúgal]
+    "caps4low",
     # "collocation-idiom",  # fast orðasamband með ógagnsæja merkingu collocation hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
     # "collocation",  # fast orðasamband  collocation fram á þennan dag > fram til þessa dags
     "comma4conjunction",  # komma fyrir samtengingu punctuation ...fara með vald Guðs, öll löggjöf byggir... > ...fara með vald Guðs og öll löggjöf byggir...
@@ -193,6 +195,7 @@ OUT_OF_SCOPE = {
     "indef-pro",  # óákveðið fornafn    grammar enginn > ekki neinn
     "it4nonit",  # skáletrað fyrir óskáletrað       Studdi Isma'il > Studdi Isma'il
     "loan-syntax",  # lánuð setningagerð    style   ég vaknaði upp > ég vaknaði
+    "low4caps",
     "missing-commas",  # kommur vantar utan um innskot  punctuation Hún er jafn verðmæt ef ekki verðmætari en háskólapróf > Hún er verðmæt, ef ekki verðmætari, en háskólapróf
     "missing-conjunction",  # samtengingu vantar    punctuation í Noregi suður að Gíbraltarsundi > í Noregi og suður að Gíbraltarsundi
     "missing-ex",  # vantar upphrópunarmerki    punctuation Viti menn ég komst af > Viti menn! Ég komst af
@@ -206,6 +209,7 @@ OUT_OF_SCOPE = {
     "nonit4it",  # óskáletrað fyrir skáletrað       orðið qibt > orðið qibt
     "noun4dem",  # nafnorð í stað ábendingarfornafns    grammar stærsta klukkan > sú stærsta
     "noun4pro",  # nafnorð í stað fornafns  grammar menntun má nálgast > hana má nálgast
+    "number4word",
     "past4pres",  # sögn í þátíð í stað nútíðar grammar þegar hún leigði spólur > þegar hún leigir spólur
     "period4comma",  # punktur fyrir kommu  punctuation meira en áður. Hella meira í sig > meira en áður, hella meira í sig
     "period4conjunction",  # punktur fyrir samtengingu  punctuation ...maður vill gera. Vissulega > ...maður vill gera en vissulega
@@ -225,7 +229,9 @@ OUT_OF_SCOPE = {
     "sub4ind",  # viðtengingarh. fyrir fh.  grammar Stjórnvöld vildu auka rétt borgara og geri þeim kleift > Stjórnvöld vildu auka rétt borgara og gera þeim kleift
     "unicelandic",  # óíslenskuleg málnotkun    style   ...fer eftir persónunni... > ...fer eftir manneskjunni...
     "upper4lower-proper",  # stór stafur í sérnafni þar sem hann á ekki að vera capitalization  Mál og Menning > Mál og menning
+    "upper4lower-noninitial",
     "wording",  # orðalag   wording ...gerðum allt í raun... > ...gerðum í raun allt...
+    "word4number",
     "xxx",  # unclassified  unclassified
     "zzz",  # to revisit    unannotated
 }
@@ -268,6 +274,7 @@ SIMCATEGORIES = {
         "swapped-letters",
         "letter-rep",
         "missing-letter",
+        "missing-letters",
         "missing-accent",
         "wrong-accent",
         "merged-words",
@@ -295,6 +302,7 @@ SIMCATEGORIES = {
         "upper4lower-common",
         "upper4lower-proper",
         "upper4lower-noninitial",
+        "low4caps",
         "collocation",
         "collocation-idiom",
         "missing-word",
@@ -416,92 +424,105 @@ SIMCATEGORIES = {
         "dep",
         "þar4það",
         "context",
+        "foreign-name",
     ],
     "punctuation": [
+        "bracket4comma",
+        "bracket4period",
+        "bracket4square",
+        "colon4comma",
+        "colon4period",
+        "comma-plus-conjunction",
+        "comma4bracket",
+        "comma4colon",
+        "comma4conjunction",
+        "comma4dash",
+        "comma4ex",
         "comma4period",
         "comma4qm",
-        "comma4colon",
+        "comma4semicolon",
+        "conjunction-drop",
+        "conjunction4comma",
+        "conjunction4period",
+        "conjunction4qm",
+        "conjunction4semicolon",
+        "endash4colon",
+        "endash4comma",
+        "endash4period",
+        "endash4semicolon",
+        "endash4word",
+        "date-abbreviation",
+        "date-period",
+        "dots4comma",
+        "dots4period",
         "double-punctuation",
+        "ex4comma",
+        "ex4period",
         "extra-abbreviation",
-        "extra-dash",
+        "extra-bracket",
+        "extra-brackets",
+        "extra-colon",
+        "extra-comma",
+        "extra-commas",
+        "extra-conjunction",
+        "extra-endash",
+        "extra-hyphen",
+        "extra-period",
+        "extra-punctuation",
+        "extra-qm",
+        "extra-quot",
+        "extra-quots",
+        "extra-semicolon",
+        "extra-square",
+        "hyphen4colon",
+        "hyphen4comma",
+        "hyphen4endash",
+        "hyphen4period",
+        "hyphen4semicolon",
+        "hyphen4word",
         "iteration-colon",
+        "misplaced-quot",
+        "missing-bracket",
         "missing-colon",
         "missing-comma",
         "missing-commas",
+        "missing-conjunction",
+        "missing-ex",
+        "missing-endash",
+        "missing-hyphen",
         "missing-period",
         "missing-qm",
-        "missing-conjunction",
         "missing-quot",
         "missing-quots",
-        "misplaced-quot",
-        "wrong-quots",
-        "extra-quot",
-        "extra-quots",
-        "extra-punctuation",
-        "extra-comma",
-        "extra-period",
-        "period4comma",
-        "period4colon",
-        "period4conjunction",
-        "conjunction4period",
-        "conjunction4comma",
-        "comma4conjunction",
-        "period4qm",
-        "period-plus-conjunction",
-        "comma-plus-conjunction",
-        "comma4ex",
-        "period4ex",
-        "semicolon4colon",
-        "extra-semicolon",
-        "ordinal-period",
-        "conjunction-drop",
-        "extra-conjunction",
-        "semicolon4comma",
-        "conjunction4qm",
+        "missing-semicolon",
         "missing-slash",
-        "comma4bracket",
+        "missing-square",
+        "missing-symbol",
+        "nonsup4sup",
+        "ordinal-period",
+        "period-plus-conjunction",
+        "period4colon",
+        "period4comma",
+        "period4conjunction",
+        "period4endash",
+        "period4ex",
+        "period4qm",
+        "period4semicolon",
         "qm4comma",
-        "missing-ex",
         "qm4ex",
         "qm4period",
-        "bracket4square",
-        "square4bracket",
-        "dash4comma",
-        "date-period",
-        "comma4semicolon",
-        "word4dash",
-        "dash4word",
-        "missing-semicolon",
-        "slash4or",
-        "dash4period",
-        "ex4comma",
-        "colon4period",
-        "colon4comma",
-        "ex4period",
-        "extra-colon",
-        "bracket4comma",
-        "extra-qm",
-        "comma4dash",
-        "dash4semicolon",
-        "wrong-dash",
-        "dash4colon",
-        "dots4comma",
-        "missing-symbol",
-        "dots4period",
-        "extra-square",
-        "bracket4period",
-        "word4symbol",
-        "nonsup4sup",
+        "semicolon4colon",
+        "semicolon4comma",
         "semicolon4period",
-        "period4semicolon",
-        "period4dash",
-        "missing-square",
         "slash4dash",
-        "extra-commas",
-        "conjunction4semicolon",
-        "missing-bracket",
-        "extra-bracket",
-        "date-abbreviation",
+        "slash4hyphen",
+        "slash4or",
+        "square4bracket",
+        "word4endash",
+        "word4symbol",
+        "wrong-dash",
+        "wrong-quot",
+        "wrong-quots",
     ],
 }
 
@@ -603,6 +624,7 @@ SUPERCATEGORIES = {
         "wrong-accent",
         "extra-accent",
         "extra-letter",
+        "extra-letters",
     ],
     "punctuation": [
         "comma4period",
@@ -753,80 +775,90 @@ SUPERCATEGORIES = {
 }
 
 GCtoIEC = {
-    "A001" : ["abbreviation-period"],
-    "A002" : ["abbreviation-period"],
-    "Z001" : ["upper4lower-common", "upper4lower-proper", "upper4lower-noninitial"],
-    "Z002" : ["lower4upper-initial", "lower4upper-proper", "lower4upper-acro"],
-    "Z003" : ["upper4lower-common"],
-    "Z004" : ["upper4lower-common"],
-    "Z005" : ["upper4lower-common"],
-    "Z006" : ["lower4upper-acro"],
-    #"E001" : ["XXX"],
-    #"E002" : ["XXX"],
-    #"E003" : ["XXX"],
-    "E004" : ["fw"],
-    "C001" : ["repeat-word"],
-    "C002" : ["merged-words"],
-    "C003" : ["split-compound", "split-word", "split-words"],
-    "C004" : ["repeat-word"],
-    "C005" : ["split-compound", "split-word", "split-words"],
-    "C006" : ["compound-nonword"],
-    "P_NT_Að_w" : ["extra-conjunction"],
-    "P_NT_AnnaðHvort" : ["conjunction"],
-    "P_NT_Annaðhvort" : ["conjunction"],
-    "P_NT_Annara" : ["pro-inflection"],
-    "P_NT_Annarar" : ["pro-inflection"],
-    "P_NT_Annari" : ["pro-inflection"],
-    "P_NT_Einkunn" : ["agreement-concord"],
-    "P_NT_EinnAf" : ["agreement"],
-    "P_NT_EndingANA" : ["n4nn"],
-    "P_NT_EndingIR" : ["nominal-inflection"],
-    "P_NT_FjöldiHluti" : ["agreement"],
-    "P_NT_FráÞvíAð" : ["missing-conjunction"],
-    "P_NT_FsMeðFallstjórn" : ["case-prep"],
-    "P_NT_Heldur_w" : ["conjunction"],
-    "P_NT_ÍTölu" : ["plural4singular", "singular4plural"],
-    "P_NT_Komma_w" : ["extra-comma"],
-    "P_NT_Né" : ["conjunction"],
-    "P_NT_Sem_w" : ["extra-conjunction"],
-    "P_NT_Síðan_w" : ["extra-word"],
-    "P_NT_Síðastliðinn" : ["split-compound"],
-    "P_NT_SvigaInnihaldNl" : ["case-verb", "case-prep", "case-adj"],
-    "P_NT_TvípunkturFs" : ["extra-colon"],
-    "P_NT_VantarKommu" : ["missing-comma"],
-    "P_NT_VístAð" : ["conjunction"],
-    "P_NT_ÞóAð" : ["conjunction"],
-    "P_WRONG_CASE_nf_þf" : ["case-verb"],
-    "P_WRONG_CASE_nf_þgf" : ["case-verb"],
-    "P_WRONG_CASE_nf_ef" : ["case-verb"],
-    "P_WRONG_CASE_þf_nf" : ["case-verb"],
-    "P_WRONG_CASE_þf_þgf" : ["case-verb"],
-    "P_WRONG_CASE_þf_ef" : ["case-verb"],
-    "P_WRONG_CASE_þgf_nf" : ["case-verb"],
-    "P_WRONG_CASE_þgf_þf" : ["case-verb"],
-    "P_WRONG_CASE_þgf_ef" : ["case-verb"],
-    "P_WRONG_CASE_ef_nf" : ["case-verb"],
-    "P_WRONG_CASE_ef_þf" : ["case-verb"],
-    "P_WRONG_CASE_ef_þgf" : ["case-verb"],
-    "P_WRONG_NOUN_WITH_VERB" : ["collocation"],
-    #"P_WRONG_OP_FORM" : ["XXX"],
-    "P_WRONG_PLACE_PP" : ["wrong-prep"],
-    "P_WRONG_PREP_AÐ" : ["að4af"],
-    "P_WRONG_PREP_AF" : ["af4að"],
-    "P_WRONG_VERB_USE" : ["collocation"],
-    "X_number4word" : ["number4word"],
-    "N001" : ["wrong-quot"],
-    "N002" : ["extra-punctuation"],
-    "N003" : ["extra-punctuation"],
-    "S001" : ["nonword"],
-    "S002" : ["nonword"],
-    "S003" : ["nonword"],
-    "S004" : ["nonword"],
-    "W001_w" : ["nonword"],
-    "T001" : ["taboo-word"],
-    "U001" : ["fw"],
-    "U001_w " : ["fw"],
+    "A001": ["abbreviation-period"],
+    "A002": ["abbreviation-period"],
+    "Z001": ["upper4lower-common", "upper4lower-proper", "upper4lower-noninitial"],
+    "Z002": ["lower4upper-initial", "lower4upper-proper", "lower4upper-acro"],
+    "Z003": ["upper4lower-common"],
+    "Z004": ["upper4lower-common"],
+    "Z005": ["upper4lower-common"],
+    "Z006": ["lower4upper-acro"],
+    # "E001" : ["XXX"],
+    # "E002" : ["XXX"],
+    # "E003" : ["XXX"],
+    "E004": ["fw"],
+    "C001": ["repeat-word"],
+    "C002": ["merged-words"],
+    "C003": ["split-compound", "split-word", "split-words"],
+    "C004": ["repeat-word"],
+    "C005": ["split-compound", "split-word", "split-words"],
+    "C006": ["compound-nonword"],
+    "P_NT_Að_w": ["extra-conjunction"],
+    "P_NT_AnnaðHvort": ["conjunction"],
+    "P_NT_Annaðhvort": ["conjunction"],
+    "P_NT_Annara": ["pro-inflection"],
+    "P_NT_Annarar": ["pro-inflection"],
+    "P_NT_Annari": ["pro-inflection"],
+    "P_NT_Einkunn": ["agreement-concord"],
+    "P_NT_EinnAf": ["agreement"],
+    "P_NT_EndingANA": ["n4nn"],
+    "P_NT_EndingIR": ["nominal-inflection"],
+    "P_NT_FjöldiHluti": ["agreement"],
+    "P_NT_FráÞvíAð": ["missing-conjunction"],
+    "P_NT_FsMeðFallstjórn": ["case-prep"],
+    "P_NT_Heldur_w": ["conjunction"],
+    "P_NT_ÍTölu": ["plural4singular", "singular4plural"],
+    "P_NT_Komma_w": ["extra-comma"],
+    "P_NT_Né": ["conjunction"],
+    "P_NT_Sem_w": ["extra-conjunction"],
+    "P_NT_Síðan_w": ["extra-word"],
+    "P_NT_Síðastliðinn": ["split-compound"],
+    "P_NT_SvigaInnihaldNl": ["case-verb", "case-prep", "case-adj"],
+    "P_NT_TvípunkturFs": ["extra-colon"],
+    "P_NT_VantarKommu": ["missing-comma"],
+    "P_NT_VístAð": ["conjunction"],
+    "P_NT_ÞóAð": ["conjunction"],
+    "P_redundant_word": ["extra-word"],
+    "P_wrong_person": ["verb-inflection"],
+    "P_wrong_phrase": ["wording"],
+    "P_wrong_word": ["wording"],
+    "P_wrong_case": ["case-noun"],
+    "P_WRONG_CASE_nf_þf": ["case-verb"],
+    "P_WRONG_CASE_nf_þgf": ["case-verb"],
+    "P_WRONG_CASE_nf_ef": ["case-verb"],
+    "P_WRONG_CASE_þf_nf": ["case-verb"],
+    "P_WRONG_CASE_þf_þgf": ["case-verb"],
+    "P_WRONG_CASE_þf_ef": ["case-verb"],
+    "P_WRONG_CASE_þgf_nf": ["case-verb"],
+    "P_WRONG_CASE_þgf_þf": ["case-verb"],
+    "P_WRONG_CASE_þgf_ef": ["case-verb"],
+    "P_WRONG_CASE_ef_nf": ["case-verb"],
+    "P_WRONG_CASE_ef_þf": ["case-verb"],
+    "P_WRONG_CASE_ef_þgf": ["case-verb"],
+    "P_WRONG_NOUN_WITH_VERB": ["collocation"],
+    "P_WRONG_OP_FORM": ["verb-inflection"],
+    "P_WRONG_PLACE_PP": ["wrong-prep"],
+    "P_yi": ["i4y"],
+    "P_aðaf": ["að4af"],
+    "P_WRONG_PREP_AÐ": ["að4af"],
+    "P_WRONG_PREP_AF": ["af4að"],
+    "P_WRONG_VERB_USE": ["collocation"],
+    "X_number4word": ["number4word"],
+    "N001": ["wrong-quot"],
+    "N002": ["extra-punctuation"],
+    "N003": ["extra-punctuation"],
+    "S001": ["nonword"],
+    "S002": ["nonword"],
+    "S003": ["nonword"],
+    "S004": ["nonword"],
+    "T001": ["taboo-word"],
+    "T001_w": ["taboo-word"],
+    "U001": ["fw"],
+    "U001_w": ["fw"],
+    "W001_w": ["nonword"],
 }
+
+GCSKIPCODES = frozenset(("E001", "C005", "Z002", "W001"))
 
 # Define the command line arguments
 
@@ -887,10 +919,7 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-x", 
-    "--exclude", 
-    action="store_true", 
-    help="Exclude sentences marked exclude",
+    "-x", "--exclude", action="store_true", help="Exclude sentences marked exclude",
 )
 
 parser.add_argument(
@@ -902,9 +931,9 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-a", 
-    "--analysis", 
-    action="store_true", 
+    "-a",
+    "--analysis",
+    action="store_true",
     help="Create an analysis report for token results",
 )
 
@@ -919,6 +948,9 @@ SINGLE = False
 # This boolean global is set to True if sentences marked
 # with an exclusion flag should be excluded from processing
 EXCLUDE = False
+
+# This boolean global is set to True for token-level analysis
+ANALYSIS = False
 
 
 def element_text(element: ET.Element) -> str:
@@ -1504,10 +1536,10 @@ class Stats:
                 nfreqsall = 0
                 correcs = 0.0
                 correcsall = 0.0
-                microrec = 0.0
-                microrecall = 0.0
-                microprec = 0.0
-                microprecall = 0.0
+                # microrec = 0.0
+                # microrecall = 0.0
+                # microprec = 0.0
+                # microprecall = 0.0
                 # TODO taka saman corr_rec og span_rec; skoða hvernig fæ F-skor,
                 # svipað og fyrir hitt, þegar er ekki með TN inni
                 bprint("\n{}:".format(entry.capitalize()))
@@ -1530,7 +1562,6 @@ class Stats:
                                 freq,
                             )
                         )
-
                     microf1all += cast(float, et["f1score"]) * freq
                     microf05all += cast(float, et["f05score"]) * freq
                     if et.get("corr_rec", "N/A") != "N/A":
@@ -1749,16 +1780,17 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 s = pg[0][0]
             if len(pg) > 1 or (len(pg) == 1 and len(pg[0]) > 1):
-                if QUIET:
-                    bprint(f"In file {fpath}:")
-                bprint(
-                    f"\n{index}: *** Input contains more than one sentence *** {text}"
-                )
+                # if QUIET:
+                #     bprint(f"In file {fpath}:")
+                # bprint(
+                #     f"\n{index}: *** Input contains more than one sentence *** {text}"
+                # )
+                pass
             if s is None:
-                if QUIET:
-                    bprint(f"In file {fpath}:")
-                bprint(f"\n{index}: *** No parse for sentence *** {text}")
-                continue
+                # if QUIET:
+                #     bprint(f"In file {fpath}:")
+                # bprint(f"\n{index}: *** No parse for sentence *** {text}")
+                pass
             if not QUIET:
                 # Output the original sentence
                 bprint(f"\n{index}: {text}")
@@ -1821,7 +1853,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             gc_error, ice_error = sentence_results(s.annotations, errors)
 
             def token_results(
-                hyp_annotations: Iterable[gc.Annotation], ref_annotations: Iterable[ErrorDict]
+                hyp_annotations: Iterable[gc.Annotation],
+                ref_annotations: Iterable[ErrorDict],
             ) -> Tuple[int, int, int, int, int, int, int]:
                 """ Calculate statistics on annotations at the token span level """
                 tp, fp, fn = 0, 0, 0  # tn comes from len(tokens)-(tp+fp+fn) later on
@@ -1837,15 +1870,15 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
 
                 if ANALYSIS:
                     analysisblob.append("\n{}".format(text))
-                    analysisblob.append("\tiEC:")
 
-                    for item in ref_annotations:
-                        analysisblob.append("\t\t{}".format(item))
+                    analysisblob.append("\tiEC:")
+                    for iec_ann in ref_annotations:
+                        analysisblob.append("\t\t{}".format(iec_ann))
 
                     analysisblob.append("\tGC:")
-                    for item in hyp_annotations:
-                        analysisblob.append("\t\t{}".format(item))
-                
+                    for gc_ann in hyp_annotations:
+                        analysisblob.append("\t\t{}".format(gc_ann))
+
                 xspanlast = set([-1])
                 try:
                     ytok = next(y)
@@ -1853,24 +1886,44 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     while True:
                         ystart, yend = ytok.start, ytok.end
                         xstart, xend = cast(int, xtok["start"]), cast(int, xtok["end"])
-
+                        samespan = False
                         # 1. Error detection
                         # Token span in GreynirCorrect annotation
-                        yspan = set(range(ystart, yend + 1))
+                        yspan = set(
+                            range(ystart, yend + 1)
+                        )  # TODO Usually ystart, yend+1, reset when secondary comparison works
                         # Token span in iEC annotation
                         xspan = set(range(xstart, xend + 1))
-                        
+                        if ytok.original:
+                            yorig = set(ytok.original.split())
+                        else:
+                            yorig = set()
+                        xorig = set(cast(str, xtok["original"]).split())
+                        if ytok.suggest:
+                            if isinstance(ytok.suggest, str):
+                                ysugg = set(ytok.suggest.split())
+                            else:
+                                ysugg = set(ytok.suggest)
+                        else:
+                            ysugg = set()
+                        xsugg = set(cast(str, xtok["corrected"]).split())
+                        if xspan & yspan:
+                            samespan = True
 
-                        # Secondary search option:
+                        # Secondary comparison:
                         # Check if any common tokens
-                        ytoks = set(ytok.text) # TODO not ytok.text
-                        xtoks = set(xtok["original"])
+                        # and relatively same span
+                        if abs(ystart - xstart) <= 5 or abs(yend - xend) <= 5:
+                            if yorig and xorig and yorig.intersection(xorig):
+                                samespan = True
+                            if ysugg and xsugg and ysugg.intersection(xsugg):
+                                samespan = True
 
                         # iEC error subcategory
                         xtype = cast(str, xtok["xtype"])
                         # By default, use iEC error category
                         # on the GreynirCorrect side as well
-                        ytype = xtype            
+                        ytype = xtype
                         if ytok.code in GCtoIEC:
                             # We have a mapping of the GC code
                             if xtype not in GCtoIEC[ytok.code]:
@@ -1883,25 +1936,36 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 ytype = GCtoIEC[ytok.code][0]
 
                         if ANALYSIS:
-                            analysisblob.append("\tComparing:\n\t          {}\n\t          {} - {} ({})".format(xtok, ytok, ytok.text, ytype))
-                            #analysisblob.append("\tXspans:   {} | {}".format(xspanlast, xspan))
+                            analysisblob.append(
+                                "\tComparing:\n\t          {}\n\t          {} - {} ({})".format(
+                                    xtok, ytok, ytok.text, ytype
+                                )
+                            )
+                            # analysisblob.append("\tXspans:   {} | {}".format(xspanlast, xspan))
                         # Multiple tags for same error: Skip rest
                         if xspan == xspanlast:
                             if ANALYSIS:
-                                analysisblob.append("\t          Same span, skip: {}".format(cast(str, xtok["xtype"])))                                
+                                analysisblob.append(
+                                    "\t          Same span, skip: {}".format(
+                                        cast(str, xtok["xtype"])
+                                    )
+                                )
                             xtok = None
                             xtok = next(x)
                             continue
-                        if ytok.code in ["E001"] or "/w" in ytok.code:
+                        if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
                             # Skip these errors, shouldn't be compared.
                             if ANALYSIS:
-                                analysisblob.append("\t          Skip: {}".format(ytok.code))
+                                analysisblob.append(
+                                    "\t          Skip: {}".format(ytok.code)
+                                )
                             ytok = None
                             ytok = next(y)
                             continue
 
-                        if xspan & yspan:
+                        if samespan:
                             # The annotation spans overlap
+                            # or almost overlap and contain the same original value or correction
                             tp += 1
                             errtypefreqs[xtype]["tp"] += 1
                             if ANALYSIS:
@@ -1914,9 +1978,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 wrong_span += 1
                                 errtypefreqs[xtype]["wrong_span"] += 1
                             # 3. Error correction
-                            # Get the 'corrected' attribute if available,
-                            # otherwise use ytok['suggest']
-                            ycorr = getattr(ytok, "corrected", ytok.suggest)
+                            ycorr = getattr(ytok, "suggest", "")
                             if ycorr == xtok["corrected"]:
                                 right_corr += 1
                                 errtypefreqs[xtype]["right_corr"] += 1
@@ -1963,10 +2025,12 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     analysisblob.append("\tDumping rest of GC errors:")
                 while ytok is not None:
                     # This is a remaining GC annotation: false positive
-                    if ytok.code in ["E001"]:
+                    if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
                         # Skip these errors, shouldn't be a part of the results.
                         if ANALYSIS:
-                            analysisblob.append("\t          Skip: {}".format(ytok.code))
+                            analysisblob.append(
+                                "\t          Skip: {}".format(ytok.code)
+                            )
                         ytok = next(y, None)
                         continue
                     fp += 1
@@ -1990,7 +2054,9 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     if xspan == xspanlast:
                         # Multiple tags for same error: Skip rest
                         if ANALYSIS:
-                            analysisblob.append("\t          Same span, skip: {}".format(xtype))                                
+                            analysisblob.append(
+                                "\t          Same span, skip: {}".format(xtype)
+                            )
                         xtok = None
                         xtok = next(x, None)
                     else:
@@ -2027,7 +2093,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     )
                 )
             if ANALYSIS:
-                with open("analysis.txt", 'a+') as analysis:
+                with open("analysis.txt", "a+") as analysis:
                     analysis.write("\n".join(analysisblob))
                 analysisblob = []
     except ET.ParseError:
@@ -2039,8 +2105,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
         with OUTPUT_LOCK:
             for s in buffer:
                 print(s)
-            if not QUIET:
-                print("", flush=True)
+            print("", flush=True)
 
     # This return value will be pickled and sent back to the parent process
     return dict(
