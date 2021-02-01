@@ -1850,6 +1850,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         bprint("!++ False positive")
                 return gc_error, ice_error
 
+            assert s is not None
             gc_error, ice_error = sentence_results(s.annotations, errors)
 
             def token_results(

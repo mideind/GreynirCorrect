@@ -49,7 +49,6 @@ from typing import (
 )
 
 import re
-from collections import defaultdict
 from abc import ABC, abstractmethod
 
 from tokenizer import Abbreviations, detokenize
@@ -73,7 +72,6 @@ from .settings import (
     MultiwordErrors,
     CapitalizationErrors,
     TabooWords,
-    CDErrorForms,
     CIDErrorForms,
     Morphemes,
     Settings,
@@ -271,7 +269,7 @@ class CorrectToken:
             ct.set_error(args[3])
             return ct
         # 5-tuple: We have a proper error object
-        error_class_name = args[3]
+        error_class_name: str = args[3]
         error_dict = args[4]
         error_cls = ERROR_CLASS_REGISTRY[error_class_name]
         # Python hack to create a fresh, empty instance of the
@@ -305,12 +303,11 @@ class CorrectToken:
         """ Set the capitalization state for this token """
         self._cap = cap
 
-    def copy_capitalization(self, other: "CorrectToken") -> None:
+    def copy_capitalization(self, other: Union["CorrectToken", List["CorrectToken"]]) -> None:
         """ Copy the capitalization state from another CorrectToken instance """
         if isinstance(other, list):
             other = other[0]
-        if isinstance(other, CorrectToken):
-            self._cap = other._cap
+        self._cap = other._cap
 
     @property
     def cap_sentence_start(self) -> bool:
@@ -341,7 +338,7 @@ class CorrectToken:
             for t in other:
                 if self.copy_error(t, coalesce=True):
                     break
-        elif isinstance(other, CorrectToken):
+        else:
             self._err = other._err
             if coalesce and other.error_span > 1:
                 # The original token had an associated error
@@ -831,7 +828,10 @@ def parse_errors(
                         # !!! TODO: Amalgamate more than one potential correction
                         # !!! of the abbreviation (ma. -> 'meðal annars' or 'milljarðar')
                         am = Abbreviations.get_meaning(corrected)
-                        m = list(map(BIN_Meaning._make, am))
+                        if not am:
+                            m = []
+                        else:
+                            m = list(map(BIN_Meaning._make, am))
                         token = CorrectToken.word(corrected, m)
                         token.set_error(
                             AbbreviationError(

@@ -36,7 +36,7 @@
 
 """
 
-from typing import List, Iterable, cast
+from typing import List, Tuple, Iterator, Iterable, Dict, Any, Union, cast
 
 import sys
 import argparse
@@ -85,30 +85,30 @@ group.add_argument(
 )
 
 
-def main():
-    """ Main function, called when the tokenize command is invoked """
+def main() -> None:
+    """ Main function, called when the correct command is invoked """
 
     args = parser.parse_args()
 
     # By default, no options apply
-    options = {}
+    options: Dict[str, bool] = {}
     if not (args.csv or args.json):
         # If executing a plain ('shallow') correct,
         # apply most suggestions to the text
         options["apply_suggestions"] = True
 
-    def quote(s):
+    def quote(s: str) -> str:
         """ Return the string s within double quotes, and with any contained
             backslashes and double quotes escaped with a backslash """
         if not s:
             return "\"\""
         return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-    def gen(f):
+    def gen(f: Iterator[str]) -> Iterable[str]:
         """ Generate the lines of text in the input file """
         yield from f
 
-    def val(t, quote_word=False):
+    def val(t: CorrectToken, quote_word: bool=False) -> Union[None, str, Tuple, List]:
         """ Return the value part of the token t """
         if t.val is None:
             return None
@@ -159,7 +159,7 @@ def main():
                         t.kind,
                         quote(t.txt),
                         val(t, quote_word=True) or "\"\"",
-                        quote(str(t.error) if t.error else None)
+                        quote(str(t.error) if t.error else "")
                     ),
                     file=args.outfile
                 )
@@ -168,7 +168,7 @@ def main():
                 print("0,\"\",\"\"", file=args.outfile)
         elif args.json:
             # Output the tokens in JSON format, one line per token
-            d = dict(k=TOK.descr[t.kind])
+            d: Dict[str, Any] = dict(k=TOK.descr[t.kind])
             if t.txt is not None:
                 d["t"] = t.txt
             v = val(t)

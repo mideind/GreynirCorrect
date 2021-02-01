@@ -41,22 +41,18 @@
 
 """
 
-from typing import Dict, Mapping, Set, List, Tuple, Sequence, Optional
+from typing import Dict, Set, List, Tuple, Optional, Union, cast
 import os
-import locale
 import threading
 
-from contextlib import contextmanager
 from collections import defaultdict
 
-from reynir.basics import changedlocale, sort_strings, ConfigError, LineReader
+from reynir.basics import ConfigError, LineReader
 from reynir.bindb import BIN_Db
 from reynir.bintokenizer import StateDict
 
 
-# A set of all valid argument cases
-_ALL_CASES = frozenset(("nf", "þf", "þgf", "ef"))
-_ALL_GENDERS = frozenset(("kk", "kvk", "hk"))
+ErrorFormTuple = Tuple[str, str, int, str, str]
 
 # A set of all strings that should be interpreted as True
 TRUE = frozenset(("true", "True", "1", "yes", "Yes"))
@@ -64,7 +60,7 @@ TRUE = frozenset(("true", "True", "1", "yes", "Yes"))
 
 # Lazily initialized module-wide instance of BIN_Db for word lookups
 # during parsing of config files
-_db: Optional[BIN_Db] = None
+db: Optional[BIN_Db] = None
 
 
 class AllowedMultiples:
@@ -73,7 +69,7 @@ class AllowedMultiples:
     SET: Set[str] = set()
 
     @staticmethod
-    def add(word):
+    def add(word: str) -> None:
         AllowedMultiples.SET.add(word)
 
 
@@ -83,7 +79,7 @@ class WrongCompounds:
     DICT: Dict[str, Tuple[str, ...]] = {}
 
     @staticmethod
-    def add(word, parts: Tuple[str, ...]) -> None:
+    def add(word: str, parts: Tuple[str, ...]) -> None:
         if word in WrongCompounds.DICT:
             raise ConfigError(
                 "Multiple definition of '{0}' in wrong_compounds section".format(word)
@@ -192,11 +188,11 @@ class TabooWords:
             raise ConfigError(
                 "Multiple definition of '{0}' in taboo_words section".format(word)
             )
-        global _db
-        if _db is None:
-            _db = BIN_Db()
+        global db
+        if db is None:
+            db = BIN_Db()
         a = word.split("_")
-        _, m = _db.lookup_word(a[0])
+        _, m = db.lookup_word(a[0])
         if not m or (len(a) >= 2 and all(mm.ordfl != a[1] for mm in m)):
             raise ConfigError(
                 "The taboo word '{0}' is not found in BÍN".format(word)
@@ -269,15 +265,15 @@ class CapitalizationErrors:
             prefix, suffix = "", word
             # Split_on_hyphen is True for e.g. 'norður-kórea' and 'nýja-sjáland'
             split_on_hyphen = "-" in word
-        global _db
-        if _db is None:
-            _db = BIN_Db()
+        global db
+        if db is None:
+            db = BIN_Db()
         # The suffix may not be in BÍN except as a compound, and in that
         # case we want its hyphenated lemma
         suffix_rev = CapitalizationErrors.reverse_capitalization(
             suffix, split_on_hyphen=split_on_hyphen
         )
-        _, m = _db.lookup_word(suffix_rev)
+        _, m = db.lookup_word(suffix_rev)
         if not m:
             raise ConfigError(
                 "No BÍN meaning for '{0}' (from error word '{1}') in capitalization_errors section".format(
@@ -326,11 +322,11 @@ class OwForms:
         OwForms.DICT[wrong_form] = meaning
 
     @staticmethod
-    def get_lemma(wrong_form):
+    def get_lemma(wrong_form: str) -> str:
         return OwForms.DICT[wrong_form][0]
 
     @staticmethod
-    def get_correct_form(wrong_form):
+    def get_correct_form(wrong_form: str) -> str:
         """ Return a corrected form of the given word, attempting
             to emulate the lower/upper/title case of the word """
         # First, try the original casing of the wrong form
@@ -351,25 +347,25 @@ class OwForms:
         return form
 
     @staticmethod
-    def get_id(wrong_form):
+    def get_id(wrong_form: str) -> int:
         return OwForms.DICT[wrong_form][2]
 
     @staticmethod
-    def get_category(wrong_form):
+    def get_category(wrong_form: str) -> str:
         return OwForms.DICT[wrong_form][3]
 
     @staticmethod
-    def get_tag(wrong_form):
+    def get_tag(wrong_form: str) -> str:
         return OwForms.DICT[wrong_form][4]
 
 
 class CIDErrorForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
-    DICT: Dict[str, Tuple[str, str, int, str, str]] = dict()
+    DICT: Dict[str, ErrorFormTuple] = dict()
 
     @staticmethod
-    def contains(word):
+    def contains(word: str) -> bool:
         """ Check whether the word form is in the error forms dictionary,
             either in its original casing or in a lower case form """
         d = CIDErrorForms.DICT
@@ -378,11 +374,11 @@ class CIDErrorForms:
         return word in d or word.lower() in d
 
     @staticmethod
-    def add(wrong_form, meaning):
+    def add(wrong_form: str, meaning: ErrorFormTuple) -> None:
         CIDErrorForms.DICT[wrong_form] = meaning
 
     @staticmethod
-    def get_lemma(wrong_form):
+    def get_lemma(wrong_form: str) -> str:
         return CIDErrorForms.DICT[wrong_form][0]
 
     @staticmethod
@@ -407,25 +403,25 @@ class CIDErrorForms:
         return form
 
     @staticmethod
-    def get_id(wrong_form):
+    def get_id(wrong_form: str) -> int:
         return CIDErrorForms.DICT[wrong_form][2]
 
     @staticmethod
-    def get_category(wrong_form):
+    def get_category(wrong_form: str) -> str:
         return CIDErrorForms.DICT[wrong_form][3]
 
     @staticmethod
-    def get_tag(wrong_form):
+    def get_tag(wrong_form: str) -> str:
         return CIDErrorForms.DICT[wrong_form][4]
 
 
 class CDErrorForms:
 
     # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
-    DICT: Dict[str, Tuple[str, str, int, str, str]] = dict()
+    DICT: Dict[str, ErrorFormTuple] = dict()
 
     @staticmethod
-    def contains(word):
+    def contains(word: str) -> bool:
         """ Check whether the word form is in the error forms dictionary,
             either in its original casing or in a lower case form """
         d = CDErrorForms.DICT
@@ -434,15 +430,15 @@ class CDErrorForms:
         return word in d or word.lower() in d
 
     @staticmethod
-    def add(wrong_form, meaning):
+    def add(wrong_form: str, meaning: ErrorFormTuple) -> None:
         CDErrorForms.DICT[wrong_form] = meaning
 
     @staticmethod
-    def get_lemma(wrong_form):
+    def get_lemma(wrong_form: str) -> str:
         return CDErrorForms.DICT[wrong_form][0]
 
     @staticmethod
-    def get_correct_form(wrong_form):
+    def get_correct_form(wrong_form: str) -> str:
         """ Return a corrected form of the given word, attempting
             to emulate the lower/upper/title case of the word """
         # First, try the original casing of the wrong form
@@ -463,15 +459,15 @@ class CDErrorForms:
         return form
 
     @staticmethod
-    def get_id(wrong_form):
+    def get_id(wrong_form: str) -> int:
         return CDErrorForms.DICT[wrong_form][2]
 
     @staticmethod
-    def get_category(wrong_form):
+    def get_category(wrong_form: str) -> str:
         return CDErrorForms.DICT[wrong_form][3]
 
     @staticmethod
-    def get_tag(wrong_form):
+    def get_tag(wrong_form: str) -> str:
         return CDErrorForms.DICT[wrong_form][4]
 
 
@@ -483,7 +479,7 @@ class Morphemes:
     FREE_DICT: Dict[str, List[str]] = {}
 
     @staticmethod
-    def add(morph, boundlist, freelist):
+    def add(morph: str, boundlist: List[str], freelist: List[str]) -> None:
         if not boundlist:
             raise ConfigError("A definition of allowed PoS is necessary with morphemes")
         Morphemes.BOUND_DICT[morph] = boundlist
@@ -502,16 +498,16 @@ class Settings:
     # Configuration settings from the GreynirCorrect.conf file
 
     @staticmethod
-    def _handle_settings(s):
+    def _handle_settings(s: str) -> None:
         """ Handle config parameters in the settings section """
         a = s.lower().split("=", maxsplit=1)
         par = a[0].strip().lower()
-        val = a[1].strip()
-        if val.lower() == "none":
+        val: Union[None, bool, str] = a[1].strip()
+        if cast(str, val).lower() == "none":
             val = None
-        elif val.lower() == "true":
+        elif cast(str, val).lower() == "true":
             val = True
-        elif val.lower() == "false":
+        elif cast(str, val).lower() == "false":
             val = False
         try:
             if par == "debug":
@@ -522,7 +518,7 @@ class Settings:
             raise ConfigError("Invalid parameter value: {0} = {1}".format(par, val))
 
     @staticmethod
-    def _handle_allowed_multiples(s):
+    def _handle_allowed_multiples(s: str) -> None:
         """ Handle config parameters in the allowed_multiples section """
         assert s
         if len(s.split()) != 1:
@@ -536,7 +532,7 @@ class Settings:
         AllowedMultiples.add(s)
 
     @staticmethod
-    def _handle_wrong_compounds(s):
+    def _handle_wrong_compounds(s: str) -> None:
         """ Handle config parameters in the wrong_compounds section """
         a = s.lower().split(",", maxsplit=1)
         if len(a) != 2:
@@ -556,7 +552,7 @@ class Settings:
         WrongCompounds.add(word, tuple(parts))
 
     @staticmethod
-    def _handle_split_compounds(s):
+    def _handle_split_compounds(s: str) -> None:
         """ Handle config parameters in the split_compounds section """
         parts = s.split()
         if len(parts) != 2:
@@ -564,7 +560,7 @@ class Settings:
         SplitCompounds.add(parts[0], parts[1])
 
     @staticmethod
-    def _handle_unique_errors(s):
+    def _handle_unique_errors(s: str) -> None:
         """ Handle config parameters in the unique_errors section """
         a = s.lower().split(",", maxsplit=1)
         if len(a) != 2:
@@ -587,17 +583,17 @@ class Settings:
                 "Expected word in double quotes after comma in unique_errors section"
             )
         corr = corr[1:-1]
-        corr = tuple(corr.split())
+        corr_t = tuple(corr.split())
         if not word:
             raise ConfigError("Expected word before the comma in unique_errors section")
         if len(word.split()) != 1:
             raise ConfigError(
                 "Multiple words not allowed before the comma in unique_errors section"
             )
-        UniqueErrors.add(word, corr)
+        UniqueErrors.add(word, corr_t)
 
     @staticmethod
-    def _handle_capitalization_errors(s):
+    def _handle_capitalization_errors(s: str) -> None:
         """ Handle config parameters in the capitalization_errors section """
         CapitalizationErrors.add(s)
 
@@ -634,7 +630,7 @@ class Settings:
         TabooWords.add(taboo, replacement, explanation)
 
     @staticmethod
-    def _handle_suggestions(s):
+    def _handle_suggestions(s: str) -> None:
         """ Handle config parameters in the suggestions section """
         a = s.lower().split()
         if len(a) < 2:
@@ -648,7 +644,7 @@ class Settings:
         Suggestions.add(a[0].strip(), [w.strip() for w in a[1:]])
 
     @staticmethod
-    def _handle_multiword_errors(s):
+    def _handle_multiword_errors(s: str) -> None:
         """ Handle config parameters in the multiword_errors section """
         a = s.lower().split("$error", maxsplit=1)
         if len(a) != 2:
@@ -664,7 +660,7 @@ class Settings:
         MultiwordErrors.add(phrase, error[1:-1])
 
     @staticmethod
-    def _handle_ow_forms(s):
+    def _handle_ow_forms(s: str) -> None:
         """ Handle config parameters in the ow_forms section """
         split = s.strip().split(";")
         if len(split) != 6:
@@ -677,17 +673,17 @@ class Settings:
             # raise ConfigError(
             #     "Wrong form identical to correct form for '{0}'".format(wrong_form)
             # )
-        meaning = (
+        meaning: ErrorFormTuple = (
             split[1].strip(),  # Lemma (stofn)
             correct_form,  # Correct form (ordmynd)
-            split[3].strip(),  # Id (utg)
+            int(split[3]),  # Id (utg)
             split[4].strip(),  # Category (ordfl)
             split[5].strip(),  # Tag (beyging)
         )
         OwForms.add(wrong_form, meaning)
 
     @staticmethod
-    def _handle_error_forms(s):
+    def _handle_error_forms(s: str) -> None:
         """ Handle config parameters in the error_forms section """
         split = s.strip().split(";")
         if len(split) != 7:
@@ -701,10 +697,10 @@ class Settings:
             raise ConfigError(
                 "Wrong form identical to correct form for '{0}'".format(wrong_form)
             )
-        meaning = (
+        meaning: ErrorFormTuple = (
             split[1].strip(),  # Lemma (stofn)
             correct_form,  # Correct form (ordmynd)
-            split[3].strip(),  # Id (utg)
+            int(split[3]),  # Id (utg)
             split[4].strip(),  # Category (ordfl)
             split[5].strip(),  # Tag (beyging)
         )
@@ -717,10 +713,10 @@ class Settings:
             raise ConfigError("Wrong error type given, expected 'cid' or 'cd'")
 
     @staticmethod
-    def _handle_morphemes(s):
+    def _handle_morphemes(s: str) -> None:
         """ Process the contents of the [morphemes] section """
-        freelist = []
-        boundlist = []
+        freelist: List[str] = []
+        boundlist: List[str] = []
         spl = s.split()
         if len(spl) < 2:
             raise ConfigError(
@@ -740,7 +736,7 @@ class Settings:
         Morphemes.add(m, boundlist, freelist)
 
     @staticmethod
-    def read(fname):
+    def read(fname: str) -> None:
         """ Read configuration file """
 
         with Settings._lock:
@@ -748,7 +744,7 @@ class Settings:
             if Settings.loaded:
                 return
 
-            global _db
+            global db
 
             CONFIG_HANDLERS = {
                 "settings": Settings._handle_settings,
@@ -804,6 +800,7 @@ class Settings:
                 raise e
 
             Settings.loaded = True
-            if _db is not None:
-                _db.close()
-                _db = None
+            global db
+            if db is not None:
+                db.close()
+                db = None
