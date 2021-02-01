@@ -56,7 +56,7 @@ from .annotation import Annotation
 __author__ = u"Miðeind ehf"
 __copyright__ = "(C) 2021 Miðeind ehf."
 # Remember to update the version in setup.py as well
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 
 
 Settings.read("config/GreynirCorrect.conf")
