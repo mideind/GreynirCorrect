@@ -227,7 +227,7 @@ class CapitalizationErrors:
             (lower/upper/capitalized) """
         if template.isupper():
             return s.upper()
-        elif template and template[0].isupper():
+        if template and template[0].isupper():
             return s.capitalize()
         return s
 
@@ -283,7 +283,7 @@ class CapitalizationErrors:
         if not prefix:
             # This might be something like 'barnamálaráðherra' which comes out
             # with a lemma of 'barnamála-ráðherra'
-            word = CapitalizationErrors.emulate_case(m[0].stofn, word)
+            word = CapitalizationErrors.emulate_case(m[0].stofn, template=word)
         else:
             # This might be something like 'félags- og barnamálaráðherra' which comes out
             # with a lemma of 'félags- og barnamála-ráðherra'

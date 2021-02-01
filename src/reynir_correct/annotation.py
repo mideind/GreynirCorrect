@@ -51,7 +51,7 @@ class Annotation:
         detail: Optional[str] = None,
         original: Optional[str] = None,
         suggest: Optional[str] = None,
-        is_warning: bool = False
+        is_warning: bool = False,
     ) -> None:
         assert isinstance(start, int)
         assert isinstance(end, int)
@@ -77,13 +77,12 @@ class Annotation:
 
     def __str__(self) -> str:
         """ Return a string representation of this annotation """
-        return "{0:03}-{1:03}: {2:6} {3}|{4} -> {5}".format(
-            self._start,
-            self._end,
-            self._code,
-            self._text,
-            self._original,
-            self._suggest,
+        if self._original and self._suggest:
+            orig_sugg = f" | '{self._original}' -> '{self._suggest}'"
+        else:
+            orig_sugg = ""
+        return "{0:03}-{1:03}: {2:6} {3}{4}".format(
+            self._start, self._end, self._code, self._text, orig_sugg,
         )
 
     @property
@@ -124,13 +123,12 @@ class Annotation:
         return self._detail
 
     @property
+    def original(self) -> Optional[str]:
+        """ The original text for the error """
+        return self._original
+
+    @property
     def suggest(self) -> Optional[str]:
         """ A suggested correction for the token span, as a text string
             containing tokens delimited by spaces """
         return self._suggest
-
-
-    @property
-    def original(self) -> Optional[str]:
-        """ The original text for the error """
-        return self._original

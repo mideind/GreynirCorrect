@@ -178,7 +178,7 @@ def register_error_class(cls: ErrorType) -> ErrorType:
     return cls
 
 
-def emulate_case(s: str, template: str) -> str:
+def emulate_case(s: str, *, template: str) -> str:
     """ Return the string s but emulating the case of the template
         (lower/upper/capitalized) """
     if template.isupper():
@@ -944,7 +944,7 @@ def parse_errors(
                         correct_phrase[ix] = p.upper()
                 else:
                     # First word might be capitalized
-                    correct_phrase[0] = emulate_case(correct_phrase[0], token.txt)
+                    correct_phrase[0] = emulate_case(correct_phrase[0], template=token.txt)
                 for ix, phrase_part in enumerate(correct_phrase):
                     new_token = CorrectToken.word(phrase_part)
                     if ix == 0:
@@ -1294,7 +1294,7 @@ def fix_compound_words(
             at_sentence_start = True
             continue
         if token.txt and token.txt.endswith("-og") and len(token.txt) > 3:
-            prefix = emulate_case(token.txt[:-2], token.txt)
+            prefix = token.txt[:-2]
             w, m = db.lookup_word(prefix, at_sentence_start)
             t1 = token_ctor.Word(w, m, token=token)
             t1.set_error(
@@ -1334,7 +1334,7 @@ def fix_compound_words(
         if cw[0] in NOT_FORMERS:
             # Prefix is invalid as such; should be split
             # into two words
-            prefix = emulate_case(cw[0], token.txt)
+            prefix = emulate_case(cw[0], template=token.txt)
             suffix = token.txt[len(cw[0]) :]
             w, m = db.lookup_word(prefix, at_sentence_start)
             t1 = token_ctor.Word(w, m, token=token)
@@ -1357,7 +1357,7 @@ def fix_compound_words(
             # Check which PoS, attachment depends on that
             at_sentence_start = False
             suffix = token.txt[len(cw[0]) :]
-            prefix = emulate_case(cw[0], token.txt)
+            prefix = emulate_case(cw[0], template=token.txt)
             freepos = Morphemes.FREE_DICT.get(cw[0])
             assert freepos is not None
             w2, meanings2 = db.lookup_word(suffix, at_sentence_start)
@@ -1413,7 +1413,7 @@ def fix_compound_words(
         elif cw[0] in WRONG_FORMERS_CI:
             correct_former = WRONG_FORMERS_CI[cw[0]]
             corrected = correct_former + token.txt[len(cw[0]) :]
-            corrected = emulate_case(corrected, token.txt)
+            corrected = emulate_case(corrected, template=token.txt)
             w, m = db.lookup_word(corrected, at_sentence_start)
             t1 = token_ctor.Word(w, m, token=token)
             t1.set_error(
@@ -1433,7 +1433,7 @@ def fix_compound_words(
             # ('feyknaglaður' -> 'feiknaglaður')
             correct_former = WRONG_FORMERS[cw[0]]
             corrected = correct_former + token.txt[len(cw[0]) :]
-            corrected = emulate_case(corrected, token.txt)
+            corrected = emulate_case(corrected, template=token.txt)
             w, m = db.lookup_word(corrected, at_sentence_start)
             t1 = token_ctor.Word(w, m, token=token)
             t1.set_error(
@@ -1837,7 +1837,7 @@ def fix_capitalization(
                 return True
         # If we find any of the 'wrong' capitalizations in the error set,
         # this is definitely an error
-        if any(emulate_case(m.stofn, word) in wrong_stems for m in rev_meanings):
+        if any(emulate_case(m.stofn, template=word) in wrong_stems for m in rev_meanings):
             return True
         # If we don't find any of the stems of the "corrected"
         # meanings in the corrected error set (SET_REV),
