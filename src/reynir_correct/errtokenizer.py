@@ -92,12 +92,12 @@ NON_ICELANDIC_LETTERS_SET = frozenset("cwqøâãäçĉčêëîïñôõûüÿßĳ
 MONTH_NAMES_CAPITALIZED = (
     "Janúar",
     "Febrúar",
-    "Mars",
+    #"Mars", # Can also be planet
     "Apríl",
     "Maí",
     "Júní",
     "Júlí",
-    "Ágúst",
+    #"Ágúst",    # Also a name
     "September",
     "Október",
     "Nóvember",
@@ -564,12 +564,12 @@ class CapitalizationError(Error):
     # Z002: Word should begin with uppercase letter
     # Z003: Month name should begin with lowercase letter
     # Z004: Numbers should be written in lowercase ('24 milljónir')
-    # Z005: Amounts should be written in lowercase ('24 milljónir króna')
+    # Z005: Amounts should be written in lowercase ('24 milljónir króna') (is_warning)
     # Z006: Acronyms should be written in uppercase ('RÚV')
 
-    def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
+    def __init__(self, code: str, txt: str, original: str, suggest: str, is_warning: bool=False) -> None:
         # Capitalization error codes start with "Z"
-        super().__init__("Z" + code, original=original, suggest=suggest)
+        super().__init__("Z" + code, original=original, suggest=suggest, is_warning=is_warning)
         self._txt = txt
 
     @property
@@ -1572,7 +1572,6 @@ def lookup_unknown_words(
             context = tuple()
             parenthesis_stack = []
             continue
-
         # Store the previous context in case we need to construct
         # a new current context (after token substitution)
         prev_context = context
@@ -2027,11 +2026,14 @@ def late_fix_capitalization(
                         )
                     )
         elif token.kind == TOK.NUMBER:
-            if re.match(r"[0-9.,/]+$", token.txt) or token.txt.isupper():
-                # '1.234,56' or '3/4' or '24 MILLJÓNIR' is always OK
+            if re.match(r"[0-9.,/-]+$", token.txt) or token.txt.isupper():
+                # '1.234,56' or '3/4' or "-6" or '24 MILLJÓNIR' is always OK
                 pass
             elif at_sentence_start:
-                if token.txt[0].isnumeric() and not token.txt[1:].islower():
+                if (
+                    token.txt[0].isnumeric() 
+                    and not token.txt[1:].islower()
+                ):
                     # '500 Milljónir' at sentence start
                     token = number_error(
                         token, token.txt.lower(), "004", "með lágstöfum"
@@ -2073,6 +2075,7 @@ def late_fix_capitalization(
                         "með lágstöfum".format(original_txt),
                         original=original_txt,
                         suggest=lower,
+                        is_warning=True,
                     )
                 )
         elif token.kind == TOK.MEASUREMENT:
