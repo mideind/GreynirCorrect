@@ -61,6 +61,7 @@ AnnotationFunc = Callable[[str, str, Node], AnnotationReturn]
 
 
 class CastFunction(Protocol):
+    """ Type annotation protocol for a case casting function """
     def fget(self, tree: SimpleTree) -> str:
         ...
 
@@ -653,7 +654,7 @@ class ErrorFinder(ParseForestNavigator):
                 subj_text = subj.tidy_text
                 suggestion = self.cast_to_case(correct_case_abbr, subj)
                 correct_np = correct_spaces(suggestion)
-                correct_np = emulate_case(correct_np, subj_text)
+                correct_np = emulate_case(correct_np, template=subj_text)
                 # Skip the annotation if it suggests the same text as the
                 # original one; this can happen if the word forms for two
                 # cases are identical
@@ -670,7 +671,7 @@ class ErrorFinder(ParseForestNavigator):
                                 verb, correct_case, wrong_case, personal
                             ),
                             original=subj_text,
-                            suggest="",
+                            suggest=correct_np,
                         )
                     )
             else:
@@ -707,7 +708,7 @@ class ErrorFinder(ParseForestNavigator):
                     ),
                     detail=detail,
                     original=verb,
-                    suggest=emulate_case(verb, correct),
+                    suggest=emulate_case(correct, template=verb),
                 )
             )
 
