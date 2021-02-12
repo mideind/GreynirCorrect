@@ -2229,7 +2229,7 @@ class CorrectionPipeline(DefaultPipeline):
     # TOK (tokenizer.py) or Bin_TOK (bintokenizer.py)
     _token_ctor = cast(Type[Bin_TOK], Correct_TOK)
 
-    def __init__(self, text_or_gen: StringIterable, **options) -> None:
+    def __init__(self, text_or_gen: StringIterable, **options: Any) -> None:
         super().__init__(text_or_gen, **options)
         self._corrector: Optional[Corrector] = None
         # If only_ci is True, we only correct context-independent errors
