@@ -157,8 +157,8 @@ CATEGORIES = (
 # Error codes in iceErrorCorpus that are considered out of scope
 # for GreynirCorrect, at this stage at least
 OUT_OF_SCOPE = {
-    "agreement-pro",  # samræmi fornafns við undanfara  grammar ...vöðvahólf sem sé um dælinguna. Hann dælir blóðinu > Það dælir blóðinu
-    "aux",  # meðferð vera og verða, hjálparsagna   wording mun verða eftirminnilegt > mun vera eftirminnilegt
+    #"agreement-pro",  # samræmi fornafns við undanfara  grammar ...vöðvahólf sem sé um dælinguna. Hann dælir blóðinu > Það dælir blóðinu
+    #"aux",  # meðferð vera og verða, hjálparsagna   wording mun verða eftirminnilegt > mun vera eftirminnilegt
     "bad-contraction",
     "bracket4square",  # svigi fyrir hornklofa  punctuation (Portúgal) > [Portúgal]
     "caps4low",
@@ -173,10 +173,10 @@ OUT_OF_SCOPE = {
     "conjunction4period",  # samtenging fyrir punkt punctuation ...tónlist ár hvert og tónlistarstefnurnar eru orðnar... > ...tónlist ár hvert. Tónlistarstefnurnar eru orðnar...
     "context",  # rangt orð í samhengi  other
     "dash4semicolon",  # bandstrik fyrir semíkommu  punctuation núna - þetta > núna; þetta
-    "def4ind",  # ákveðið fyrir óákveðið    grammar skákinni > skák
-    "dem-pro",  # hinn í stað fyrir sá; sá ekki til eða ofnotað grammar hinn > sá
-    "dem4noun",  # ábendingarfornafn í stað nafnorðs    grammar hinn > maðurinn
-    "dem4pers",  # ábendingarfornafn í stað persónufornafns grammar þessi > hún
+    #"def4ind",  # ákveðið fyrir óákveðið    grammar skákinni > skák
+    #"dem-pro",  # hinn í stað fyrir sá; sá ekki til eða ofnotað grammar hinn > sá
+    #"dem4noun",  # ábendingarfornafn í stað nafnorðs    grammar hinn > maðurinn
+    #"dem4pers",  # ábendingarfornafn í stað persónufornafns grammar þessi > hún
     "extra-comma",  # auka komma    punctuation stríð, við náttúruna > stríð við náttúruna
     "extra-number",  # tölustöfum ofaukið   other   139,0 > 139
     "extra-period",  # auka punktur punctuation á morgun. Og ... > á morgun og...
@@ -190,9 +190,9 @@ OUT_OF_SCOPE = {
     "fw4ice",  # erlent orð þýtt yfir á íslensku    style   Elba > Saxelfur
     "gendered",  # kynjað mál, menn fyrir fólk  exclusion   menn hugsa oft > fólk hugsar oft
     "ice4fw",  # íslenskt orð notað í stað erlends      Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
-    "ind4def",  # óákveðið fyrir ákveðið    grammar gítartakta > gítartaktana
-    "ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
-    "indef-pro",  # óákveðið fornafn    grammar enginn > ekki neinn
+    #"ind4def",  # óákveðið fyrir ákveðið    grammar gítartakta > gítartaktana
+    #"ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
+    #"indef-pro",  # óákveðið fornafn    grammar enginn > ekki neinn
     "it4nonit",  # skáletrað fyrir óskáletrað       Studdi Isma'il > Studdi Isma'il
     "loan-syntax",  # lánuð setningagerð    style   ég vaknaði upp > ég vaknaði
     "low4caps",
@@ -207,26 +207,26 @@ OUT_OF_SCOPE = {
     "missing-word",  # orð vantar   omission    í Donalda > í þorpinu Donalda
     "missing-words",  # fleiri en eitt orð vantar   omission    því betri laun > því betri laun hlýtur maður
     "nonit4it",  # óskáletrað fyrir skáletrað       orðið qibt > orðið qibt
-    "noun4dem",  # nafnorð í stað ábendingarfornafns    grammar stærsta klukkan > sú stærsta
-    "noun4pro",  # nafnorð í stað fornafns  grammar menntun má nálgast > hana má nálgast
+    #"noun4dem",  # nafnorð í stað ábendingarfornafns    grammar stærsta klukkan > sú stærsta
+    #"noun4pro",  # nafnorð í stað fornafns  grammar menntun má nálgast > hana má nálgast
     "number4word",
-    "past4pres",  # sögn í þátíð í stað nútíðar grammar þegar hún leigði spólur > þegar hún leigir spólur
+    #"past4pres",  # sögn í þátíð í stað nútíðar grammar þegar hún leigði spólur > þegar hún leigir spólur
     "period4comma",  # punktur fyrir kommu  punctuation meira en áður. Hella meira í sig > meira en áður, hella meira í sig
     "period4conjunction",  # punktur fyrir samtengingu  punctuation ...maður vill gera. Vissulega > ...maður vill gera en vissulega
     "period4ex",  # punktur fyrir upphrópun punctuation Viti menn. > Viti menn!
-    "pers4dem",  # persónufornafn í staðinn fyrir ábendingarf.  grammar það > þetta
-    "pres4past",  # sögn í nútíð í stað þátíðar grammar Þeir fara út > Þeir fóru út
-    "pro4noun",  # fornafn í stað nafnorðs  grammar þau voru spurð > parið var spurt
-    "pro4reflexive",  # nafnorð í stað afturbeygðs fornafns grammar gefur orku til fólks í kringum það > gefur orku til fólks í kringum sig
-    "pro4reflexive",  # persónufornafn í stað afturbeygðs fn.   grammar Fólk heldur að það geri það hamingjusamt > Fólk heldur að það geri sig hamingjusamt
+    #"pers4dem",  # persónufornafn í staðinn fyrir ábendingarf.  grammar það > þetta
+    #"pres4past",  # sögn í nútíð í stað þátíðar grammar Þeir fara út > Þeir fóru út
+    #"pro4noun",  # fornafn í stað nafnorðs  grammar þau voru spurð > parið var spurt
+    #"pro4reflexive",  # nafnorð í stað afturbeygðs fornafns grammar gefur orku til fólks í kringum það > gefur orku til fólks í kringum sig
+    #"pro4reflexive",  # persónufornafn í stað afturbeygðs fn.   grammar Fólk heldur að það geri það hamingjusamt > Fólk heldur að það geri sig hamingjusamt
     "punctuation",  # greinarmerki  punctuation hún mætti og hann var ekki tilbúinn > hún mætti en hann var ekki tilbúinn
     "qm4ex",  # spurningarmerki fyrir upphrópun punctuation Algjört hrak sjálf? > Algjört hrak sjálf!
-    "reflexive4noun",  # afturbeygt fornafn í stað nafnorðs grammar félagið hélt aðalfund þess > félagið hélt aðalfund sinn
-    "reflexive4pro",  # afturbeygt fornafn í stað persónufornafns   grammar gegnum líkama sinn > gegnum líkama hans
-    "simple4cont",  # nútíð í stað vera að + nafnh. grammar ók > var að aka
+    #"reflexive4noun",  # afturbeygt fornafn í stað nafnorðs grammar félagið hélt aðalfund þess > félagið hélt aðalfund sinn
+    #"reflexive4pro",  # afturbeygt fornafn í stað persónufornafns   grammar gegnum líkama sinn > gegnum líkama hans
+    #"simple4cont",  # nútíð í stað vera að + nafnh. grammar ók > var að aka
     "square4bracket",  # hornklofi fyrir sviga  punctuation [börnin] > (börnin)
     "style",  # stíll   style   urðu ekkert frægir > urðu ekki frægir
-    "sub4ind",  # viðtengingarh. fyrir fh.  grammar Stjórnvöld vildu auka rétt borgara og geri þeim kleift > Stjórnvöld vildu auka rétt borgara og gera þeim kleift
+    #"sub4ind",  # viðtengingarh. fyrir fh.  grammar Stjórnvöld vildu auka rétt borgara og geri þeim kleift > Stjórnvöld vildu auka rétt borgara og gera þeim kleift
     "unicelandic",  # óíslenskuleg málnotkun    style   ...fer eftir persónunni... > ...fer eftir manneskjunni...
     "upper4lower-proper",  # stór stafur í sérnafni þar sem hann á ekki að vera capitalization  Mál og Menning > Mál og menning
     "upper4lower-noninitial",
@@ -360,6 +360,7 @@ SIMCATEGORIES = {
         "pro4noun",
         "reflexive4pro",
         "pro4reflexive",
+        "reflexive4noun",
         "pres4past",
         "past4pres",
         "tense4perfect",
