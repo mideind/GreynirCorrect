@@ -149,6 +149,7 @@ class PatternMatcher:
     ctx_verb_01: Optional[ContextType] = None
     ctx_verb_02: Optional[ContextType] = None
     ctx_place_names: Optional[ContextType] = None
+    ctx_vera_að: Optional[ContextType] = None
 
     def __init__(self, ann: List[Annotation], sent: _Sentence) -> None:
         # Annotation list
@@ -367,6 +368,25 @@ class PatternMatcher:
                 original=verb,
                 suggest=suggest,
             )
+        )
+
+    def vera_að(self, match: SimpleTree) -> None:
+        start, end = match.span
+        text = "Mælt er með að sleppa 'vera að' og beygja frekar sögnina."
+        detail = text
+        tidy_text = match.tidy_text
+        suggest = tidy_text.replace("", "", 1)
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_TO_BE",
+                text=text,
+                detail=detail,
+                original="vera að", # TODO skoða
+                suggest=suggest,
+            )
+
         )
 
     @classmethod
@@ -588,6 +608,19 @@ class PatternMatcher:
                 cls.wrong_noun_with_verb,
                 None,
             )
+        )
+
+        # Check use of "vera að" instead of a simple verb
+        cls.ctx_vera_að = {"verb": "@'vera'", "nhm": "@'að'"}
+        p.append(
+            (
+                "vera", # Trigger lemma for this pattern
+                #"VP > [ VP > { %verb } IP-INF > TO > {%nhm} ]",
+                "S-MAIN >> [VP IP-INF]",
+                lambda self, match: self.vera_að(match),
+                cls.ctx_vera_að,
+            )
+
         )
 
     def go(self) -> None:
