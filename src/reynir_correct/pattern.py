@@ -259,6 +259,118 @@ class PatternMatcher:
             )
         )
 
+    def wrong_preposition_grin_af(self, match: SimpleTree) -> None:
+        """ Handle a match of a suspect preposition pattern """
+        # Find the offending verb phrase
+        # Calculate the start and end token indices, spanning both phrases
+        start, end = match.span
+        text = "'gera grín af' á sennilega að vera 'gera grín að'"
+        detail = (
+            "Í samhenginu 'gera grín að e-u' er notuð "
+            "forsetningin 'að', ekki 'af'."
+        )
+        if match.tidy_text.count(" af ") == 1:
+            # Only one way to substitute af -> að: do it
+            suggest = match.tidy_text.replace(" af ", " að ")
+        else:
+            # !!! TODO: More intelligent substitution to create a suggestion
+            suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_WRONG_PREP_AF",
+                text=text,
+                detail=detail,
+                original="af",
+                suggest=suggest,
+            )
+        )
+
+    def wrong_preposition_leida_af(self, match: SimpleTree) -> None:
+        """ Handle a match of a suspect preposition pattern """
+        # Find the offending verb phrase
+        # Calculate the start and end token indices, spanning both phrases
+        start, end = match.span
+        text = "Sagnasambandið tekur sennilega með sér forsetninguna 'að'"
+        detail = (
+            "Í samhenginu er notuð "
+            "forsetningin 'að', ekki 'af'."
+        )
+        if match.tidy_text.count(" af ") == 1:
+            # Only one way to substitute af -> að: do it
+            suggest = match.tidy_text.replace(" af ", " að ")
+        else:
+            # !!! TODO: More intelligent substitution to create a suggestion
+            suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_WRONG_PREP_AF",
+                text=text,
+                detail=detail,
+                original="af",
+                suggest=suggest,
+            )
+        )
+
+    def wrong_preposition_marka_af(self, match: SimpleTree) -> None:
+        """ Handle a match of a suspect preposition pattern """
+        # Find the offending verb phrase
+        # Calculate the start and end token indices, spanning both phrases
+        start, end = match.span
+        text = "'marka upphaf af' á sennilega að vera 'marka upphaf að'"
+        detail = (
+            "Í samhenginu 'marka upphaf að e-u' er notuð "
+            "forsetningin 'að', ekki 'af'."
+        )
+        if match.tidy_text.count(" af ") == 1:
+            # Only one way to substitute af -> að: do it
+            suggest = match.tidy_text.replace(" af ", " að ")
+        else:
+            # !!! TODO: More intelligent substitution to create a suggestion
+            suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_WRONG_PREP_AF",
+                text=text,
+                detail=detail,
+                original="af",
+                suggest=suggest,
+            )
+        )
+
+    def wrong_preposition_leggja_af(self, match: SimpleTree) -> None:
+        """ Handle a match of a suspect preposition pattern """
+        # Find the offending verb phrase
+        # Calculate the start and end token indices, spanning both phrases
+        start, end = match.span
+        text = "'leggja af velli' á sennilega að vera 'leggja að velli'"
+        detail = (
+            "Í samhenginu 'leggja einhvern að velli' er notuð "
+            "forsetningin 'að', ekki 'af'."
+        )
+        if match.tidy_text.count(" af ") == 1:
+            # Only one way to substitute af -> að: do it
+            suggest = match.tidy_text.replace(" af ", " að ")
+        else:
+            # !!! TODO: More intelligent substitution to create a suggestion
+            suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_WRONG_PREP_AF",
+                text=text,
+                detail=detail,
+                original="af",
+                suggest=suggest,
+            )
+        )
+
     def wrong_preposition_heillaður_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verb phrase
@@ -439,6 +551,7 @@ class PatternMatcher:
                     cls.ctx_af,
                 )
             )
+
             # Catch sentences such as 'Vissulega er hægt að brosa af þessu',
             # 'Friðgeir var leitandi af kettinum í allan dag'
             p.append(
@@ -467,6 +580,81 @@ class PatternMatcher:
                     "VP > { VP > [ .* ('verða' | 'vera') .* "
                     'NP-PRD > { "vitni" PP > { P > { "af" } } } ] } ',
                     cls.wrong_preposition_vitni_af,
+                    None,
+                )
+            )
+            # Catch "Hún gerði grín af því."
+            p.append(
+                (
+                    "grín",  # Trigger lemma for this pattern
+                    "VP > { VP > [ .* 'gera' .* "
+                    'NP-OBJ > "grín" ] ( PP | ADVP ) > ( { P > { "af" } } | { "af" } ) } ',
+                    cls.wrong_preposition_grin_af,
+                    None,
+                )
+            )
+            # Catch "Þetta er mesta vitleysa sem ég hef gert grín af"
+            p.append(
+                (
+                    "grín",  # Trigger lemma for this pattern
+                    "VP > { VP > { VP > { VP > { 'gera' } NP-OBJ > { 'grín' } } } ADVP > { 'af' } }",
+                    cls.wrong_preposition_grin_af,
+                    None,
+                )
+            )
+            # Catch "Hann leiðir líkur af því."
+            p.append(
+                (
+                    "leiða",  # Trigger lemma for this pattern
+                    "VP > { VP > { VP > { 'leiða' } NP-OBJ > { ('líkur' | 'rök') } } PP > { P > { 'af' } } }",
+                    cls.wrong_preposition_leida_af,
+                    None,
+                )
+            )
+            # Catch "Hann leiðir ekki líkur af því."
+            p.append(
+                (
+                    "líkur",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'leiða' } NP-PRD > { ('líkur' | 'rök') } PP > { P > { 'af' } } } ",
+                    cls.wrong_preposition_leida_af,
+                    None,
+                )
+            )
+            # Catch "Tíminn markar (ekki) upphaf af því."
+            p.append(
+                (
+                    "upphaf",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'marka' } NP-OBJ > { 'upphaf' PP > { 'af' } } }",
+                    cls.wrong_preposition_leida_af,
+                    None,
+                )
+            )
+            # Catch "Það markar (ekki) upphaf af því."
+            p.append(
+                (
+                    "upphaf",  # Trigger lemma for this pattern
+                    "VP > { VP > { VP > { 'marka' } NP-SUBJ > { 'upphaf' } } PP > { 'af' } }",
+                    cls.wrong_preposition_marka_af,
+                    None,
+                )
+            )
+            # Catch "Jón leggur hann af velli."
+            p.append(
+                (
+                    "leggja",  # Trigger lemma for this pattern
+                    "VP > { VP > { VP > { 'leggja' } NP-OBJ } PP > { P > { 'af' } NP > { 'völlur' } } }",
+                    #"VP > { VP > { 'leggja' } NP-OBJ > { PP > { 'af' } } }",
+                    cls.wrong_preposition_leggja_af,
+                    None,
+                )
+            )
+            # Catch "Jón hefur ekki lagt hann af velli."
+            p.append(
+                (
+                    "leggja",  # Trigger lemma for this pattern
+                    "VP > { VP > { VP > { VP > { 'leggja' } } } PP > { P > { 'af' } NP > { 'völlur' } } }",
+                    #"VP > { VP > { 'leggja' } NP-OBJ > { PP > { 'af' } } }",
+                    cls.wrong_preposition_leggja_af,
                     None,
                 )
             )
