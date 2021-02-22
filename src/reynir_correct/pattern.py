@@ -46,7 +46,7 @@ from functools import partial
 import os
 import json
 
-from reynir import _Sentence, NounPhrase
+from reynir import Sentence, NounPhrase
 from reynir.simpletree import SimpleTree
 from reynir.verbframe import VerbErrors
 
@@ -150,7 +150,7 @@ class PatternMatcher:
     ctx_verb_02: Optional[ContextType] = None
     ctx_place_names: Optional[ContextType] = None
 
-    def __init__(self, ann: List[Annotation], sent: _Sentence) -> None:
+    def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
         self._ann = ann
         # The original sentence object

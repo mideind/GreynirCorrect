@@ -1473,8 +1473,8 @@ class Stats:
                 # Create freqdict for sorting error categories by frequency
                 freqdict[cat] = freq
 
-            # print results for each category by frequency
-            for k in sorted(freqdict, key=freqdict.get, reverse=True):
+            # Print results for each category by frequency
+            for k in sorted(freqdict, key=freqdict.__getitem__, reverse=True):
                 rk = resultdict[k]
                 bprint("{} (in_scope={})".format(k, k not in OUT_OF_SCOPE))
                 bprint(
@@ -1851,7 +1851,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 return gc_error, ice_error
 
             assert s is not None
-            gc_error, ice_error = sentence_results(s.annotations, errors)
+            gc_error, ice_error = sentence_results(getattr(s, "annotations"), errors)
 
             def token_results(
                 hyp_annotations: Iterable[gc.Annotation],
@@ -2071,7 +2071,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
 
             tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span = token_results(
-                s.annotations, errors
+                getattr(s, "annotations"), errors
             )
             tn = len(tokens) - tp - fp - fn
             # Collect statistics into the stats list, to be returned
@@ -2104,8 +2104,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
     finally:
         # Print the accumulated output before exiting
         with OUTPUT_LOCK:
-            for s in buffer:
-                print(s)
+            for txt in buffer:
+                print(txt)
             print("", flush=True)
 
     # This return value will be pickled and sent back to the parent process
@@ -2150,7 +2150,7 @@ def main() -> None:
     # Initialize the statistics collector
     stats = Stats()
     # The glob path of the XML files to process
-    path = args.path
+    path: str = args.path
     # When running measurements only, we use _TEST_PATH as the default,
     # otherwise _DEV_PATH
     if path is None:

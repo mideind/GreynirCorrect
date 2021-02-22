@@ -56,7 +56,10 @@
 
 """
 
+from typing import List, Optional, Tuple
+
 import pytest
+from typing_extensions import Annotated
 
 import reynir_correct
 
@@ -79,11 +82,17 @@ def dump(tokens):
             print("   {0}: {1}".format(token.error_code, err))
 
 
-def check_sentence(rc, s, annotations, is_foreign=False, ignore_warnings=False):
+def check_sentence(
+    rc: reynir_correct.GreynirCorrect,
+    s: str,
+    annotations: Optional[List[Tuple[int, int, str]]],
+    is_foreign: bool = False,
+    ignore_warnings: bool = False,
+) -> None:
     """ Check whether a given single sentence gets the
         specified annotations when checked """
 
-    def check_sent(sent):
+    def check_sent(sent: reynir_correct.AnnotatedSentence) -> None:
         assert sent is not None
         if sent.tree is None and not is_foreign:
             # If the sentence should not parse, call
@@ -120,14 +129,18 @@ def check_sentence(rc, s, annotations, is_foreign=False, ignore_warnings=False):
                 assert a.code == code
 
     # Test check_single()
-    check_sent(rc.parse_single(s))
+    sent = rc.parse_single(s)
+    assert isinstance(sent, reynir_correct.AnnotatedSentence)
+    check_sent(sent)
     # Test check()
     for pg in reynir_correct.check(s):
         for sent in pg:
+            assert isinstance(sent, reynir_correct.AnnotatedSentence)
             check_sent(sent)
     # Test check_with_stats()
     for pg in reynir_correct.check_with_stats(s)["paragraphs"]:
         for sent in pg:
+            assert isinstance(sent, reynir_correct.AnnotatedSentence)
             check_sent(sent)
 
 
@@ -145,19 +158,19 @@ def test_error_finder(rc):
     check_sentence(rc, s, [(2, 2, "P_NT_FjöldiHluti")])
     s = "Jón borðaði ís þar sem að hann var svangur."
     check_sentence(rc, s, [(5, 5, "P_NT_Að/w")])
-    s = "Jón \"borðaði\" ís þar sem að hann var svangur."
+    s = 'Jón "borðaði" ís þar sem að hann var svangur.'
     check_sentence(rc, s, [(1, 1, "N001"), (3, 3, "N001"), (7, 7, "P_NT_Að/w")])
     s = "Jón borðaði ís þó hann væri svangur."
     check_sentence(rc, s, [(3, 3, "P_NT_ÞóAð")])
-    s = "Jón \"borðaði\" ís þó hann væri svangur."
+    s = 'Jón "borðaði" ís þó hann væri svangur.'
     check_sentence(rc, s, [(1, 1, "N001"), (3, 3, "N001"), (5, 5, "P_NT_ÞóAð")])
     s = "Jón borðaði ís jafnvel þó hann væri svangur."
     check_sentence(rc, s, [(3, 4, "P_NT_ÞóAð")])
-    s = "Jón \"borðaði\" ís jafnvel þó hann væri svangur."
+    s = 'Jón "borðaði" ís jafnvel þó hann væri svangur.'
     check_sentence(rc, s, [(1, 1, "N001"), (3, 3, "N001"), (5, 6, "P_NT_ÞóAð")])
     s = "Jón borðaði ís þótt hann væri svangur."
     check_sentence(rc, s, [])
-    s = "Jón \"borðaði\" ís þótt hann væri svangur."
+    s = 'Jón "borðaði" ís þótt hann væri svangur.'
     check_sentence(rc, s, [(1, 1, "N001"), (3, 3, "N001")])
     s = "Ég féll fyrir annað hvort fegurð hennar eða gáfum."
     check_sentence(rc, s, [(3, 4, "P_NT_AnnaðHvort")])
@@ -245,38 +258,26 @@ def test_foreign_sentences(rc):
         rc,
         "It was the best of times, it was the worst of times.",
         [(0, 13, "E004")],
-        is_foreign=True
+        is_foreign=True,
     )
     check_sentence(
         rc,
         "Praise the Lord.",
         [(0, 2, "E004")],  # Note: the tokenizer amalgams 'Praise the' into one token
-        is_foreign=True
+        is_foreign=True,
     )
     check_sentence(
         rc,
         "Borðaðu Magnyl og Xanax eagerly in Rushmore.",
         [(0, 7, "E004")],
-        is_foreign=True
+        is_foreign=True,
     )
 
 
 def test_number(rc):
-    check_sentence(
-        rc,
-        "Vinnuvika sjómanna eru 7 heilir dagar.",
-        [(2, 5, "P_NT_ÍTölu")]
-    )
-    check_sentence(
-        rc,
-        "Hjón borðar matinn sinn.",
-        [(1, 3, "P_NT_ÍTölu")]
-    )
-    check_sentence(
-        rc,
-        "Ég borðum matinn minn.",
-        [(1, 3, "P_NT_ÍTölu")]
-    )
+    check_sentence(rc, "Vinnuvika sjómanna eru 7 heilir dagar.", [(2, 5, "P_NT_ÍTölu")])
+    check_sentence(rc, "Hjón borðar matinn sinn.", [(1, 3, "P_NT_ÍTölu")])
+    check_sentence(rc, "Ég borðum matinn minn.", [(1, 3, "P_NT_ÍTölu")])
 
 
 def test_correct_sentences(rc):
@@ -286,14 +287,22 @@ def test_correct_sentences(rc):
         rc,
         "Ég held að músin hafi kviðið fyrir að hitta köttinn.",
         [],
-        ignore_warnings=True
+        ignore_warnings=True,
     )
     check_sentence(rc, "Músin kveið fyrir að hitta köttinn.", [])
-    check_sentence(rc,
+    check_sentence(
+        rc,
         "Páll hlakkaði til jólanna og að hitta strákinn sem hlakkaði til páskanna.",
-        []
+        [],
     )
     check_sentence(rc, "Ég hlakka til að sjá nýju Aliens-myndina.", [])
+
+
+def test_corrected_meanings(rc: reynir_correct.GreynirCorrect) -> None:
+    s = """
+    Þannig fundust stundum engin bréfaskipti á milli lífsförunauta í annars ríkulegum bréfasöfnum.
+    """
+    check_sentence(rc, s, [])
 
 
 if __name__ == "__main__":
@@ -307,3 +316,4 @@ if __name__ == "__main__":
     test_correct_sentences(gc)
     test_foreign_sentences(gc)
     test_number(gc)
+    test_corrected_meanings(gc)

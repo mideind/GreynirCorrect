@@ -1301,14 +1301,10 @@ def check_sentence(s, annotations, is_foreign=False):
         assert hasattr(sent, "annotations")
         assert len(sent.annotations) == len(annotations)
         for a, (start, end, code) in zip(sent.annotations, annotations):
-            print(
-                "{} {} {}".format(a.start, a.end, a.code)
-            )  # TODO taka út þegar búin að aflúsa prófanirnar
             assert a.start == start
             assert a.end == end
             assert a.code == code
 
-    print(s)
     # Test check_single()
     check_sent(rc.check_single(s))
     # Test check()

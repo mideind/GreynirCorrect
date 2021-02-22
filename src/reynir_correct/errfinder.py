@@ -38,19 +38,22 @@
 
 """
 
-from typing import Tuple, List, Dict, Any, Callable, Union, Optional, cast
+from typing import TYPE_CHECKING, Tuple, List, Dict, Any, Callable, Union, Optional, cast
 from typing_extensions import Protocol
 
 import re
 
 from reynir import correct_spaces, TOK, _Sentence
 from reynir.fastparser import ParseForestNavigator, Node
+from reynir.binparser import BIN_Terminal, BIN_Token
 from reynir.settings import VerbSubjects
 from reynir.simpletree import SimpleTree
 
 from .annotation import Annotation
 from .errtokenizer import emulate_case
 
+if TYPE_CHECKING:
+    from .checker import ErrorDetectionToken
 
 # Typing stuff
 AnnotationDict = Dict[str, Union[str, int]]
@@ -166,9 +169,11 @@ class ErrorFinder(ParseForestNavigator):
             inflected in the given case """
         return self._CAST_FUNCTIONS[case].fget(tree)
 
-    def _simple_tree(self, node: Node) -> SimpleTree:
+    def _simple_tree(self, node: Node) -> Optional[SimpleTree]:
         """ Return a SimpleTree instance spanning the deep tree
             of which node is the root """
+        if node is None:
+            return None
         first, last = self._node_span(node)
         toklist = self._tokens[first : last + 1]
         return SimpleTree.from_deep_tree(node, toklist, first_token_index=first)
@@ -385,6 +390,7 @@ class ErrorFinder(ParseForestNavigator):
         pronoun_node = next(node.enum_child_nodes())
         assert pronoun_node is not None
         p = self._simple_tree(pronoun_node)
+        assert p is not None
         correct_pronoun = self.cast_to_case(correct_case, p)
         return dict(
             text="'{0}' á sennilega að vera '{1}'".format(
@@ -455,14 +461,14 @@ class ErrorFinder(ParseForestNavigator):
     def VillaÍTölu(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # Sögn á að vera í sömu tölu og frumlag
         children = list(node.enum_child_nodes())
-        assert len(children) == 2
-        assert children[0] is not None
-        subject = self._node_text(children[0])
+        ch0, ch1 = children
+        assert ch0 is not None
+        subject = self._node_text(ch0)
         # verb_phrase = self._node_text(children[1])
         number = "eintölu" if "et" in variants else "fleirtölu"
         # Annotate the verb phrase
-        assert children[1] is not None
-        start, end = self._node_span(children[1])
+        assert ch1 is not None
+        start, end = self._node_span(ch1)
         return dict(
             text="Sögn á sennilega að vera í {1} eins og frumlagið '{0}'".format(
                 subject, number
@@ -487,6 +493,9 @@ class ErrorFinder(ParseForestNavigator):
             preposition = p.P.text
             suggestion = preposition + " " + self.cast_to_case(variants, subj)
             correct_np = correct_spaces(suggestion)
+            if correct_np == p.text:
+                # Avoid suggesting the original text
+                return dict()
             return dict(
                 text="Á sennilega að vera '{0}'".format(correct_np),
                 detail=(
@@ -508,6 +517,7 @@ class ErrorFinder(ParseForestNavigator):
         """ Explanatory noun phrase in a different case than the noun phrase
             that it explains """
         np = self._simple_tree(node)
+        assert np is not None
         return "Gæti átt að vera '{0}'".format(self.cast_to_case(variants, np))
 
     def VillaSíðastLiðinn(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -600,7 +610,7 @@ class ErrorFinder(ParseForestNavigator):
         if node.token.t0 != TOK.ORDINAL:
             # The matched token is not a numeric ordinal: no complaint
             return
-        num = node.token.t2
+        num = cast(int, node.token.t2)
         if not (1 <= num <= 9):
             # We only want to correct 1. - 9.
             return
@@ -610,12 +620,14 @@ class ErrorFinder(ParseForestNavigator):
         if "." in node.token.t1[:-1]:
             # Looks like more than one period (2.4.1): leave as-is
             return
-        terminal = node.terminal
+        terminal = cast(BIN_Terminal, node.terminal)
+        assert terminal is not None
         if len(terminal.variants) < 2:
             # We can only annotate if we have the case and the gender
             return
-        correct = ORDINALS[num][terminal.gender][terminal.case]
-        if node.token.cap_sentence_start:
+        correct = ORDINALS[num][terminal.gender or ""][terminal.case or ""]
+        token = cast("ErrorDetectionToken", node.token)
+        if token.cap_sentence_start:
             # The token is at the start of a sentence: suggest an uppercase word
             correct = correct.capitalize()
         self._ann.append(
@@ -634,7 +646,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def _annotate_verb(self, node: Node) -> None:
         """ Annotate a verb (so) terminal """
-        terminal = node.terminal
+        terminal = cast(BIN_Terminal, node.terminal)
         tnode = self._terminal_nodes[node.start]
         verb = tnode.lemma
 
@@ -760,7 +772,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def visit_token(self, level: int, node: Node) -> None:
         """ Entering a terminal/token match node """
-        terminal = node.terminal
+        terminal = cast(BIN_Terminal, node.terminal)
         if terminal.category == "so":
             self._annotate_verb(node)
         # TODO: The following actually reduces GreynirCorrect's score on the
@@ -818,6 +830,10 @@ class ErrorFinder(ParseForestNavigator):
                     ann_text, start, end, suggestion = cast(AnnotationTuple4, ann)
             elif isinstance(ann, dict):
                 ann = cast(AnnotationDict, ann)
+                if len(ann) == 0:
+                    # Empty dict: this means that upon closer inspection,
+                    # there was no need to annotate
+                    return None
                 ann_text = cast(str, ann.get("text"))
                 ann_detail = cast(str, ann.get("detail"))
                 original = cast(str, ann.get("original"))
