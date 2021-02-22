@@ -110,11 +110,15 @@ import argparse
 import xml.etree.ElementTree as ET
 import multiprocessing
 
+from typing_extensions import Annotated
+
 # import multiprocessing.dummy as multiprocessing
 
 import reynir_correct as gc
 from reynir import _Sentence
 from tokenizer import detokenize, Tok, TOK
+
+from reynir_correct.checker import AnnotatedSentence
 
 
 # Disable Pylint warnings arising from Pylint not understanding the typing module
@@ -1852,7 +1856,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 return gc_error, ice_error
 
             assert s is not None
-            gc_error, ice_error = sentence_results(getattr(s, "annotations"), errors)
+            assert isinstance(s, AnnotatedSentence)
+            gc_error, ice_error = sentence_results(s.annotations, errors)
 
             def token_results(
                 hyp_annotations: Iterable[gc.Annotation],
@@ -2071,8 +2076,9 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
 
                 return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
 
+            assert isinstance(s, AnnotatedSentence)
             tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span = token_results(
-                getattr(s, "annotations"), errors
+                s.annotations, errors
             )
             tn = len(tokens) - tp - fp - fn
             # Collect statistics into the stats list, to be returned

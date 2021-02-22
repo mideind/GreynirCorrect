@@ -102,18 +102,14 @@ def check_sentence(
         if not is_foreign:
             assert sent.tree is not None
         # Compile a list of error annotations, omitting warnings
-        if not hasattr(sent, "annotations"):
-            sent_errors = []
-        else:
-            sent_errors = [a for a in sent.annotations if not a.code.endswith("/w")]
+        sent_errors = [a for a in sent.annotations if not a.code.endswith("/w")]
         if not annotations:
             # This sentence is not supposed to have any annotations
             if ignore_warnings:
                 assert len(sent_errors) == 0
             else:
-                assert (not hasattr(sent, "annotations")) or len(sent.annotations) == 0
+                assert len(sent.annotations) == 0
             return
-        assert hasattr(sent, "annotations")
         if ignore_warnings:
             assert len(sent_errors) == len(annotations)
             for a, (start, end, code) in zip(sent_errors, annotations):

@@ -38,6 +38,8 @@
 import reynir_correct as rc
 import tokenizer
 
+from reynir_correct.checker import AnnotatedSentence
+
 
 # Tests for errtokenizer.py
 
@@ -1280,7 +1282,7 @@ def test_correct_words(verbose=False):
 # Tests for checker.py
 
 
-def check_sentence(s, annotations, is_foreign=False):
+def check_sentence(s: str, annotations, is_foreign=False):
     """ Check whether a given single sentence gets the
         specified annotations when checked """
 
@@ -1296,9 +1298,8 @@ def check_sentence(s, annotations, is_foreign=False):
             assert sent.tree is not None
         if not annotations:
             # This sentence is not supposed to have any annotations
-            assert (not hasattr(sent, "annotations")) or len(sent.annotations) == 0
+            assert len(sent.annotations) == 0
             return
-        assert hasattr(sent, "annotations")
         assert len(sent.annotations) == len(annotations)
         for a, (start, end, code) in zip(sent.annotations, annotations):
             assert a.start == start
