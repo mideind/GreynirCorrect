@@ -59,7 +59,6 @@
 from typing import List, Optional, Tuple
 
 import pytest
-from typing_extensions import Annotated
 
 import reynir_correct
 
