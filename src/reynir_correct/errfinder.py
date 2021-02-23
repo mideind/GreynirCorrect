@@ -38,7 +38,17 @@
 
 """
 
-from typing import TYPE_CHECKING, Tuple, List, Dict, Any, Callable, Union, Optional, cast
+from typing import (
+    TYPE_CHECKING,
+    Tuple,
+    List,
+    Dict,
+    Any,
+    Callable,
+    Union,
+    Optional,
+    cast,
+)
 from typing_extensions import Protocol
 
 import re
@@ -65,6 +75,7 @@ AnnotationFunc = Callable[[str, str, Node], AnnotationReturn]
 
 class CastFunction(Protocol):
     """ Type annotation protocol for a case casting function """
+
     def fget(self, tree: SimpleTree) -> str:
         ...
 
@@ -138,7 +149,8 @@ class ErrorFinder(ParseForestNavigator):
     _NON_OP_VERB_FORMS = {
         "lýst": (
             "líst",
-            "'Lýst' á sennilega að vera 'líst', þ.e. sögnin 'að líta(st)' í stað sagnarinnar 'að ljósta'.",
+            "'Lýst' á sennilega að vera 'líst', þ.e. sögnin 'að líta(st)' "
+            "í stað sagnarinnar 'að ljósta'.",
         ),
     }
 
@@ -310,7 +322,8 @@ class ErrorFinder(ParseForestNavigator):
         lemma, correct = d[txt.lower()]
         return dict(
             text=f"Á líklega að vera '{correct}'",
-            detail=f"Fornafnið '{lemma}' er ritað '{correct}' í þágufalli, eintölu, kvenkyni.",
+            detail=f"Fornafnið '{lemma}' er ritað '{correct}' "
+                "í þágufalli, eintölu, kvenkyni.",
             original=txt,
             suggest=correct,
         )
@@ -321,7 +334,8 @@ class ErrorFinder(ParseForestNavigator):
         lemma, correct = d[txt.lower()]
         return dict(
             text=f"Á líklega að vera '{correct}'",
-            detail=f"Fornafnið '{lemma}' er ritað '{correct}' í eignarfalli, eintölu, kvenkyni.",
+            detail=f"Fornafnið '{lemma}' er ritað '{correct}' "
+                "í eignarfalli, eintölu, kvenkyni.",
             original=txt,
             suggest=correct,
         )
@@ -490,6 +504,7 @@ class ErrorFinder(ParseForestNavigator):
             except AttributeError:
                 pass
         if subj:
+            assert p is not None
             preposition = p.P.text
             suggestion = preposition + " " + self.cast_to_case(variants, subj)
             correct_np = correct_spaces(suggestion)
@@ -586,7 +601,8 @@ class ErrorFinder(ParseForestNavigator):
         # First, check within the enclosing verb phrase
         # (the subject may be embedded within it, as in
         # ?'Í dag langaði Páli bróður að fara í sund')
-        p = tnode.enclosing_tag("VP").enclosing_tag("VP")
+        vp = tnode.enclosing_tag("VP")
+        p = None if vp is None else vp.enclosing_tag("VP")
         if p is not None:
             try:
                 subj = p.NP_SUBJ
@@ -607,17 +623,18 @@ class ErrorFinder(ParseForestNavigator):
 
     def _annotate_ordinal(self, node: Node) -> None:
         """ Check for errors in ordinal number terminals ("2.") and annotate them """
-        if node.token.t0 != TOK.ORDINAL:
+        token = cast("ErrorDetectionToken", node.token)
+        if token is None or token.t0 != TOK.ORDINAL:
             # The matched token is not a numeric ordinal: no complaint
             return
-        num = cast(int, node.token.t2)
+        num = cast(int, token.t2)
         if not (1 <= num <= 9):
             # We only want to correct 1. - 9.
             return
-        if node.token.t1[0] not in "0123456789":
+        if token.t1[0] not in "0123456789":
             # Probably a Roman numeral - we don't mess with those
             return
-        if "." in node.token.t1[:-1]:
+        if "." in token.t1[:-1]:
             # Looks like more than one period (2.4.1): leave as-is
             return
         terminal = cast(BIN_Terminal, node.terminal)
@@ -626,7 +643,6 @@ class ErrorFinder(ParseForestNavigator):
             # We can only annotate if we have the case and the gender
             return
         correct = ORDINALS[num][terminal.gender or ""][terminal.case or ""]
-        token = cast("ErrorDetectionToken", node.token)
         if token.cap_sentence_start:
             # The token is at the start of a sentence: suggest an uppercase word
             correct = correct.capitalize()
@@ -709,7 +725,9 @@ class ErrorFinder(ParseForestNavigator):
 
         def annotate_wrong_op_verb_form(verb: str, correct: str, detail: str) -> None:
             """ Annotate wrong impersonal verb forms, such as 'Mér lýst' """
-            index = node.token.index
+            token = node.token
+            assert token is not None
+            index = token.index
             self._ann.append(
                 Annotation(
                     start=index,
@@ -757,9 +775,11 @@ class ErrorFinder(ParseForestNavigator):
         # Check whether this is a verb form that is forbidden from
         # impersonal use, such as 'lýst' which cannot be used impersonally
         # as a form of 'ljósta' ('Eldingunni laust niður')
-        if node.token.lower in self._NON_OP_VERB_FORMS:
-            correct, detail = self._NON_OP_VERB_FORMS[node.token.lower]
-            annotate_wrong_op_verb_form(node.token.text, correct, detail)
+        token = node.token
+        assert token is not None
+        if token.lower in self._NON_OP_VERB_FORMS:
+            correct, detail = self._NON_OP_VERB_FORMS[token.lower]
+            annotate_wrong_op_verb_form(token.text, correct, detail)
             return
 
         # Check whether this verb has an entry in the VERBS_ERRORS
@@ -782,7 +802,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def visit_nonterminal(self, level: int, node: Node) -> Any:
         """ Entering a nonterminal node """
-        if node.is_interior or node.nonterminal.is_optional:
+        if node.is_interior or node.nonterminal is None or node.nonterminal.is_optional:
             # Not an interesting node
             return None
         if not node.nonterminal.has_tag("error"):

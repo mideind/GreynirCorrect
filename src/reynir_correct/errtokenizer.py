@@ -2231,7 +2231,7 @@ class Correct_TOK(TOK):
         tokenizer.TOK instances """
 
     @staticmethod
-    def Word(
+    def Word(  # type: ignore
         w: str, m: Optional[MeaningList] = None, token: Optional[Tok] = None
     ) -> CorrectToken:
         ct = CorrectToken.word(w, m)
@@ -2245,7 +2245,7 @@ class Correct_TOK(TOK):
         return ct
 
     @staticmethod
-    def Number(
+    def Number(  # type: ignore
         w: str, n, cases=None, genders=None, token: Optional[Tok] = None
     ) -> CorrectToken:
         ct = CorrectToken(TOK.NUMBER, w, (n, cases, genders))
@@ -2257,7 +2257,7 @@ class Correct_TOK(TOK):
         return ct
 
     @staticmethod
-    def Amount(
+    def Amount(  # type: ignore
         w: str, iso, n, cases=None, genders=None, token: Optional[Tok] = None
     ) -> CorrectToken:
         ct = CorrectToken(TOK.AMOUNT, w, (n, iso, cases, genders))
@@ -2269,7 +2269,7 @@ class Correct_TOK(TOK):
         return ct
 
     @staticmethod
-    def Person(w: str, m=None, token: Optional[Tok] = None) -> CorrectToken:
+    def Person(w: str, m=None, token: Optional[Tok] = None) -> CorrectToken:  # type: ignore
         ct = CorrectToken(TOK.PERSON, w, m)
         if token is not None:
             # This token is being constructed in reference to a previously
@@ -2279,7 +2279,7 @@ class Correct_TOK(TOK):
         return ct
 
     @staticmethod
-    def Entity(w: str, token: Optional[Tok] = None) -> CorrectToken:
+    def Entity(w: str, token: Optional[Tok] = None) -> CorrectToken:  # type: ignore
         ct = CorrectToken(TOK.ENTITY, w, None)
         if token is not None:
             # This token is being constructed in reference to a previously
@@ -2289,7 +2289,7 @@ class Correct_TOK(TOK):
         return ct
 
     @staticmethod
-    def Dateabs(w: str, y, m, d, token: Optional[Tok] = None) -> CorrectToken:
+    def Dateabs(w: str, y, m, d, token: Optional[Tok] = None) -> CorrectToken:  # type: ignore
         ct = CorrectToken(TOK.DATEABS, w, (y, m, d))
         if token is not None:
             # This token is being constructed in reference to a previously
@@ -2299,7 +2299,7 @@ class Correct_TOK(TOK):
         return ct
 
     @staticmethod
-    def Daterel(
+    def Daterel(  # type: ignore
         w: str, y: int, m: int, d: int, token: Optional[Tok] = None
     ) -> CorrectToken:
         ct = CorrectToken(TOK.DATEREL, w, (y, m, d))
