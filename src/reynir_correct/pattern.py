@@ -1055,7 +1055,7 @@ class PatternMatcher:
         }
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
-        cls.ctx_noun_af = {"noun": partial(wrong_noun_af, NOUNS_AF_OBJ)}
+        cls.ctx_noun_af_obj = {"noun": partial(wrong_noun_af, NOUNS_AF_OBJ)}
         p.append(
             (
                 "af",  # Trigger lemma for this pattern
@@ -1066,9 +1066,6 @@ class PatternMatcher:
                 cls.ctx_noun_af,
             )
         )
-        # The macro %noun is resolved by calling the function wrong_noun_af()
-        # with the potentially matching tree node as an argument.
-        cls.ctx_noun_af = {"noun": partial(wrong_noun_af, NOUNS_AF_OBJ)}
         p.append(
             (
                 "af",  # Trigger lemma for this pattern
@@ -1079,9 +1076,6 @@ class PatternMatcher:
                 cls.ctx_noun_af,
             )
         )
-        # The macro %noun is resolved by calling the function wrong_noun_af()
-        # with the potentially matching tree node as an argument.
-        cls.ctx_noun_af = {"noun": partial(wrong_noun_af, NOUNS_AF_OBJ)}
         p.append(
             (
                 "af",  # Trigger lemma for this pattern
@@ -1092,9 +1086,6 @@ class PatternMatcher:
                 cls.ctx_noun_af,
             )
         )
-        # The macro %noun is resolved by calling the function wrong_noun_af()
-        # with the potentially matching tree node as an argument.
-        cls.ctx_noun_af = {"noun": partial(wrong_noun_af, NOUNS_AF_OBJ)}
         p.append(
             (
                 "af",  # Trigger lemma for this pattern
