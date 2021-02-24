@@ -46,7 +46,7 @@ from functools import partial
 import os
 import json
 
-from reynir import _Sentence, NounPhrase
+from reynir import Sentence, NounPhrase
 from reynir.simpletree import SimpleTree
 from reynir.verbframe import VerbErrors
 
@@ -147,11 +147,12 @@ class PatternMatcher:
     ctx_af: Optional[ContextType] = None
     ctx_að: Optional[ContextType] = None
     ctx_noun_af: Optional[ContextType] = None
+    ctx_noun_af_obj: Optional[ContextType] = None
     ctx_verb_01: Optional[ContextType] = None
     ctx_verb_02: Optional[ContextType] = None
     ctx_place_names: Optional[ContextType] = None
 
-    def __init__(self, ann: List[Annotation], sent: _Sentence) -> None:
+    def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
         self._ann = ann
         # The original sentence object
@@ -1061,9 +1062,9 @@ class PatternMatcher:
                 "af",  # Trigger lemma for this pattern
                 "NP-OBJ > { %noun PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af)
+                    match, cast(ContextType, cls.ctx_noun_af_obj)
                 ),
-                cls.ctx_noun_af,
+                cls.ctx_noun_af_obj,
             )
         )
         p.append(
@@ -1071,9 +1072,9 @@ class PatternMatcher:
                 "af",  # Trigger lemma for this pattern
                 "VP > { VP > { NP-OBJ > { %noun } } PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af)
+                    match, cast(ContextType, cls.ctx_noun_af_obj)
                 ),
-                cls.ctx_noun_af,
+                cls.ctx_noun_af_obj,
             )
         )
         p.append(
@@ -1081,9 +1082,9 @@ class PatternMatcher:
                 "af",  # Trigger lemma for this pattern
                 "NP-SUBJ > { %noun PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af)
+                    match, cast(ContextType, cls.ctx_noun_af_obj)
                 ),
-                cls.ctx_noun_af,
+                cls.ctx_noun_af_obj,
             )
         )
         p.append(
@@ -1091,9 +1092,9 @@ class PatternMatcher:
                 "af",  # Trigger lemma for this pattern
                 "NP > { %noun PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af)
+                    match, cast(ContextType, cls.ctx_noun_af_obj)
                 ),
-                cls.ctx_noun_af,
+                cls.ctx_noun_af_obj,
             )
         )
 
