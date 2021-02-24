@@ -52,20 +52,30 @@ from typing import cast, Iterable, Iterator, List, Tuple, Dict, Type, Optional
 from threading import Lock
 
 from reynir import (
-    Greynir, correct_spaces, TOK, Tok, TokenList,
-    _Job, _Sentence, _Paragraph,
-    ProgressFunc, ParseResult, ICELANDIC_RATIO,
+    Greynir,
+    correct_spaces,
+    TOK,
+    Tok,
+    TokenList,
+    _Job,
+    _Sentence,
+    _Paragraph,
+    ProgressFunc,
+    ParseResult,
+    ICELANDIC_RATIO,
 )
-from reynir.binparser import BIN_Token, BIN_Grammar
+from reynir.binparser import BIN_Token, BIN_Grammar, BIN_Parser
 from reynir.bintokenizer import StringIterable
-from reynir.fastparser import Fast_Parser, ParseForestNavigator, ffi
+from reynir.fastparser import (
+    Fast_Parser,
+    ffi,  # type: ignore
+)
 from reynir.reducer import Reducer
+from reynir.reynir import Job, Sentence
 from reynir.settings import VerbSubjects
 
 from .annotation import Annotation
-from .errtokenizer import (
-    CorrectToken, tokenize as tokenize_and_correct
-)
+from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
 from .errfinder import ErrorFinder
 from .pattern import PatternMatcher
 
@@ -142,10 +152,9 @@ class ErrorDetectionToken(BIN_Token):
         """ Returns True if the given subject type/case is allowed
             for this verb or if it is an erroneous subject
             which we can flag """
-        return (
-            subj in cls._VERB_SUBJECTS.get(verb, set()) or
-            subj in cls._VERB_ERROR_SUBJECTS.get(verb, set())
-        )
+        return subj in cls._VERB_SUBJECTS.get(
+            verb, set()
+        ) or subj in cls._VERB_ERROR_SUBJECTS.get(verb, set())
 
 
 class ErrorDetectingGrammar(BIN_Grammar):
@@ -159,6 +168,15 @@ class ErrorDetectingGrammar(BIN_Grammar):
         super().__init__()
         # Enable the 'include_errors' condition
         self.set_conditions({"include_errors"})
+
+
+class AnnotatedSentence(Sentence):
+
+    """ A subclass that adds a list of Annotation instances to a Sentence object """
+
+    def __init__(self, job: Job, s: TokenList) -> None:
+        super().__init__(job, s)
+        self.annotations: List[Annotation] = []
 
 
 class ErrorDetectingParser(Fast_Parser):
@@ -180,7 +198,7 @@ class ErrorDetectingParser(Fast_Parser):
     _c_grammar_ts: Optional[float] = None
 
     @staticmethod
-    def _create_wrapped_token(t: Tok, ix: int) -> ErrorDetectionToken:
+    def wrap_token(t: Tok, ix: int) -> ErrorDetectionToken:
         """ Create an instance of a wrapped token """
         return ErrorDetectionToken(t, ix)
 
@@ -218,7 +236,7 @@ class GreynirCorrect(Greynir):
         largs = len(args)
         if largs == 3:
             # Plain ol' token
-            return super()._load_token(*args)
+            return cast(CorrectToken, super()._load_token(*args))
         # This is a CorrectToken: pass it to that class for handling
         return CorrectToken.load(*args)
 
@@ -243,13 +261,14 @@ class GreynirCorrect(Greynir):
         assert GreynirCorrect._reducer is not None
         return GreynirCorrect._reducer
 
-    @staticmethod
-    def annotate(sent: _Sentence) -> List[Annotation]:
+    def annotate(self, sent: _Sentence) -> List[Annotation]:
         """ Returns a list of annotations for a sentence object, containing
             spelling and grammar annotations of that sentence """
         ann: List[Annotation] = []
         words_in_bin = 0
         words_not_in_bin = 0
+        parsed = sent.deep_tree is not None
+        grammar = self.parser.grammar
         # First, add token-level annotations
         for ix, t in enumerate(sent.tokens):
             if t.kind == TOK.WORD:
@@ -272,8 +291,23 @@ class GreynirCorrect(Greynir):
             if getattr(t, "error_code", None):
                 # This is a CorrectToken instance (or a duck typing equivalent)
                 assert isinstance(t, CorrectToken)  # Satisfy Mypy
-                ann.append(
-                    Annotation(
+                annotate = True
+                if parsed:
+                    # For the call to suggestion_does_not_match(), we need a
+                    # BIN_Token instance, which we can obtain in a bit of a hacky
+                    # way by creating it on the fly
+                    bin_token = BIN_Parser.wrap_token(cast(Tok, t), ix)
+                    # Obtain the original BIN_Terminal instance from the grammar
+                    terminal_node = sent.terminal_nodes[ix]
+                    original_terminal = terminal_node.original_terminal
+                    assert original_terminal is not None
+                    terminal = grammar.terminals[original_terminal]
+                    if t.suggestion_does_not_match(terminal, bin_token):
+                        # If this token is annotated with a spelling suggestion,
+                        # do not add it unless it works grammatically
+                        annotate = False
+                if annotate:
+                    a = Annotation(
                         start=ix,
                         end=ix + t.error_span - 1,
                         code=t.error_code,
@@ -282,7 +316,7 @@ class GreynirCorrect(Greynir):
                         original=t.error_original,
                         suggest=t.error_suggest,
                     )
-                )
+                    ann.append(a)
         # Then, look at the whole sentence
         num_words = words_in_bin + words_not_in_bin
         if num_words > 2 and words_in_bin / num_words < ICELANDIC_RATIO:
@@ -296,11 +330,12 @@ class GreynirCorrect(Greynir):
                     end=len(sent.tokens) - 1,
                     code="E004",
                     text="Málsgreinin er sennilega ekki á íslensku",
-                    detail="{0:.0f}% orða í henni finnast ekki í íslenskri orðabók"
-                        .format(words_not_in_bin/num_words * 100.0),
+                    detail="{0:.0f}% orða í henni finnast ekki í íslenskri orðabók".format(
+                        words_not_in_bin / num_words * 100.0
+                    ),
                 )
             ]
-        elif sent.deep_tree is None:
+        elif not parsed:
             # If the sentence couldn't be parsed,
             # put an annotation on it as a whole.
             # In this case, we keep the token-level annotations.
@@ -317,8 +352,9 @@ class GreynirCorrect(Greynir):
                     end=len(sent.tokens) - 1,
                     code="E001",
                     text="Málsgreinin fellur ekki að reglum",
-                    detail="Þáttun brást í kring um {0}. tóka ('{1}')"
-                        .format(err_index + 1, toktext),
+                    detail="Þáttun brást í kring um {0}. tóka ('{1}')".format(
+                        err_index + 1, toktext
+                    ),
                 )
             )
         else:
@@ -334,12 +370,12 @@ class GreynirCorrect(Greynir):
         ann.sort(key=lambda a: (a.start, -a.end))
         return ann
 
-    def create_sentence(self, job: _Job, s: TokenList) -> _Sentence:
+    def create_sentence(self, job: Job, s: TokenList) -> _Sentence:
         """ Create a fresh sentence object and annotate it
             before returning it to the client """
-        sent = super().create_sentence(job, s)
+        sent = AnnotatedSentence(job, s)
         # Add spelling and grammar annotations to the sentence
-        setattr(sent, "annotations", self.annotate(sent))
+        sent.annotations = self.annotate(sent)
         return sent
 
 
@@ -350,7 +386,7 @@ def check_single(sentence_text: str) -> Optional[_Sentence]:
     return rc.parse_single(sentence_text)
 
 
-def check(text: str, *, split_paragraphs: bool=False) -> Iterable[_Paragraph]:
+def check(text: str, *, split_paragraphs: bool = False) -> Iterable[_Paragraph]:
     """ Return a generator of checked paragraphs of text,
         each being a generator of checked sentences with
         annotations """
@@ -360,10 +396,12 @@ def check(text: str, *, split_paragraphs: bool=False) -> Iterable[_Paragraph]:
     yield from job.paragraphs()
 
 
-def check_with_custom_parser(text: str, *,
-    split_paragraphs: bool=False,
-    parser_class: Type[GreynirCorrect]=GreynirCorrect,
-    progress_func: ProgressFunc=None
+def check_with_custom_parser(
+    text: str,
+    *,
+    split_paragraphs: bool = False,
+    parser_class: Type[GreynirCorrect] = GreynirCorrect,
+    progress_func: ProgressFunc = None
 ) -> ParseResult:
     """ Return a dict containing parsed paragraphs as well as statistics,
         using the given correction/parser class. This is a low-level
@@ -388,6 +426,6 @@ def check_with_custom_parser(text: str, *,
     )
 
 
-def check_with_stats(text: str, *, split_paragraphs: bool=False) -> Dict:
+def check_with_stats(text: str, *, split_paragraphs: bool = False) -> Dict:
     """ Return a dict containing parsed paragraphs as well as statistics """
     return check_with_custom_parser(text, split_paragraphs=split_paragraphs)
