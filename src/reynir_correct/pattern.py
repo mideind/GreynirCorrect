@@ -738,6 +738,15 @@ class PatternMatcher:
                     cls.ctx_af,
                 )
             )
+            # Catch "...vegna þess að dýr leita af öðrum smærri dýrum."
+            p.append(
+                (
+                    "af",  # Trigger lemma for this pattern
+                    ". > { PP >> 'leita' PP > 'af' }",
+                    cls.wrong_preposition_af,
+                    cls.ctx_af,
+                )
+            )
 
             # Catch "Þetta er mesta vitleysa sem ég hef orðið vitni af"
             p.append(
@@ -759,6 +768,15 @@ class PatternMatcher:
                     None,
                 )
             )
+            # Catch ""
+            p.append(
+                (
+                    "vitni",  # Trigger lemma for this pattern
+                    "VP > { VP > 'verða' NP-PRD > { 'vitni' PP > { P > { 'af' } } } }",
+                    cls.wrong_preposition_vitni_af,
+                    None,
+                )
+            )
             # Catch "Hún gerði grín af því."
             p.append(
                 (
@@ -769,11 +787,20 @@ class PatternMatcher:
                     None,
                 )
             )
-            # Catch "Þetta er mesta vitleysa sem ég hef gert grín af"
+            # Catch "Þetta er mesta vitleysa sem ég hef gert grín af."
             p.append(
                 (
                     "grín",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > { VP > { 'gera' } NP-OBJ > { 'grín' } } } ADVP > { 'af' } }",
+                    cls.wrong_preposition_grin_af,
+                    None,
+                )
+            )
+            # Catch "...og gerir grín af sjálfum sér."
+            p.append(
+                (
+                    "grín",  # Trigger lemma for this pattern
+                    "VP > { VP > { VP > 'gera' NP-OBJ } PP > { 'af' } }",
                     cls.wrong_preposition_grin_af,
                     None,
                 )
@@ -814,11 +841,21 @@ class PatternMatcher:
                     None,
                 )
             )
+
             # Catch "Jón leggur hann af velli."
             p.append(
                 (
                     "leggja",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { 'leggja' } NP-OBJ } PP > { P > { 'af' } NP > { 'völlur' } } }",
+                    "VP > { VP > { VP > { 'leggja' } } PP > { P > { 'af' } NP > { 'völlur' } } }",
+                    cls.wrong_preposition_leggja_af,
+                    None,
+                )
+            )
+            # Catch "Jón hefur lagt hann af velli."
+            p.append(
+                (
+                    "leggja",  # Trigger lemma for this pattern
+                    "VP > { VP > { VP > { VP > { 'leggja' } } } PP > { P > 'af' NP > 'völlur' } }",
                     cls.wrong_preposition_leggja_af,
                     None,
                 )
@@ -827,7 +864,7 @@ class PatternMatcher:
             p.append(
                 (
                     "leggja",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { VP > { 'leggja' } } } PP > { P > { 'af' } NP > { 'völlur' } } }",
+                    "VP > { VP > { VP > { VP > { VP > { 'leggja' } } } } PP > { P > { 'af' } NP > { 'völlur' } } }",
                     cls.wrong_preposition_leggja_af,
                     None,
                 )
@@ -836,7 +873,7 @@ class PatternMatcher:
             p.append(
                 (
                     "kunna",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'kunna' } ADVP > { 'utan' } ADVP > { 'af' } }",
+                    "VP > { VP > 'kunna' ADVP > 'utan' ADVP > 'af' }",
                     cls.wrong_preposition_utan_af,
                     None,
                 )
@@ -854,7 +891,7 @@ class PatternMatcher:
             p.append(
                 (
                     "verða",  # Trigger lemma for this pattern
-                    "IP > { VP > { VP > { 'verða' } PP > { P > { 'af' } } } }",
+                    "IP > { VP > { VP > { 'verða' } PP > { P > { 'af' } NP > { 'ósk' } } } }",
                     cls.wrong_preposition_verða_af,
                     None,
                 )
@@ -1023,6 +1060,7 @@ class PatternMatcher:
             "beiðni_þgf",
             "siður_þgf",
             "tilefni_þgf",
+            "fyrirmynd_þgf"
         }
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
@@ -1052,7 +1090,8 @@ class PatternMatcher:
             "lykill_nf",
             "lykill_þf",
             "uppskrift_nf",
-            "uppskrift_þf"
+            "uppskrift_þf",
+            "grín_þf"
         }
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
@@ -1080,6 +1119,16 @@ class PatternMatcher:
         p.append(
             (
                 "af",  # Trigger lemma for this pattern
+                "VP > { PP > { NP > %noun } PP > { 'af' } }",
+                lambda self, match: self.wrong_af_use(
+                    match, cast(ContextType, cls.ctx_noun_af_obj)
+                ),
+                cls.ctx_noun_af_obj,
+            )
+        )
+        p.append(
+            (
+                "af",  # Trigger lemma for this pattern
                 "NP-SUBJ > { %noun PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
                     match, cast(ContextType, cls.ctx_noun_af_obj)
@@ -1091,6 +1140,17 @@ class PatternMatcher:
             (
                 "af",  # Trigger lemma for this pattern
                 "NP > { %noun PP > { P > { 'af' } } }",
+                lambda self, match: self.wrong_af_use(
+                    match, cast(ContextType, cls.ctx_noun_af_obj)
+                ),
+                cls.ctx_noun_af_obj,
+            )
+        )
+
+        p.append(
+            (
+                "af",  # Trigger lemma for this pattern
+                "VP > { VP >> { %noun } PP > { 'af' } }",
                 lambda self, match: self.wrong_af_use(
                     match, cast(ContextType, cls.ctx_noun_af_obj)
                 ),
