@@ -380,7 +380,7 @@ class PatternMatcher:
             Annotation(
                 start=start,
                 end=end,
-                code="P_TO_BE",
+                code="P_VeraAð",
                 text=text,
                 detail=detail,
                 original="vera að", # TODO skoða
@@ -611,12 +611,11 @@ class PatternMatcher:
         )
 
         # Check use of "vera að" instead of a simple verb
-        cls.ctx_vera_að = {"verb": "@'vera'", "nhm": "@'að'"}
+        cls.ctx_vera_að = {"verb": "@'vera'",}
         p.append(
             (
                 "vera", # Trigger lemma for this pattern
-                #"VP > [ VP > { %verb } IP-INF > TO > {%nhm} ]",
-                "S-MAIN >> [VP IP-INF]",
+                "VP > [VP > { %verb } (ADVP|NP-SUBJ)? IP-INF > {TO > nhm}]",
                 lambda self, match: self.vera_að(match),
                 cls.ctx_vera_að,
             )
