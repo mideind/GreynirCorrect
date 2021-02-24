@@ -33,6 +33,7 @@
 
 """
 
+from typing import Iterable, cast
 import reynir_correct as rc
 import tokenizer
 
@@ -55,8 +56,8 @@ def gen_to_string(g):
     return tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt))
 
 
-def roundtrip(s):
-    return rc.detokenize(rc.tokenize(s))
+def roundtrip(s: str) -> str:
+    return rc.detokenize(cast(Iterable[tokenizer.Tok], rc.tokenize(s)))
 
 
 def test_correct(verbose=False):

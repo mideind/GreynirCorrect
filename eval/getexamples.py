@@ -49,23 +49,22 @@ import glob
 import argparse
 
 from typing import (
-    Dict,
     List,
-    Optional,
+    Optional, TYPE_CHECKING,
     Union,
     Tuple,
     Iterable,
     cast,
-    NamedTuple,
-    Any,
     DefaultDict,
 )
-from reynir_correct import Annotation
 import reynir_correct as gc
-from reynir import _Sentence
+from reynir_correct import Annotation, AnnotatedSentence
 from tokenizer import detokenize, Tok, TOK
 
-from eval import OUT_OF_SCOPE
+if TYPE_CHECKING:
+    from .eval import OUT_OF_SCOPE
+else:
+    from eval import OUT_OF_SCOPE
 
 # Default glob path of the development corpus TEI XML files to be processed
 _DEV_PATH = "iceErrorCorpus/data/**/*.xml"
@@ -210,9 +209,10 @@ def get_examples(fpath: str) -> None:
                 continue
 
             pg = [list(p) for p in gc.check(text)]
-            s: Optional[_Sentence] = None
+            s: Optional[AnnotatedSentence] = None
             if len(pg) >= 1 and len(pg[0]) >= 1:
-                s = pg[0][0]
+                assert isinstance(pg[0][0], AnnotatedSentence)
+                s = cast(AnnotatedSentence, pg[0][0])
             if s is None:
                 continue
             for ann in cast(Iterable[Annotation], s.annotations):

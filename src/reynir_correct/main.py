@@ -36,7 +36,7 @@
 
 """
 
-from typing import List, Tuple, Iterator, Iterable, Dict, Any, Union, cast
+from typing import List, Sequence, Tuple, Iterator, Iterable, Dict, Any, Union, cast
 
 import sys
 import argparse
@@ -108,7 +108,7 @@ def main() -> None:
         """ Generate the lines of text in the input file """
         yield from f
 
-    def val(t: CorrectToken, quote_word: bool=False) -> Union[None, str, Tuple, List]:
+    def val(t: CorrectToken, quote_word: bool=False) -> Union[None, str, Tuple, Sequence]:
         """ Return the value part of the token t """
         if t.val is None:
             return None
@@ -125,7 +125,8 @@ def main() -> None:
         if t.kind == TOK.S_BEGIN:
             return None
         if t.kind == TOK.PUNCTUATION:
-            return quote(t.val[1]) if quote_word else t.val[1]
+            punct = cast(str, t.val[1])
+            return quote(punct) if quote_word else punct
         if quote_word and t.kind in {
             TOK.DATE, TOK.TIME, TOK.DATEABS, TOK.DATEREL, TOK.TIMESTAMP,
             TOK.TIMESTAMPABS, TOK.TIMESTAMPREL, TOK.TELNO, TOK.NUMWLETTER,

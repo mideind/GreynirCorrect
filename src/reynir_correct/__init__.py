@@ -29,14 +29,14 @@
 
 # Expose the reynir-correct API
 
-from reynir import Greynir, correct_spaces, mark_paragraphs
+from reynir import Greynir, correct_spaces, mark_paragraphs, Sentence, Paragraph
+from tokenizer import detokenize
 from .settings import Settings
 
 # Token-level correction
 from .errtokenizer import (
     CorrectionPipeline,
     tokenize,
-    detokenize,
     Correct_TOK,
 )
 
@@ -47,6 +47,7 @@ from .checker import (
     check_single,
     check_with_stats,
     check_with_custom_parser,
+    AnnotatedSentence,
 )
 
 # Annotations
