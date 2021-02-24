@@ -286,6 +286,34 @@ class PatternMatcher:
             )
         )
 
+    def wrong_preposition_ahyggja_að(self, match: SimpleTree) -> None:
+        """ Handle a match of a suspect preposition pattern """
+        # Find the offending verb phrase
+        # Calculate the start and end token indices, spanning both phrases
+        start, end = match.span
+        text = "'hafa áhyggjur að' á sennilega að vera 'hafa áhyggjur af'"
+        detail = (
+            "Í samhenginu 'hafa áhyggjur af e-u' er notuð "
+            "forsetningin 'af', ekki 'að'."
+        )
+        if match.tidy_text.count(" af ") == 1:
+            # Only one way to substitute af -> að: do it
+            suggest = match.tidy_text.replace(" af ", " að ")
+        else:
+            # !!! TODO: More intelligent substitution to create a suggestion
+            suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_WRONG_PREP_AF",
+                text=text,
+                detail=detail,
+                original="af",
+                suggest=suggest,
+            )
+        )
+
     def check_pp_with_place(self, match: SimpleTree) -> None:
         """ Check whether the correct preposition is being used with a place name """
         place = match.NP.lemma
@@ -470,6 +498,16 @@ class PatternMatcher:
                     None,
                 )
             )
+
+            p.append(
+                (
+                    "áhyggja",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'áhyggja' } PP > { 'að' } }",
+                    cls.wrong_preposition_ahyggja_að,
+                    None,
+                )
+            )
+            
 
         if verbs_að:
             # Create matching patterns with a context that catches the að/af verbs.
