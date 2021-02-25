@@ -268,6 +268,17 @@ class GreynirCorrect(Greynir):
         words_in_bin = 0
         words_not_in_bin = 0
         parsed = sent.deep_tree is not None
+        # Create a mapping from token indices to terminal indices.
+        # This is necessary because not all tokens are included in
+        # the token list that is passed to the parser, and therefore
+        # the terminal-token matches can be fewer than the original tokens.
+        token_to_terminal: Dict[int, int] = {}
+        if parsed:
+            token_to_terminal = {
+                tnode.index: ix
+                for ix, tnode in enumerate(sent.terminal_nodes)
+                if tnode.index is not None
+            }
         grammar = self.parser.grammar
         # First, add token-level annotations
         for ix, t in enumerate(sent.tokens):
@@ -292,13 +303,14 @@ class GreynirCorrect(Greynir):
                 # This is a CorrectToken instance (or a duck typing equivalent)
                 assert isinstance(t, CorrectToken)  # Satisfy Mypy
                 annotate = True
-                if parsed:
+                if parsed and ix in token_to_terminal:
                     # For the call to suggestion_does_not_match(), we need a
                     # BIN_Token instance, which we can obtain in a bit of a hacky
                     # way by creating it on the fly
                     bin_token = BIN_Parser.wrap_token(cast(Tok, t), ix)
                     # Obtain the original BIN_Terminal instance from the grammar
-                    terminal_node = sent.terminal_nodes[ix]
+                    terminal_index = token_to_terminal[ix]
+                    terminal_node = sent.terminal_nodes[terminal_index]
                     original_terminal = terminal_node.original_terminal
                     assert original_terminal is not None
                     terminal = grammar.terminals[original_terminal]
