@@ -496,7 +496,7 @@ def test_capitalization_of_numbers(verbose=False):
 def test_taboo_words(verbose=False):
     g = rc.tokenize(
         "Jón sagði að hún væri múhameðstrúarmaður en hún svaraði að "
-        "hann væri hommatittur og negri með lítinn tilla."
+        "hann væri hommatittur og negri með lítinn typpaling."
     )
     g = list(g)
     if verbose: dump(g)
