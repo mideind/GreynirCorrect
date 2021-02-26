@@ -496,7 +496,6 @@ class PatternMatcher:
         vp = match.first_match("VP > { 'verða' }", self.ctx_af)
         if vp is None:
             vp = match.first_match("VP >> { 'verða' }", self.ctx_af)
-        print(vp)
         # Find the attached nominal phrase
         np = match.first_match("NP > { 'uppvís' }", self.ctx_af)
         # Find the attached prepositional phrase
@@ -504,6 +503,12 @@ class PatternMatcher:
         if pp is None:
             pp = match.first_match("ADVP > { 'af' }", self.ctx_af)
         # Calculate the start and end token indices, spanning both phrases
+        if vp is None:
+            start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
+        elif np is None:
+            start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
+        elif pp is None:
+            start, end = min(vp.span[0], np.span[0]), max(vp.span[1], np.span[1])
         start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
         text = "'uppvís af' á sennilega að vera 'uppvís að'"
         detail = (
@@ -1243,11 +1248,20 @@ class PatternMatcher:
                 cls.ctx_noun_af_obj,
             )
         )
-
         p.append(
             (
                 "af",  # Trigger lemma for this pattern
                 "VP > { VP >> { %noun } PP > { 'af' } }",
+                lambda self, match: self.wrong_af_use(
+                    match, cast(ContextType, cls.ctx_noun_af_obj)
+                ),
+                cls.ctx_noun_af_obj,
+            )
+        )
+        p.append(
+            (
+                "af",  # Trigger lemma for this pattern
+                "VP > { PP > { 'af' } }",
                 lambda self, match: self.wrong_af_use(
                     match, cast(ContextType, cls.ctx_noun_af_obj)
                 ),
