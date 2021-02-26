@@ -285,7 +285,10 @@ class PatternMatcher:
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
         # Calculate the start and end token indices, spanning both phrases
-        start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
+        if vp is None:
+            start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
+        else:
+            start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
         text = "'gera grín af' á sennilega að vera 'gera grín að'"
         detail = (
             "Í samhenginu 'gera grín að e-u' er notuð "
@@ -704,9 +707,12 @@ class PatternMatcher:
 
     def wrong_af_use(self, match: SimpleTree, context: ContextType,) -> None:
         """ Handle a match of a suspect preposition pattern """
-        # Find the offending noun phrase
+        # Find the offending noun
+        np = match.first_match(" %noun ", context)
+        # Find the attached prepositional phrase
+        pp = match.first_match("P > { 'af' }")
         # Calculate the start and end token indices, spanning both phrases
-        start, end = match.span
+        start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "Hér á líklega að vera forsetningin 'að' í stað 'af'."
         detail = "Í samhenginu '{0}' er rétt að nota forsetninguna 'að' í stað 'af'.".format(
             match.tidy_text
@@ -873,6 +879,15 @@ class PatternMatcher:
                 (
                     "grín",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > 'gera' NP-OBJ } PP > { 'af' } }",
+                    cls.wrong_preposition_grin_af,
+                    None,
+                )
+            )
+
+            p.append(
+                (
+                    "grín",  # Trigger lemma for this pattern
+                    "VP > { PP > { NP > { 'grín' } } PP > { 'af' } }",
                     cls.wrong_preposition_grin_af,
                     None,
                 )
@@ -1252,16 +1267,6 @@ class PatternMatcher:
             (
                 "af",  # Trigger lemma for this pattern
                 "VP > { VP >> { %noun } PP > { 'af' } }",
-                lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af_obj)
-                ),
-                cls.ctx_noun_af_obj,
-            )
-        )
-        p.append(
-            (
-                "af",  # Trigger lemma for this pattern
-                "VP > { PP > { 'af' } }",
                 lambda self, match: self.wrong_af_use(
                     match, cast(ContextType, cls.ctx_noun_af_obj)
                 ),
