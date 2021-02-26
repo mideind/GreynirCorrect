@@ -37,7 +37,7 @@ import pytest
 
 import reynir_correct
 
-from test_annotator import check_sentence
+from test_annotator import check_sentence  # type: ignore
 
 
 @pytest.fixture(scope="module")
