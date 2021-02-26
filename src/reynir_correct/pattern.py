@@ -453,7 +453,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_verða_af(self, match: SimpleTree) -> None:
-        # Find the offending adverbial phrase
+        # Find the offending verbal phrase
         vp = match.first_match("VP > { 'verða' }", self.ctx_af)
         if vp is None:
             vp = match.first_match("VP >> { 'verða' }", self.ctx_af)
@@ -501,6 +501,8 @@ class PatternMatcher:
             vp = match.first_match("VP >> { 'verða' }", self.ctx_af)
         # Find the attached nominal phrase
         np = match.first_match("NP > { 'uppvís' }", self.ctx_af)
+        if np is None:
+            np = match.first_match("NP >> { 'uppvís' }", self.ctx_af)
         # Find the attached prepositional phrase
         pp = match.first_match('PP > { "af" }', self.ctx_af)
         if pp is None:
@@ -512,7 +514,8 @@ class PatternMatcher:
             start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         elif pp is None:
             start, end = min(vp.span[0], np.span[0]), max(vp.span[1], np.span[1])
-        start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
+        else:
+            start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
         text = "'uppvís af' á sennilega að vera 'uppvís að'"
         detail = (
             "Í samhenginu 'verða uppvís að einhverju' er notuð "
@@ -996,7 +999,7 @@ class PatternMatcher:
             p.append(
                 (
                     "verða",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'verða' } NP-PRD > { ('uppvís' | NP-PRD) PP > { 'af' } } }",
+                    "VP > { VP > { 'verða' } NP-PRD > { 'uppvís' PP > { 'af' } } }",
                     cls.wrong_preposition_uppvis_af,
                     None,
                 )
