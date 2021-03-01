@@ -49,16 +49,15 @@ import json
 from reynir import Sentence, NounPhrase
 from reynir.simpletree import SimpleTree
 from reynir.verbframe import VerbErrors
+from reynir.matcher import ContextDict
 
 from .annotation import Annotation
 
 
 # The types involved in pattern processing
-CheckFunction = Callable[[SimpleTree], bool]
-ContextType = Dict[str, Union[str, CheckFunction]]
 AnnotationFunction = Callable[["PatternMatcher", SimpleTree], None]
 PatternTuple = Tuple[
-    Union[str, FrozenSet[str]], str, AnnotationFunction, Optional[ContextType]
+    Union[str, FrozenSet[str]], str, AnnotationFunction, Optional[ContextDict]
 ]
 
 
@@ -144,11 +143,11 @@ class PatternMatcher:
 
     _LOCK = Lock()
 
-    ctx_af: Optional[ContextType] = None
-    ctx_að: Optional[ContextType] = None
-    ctx_verb_01: Optional[ContextType] = None
-    ctx_verb_02: Optional[ContextType] = None
-    ctx_place_names: Optional[ContextType] = None
+    ctx_af = cast(ContextDict, None)
+    ctx_að = cast(ContextDict, None)
+    ctx_verb_01 = cast(ContextDict, None)
+    ctx_verb_02 = cast(ContextDict, None)
+    ctx_place_names = cast(ContextDict, None)
 
     def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
@@ -174,6 +173,8 @@ class PatternMatcher:
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "af" }')
         # Calculate the start and end token indices, spanning both phrases
+        assert vp is not None
+        assert pp is not None
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
         detail = (
@@ -207,6 +208,8 @@ class PatternMatcher:
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "að" }')
         # Calculate the start and end token indices, spanning both phrases
+        assert vp is not None
+        assert pp is not None
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
         detail = (
@@ -368,14 +371,16 @@ class PatternMatcher:
         )
 
     def wrong_verb_use(
-        self, match: SimpleTree, correct_verb: str, context: ContextType,
+        self, match: SimpleTree, correct_verb: str, context: ContextDict,
     ) -> None:
         """ Annotate wrong verbs being used with nouns,
             for instance 'byði hnekki' where the verb should
             be 'bíða' -> 'biði hnekki' instead of 'bjóða' """
         vp = match.first_match("VP > { %verb }", context)
+        assert vp is not None
         verb = next(ch for ch in vp.children if ch.tcat == "so").own_lemma_mm
         np = match.first_match("NP >> { %noun }", context)
+        assert np is not None
         start, end = min(vp.span[0], np.span[0]), max(vp.span[1], np.span[1])
         # noun = next(ch for ch in np.leaves if ch.tcat == "no").own_lemma
         text = "Hér á líklega að vera sögnin '{0}' í stað '{1}'.".format(
@@ -452,12 +457,12 @@ class PatternMatcher:
             # Note that we use the own_lemma_mm property instead of own_lemma. This
             # means that the lambda condition matches middle voice stem forms,
             # such as 'dást' instead of 'dá'.
-            cls.ctx_af = {
+            cls.ctx_af = cast(ContextDict, {
                 "verb": lambda tree: (
                     tree.own_lemma_mm in verbs_af
                     and not (set(tree.variants) & {"1", "2"})
                 )
-            }
+            })
             # Catch sentences such as 'Jón leitaði af kettinum'
             p.append(
                 (
@@ -511,12 +516,12 @@ class PatternMatcher:
 
         if verbs_að:
             # Create matching patterns with a context that catches the að/af verbs.
-            cls.ctx_að = {
+            cls.ctx_að = cast(ContextDict, {
                 "verb": lambda tree: (
                     tree.own_lemma_mm in verbs_að
                     and not (set(tree.variants) & {"1", "2"})
                 )
-            }
+            })
             # Catch sentences such as 'Jón heillaðist að kettinum'
             p.append(
                 (
@@ -580,7 +585,7 @@ class PatternMatcher:
                 "bjóða",  # Trigger lemma for this pattern
                 "VP > { VP > { %verb } NP-OBJ >> { %noun } }",
                 lambda self, match: self.wrong_verb_use(
-                    match, "bíða", cast(ContextType, cls.ctx_verb_01),
+                    match, "bíða", cls.ctx_verb_01,
                 ),
                 cls.ctx_verb_01,
             )
@@ -593,7 +598,7 @@ class PatternMatcher:
                 "hegna",  # Trigger lemma for this pattern
                 "VP > { VP > { %verb } NP-OBJ >> { %noun } }",
                 lambda self, match: self.wrong_verb_use(
-                    match, "hengja", cast(ContextType, cls.ctx_verb_02),
+                    match, "hengja", cls.ctx_verb_02,
                 ),
                 cls.ctx_verb_02,
             )
@@ -607,7 +612,7 @@ class PatternMatcher:
             return lemma[0].isupper() if lemma else False
 
         # Check prepositions used with place names
-        cls.ctx_place_names = {"maybe_place": maybe_place}
+        cls.ctx_place_names = cast(ContextDict, {"maybe_place": maybe_place})
         p.append(
             (
                 frozenset(("á", "í")),  # Trigger lemmas for this pattern
