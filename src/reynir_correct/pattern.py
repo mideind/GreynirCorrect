@@ -180,7 +180,7 @@ class PatternMatcher:
             start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         except AttributeError:
             start, end = match.span
-        if vp != None:
+        if vp is not None:
             text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
             detail = (
                 "Sögnin '{0}' tekur yfirleitt með sér "
@@ -822,7 +822,7 @@ class PatternMatcher:
             # Catch "...vegna þess að dýr leita af öðrum smærri dýrum."
             p.append(
                 (
-                    "af",  # Trigger lemma for this pattern
+                    "leita",  # Trigger lemma for this pattern
                     ". > { PP >> 'leita' PP > 'af' }",
                     cls.wrong_preposition_af,
                     cls.ctx_af,
@@ -907,7 +907,7 @@ class PatternMatcher:
             # Catch "Hann leiðir ekki líkur af því."
             p.append(
                 (
-                    "líkur",  # Trigger lemma for this pattern
+                    "leiða",  # Trigger lemma for this pattern
                     "VP > { VP > { 'leiða' } NP-PRD > { ('líkur' | 'rök') } PP > { P > { 'af' } } } ",
                     cls.wrong_preposition_leida_af,
                     None,
@@ -916,8 +916,8 @@ class PatternMatcher:
             # Catch "Hann hefur aldrei leitt líkur af því."
             p.append(
                 (
-                    "líkur",  # Trigger lemma for this pattern
-                    "VP > { VP >> { VP > { 'leiða' } NP > { 'líkur' } } PP > { 'af' } } ",
+                    "leiða",  # Trigger lemma for this pattern
+                    "VP > { VP >> { VP > { 'leiða' } NP > { ('líkur' | 'rök') } } PP > { 'af' } } ",
                     cls.wrong_preposition_leida_af,
                     None,
                 )
@@ -980,7 +980,7 @@ class PatternMatcher:
             # Catch "Honum varð af ósk sinni."
             p.append(
                 (
-                    "verða",  # Trigger lemma for this pattern
+                    "ósk",  # Trigger lemma for this pattern
                     "(S-MAIN | IP) > { VP > { 'verða' } PP > { 'af' NP > { 'ósk' } } }",
                     cls.wrong_preposition_verða_af,
                     None,
@@ -989,7 +989,7 @@ class PatternMatcher:
             # Catch "...en varð ekki af ósk sinni."
             p.append(
                 (
-                    "verða",  # Trigger lemma for this pattern
+                    "ósk",  # Trigger lemma for this pattern
                     "IP > { VP > { VP > { 'verða' } PP > { P > { 'af' } NP > { 'ósk' } } } }",
                     cls.wrong_preposition_verða_af,
                     None,
@@ -998,7 +998,7 @@ class PatternMatcher:
             # Catch "Hann varð uppvís af því."
             p.append(
                 (
-                    "verða",  # Trigger lemma for this pattern
+                    "uppvís",  # Trigger lemma for this pattern
                     "VP > { VP > { 'verða' } NP-PRD > { 'uppvís' PP > { 'af' } } }",
                     cls.wrong_preposition_uppvis_af,
                     None,
@@ -1007,7 +1007,7 @@ class PatternMatcher:
             # Catch "Ég varð (ekki) uppvís af athæfinu."
             p.append(
                 (
-                    "verða",  # Trigger lemma for this pattern
+                    "uppvís",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > { 'verða' } NP > { 'uppvís' } } PP > { 'af' } }",
                     cls.wrong_preposition_uppvis_af,
                     None,
