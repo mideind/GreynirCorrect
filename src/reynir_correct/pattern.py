@@ -209,7 +209,6 @@ class PatternMatcher:
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "að" }')
         # Calculate the start and end token indices, spanning both phrases
-        assert vp is not None
         assert pp is not None
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
@@ -385,6 +384,96 @@ class PatternMatcher:
         text = "'að mörkum' á sennilega að vera 'af mörkum'"
         detail = (
             "Í samhenginu 'leggja e-ð af mörkum' er notuð " "forsetningin 'af', ekki 'að'."
+        )
+        if match.tidy_text.count(" að ") == 1:
+            # Only one way to substitute að -> af: do it
+            suggest = match.tidy_text.replace(" að ", " af ")
+        else:
+            # !!! TODO: More intelligent substitution to create a suggestion
+            suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_WRONG_PREP_AÐ",
+                text=text,
+                detail=detail,
+                original="að",
+                suggest=suggest,
+            )
+        )
+
+    def wrong_preposition_að_leiða(self, match: SimpleTree) -> None:
+        """ Handle a match of a suspect preposition pattern """
+        # Find the offending verb phrase
+        # Calculate the start and end token indices, spanning both phrases
+        start, end = match.span
+        text = "'að leiða' á sennilega að vera 'af leiða'"
+        detail = (
+            "Í samhenginu 'láta gott af sér leiða' er notuð " "forsetningin 'af', ekki 'að'."
+        )
+        if match.tidy_text.count(" að ") == 1:
+            # Only one way to substitute að -> af: do it
+            suggest = match.tidy_text.replace(" að ", " af ")
+        else:
+            # !!! TODO: More intelligent substitution to create a suggestion
+            suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_WRONG_PREP_AÐ",
+                text=text,
+                detail=detail,
+                original="að",
+                suggest=suggest,
+            )
+        )
+
+    def wrong_preposition_heiður_að(self, match: SimpleTree) -> None:
+        """ Handle a match of a suspect preposition pattern """
+        # Find the offending verb phrase
+        # Calculate the start and end token indices, spanning both phrases
+        start, end = match.span
+        text = "'heiðurinn að' á sennilega að vera 'heiðurinn af'"
+        detail = (
+            "Í samhenginu 'eiga heiðurinn af e-u' er notuð " "forsetningin 'af', ekki 'að'."
+        )
+        if match.tidy_text.count(" að ") == 1:
+            # Only one way to substitute að -> af: do it
+            suggest = match.tidy_text.replace(" að ", " af ")
+        else:
+            # !!! TODO: More intelligent substitution to create a suggestion
+            suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_WRONG_PREP_AÐ",
+                text=text,
+                detail=detail,
+                original="að",
+                suggest=suggest,
+            )
+        )
+
+    def wrong_preposition_eiga_að(self, match: SimpleTree) -> None:
+        """ Handle a match of a suspect preposition pattern """
+        # Find the offending verb phrase
+        vp = match.first_match("VP > { 'eiga' }", self.ctx_að)
+        if vp is None:
+            vp = match.first_match("VP >> { 'eiga' }", self.ctx_að)
+        # Find the nominal object
+        np = match.first_match("(NP-OBJ|ADVP)", self.ctx_að)
+        # Find the attached prepositional phrase
+        pp = match.first_match('P > { "að" }')
+        # Calculate the start and end token indices, spanning both phrases
+        assert pp is not None
+        start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
+        text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
+        detail = (
+            "Orðasambandið 'að eiga {0}' tekur yfirleitt með sér "
+            "forsetninguna 'af', ekki 'að'.".format(np.tidy_text)
         )
         if match.tidy_text.count(" að ") == 1:
             # Only one way to substitute að -> af: do it
@@ -702,7 +791,7 @@ class PatternMatcher:
             # Catch "Ég lagði (ekki) mikið að mörkum.", "Ég hafði lagt mikið að mörkum."
             p.append(
                 (
-                    "leggja",  # Trigger lemma for this pattern
+                    "mark",  # Trigger lemma for this pattern
                     "VP > { VP > { 'leggja' } PP > { P > 'að' NP > { 'mark' } } }",
                     cls.wrong_preposition_að_mörkum,
                     None,
@@ -711,7 +800,7 @@ class PatternMatcher:
             # Catch "Ég hafði ekki lagt mikið að mörkum."
             p.append(
                 (
-                    "leggja",  # Trigger lemma for this pattern
+                    "mark",  # Trigger lemma for this pattern
                     "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { 'mark' } } }",
                     cls.wrong_preposition_að_mörkum,
                     None,
@@ -723,10 +812,40 @@ class PatternMatcher:
                 (
                     "leiða",  # Trigger lemma for this pattern
                     "VP > { VP > { 'láta' } VP > { PP > { 'að' } VP > 'leiða' } }",
-                    cls.wrong_preposition_að_mörkum,
+                    cls.wrong_preposition_að_leiða,
                     None,
                 )
             )
+
+            # Catch "Hún á (ekki) heiðurinn að þessu.", "Hún hafði (ekki) átt heiðurinn að þessu."
+            p.append(
+                (
+                    "heiður",  # Trigger lemma for this pattern
+                    "VP > { VP >> { VP > { 'eiga' } NP > { 'heiður' } } PP > { 'að' } }",
+                    cls.wrong_preposition_heiður_að,
+                    None,
+                )
+            )
+
+            # Catch "Hún á (ekki) mikið/fullt/helling/gommu... að börnum."
+            p.append(
+                (
+                    "eiga",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'eiga' NP } PP > { 'að' } }",
+                    cls.wrong_preposition_eiga_að,
+                    None,
+                )
+            )
+            # Catch "Hún á (ekki) lítið að börnum."
+            p.append(
+                (
+                    "eiga",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'eiga' } ADVP > { 'lítið' } PP > { 'að' } }",
+                    cls.wrong_preposition_eiga_að,
+                    None,
+                )
+            )
+            
 
         # Verbs used wrongly with particular nouns
         def wrong_noun(nouns: Set[str], tree: SimpleTree) -> bool:
