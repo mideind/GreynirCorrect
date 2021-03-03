@@ -277,7 +277,7 @@ def test_number(rc):
 
 def test_correct_sentences(rc):
     check_sentence(rc, "Pál langaði að horfa á sjónvarpið.", [])
-    check_sentence(rc, "Mig dreymdi mús sem var að elta kött.", [])
+    check_sentence(rc, "Mig dreymdi mús sem elti kött.", [])
     check_sentence(
         rc,
         "Ég held að músin hafi kviðið fyrir að hitta köttinn.",

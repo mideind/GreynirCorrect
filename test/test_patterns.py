@@ -74,8 +74,8 @@ def test_verb_af(rc):
     s = "Ég vildi leita af mér allan grun."
     check_sentence(rc, s, [])
 
-    s = "Hver er að leita af skrifstofuhúsnæði?"
-    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
+    s = "Hver leitar af skrifstofuhúsnæði?"
+    check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AF")])
 
 
 def test_placename_pp(rc):
