@@ -1190,10 +1190,10 @@ class PatternMatcher:
             )
         )
 
-    def wrong_af_use(self, match: SimpleTree) -> None:
+    def wrong_af_use(self, match: SimpleTree, context: ContextDict) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending noun
-        np = match.first_match(" %noun ")
+        np = match.first_match(" %noun ", context)
         # Find the attached prepositional phrase
         pp = match.first_match("P > { 'af' }")
         assert np is not None
