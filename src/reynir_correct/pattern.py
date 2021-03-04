@@ -416,6 +416,7 @@ class PatternMatcher:
         detail = (
             "Í samhenginu 'leggja einhvern að velli' er notuð "
             "forsetningin 'að', ekki 'af'."
+        )
         if match.tidy_text.count(" af ") == 1:
             # Only one way to substitute að -> af: do it
             suggest = match.tidy_text.replace(" af ", " að ")
