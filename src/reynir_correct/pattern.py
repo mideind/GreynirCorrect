@@ -783,6 +783,8 @@ class PatternMatcher:
         np = match.first_match(" %noun ", context)
         # Find the attached prepositional phrase
         pp = match.first_match("P > { 'að' }")
+        assert np is not None
+        assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "Hér á líklega að vera forsetningin 'af' í stað 'að'."
