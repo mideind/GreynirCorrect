@@ -264,7 +264,6 @@ class PatternMatcher:
 
     def wrong_preposition_heillaður_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
-        # Find the offending verb phrase
         # Calculate the start and end token indices, spanning both phrases
         start, end = match.span
         text = "'heillaður að' á sennilega að vera 'heillaður af'"
@@ -291,7 +290,6 @@ class PatternMatcher:
 
     def wrong_preposition_ahyggja_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
-        # Find the offending verb phrase
         # Calculate the start and end token indices, spanning both phrases
         start, end = match.span
         text = "'hafa áhyggjur að' á sennilega að vera 'hafa áhyggjur af'"
@@ -319,7 +317,6 @@ class PatternMatcher:
     
     def wrong_preposition_hluti_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
-        # Find the offending verb phrase
         # Calculate the start and end token indices, spanning both phrases
         start, end = match.span
         text = "'hluti að' á sennilega að vera 'hluti af'"
@@ -345,6 +342,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_að_leiðandi(self, match: SimpleTree) -> None:
+        """ Handle a match of a suspect preposition pattern """
         # Find the offending adverbial phrase
         advp = match.first_match("ADVP > { 'þar' }", self.ctx_af)
         if advp is None:
@@ -353,7 +351,6 @@ class PatternMatcher:
         vp = match.first_match('VP > { "leiðandi" }')
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(advp.span[0], vp.span[0]), max(advp.span[1], vp.span[1])
-        ## start, end = match.first_match("ADVP > { 'að' }"), match.first_match("ADVP > { 'að' }")
         text = "'þar að leiðandi' á sennilega að vera 'þar af leiðandi'"
         detail = (
             "Í samhenginu 'þar af leiðandi' er notuð " "forsetningin 'af', ekki 'að'."
@@ -378,7 +375,7 @@ class PatternMatcher:
 
     def wrong_preposition_að_mörkum(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
-        # Find the offending verb phrase
+        # Find the offending prepositional phrase
         pp = match.first_match("PP > { 'að' 'mark' }", self.ctx_að)
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp.span[0], pp.span[1]
@@ -406,7 +403,6 @@ class PatternMatcher:
 
     def wrong_preposition_að_leiða(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
-        # Find the offending verb phrase
         # Calculate the start and end token indices, spanning both phrases
         start, end = match.span
         text = "'að leiða' á sennilega að vera 'af leiða'"
@@ -433,10 +429,11 @@ class PatternMatcher:
 
     def wrong_preposition_heiður_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
-        # Find the offending verb phrase
-        # Calculate the start and end token indices, spanning both phrases
+        # Find the offending nominal phrase
         np = match.first_match("NP > { 'heiður' }", self.ctx_að)
+        # Find the attached prepositional phrase
         pp = match.first_match("P > { 'að' }", self.ctx_að)
+        # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "'heiðurinn að' á sennilega að vera 'heiðurinn af'"
         detail = (
@@ -470,8 +467,8 @@ class PatternMatcher:
         np = match.first_match("(NP-OBJ|ADVP)", self.ctx_að)
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "að" }')
-        # Calculate the start and end token indices, spanning both phrases
         assert pp is not None
+        # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
         text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
         detail = (
@@ -576,7 +573,9 @@ class PatternMatcher:
 
     def wrong_preposition_frettir_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
+        # Find the offending preposition
         pp = match.first_match("P > { 'að' }", self.ctx_að)
+        # Calculate the start and end token indices, spanning both phrases
         start, end = pp.span[0], pp.span[1]
         text = "'að' á sennilega að vera 'af'"
         detail = (
@@ -600,37 +599,10 @@ class PatternMatcher:
                 suggest=suggest,
             )
         )
-
-#    def wrong_preposition_raðast_að(self, match: SimpleTree) -> None:
-#        """ Handle a match of a suspect preposition pattern """
-#        vp = match.first_match("VP > { 'ráða' }", self.ctx_að)
-#        pp = match.first_match("P > { 'að' }")
-#        start, end = match.span
-#        text = "'{0} {1}' á sennilega að vera '{0} af'".format(vp.tidy_text, pp.tidy_text)
-#        detail = (
-#            "Orðasambandið 'að ráðast af e-u' tekur yfirleitt með sér "
-#            "forsetninguna 'af', ekki 'að'."
-#        )
-#        if match.tidy_text.count(" að ") == 1:
-#            # Only one way to substitute að -> af: do it
-#            suggest = match.tidy_text.replace(" að ", " af ")
-#        else:
-#            # !!! TODO: More intelligent substitution to create a suggestion
-#            suggest = ""
-#        self._ann.append(
-#            Annotation(
-#                start=start,
-#                end=end,
-#                code="P_WRONG_PREP_AÐ",
-#                text=text,
-#                detail=detail,
-#                original="að",
-#                suggest=suggest,
-#            )
-#        )
     
     def wrong_preposition_stafa_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
+        # Find the offending verbal phrase
         vp = match.first_match("VP > { 'stafa' }", self.ctx_að)
         start, end = match.span
         if " að " in vp.tidy_text:
@@ -661,8 +633,11 @@ class PatternMatcher:
 
     def wrong_preposition_ólétt_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
+        # Find the offending nominal phrase
         np = match.first_match("NP > { 'óléttur' }", self.ctx_að)
+        # Find the attached prepositional phrase
         pp = match.first_match("P > { 'að' }", self.ctx_að)
+        # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
         detail = (
@@ -689,8 +664,11 @@ class PatternMatcher:
 
     def wrong_preposition_heyra_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
+        # Find the offending verbal phrase
         vp = match.first_match("VP > { 'heyra' }", self.ctx_að)
+        # Find the attached prepositional phrase
         pp = match.first_match("P > { 'að' }", self.ctx_að)
+        # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         if " að " in vp.tidy_text:
             text = "'{0}' á sennilega að vera '{1}'".format(vp.tidy_text, vp.tidy_text.replace(" að ", " af "))
@@ -720,8 +698,11 @@ class PatternMatcher:
 
     def wrong_preposition_hafa_gaman_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
+        # Find the offending nominal phrase
         np = match.first_match("NP > { 'gaman' }", self.ctx_að)
+        # Find the attached prepositional phrase
         pp = match.first_match("P > { 'að' }", self.ctx_að)
+        # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "'gaman að' á sennilega að vera 'gaman af'"
         detail = (
@@ -748,6 +729,7 @@ class PatternMatcher:
 
     def wrong_preposition_valinn_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
+        # Find the offending nominal phrase
         np = match.first_match("NP > { 'velja' }", self.ctx_að)
         if np is None:
             np = match.first_match("NP > { 'valinn' }", self.ctx_að)
