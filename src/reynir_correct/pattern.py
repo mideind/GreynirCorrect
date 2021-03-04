@@ -893,6 +893,22 @@ class PatternMatcher:
             )
         )
 
+    def vera_að(self, match: SimpleTree) -> None:
+        start, end = match.span
+        text = "Mælt er með að sleppa 'vera að' og beygja frekar sögnina."
+        detail = text
+        tidy_text = match.tidy_text
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_VeraAð",
+                text=text,
+                detail=detail,
+                original="vera að",
+            )
+
+        )
 
     @classmethod
     def create_patterns(cls) -> None:
