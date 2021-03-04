@@ -512,14 +512,10 @@ class PatternMatcher:
         if pp is None:
             pp = match.first_match("ADVP > { 'af' }", self.ctx_af)
         # Calculate the start and end token indices, spanning both phrases
-        if vp is None:
-            start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
-        elif np is None:
-            start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
-        elif pp is None:
-            start, end = min(vp.span[0], np.span[0]), max(vp.span[1], np.span[1])
-        else:
-            start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
+        assert vp is not None
+        assert np is not None
+        assert pp is not None
+        start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
         text = "'uppvís af' á sennilega að vera 'uppvís að'"
         detail = (
             "Í samhenginu 'verða uppvís að einhverju' er notuð "
@@ -1076,65 +1072,6 @@ class PatternMatcher:
                 suggest=suggest,
             )
         )
-    
-    def wrong_preposition_hluti_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
-        # Find the offending verb phrase
-        # Calculate the start and end token indices, spanning both phrases
-        start, end = match.span
-        text = "'hluti að' á sennilega að vera 'hluti af'"
-        detail = (
-            "Í samhenginu 'hluti af e-u' er notuð " "forsetningin 'af', ekki 'að'."
-        )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_WRONG_PREP_AÐ",
-                text=text,
-                detail=detail,
-                original="að",
-                suggest=suggest,
-            )
-        )
-
-    def wrong_preposition_að_leiðandi(self, match: SimpleTree) -> None:
-        # Find the offending adverbial phrase
-        advp = match.first_match("ADVP > { 'þar' }", self.ctx_af)
-        if advp is None:
-            advp = match.first_match("ADVP >> { 'þar' }", self.ctx_af)
-        # Find the attached prepositional phrase
-        vp = match.first_match('VP > { "leiðandi" }')
-        # Calculate the start and end token indices, spanning both phrases
-        start, end = min(advp.span[0], vp.span[0]), max(advp.span[1], vp.span[1])
-        ## start, end = match.first_match("ADVP > { 'að' }"), match.first_match("ADVP > { 'að' }")
-        text = "'þar að leiðandi' á sennilega að vera 'þar af leiðandi'"
-        detail = (
-            "Í samhenginu 'þar af leiðandi' er notuð " "forsetningin 'af', ekki 'að'."
-        )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_WRONG_PREP_AÐ",
-                text=text,
-                detail=detail,
-                original="að",
-                suggest=suggest,
-            )
-        )
 
     def wrong_að_use(self, match: SimpleTree, context: ContextDict) -> None:
         """ Handle a match of a suspect preposition pattern """
@@ -1253,12 +1190,14 @@ class PatternMatcher:
             )
         )
 
-    def wrong_af_use(self, match: SimpleTree, context: ContextType,) -> None:
+    def wrong_af_use(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending noun
-        np = match.first_match(" %noun ", context)
+        np = match.first_match(" %noun ")
         # Find the attached prepositional phrase
         pp = match.first_match("P > { 'af' }")
+        assert np is not None
+        assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "Hér á líklega að vera forsetningin 'að' í stað 'af'."
@@ -2031,7 +1970,7 @@ class PatternMatcher:
                 "af",  # Trigger lemma for this pattern
                 "PP > { P > { 'af' } NP > { %noun } }",
                 lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af)
+                    match, cls.ctx_noun_af
                 ),
                 cls.ctx_noun_af,
             )
@@ -2064,7 +2003,7 @@ class PatternMatcher:
                 "af",  # Trigger lemma for this pattern
                 "NP-OBJ > { %noun PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af_obj)
+                    match, cls.ctx_noun_af_obj
                 ),
                 cls.ctx_noun_af_obj,
             )
@@ -2074,7 +2013,7 @@ class PatternMatcher:
                 "af",  # Trigger lemma for this pattern
                 "VP > { VP > { NP-OBJ > { %noun } } PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af_obj)
+                    match, cls.ctx_noun_af_obj
                 ),
                 cls.ctx_noun_af_obj,
             )
@@ -2084,7 +2023,7 @@ class PatternMatcher:
                 "af",  # Trigger lemma for this pattern
                 "VP > { PP > { NP > %noun } PP > { 'af' } }",
                 lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af_obj)
+                    match, cls.ctx_noun_af_obj
                 ),
                 cls.ctx_noun_af_obj,
             )
@@ -2094,7 +2033,7 @@ class PatternMatcher:
                 "af",  # Trigger lemma for this pattern
                 "NP-SUBJ > { %noun PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af_obj)
+                    match, cls.ctx_noun_af_obj
                 ),
                 cls.ctx_noun_af_obj,
             )
@@ -2104,7 +2043,7 @@ class PatternMatcher:
                 "af",  # Trigger lemma for this pattern
                 "NP > { %noun PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af_obj)
+                    match, cls.ctx_noun_af_obj
                 ),
                 cls.ctx_noun_af_obj,
             )
@@ -2114,7 +2053,7 @@ class PatternMatcher:
                 "af",  # Trigger lemma for this pattern
                 "VP > { VP >> { %noun } PP > { 'af' } }",
                 lambda self, match: self.wrong_af_use(
-                    match, cast(ContextType, cls.ctx_noun_af_obj)
+                    match, cls.ctx_noun_af_obj
                 ),
                 cls.ctx_noun_af_obj,
             )
