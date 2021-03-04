@@ -78,6 +78,73 @@ def test_verb_af(rc):
     check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
 
 
+def test_verb_að(rc):
+    s = "Ég er ekki hluti að heildinni."
+    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
+    s = "Við höfum öll verið hluti að heildinni."
+    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
+    s = "Vissulega er hægt að vera hluti að heildinni."
+    check_sentence(rc, s, [(5, 6, "P_WRONG_PREP_AÐ")])
+    s = "Þeir sögðu að ég hefði verið hluti að heildinni."
+    check_sentence(rc, s, [(6, 7, "P_WRONG_PREP_AÐ")])
+    s = "Þar að leiðandi virkar þetta."
+    check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AÐ")])
+    s = "Þetta virkar þar að leiðandi."
+    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AÐ")])
+    s = "Ég hef ekki áhyggjur að honum."
+    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AÐ")])
+    s = "Ég hef áhyggjur að því að honum líði illa."
+    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
+    s = "Ég lagði ekki mikið að mörkum."
+    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
+    s = "Ég hafði lagt mikið að mörkum."
+    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
+    s = "Sama hvað ég gerði lagði ég mikið að mörkum."
+    check_sentence(rc, s, [(7, 8, "P_WRONG_PREP_AÐ")])
+    s = "Ég heillast að þannig fólki."
+    check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AÐ")])
+    s = "Ég lét gott að mér leiða."
+    check_sentence(rc, s, [(3, 5, "P_WRONG_PREP_AÐ")])
+    s = "Hún á heiðurinn að þessu."
+    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
+    s = "Hún hafði ekki átt heiðurinn að þessu en fékk heiðurinn að þessu."
+    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ"), (9, 10, "P_WRONG_PREP_AÐ")])
+    s = "Hún hlaut heiðurinn að þessu."
+    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
+    s = "Hún á heilan helling að börnum."
+    check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AÐ")])
+    s = "Hún hefur ekki haft gagn að þessu."
+    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
+    s = "Þetta hafði ekki komið að sjálfu sér."
+    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
+    s = "Fréttir bárust seint af slysinu."
+    check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AÐ")])
+    s = "Þetta er afgreitt mál að minni hálfu."
+    check_sentence(rc, s, [(4, 6, "P_WRONG_PREP_AÐ")])
+    s = "Hætta hefur aldrei stafað að þessu."
+    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AÐ")])
+    s = "Hún er ólétt að sínu þriðja barni."
+    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
+    s = "Hann hefur ekki heyrt að lausa starfinu."
+    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AÐ")])
+    s = "Ég hef aldrei haft gaman að henni."
+    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
+    s = "Þau voru sérstaklega valin að stjórninni."
+    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AÐ")])
+    s = "Það er til mjög lítið að mjólk."
+    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
+    s = "Ekki er mikið til að mjólk."
+    check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AÐ")])
+    s = "Ég hef ekki unnið verkefni að þessu tagi."
+    check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
+    s = "Verkefni að þessum toga eru erfið."
+    check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AÐ")])
+    s = "Hann gerði það að sjálfsdáðum."
+    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AÐ")])
+    s = "Hún hefur ekki gert þetta að miklum krafti."
+    check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
+    
+
 def test_placename_pp(rc):
     s = "Ég hef búið á Hafnarfirði alla mína tíð en flyt nú í Akureyri."
     check_sentence(rc, s, [(3, 4, "P_WRONG_PLACE_PP"), (9, 10, "P_WRONG_PLACE_PP")])
