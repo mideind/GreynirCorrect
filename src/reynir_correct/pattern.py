@@ -144,13 +144,13 @@ class PatternMatcher:
 
     _LOCK = Lock()
 
-    ctx_af: Optional[ContextType] = None
-    ctx_að: Optional[ContextType] = None
-    ctx_noun_af: Optional[ContextType] = None
-    ctx_noun_af_obj: Optional[ContextType] = None
-    ctx_verb_01: Optional[ContextType] = None
-    ctx_verb_02: Optional[ContextType] = None
-    ctx_place_names: Optional[ContextType] = None
+    ctx_af = cast(ContextDict, None)
+    ctx_að = cast(ContextDict, None)
+    ctx_noun_af = cast(ContextDict, None)
+    ctx_noun_af_obj = cast(ContextDict, None)
+    ctx_verb_01 = cast(ContextDict, None)
+    ctx_verb_02 = cast(ContextDict, None)
+    ctx_place_names = cast(ContextDict, None)
 
     def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
@@ -176,19 +176,14 @@ class PatternMatcher:
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "af" }')
         # Calculate the start and end token indices, spanning both phrases
-        try:
-            start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
-        except AttributeError:
-            start, end = match.span
-        if vp is not None:
-            text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
-            detail = (
-                "Sögnin '{0}' tekur yfirleitt með sér "
-                "forsetninguna 'að', ekki 'af'.".format(vp.tidy_text)
-            )
-        else:
-            text = "'af' á sennilega að vera 'að'"
-            detail = "Sögnin tekur með sér 'að', ekki 'af'"
+        assert vp is not None
+        assert pp is not None
+        start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
+        text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
+        detail = (
+            "Sögnin '{0}' tekur yfirleitt með sér "
+            "forsetninguna 'að', ekki 'af'.".format(vp.tidy_text)
+        )
         if match.tidy_text.count(" af ") == 1:
             # Only one way to substitute af -> að: do it
             suggest = match.tidy_text.replace(" af ", " að ")
@@ -735,6 +730,22 @@ class PatternMatcher:
                 detail=detail,
                 original="af",
                 suggest=suggest,
+            )
+        )
+
+    def vera_að(self, match: SimpleTree) -> None:
+        start, end = match.span
+        text = "Mælt er með að sleppa 'vera að' og beygja frekar sögnina."
+        detail = text
+        tidy_text = match.tidy_text
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_VeraAð",
+                text=text,
+                detail=detail,
+                original="vera að",
             )
         )
 
