@@ -277,7 +277,7 @@ def test_number(rc):
 
 def test_correct_sentences(rc):
     check_sentence(rc, "Pál langaði að horfa á sjónvarpið.", [])
-    check_sentence(rc, "Mig dreymdi mús sem var að elta kött.", [])
+    check_sentence(rc, "Mig dreymdi mús sem elti kött.", [])
     check_sentence(
         rc,
         "Ég held að músin hafi kviðið fyrir að hitta köttinn.",
@@ -298,6 +298,11 @@ def test_corrected_meanings(rc: reynir_correct.GreynirCorrect) -> None:
     Þannig fundust stundum engin bréfaskipti á milli lífsförunauta í annars ríkulegum bréfasöfnum.
     """
     check_sentence(rc, s, [])
+    s = """
+    Þeir hafa líka þennan Beach Boys-hljóm og virkilega fallegar raddanir,"
+    sagði Jardine, en platan hans nefnist A Postcard fram California.
+    """
+    check_sentence(rc, s, [(4, 4, "U001/w"), (11, 11, "N001"), (13, 13, "U001/w")])
 
 
 if __name__ == "__main__":

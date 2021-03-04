@@ -1453,14 +1453,14 @@ def test_munu(verbose=False):
 
 def test_vera(verbose=False):
     # vera að + so.nh.
-    # s = "Ég er ekki að skilja þetta."
-    # check_sentence(s, [(1, 6, "P_NT_VeraAð")])     # TODO villan greinist ekki, eftir að útfæra
-    # s = "Ég var að fara út með ruslið þegar ég fékk símtalið."
-    # check_sentence(s, [(1, 11, "P_NT_VeraAð")])    # TODO villan greinist ekki, eftir að útfæra
-    # s = "Hún er að skrifa vel."
-    # check_sentence(s, [(1, 6, "P_NT_VeraAð")])    # TODO villan greinist ekki, eftir að útfæra
-    pass
-
+    s = "Ég er ekki að skilja þetta."
+    check_sentence(s, [(1, 5, "P_VeraAð")])
+    s = "Ég var að fara í sund þegar ég fékk símtalið."
+    check_sentence(s, [(1, 5, "P_VeraAð")])
+    s = "Hún er að skrifa vel."
+    check_sentence(s, [(1, 4, "P_VeraAð")])
+    s = "Það gekk mikið á þegar hún var ekki að sofa."
+    check_sentence(s, [(6, 9, "P_VeraAð")])
 
 def test_nhm(verbose=False):
     # s = "Ég ætla fara í búð."
