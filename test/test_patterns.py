@@ -80,7 +80,7 @@ def test_verb_af(rc):
     s = "Hann dáist endalaust af þeim."
     check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AF")])
 
-    s = "Hann hefur lengi dást af þeim."
+    s = "Hann hefur lengi dáðst af þeim."
     check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
 
     s = "Jón gerir grín af því."
@@ -165,7 +165,7 @@ def test_noun_af(rc):
     s = "Ég baka köku af því tilefni."
     check_sentence(rc, s, [(3, 5, "P_WRONG_PREP_AF")])
     s = "Þau veittu mér aðgang af kerfinu."
-    check_sentence(rc, s, [(3, 5, "P_WRONG_PREP_AF")])
+    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
     s = "Aðgangur af kerfinu var veittur."
     check_sentence(rc, s, [(0, 1, "P_WRONG_PREP_AF")])
     s = "Drög af verkefninu eru tilbúin."
@@ -188,7 +188,7 @@ def test_noun_af(rc):
 
 def test_verb_að(rc):
     s = "Ég er ekki hluti að heildinni."
-    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(3, 5, "P_WRONG_PREP_AÐ")])
     s = "Við höfum öll verið hluti að heildinni."
     check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
     s = "Vissulega er hægt að vera hluti að heildinni."
