@@ -1331,8 +1331,17 @@ class PatternMatcher:
             # Catch "Það sem Jón spurði ekki af..."
             p.append(
                 (
-                    "af",  # Trigger lemma for this pattern
+                    "spyrja",  # Trigger lemma for this pattern
                     "IP > { VP >> { 'spyrja' } ADVP > { 'af' } }",
+                    cls.wrong_preposition_af,
+                    cls.ctx_af,
+                )
+            )
+            # Catch "Jón spyr af því."
+            p.append(
+                (
+                    "spyrja",  # Trigger lemma for this pattern
+                    "IP > { VP >> { 'spyrja' } PP > { 'af' } }",
                     cls.wrong_preposition_af,
                     cls.ctx_af,
                 )
@@ -1665,6 +1674,15 @@ class PatternMatcher:
                 (
                     "leiða",  # Trigger lemma for this pattern
                     "VP > { VP > { 'láta' } VP > { PP > { 'að' } VP > 'leiða' } }",
+                    cls.wrong_preposition_að_leiða,
+                    None,
+                )
+            )
+            # Catch "Ég lét (ekki) gott að mér leiða."
+            p.append(
+                (
+                    "leiður",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'láta' } PP > { P > { 'að' } 'leiður' } }",
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
