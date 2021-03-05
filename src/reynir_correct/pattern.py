@@ -1328,24 +1328,24 @@ class PatternMatcher:
                     cls.ctx_af,
                 )
             )
-            # Catch "Það sem Jón spurði ekki af..."
+            # Catch "Það sem Jón spurði ekki af...", "Jón spyr (ekki) af því."
             p.append(
                 (
                     "spyrja",  # Trigger lemma for this pattern
-                    "IP > { VP >> { 'spyrja' } ADVP > { 'af' } }",
+                    "IP > { VP >> { 'spyrja' } ( ADVP|PP ) > { 'af' } }",
                     cls.wrong_preposition_af,
                     cls.ctx_af,
                 )
             )
-            # Catch "Jón spyr af því."
-            p.append(
-                (
-                    "spyrja",  # Trigger lemma for this pattern
-                    "IP > { VP >> { 'spyrja' } PP > { 'af' } }",
-                    cls.wrong_preposition_af,
-                    cls.ctx_af,
-                )
-            )
+        #    # Catch "Jón spyr af því."
+        #    p.append(
+        #        (
+        #            "spyrja",  # Trigger lemma for this pattern
+        #            "IP > { VP >> { 'spyrja' } PP > { 'af' } }",
+        #            cls.wrong_preposition_af,
+        #            cls.ctx_af,
+        #        )
+        #    )
             # Catch "...vegna þess að dýr leita af öðrum smærri dýrum."
             p.append(
                 (
@@ -1719,7 +1719,7 @@ class PatternMatcher:
             p.append(
                 (
                     "eiga",  # Trigger lemma for this pattern
-                    "VP > { VP >> { 'eiga' NP } PP > { P > { 'að' } } }",
+                    "VP > { VP >> { 'eiga' NP > { ^'heiður' } } PP > { P > { 'að' } } }",
                     cls.wrong_preposition_eiga_að,
                     None,
                 )
