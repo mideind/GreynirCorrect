@@ -1975,13 +1975,23 @@ class PatternMatcher:
         p.append(
             (
                 "af",  # Trigger lemma for this pattern
-                "VP > { VP > { NP-OBJ > { %noun } } PP > { P > { 'af' } } }",
+                "VP > { VP >> { %noun } PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
                     match, cls.ctx_noun_af_obj
                 ),
                 cls.ctx_noun_af_obj,
             )
         )
+    #    p.append(
+    #        (
+    #            "af",  # Trigger lemma for this pattern
+    #            "VP > { VP > { NP-OBJ > { %noun } } PP > { P > { 'af' } } }",
+    #            lambda self, match: self.wrong_af_use(
+    #                match, cls.ctx_noun_af_obj
+    #            ),
+    #            cls.ctx_noun_af_obj,
+    #        )
+    #    )
         p.append(
             (
                 "af",  # Trigger lemma for this pattern
@@ -1992,16 +2002,7 @@ class PatternMatcher:
                 cls.ctx_noun_af_obj,
             )
         )
-        p.append(
-            (
-                "af",  # Trigger lemma for this pattern
-                "VP > { VP >> { %noun } PP > { 'af' } }",
-                lambda self, match: self.wrong_af_use(
-                    match, cls.ctx_noun_af_obj
-                ),
-                cls.ctx_noun_af_obj,
-            )
-        )
+        
 
         def wrong_noun_að(nouns: Set[str], tree: SimpleTree) -> bool:
             """ Context matching function for the %noun macro in combination
