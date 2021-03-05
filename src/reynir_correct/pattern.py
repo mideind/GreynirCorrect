@@ -458,7 +458,7 @@ class PatternMatcher:
             Annotation(
                 start=start,
                 end=end,
-                code="P_WRONG_PREP_AF",
+                code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
                 original="af",
