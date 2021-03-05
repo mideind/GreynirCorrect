@@ -1567,42 +1567,6 @@ class PatternMatcher:
                 )
             )
 
-           # # Catch "Ég er hluti að heildinni." -- unnecessary, the other commands catch this
-           # p.append(
-           #     (
-           #         "hluti",  # Trigger lemma for this pattern
-           #         "VP > { VP > { 'vera' 'hluti' } PP > { 'að' } }",
-           #         cls.wrong_preposition_hluti_að,
-           #         None,
-           #     )
-           # )
-            # Catch "Ég er ekki hluti að heildinni."
-            p.append(
-                (
-                    "hluti",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'vera' NP-PRD > { 'hluti' } } PP > { 'að' } }",
-                    cls.wrong_preposition_hluti_að,
-                    None,
-                )
-            )
-            # Catch "Við höfum öll verið hluti að heildinni."
-            p.append(
-                (
-                    "hluti",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { 'vera' 'hluti' } } PP > { 'að' } }",
-                    cls.wrong_preposition_hluti_að,
-                    None,
-                )
-            )
-           # # Catch "Vissulega er hægt að vera hluti að heildinni."
-           # p.append(
-           #     (
-           #         "hluti",  # Trigger lemma for this pattern
-           #         "VP > { VP > { NP-PRD > { 'hluti' } } PP }",
-           #         cls.wrong_preposition_hluti_að,
-           #         None,
-           #     )
-           # )
            # Catch "Þar af leiðandi virkar þetta."
             p.append(
                 (
@@ -2001,7 +1965,7 @@ class PatternMatcher:
         p.append(
             (
                 "af",  # Trigger lemma for this pattern
-                "NP-OBJ > { %noun PP > { P > { 'af' } } }",
+                "NP > { %noun PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
                     match, cls.ctx_noun_af_obj
                 ),
@@ -2022,26 +1986,6 @@ class PatternMatcher:
             (
                 "af",  # Trigger lemma for this pattern
                 "VP > { PP > { NP > %noun } PP > { 'af' } }",
-                lambda self, match: self.wrong_af_use(
-                    match, cls.ctx_noun_af_obj
-                ),
-                cls.ctx_noun_af_obj,
-            )
-        )
-        p.append(
-            (
-                "af",  # Trigger lemma for this pattern
-                "NP-SUBJ > { %noun PP > { P > { 'af' } } }",
-                lambda self, match: self.wrong_af_use(
-                    match, cls.ctx_noun_af_obj
-                ),
-                cls.ctx_noun_af_obj,
-            )
-        )
-        p.append(
-            (
-                "af",  # Trigger lemma for this pattern
-                "NP > { %noun PP > { P > { 'af' } } }",
                 lambda self, match: self.wrong_af_use(
                     match, cls.ctx_noun_af_obj
                 ),
