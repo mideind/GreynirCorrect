@@ -96,7 +96,7 @@ def test_verb_af(rc):
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AF")])
 
     s = "Jón hefur ekki lagt hann af velli."
-    check_sentence(rc, s, [(5, 6, "P_WRONG_PREP_AF")])
+    check_sentence(rc, s, [(3, 6, "P_WRONG_PREP_AF")])
 
     s = "Jón leiðir líkur af því."
     check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AF")])
@@ -192,7 +192,7 @@ def test_verb_að(rc):
     s = "Við höfum öll verið hluti að heildinni."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Vissulega er hægt að vera hluti að heildinni."
-    check_sentence(rc, s, [(1, 7, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(4, 7, "P_WRONG_PREP_AÐ")])
     s = "Þeir sögðu að ég hefði verið hluti að heildinni."
     check_sentence(rc, s, [(5, 8, "P_WRONG_PREP_AÐ")])
     s = "Þar að leiðandi virkar þetta."
