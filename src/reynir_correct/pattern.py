@@ -1465,14 +1465,14 @@ class PatternMatcher:
                 )
             )
             # Catch "Jón hefur ekki lagt hann af velli."
-            p.append(
-                (
-                    "leggja",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { VP > { VP > { 'leggja' } } } } PP > { P > { 'af' } NP > { 'völlur' } } }",
-                    cls.wrong_preposition_leggja_af,
-                    None,
-                )
-            )
+        #    p.append(
+        #        (
+        #            "leggja",  # Trigger lemma for this pattern
+        #            "VP > { VP > { VP > { VP > { VP > { 'leggja' } } } } PP > { P > { 'af' } NP > { 'völlur' } } }",
+        #            cls.wrong_preposition_leggja_af,
+        #            None,
+        #        )
+        #    )
             # Catch "Jón kann það (ekki) utan af."
             p.append(
                 (
