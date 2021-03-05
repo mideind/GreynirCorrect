@@ -147,7 +147,7 @@ def test_verb_af(rc):
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AF")])
 
     s = "Jón varð vitni af þessu."
-    check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AF")])
+    check_sentence(rc, s, [(1, 3, "P_aðaf")])
 
 
 def test_noun_af(rc):
