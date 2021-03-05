@@ -190,7 +190,7 @@ def test_verb_að(rc):
     s = "Ég er ekki hluti að heildinni."
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
     s = "Við höfum öll verið hluti að heildinni."
-    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Vissulega er hægt að vera hluti að heildinni."
     check_sentence(rc, s, [(1, 7, "P_WRONG_PREP_AÐ")])
     s = "Þeir sögðu að ég hefði verið hluti að heildinni."

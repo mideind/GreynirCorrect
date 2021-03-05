@@ -404,9 +404,9 @@ class PatternMatcher:
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
         # Find the offending nominal phrase
-        np = match.first_match("NP > { 'völlur' }", self.ctx_af)
+        np = match.first_match("NP > { ( 'völlur'|'vell' ) }", self.ctx_af)
         if np is None:
-            np = match.first_match("NP >> { 'völlur' }", self.ctx_af)
+            np = match.first_match("NP >> { ( 'völlur'|'vell' ) }", self.ctx_af)
         assert vp is not None
         assert pp is not None
         assert np is not None
@@ -1446,11 +1446,11 @@ class PatternMatcher:
                 )
             )
 
-            # Catch "Jón leggur hann af velli."
+            # Catch "Jón leggur hann (ekki) af velli."
             p.append(
                 (
                     "leggja",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { 'leggja' } } PP > { P > { 'af' } NP > { 'völlur' } } }",
+                    "VP > { VP > { VP > { 'leggja' } } PP > { P > { 'af' } NP > { ( 'völlur'|'vell' ) } } }",
                     cls.wrong_preposition_leggja_af,
                     None,
                 )
@@ -1459,7 +1459,7 @@ class PatternMatcher:
             p.append(
                 (
                     "leggja",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { VP > { 'leggja' } } } PP > { P > 'af' NP > 'völlur' } }",
+                    "VP > { VP > { VP > { VP > { 'leggja' } } } PP > { P > 'af' NP > ( 'völlur'|'vell' ) } }",
                     cls.wrong_preposition_leggja_af,
                     None,
                 )
