@@ -135,19 +135,19 @@ def test_verb_af(rc):
 #    check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AF")])
 
     s = "Honum varð af ósk sinni."
-    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AF")])
+    check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AF")])
 
     s = "Honum hafði orðið af ósk sinni."
-    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
+    check_sentence(rc, s, [(2, 5, "P_WRONG_PREP_AF")])
 
     s = "Honum varð ekki af ósk sinni."
-    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
+    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AF")])
 
     s = "Hann varð ekki uppvís af því."
-    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
+    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AF")])
 
     s = "Jón varð vitni af þessu."
-    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AF")])
+    check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AF")])
 
 
 def test_noun_af(rc):
@@ -245,7 +245,7 @@ def test_verb_að(rc):
     s = "Verkefni að þessum toga eru erfið."
     check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AÐ")])
     s = "Hann gerði það að sjálfsdáðum."
-    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(3, 4, "P_aðaf")])
     s = "Hún hefur ekki gert þetta að miklum krafti."
     check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
     

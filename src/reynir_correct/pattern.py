@@ -1524,20 +1524,21 @@ class PatternMatcher:
                     None,
                 )
             )
-            # Catch "Hann varð uppvís af því."
-            p.append(
-                (
-                    "uppvís",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'verða' } NP-PRD > { 'uppvís' PP > { 'af' } } }",
-                    cls.wrong_preposition_uppvis_af,
-                    None,
-                )
-            )
+
             # Catch "Ég varð (ekki) uppvís af athæfinu."
             p.append(
                 (
                     "uppvís",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > { 'verða' } NP > { 'uppvís' } } PP > { 'af' } }",
+                    cls.wrong_preposition_uppvis_af,
+                    None,
+                )
+            )
+            # Catch "Hann varð (ekki) uppvís af því.", "Hann hafði orðið uppvís af því."
+            p.append(
+                (
+                    "uppvís",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'verða' } NP > { NP > { 'uppvís' } PP > { 'af' } } }",
                     cls.wrong_preposition_uppvis_af,
                     None,
                 )
