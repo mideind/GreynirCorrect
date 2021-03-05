@@ -642,6 +642,8 @@ class PatternMatcher:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending prepositional phrase
         pp = match.first_match("PP > { 'að' 'mark' }", self.ctx_að)
+        if pp is None:
+            pp = match.first_match("PP > { 'að' 'mörk' }", self.ctx_að)
         assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp.span[0], pp.span[1]
@@ -1567,16 +1569,6 @@ class PatternMatcher:
                 )
             )
 
-           # Catch "Þar af leiðandi virkar þetta."
-            p.append(
-                (
-                    "leiða",  # Trigger lemma for this pattern
-                    "(IP | VP) > { ADVP > { 'þar' } ADVP > { 'að' } VP > { 'leiða' } }",
-                    cls.wrong_preposition_að_leiðandi,
-                    None,
-                )
-            )
-
             # Catch "Ég er ekki hluti að heildinni."
             p.append(
                 (
@@ -1591,6 +1583,15 @@ class PatternMatcher:
                 (
                     "hluti",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > { 'vera' 'hluti' } } PP > { 'að' } }",
+                    cls.wrong_preposition_hluti_að,
+                    None,
+                )
+            )
+            # Catch "Þeir sögðu að ég hefði verið hluti að heildinni."
+            p.append(
+                (
+                    "hluti",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'vera' } NP > { 'hluti' PP > { 'að' } } }",
                     cls.wrong_preposition_hluti_að,
                     None,
                 )
@@ -1616,16 +1617,25 @@ class PatternMatcher:
                 )
             )
 
-            # Catch "Ég lagði (ekki) mikið að mörkum.", "Ég hafði lagt mikið að mörkum."
+         #   # Catch "Ég lagði (ekki) mikið að mörkum.", "Ég hafði lagt mikið að mörkum."
+         #   p.append(
+         #       (
+         #           "mark",  # Trigger lemma for this pattern
+         #           "VP > { VP > { 'leggja' } PP > { P > 'að' NP > { 'mark' } } }",
+         #           cls.wrong_preposition_að_mörkum,
+         #           None,
+         #       )
+         #   )
+            # Catch "Ég lagði mikið að mörkum."
             p.append(
                 (
-                    "mark",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'leggja' } PP > { P > 'að' NP > { 'mark' } } }",
+                    "mörk",  # Trigger lemma for this pattern
+                    "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { 'mörk' } } }",
                     cls.wrong_preposition_að_mörkum,
                     None,
                 )
             )
-            # Catch "Ég hafði ekki lagt mikið að mörkum."
+            # Catch "Ég lagði ekki mikið að mörkum.", "Ég hafði (ekki) lagt mikið að mörkum."
             p.append(
                 (
                     "mark",  # Trigger lemma for this pattern
@@ -1675,8 +1685,8 @@ class PatternMatcher:
             # Catch "Hún á (ekki) mikið/fullt/helling/gommu... að börnum."
             p.append(
                 (
-                    "eiga_so",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'eiga' NP } PP > { 'að' } }",
+                    "eiga",  # Trigger lemma for this pattern
+                    "VP > { VP >> { 'eiga' NP } PP > { P > { 'að' } } }",
                     cls.wrong_preposition_eiga_að,
                     None,
                 )
@@ -2002,7 +2012,7 @@ class PatternMatcher:
                 cls.ctx_noun_af_obj,
             )
         )
-        
+
 
         def wrong_noun_að(nouns: Set[str], tree: SimpleTree) -> bool:
             """ Context matching function for the %noun macro in combination
