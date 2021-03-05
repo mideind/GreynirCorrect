@@ -131,8 +131,8 @@ def test_verb_af(rc):
 #    s = "Það sem Jón spurði ekki af var óljóst."
 #    check_sentence(rc, s, [(3, 5, "P_WRONG_PREP_AF")])
 
-    s = "Jón stuðlar af því."
-    check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AF")])
+#    s = "Jón stuðlar af því."
+#    check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AF")])
 
     s = "Honum varð af ósk sinni."
     check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AF")])
@@ -213,7 +213,7 @@ def test_verb_að(rc):
     s = "Hún á heiðurinn að þessu."
     check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AÐ")])
     s = "Hún hafði ekki átt heiðurinn að þessu en fékk heiðurinn að þessu."
-    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ"), (9, 11, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(2, 5, "P_WRONG_PREP_AÐ"), (9, 11, "P_WRONG_PREP_AÐ")])
     s = "Hún hlaut heiðurinn að þessu."
     check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
     s = "Hún á heilan helling að börnum."
