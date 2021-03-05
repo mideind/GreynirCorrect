@@ -1332,20 +1332,20 @@ class PatternMatcher:
             p.append(
                 (
                     "spyrja",  # Trigger lemma for this pattern
-                    "IP > { VP >> { 'spyrja' } ( ADVP|PP ) > { 'af' } }",
+                    "IP > { VP >> { 'spyrja' } ADVP > { 'af' } }",
                     cls.wrong_preposition_af,
                     cls.ctx_af,
                 )
             )
-        #    # Catch "Jón spyr af því."
-        #    p.append(
-        #        (
-        #            "spyrja",  # Trigger lemma for this pattern
-        #            "IP > { VP >> { 'spyrja' } PP > { 'af' } }",
-        #            cls.wrong_preposition_af,
-        #            cls.ctx_af,
-        #        )
-        #    )
+            # Catch "Jón spyr af því."
+            p.append(
+                (
+                    "spyrja",  # Trigger lemma for this pattern
+                    "IP > { VP >> { 'spyrja' } PP > { 'af' } }",
+                    cls.wrong_preposition_af,
+                    cls.ctx_af,
+                )
+            )
             # Catch "...vegna þess að dýr leita af öðrum smærri dýrum."
             p.append(
                 (
@@ -1688,15 +1688,6 @@ class PatternMatcher:
                 )
             )
 
-            # Catch "Hún á (ekki) heiðurinn að þessu.", "Hún hafði (ekki) átt heiðurinn að þessu."
-            p.append(
-                (
-                    "heiður",  # Trigger lemma for this pattern
-                    "VP > { VP >> { VP > { 'eiga' } NP > { 'heiður' } } PP > { 'að' } }",
-                    cls.wrong_preposition_heiður_að,
-                    None,
-                )
-            )
             # Catch "Hún fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu."
             p.append(
                 (
@@ -1706,20 +1697,12 @@ class PatternMatcher:
                     None,
                 )
             )
-            p.append(
-                (
-                    "heiður",  # Trigger lemma for this pattern
-                    "VP > { VP >> { VP > { NP >> { 'eiga' } NP > { 'heiður' } } } PP > { 'að' } }",
-                    cls.wrong_preposition_heiður_að,
-                    None,
-                )
-            )
 
-            # Catch "Hún á (ekki) mikið/fullt/helling/gommu... að börnum."
+            # Catch "Hún á (ekki) mikið/fullt/helling/gommu... að börnum.", "Hún á (ekki) heiðurinn að þessu.", "Hún hafði (ekki) átt heiðurinn að þessu."
             p.append(
                 (
                     "eiga",  # Trigger lemma for this pattern
-                    "VP > { VP >> { 'eiga' NP > { ^'heiður' } } PP > { P > { 'að' } } }",
+                    "VP > { VP >> { 'eiga' NP } PP > { P > { 'að' } } }",
                     cls.wrong_preposition_eiga_að,
                     None,
                 )
