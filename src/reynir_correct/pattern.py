@@ -319,9 +319,9 @@ class PatternMatcher:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal and nominal phrases
         vp = match.first_match("VP > { 'leiða' }", self.ctx_af)
-        np = match.first_match("NP > { 'líkur' }", self.ctx_af)
+        np = match.first_match("NP > { ( 'líkur'|'rök'|'rak' ) }", self.ctx_af)
         if np is None:
-            np = match.first_match("NP >> { 'líkur' }", self.ctx_af)
+            np = match.first_match("NP >> { ( 'líkur'|'rök'|'rak' ) }", self.ctx_af)
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "af" }')
         if pp is None:
@@ -331,10 +331,10 @@ class PatternMatcher:
         assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
-        text = "'leiða líkur af' á sennilega að vera 'leiða líkur að'"
+        text = "'leiða {0} af' á sennilega að vera 'leiða {0} að'".format(np.tidy_text)
         detail = (
-            "Í samhenginu 'leiða líkur af e-u' er notuð "
-            "forsetningin 'að', ekki 'af'."
+            "Í samhenginu 'leiða {0} af e-u' er notuð "
+            "forsetningin 'að', ekki 'af'.".format(np.tidy_text)
         )
         if match.tidy_text.count(" af ") == 1:
             # Only one way to substitute af -> að: do it
@@ -358,9 +358,13 @@ class PatternMatcher:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal and nominal phrases
         vp = match.first_match("VP > { 'marka' }", self.ctx_af)
-        np = match.first_match("NP > { 'upphaf' }", self.ctx_af)
+        if vp is None:
+            vp = match.first_match("NP > { 'markaður' }", self.ctx_af)
+        np = match.first_match("NP > { ( 'upphaf'|'upphafinn' ) }", self.ctx_af)
         if np is None:
-            np = match.first_match("NP >> { 'upphaf' }", self.ctx_af)
+            np = match.first_match("NP >> { ( 'upphaf'|'upphafinn' ) }", self.ctx_af)
+        if np is None:
+            np = match.first_match("VP > { 'upphefja' }", self.ctx_af)
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "af" }')
         if pp is None:
@@ -1324,6 +1328,15 @@ class PatternMatcher:
                     cls.ctx_af,
                 )
             )
+            # Catch "Það sem Jón spurði ekki af..."
+            p.append(
+                (
+                    "af",  # Trigger lemma for this pattern
+                    "IP > { VP >> { 'spyrja' } ADVP > { 'af' } }",
+                    cls.wrong_preposition_af,
+                    cls.ctx_af,
+                )
+            )
             # Catch "...vegna þess að dýr leita af öðrum smærri dýrum."
             p.append(
                 (
@@ -1400,34 +1413,26 @@ class PatternMatcher:
                     None,
                 )
             )
-            # Catch "Hann leiðir líkur af því."
-            p.append(
-                (
-                    "leiða",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { 'leiða' } NP-OBJ > { ('líkur' | 'rök') } } PP > { P > { 'af' } } }",
-                    cls.wrong_preposition_leida_af,
-                    None,
-                )
-            )
+
             # Catch "Hann leiðir ekki líkur af því."
             p.append(
                 (
                     "leiða",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'leiða' } NP-PRD > { ('líkur' | 'rök') } PP > { P > { 'af' } } } ",
+                    "VP > { VP > { 'leiða' } NP-PRD > { ('líkur' | 'rök' | 'rak') } PP > { P > { 'af' } } } ",
                     cls.wrong_preposition_leida_af,
                     None,
                 )
             )
-            # Catch "Hann hefur aldrei leitt líkur af því."
+            # Catch "Hann leiðir líkur af því.", "Hann leiðir rök af því.", "Hann hefur aldrei leitt líkur af því."
             p.append(
                 (
                     "leiða",  # Trigger lemma for this pattern
-                    "VP > { VP >> { VP > { 'leiða' } NP > { ('líkur' | 'rök') } } PP > { 'af' } } ",
+                    "VP > { VP >> { VP > { 'leiða' } NP > { ('líkur' | 'rök' | 'rak') } } PP > { 'af' } } ",
                     cls.wrong_preposition_leida_af,
                     None,
                 )
             )
-            # Catch "Tíminn markar (ekki) upphaf af því."
+            # Catch "Tíminn markar upphaf af því."
             p.append(
                 (
                     "upphaf",  # Trigger lemma for this pattern
@@ -1436,11 +1441,29 @@ class PatternMatcher:
                     None,
                 )
             )
-            # Catch "Það markar (ekki) upphaf af því."
+            # Catch "Það markar ekki upphaf af því."
+            p.append(
+                (
+                    "upphafinn",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'marka' } NP > { 'upphafinn' } PP > { 'af' } }",
+                    cls.wrong_preposition_marka_af,
+                    None,
+                )
+            )
+            # Catch "Það markar upphaf af því."
             p.append(
                 (
                     "upphaf",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > { 'marka' } NP-SUBJ > { 'upphaf' } } PP > { 'af' } }",
+                    cls.wrong_preposition_marka_af,
+                    None,
+                )
+            )
+            # Catch "Það hefur ekki markað upphafið af því."
+            p.append(
+                (
+                    "upphefja",  # Trigger lemma for this pattern
+                    "VP > { VP > { NP > { 'markaður' } VP > { 'upphefja' } } PP > { 'af' } }",
                     cls.wrong_preposition_marka_af,
                     None,
                 )
@@ -1464,15 +1487,7 @@ class PatternMatcher:
                     None,
                 )
             )
-            # Catch "Jón hefur ekki lagt hann af velli."
-        #    p.append(
-        #        (
-        #            "leggja",  # Trigger lemma for this pattern
-        #            "VP > { VP > { VP > { VP > { VP > { 'leggja' } } } } PP > { P > { 'af' } NP > { 'völlur' } } }",
-        #            cls.wrong_preposition_leggja_af,
-        #            None,
-        #        )
-        #    )
+
             # Catch "Jón kann það (ekki) utan af."
             p.append(
                 (
