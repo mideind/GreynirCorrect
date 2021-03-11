@@ -1123,7 +1123,15 @@ class PatternMatcher:
             p.append(
                 (
                     "leiða",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'láta' } VP > { PP > { 'að' } VP > 'leiða' } }",
+                    "VP > { VP > { 'láta' } VP > { PP > { 'að' } VP > { 'leiða' } } }",
+                    cls.wrong_preposition_að_leiða,
+                    None,
+                )
+            )
+            p.append(
+                (
+                    "leiður",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'láta' } PP > { P > { 'að' } 'leiður' } }",
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
