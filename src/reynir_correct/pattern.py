@@ -377,7 +377,7 @@ class PatternMatcher:
     def wrong_preposition_að_mörkum(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending prepositional phrase
-        pp = match.first_match("PP > { 'að' 'mark' }", self.ctx_að)
+        pp = match.first_match("PP > { 'að' ( 'mark'|'mörk' ) }", self.ctx_að)
         assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp.span[0], pp.span[1]
@@ -1102,19 +1102,27 @@ class PatternMatcher:
             )
 
             # Catch "Ég lagði (ekki) mikið að mörkum.", "Ég hafði lagt mikið að mörkum."
-            p.append(
-                (
-                    "mark",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'leggja' } PP > { P > 'að' NP > { 'mark' } } }",
-                    cls.wrong_preposition_að_mörkum,
-                    None,
-                )
-            )
+        #    p.append(
+        #        (
+        #            "mark",  # Trigger lemma for this pattern
+        #            "VP > { VP > { 'leggja' } PP > { P > 'að' NP > { 'mark' } } }",
+        #            cls.wrong_preposition_að_mörkum,
+        #            None,
+        #        )
+        #    )
             # Catch "Ég hafði ekki lagt mikið að mörkum."
             p.append(
                 (
                     "mark",  # Trigger lemma for this pattern
                     "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { 'mark' } } }",
+                    cls.wrong_preposition_að_mörkum,
+                    None,
+                )
+            )
+            p.append(
+                (
+                    "mörk",  # Trigger lemma for this pattern
+                    "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { 'mörk' } } }",
                     cls.wrong_preposition_að_mörkum,
                     None,
                 )
