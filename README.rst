@@ -2,8 +2,8 @@
 GreynirCorrect: A spelling and grammar corrector for Icelandic
 ==============================================================
 
-.. image:: https://travis-ci.com/mideind/GreynirCorrect.svg?branch=master
-    :target: https://travis-ci.com/mideind/GreynirCorrect
+.. image:: https://github.com/mideind/GreynirCorrect/workflows/Python%20package/badge.svg?branch=master
+    :target: https://github.com/mideind/GreynirCorrect/actions?query=workflow%3A%22Python+package%22
 
 .. _overview:
 
@@ -251,7 +251,7 @@ Copyright and License
    :align: right
    :alt: Miðeind ehf.
 
-**Copyright © 2020 Miðeind ehf.**
+**Copyright © 2021 Miðeind ehf.**
 
 GreynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
 

@@ -5,7 +5,7 @@
 
     Evaluation of spelling and grammar correction
 
-    Copyright (C) 2020 Miðeind ehf.
+    Copyright (C) 2021 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -61,6 +61,11 @@
 
     $ python eval.py -m
 
+    To measure GreynirCorrect's performance on the test set
+    excluding malformed sentences:
+
+    $ python eval.py -m -x
+
     To run GreynirCorrect on the entire development corpus
     (by default located in ./iceErrorCorpus/data):
 
@@ -75,6 +80,10 @@
 
     $ python eval.py -n 10 -r
 
+    To get an analysis report of token comparisons:
+
+    $ python eval.py -a
+
 """
 
 from typing import (
@@ -88,6 +97,7 @@ from typing import (
     NamedTuple,
     Any,
     DefaultDict,
+    Counter,
 )
 
 import os
@@ -100,12 +110,20 @@ import argparse
 import xml.etree.ElementTree as ET
 import multiprocessing
 
+from typing_extensions import Annotated
+
 # import multiprocessing.dummy as multiprocessing
 
 import reynir_correct as gc
 from reynir import _Sentence
 from tokenizer import detokenize, Tok, TOK
 
+from reynir_correct.checker import AnnotatedSentence
+
+
+# Disable Pylint warnings arising from Pylint not understanding the typing module
+# pylint: disable=no-member
+# pylint: disable=unsubscriptable-object
 
 # The type of a single error descriptor, extracted from a TEI XML file
 ErrorDict = Dict[str, Union[str, int, bool]]
@@ -122,7 +140,7 @@ CategoryStatsDict = DefaultDict[str, SentenceStatsDict]
 StatsTuple = Tuple[str, int, bool, bool, int, int, int, int, int, int, int, int]
 
 # Counter of tp, tn, right_corr, wrong_corr, right_span, wrong_span
-TypeFreqs = DefaultDict[str, int]
+TypeFreqs = Counter[str]
 
 # Stats for each error type for each content category
 # tp, fn, right_corr, wrong_corr, right_span, wrong_span
@@ -143,9 +161,19 @@ CATEGORIES = (
 # Error codes in iceErrorCorpus that are considered out of scope
 # for GreynirCorrect, at this stage at least
 OUT_OF_SCOPE = {
+    "act4mid",
+    "act4pass",
+    "adj4noun",
+    "adjective-inflection",
     "agreement-pro",  # samræmi fornafns við undanfara  grammar ...vöðvahólf sem sé um dælinguna. Hann dælir blóðinu > Það dælir blóðinu
     "aux",  # meðferð vera og verða, hjálparsagna   wording mun verða eftirminnilegt > mun vera eftirminnilegt
+    "bad-contraction",
     "bracket4square",  # svigi fyrir hornklofa  punctuation (Portúgal) > [Portúgal]
+    "caps4low",
+    "case-verb",
+    "case-prep", 
+    "case-adj",
+    "case-collocation",
     # "collocation-idiom",  # fast orðasamband með ógagnsæja merkingu collocation hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
     # "collocation",  # fast orðasamband  collocation fram á þennan dag > fram til þessa dags
     "comma4conjunction",  # komma fyrir samtengingu punctuation ...fara með vald Guðs, öll löggjöf byggir... > ...fara með vald Guðs og öll löggjöf byggir...
@@ -153,6 +181,7 @@ OUT_OF_SCOPE = {
     "comma4ex",  # komma fyrir upphrópun    punctuation Viti menn, almúginn... > Viti menn! Almúginn...
     "comma4period",  # komma fyrir punkt    punctuation ...kynnast nýju fólki, er á þrítugsaldri > ...kynnast nýju fólki. Hann er á þrítugsaldri
     "comma4qm",  # komma fyrir spurningarmerki  punctuation Höfum við réttinn, eins og að... > Höfum við réttinn? Eins og að...
+    "conjunction",
     "conjunction4comma",  # samtenging fyrir kommu  punctuation ...geta orðið þröngvandi og erfitt getur verið... > ...geta orðið þröngvandi, erfitt getur verið...
     "conjunction4period",  # samtenging fyrir punkt punctuation ...tónlist ár hvert og tónlistarstefnurnar eru orðnar... > ...tónlist ár hvert. Tónlistarstefnurnar eru orðnar...
     "context",  # rangt orð í samhengi  other
@@ -162,44 +191,67 @@ OUT_OF_SCOPE = {
     "dem4noun",  # ábendingarfornafn í stað nafnorðs    grammar hinn > maðurinn
     "dem4pers",  # ábendingarfornafn í stað persónufornafns grammar þessi > hún
     "extra-comma",  # auka komma    punctuation stríð, við náttúruna > stríð við náttúruna
+    "extra-dem-pro",
     "extra-number",  # tölustöfum ofaukið   other   139,0 > 139
     "extra-period",  # auka punktur punctuation á morgun. Og ... > á morgun og...
     "extra-punctuation",  # auka greinarmerki   punctuation ... að > að
     "extra-space",  # bili ofaukið  spacing 4 . > 4.
+    "extra-sub",
     "extra-symbol",  # tákn ofaukið other   Dalvík + gaf... > Dalvík gaf...
     "extra-word",  # orði ofaukið   insertion   augun á mótherja > augu mótherja
     "extra-words",  # orðum ofaukið insertion   ...ég fer að hugsa... > ...ég hugsa...
     "foreign-error",  # villa í útlendu orði    foreign Supurbowl > Super Bowl
+    "foreign-name",  # villa í erlendu nafni    foreign Warwixk > Warwick
     "fw4ice",  # erlent orð þýtt yfir á íslensku    style   Elba > Saxelfur
     "gendered",  # kynjað mál, menn fyrir fólk  exclusion   menn hugsa oft > fólk hugsar oft
+    "genitive",
+    "geta",
+    "have",
     "ice4fw",  # íslenskt orð notað í stað erlends      Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
     "ind4def",  # óákveðið fyrir ákveðið    grammar gítartakta > gítartaktana
-    "ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
+    #"ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
     "indef-pro",  # óákveðið fornafn    grammar enginn > ekki neinn
+    "interr-pro",
     "it4nonit",  # skáletrað fyrir óskáletrað       Studdi Isma'il > Studdi Isma'il
     "loan-syntax",  # lánuð setningagerð    style   ég vaknaði upp > ég vaknaði
+    "low4caps",
+    "marked4unmarked",
+    "mid4act",
+    "mid4pass",
     "missing-commas",  # kommur vantar utan um innskot  punctuation Hún er jafn verðmæt ef ekki verðmætari en háskólapróf > Hún er verðmæt, ef ekki verðmætari, en háskólapróf
     "missing-conjunction",  # samtengingu vantar    punctuation í Noregi suður að Gíbraltarsundi > í Noregi og suður að Gíbraltarsundi
+    "missing-dem-pro",
     "missing-ex",  # vantar upphrópunarmerki    punctuation Viti menn ég komst af > Viti menn! Ég komst af
+    "missing-fin-verb",
+    "missing-obj",
     "missing-quot",  # gæsalöpp vantar  punctuation „I'm winning > „I'm winning“
     "missing-quots",  # gæsalappir vantar   punctuation I'm winning > „I'm winning“
     "missing-semicolon",  # vantar semíkommu    punctuation Haukar Björgvin Páll > Haukar; Björgvin Páll
     "missing-square",  # vantar hornklofi   punctuation þeir > [þeir]
+    "missing-sub",
     "missing-symbol",  # tákn vantar    punctuation 0 > 0%
     "missing-word",  # orð vantar   omission    í Donalda > í þorpinu Donalda
     "missing-words",  # fleiri en eitt orð vantar   omission    því betri laun > því betri laun hlýtur maður
+    "nominal-inflection",
     "nonit4it",  # óskáletrað fyrir skáletrað       orðið qibt > orðið qibt
+    "noun4adj",
     "noun4dem",  # nafnorð í stað ábendingarfornafns    grammar stærsta klukkan > sú stærsta
     "noun4pro",  # nafnorð í stað fornafns  grammar menntun má nálgast > hana má nálgast
+    "number4word",
+    "numeral-inflection",
+    "pass4act",
+    "pass4mid",
+    "passive",
     "past4pres",  # sögn í þátíð í stað nútíðar grammar þegar hún leigði spólur > þegar hún leigir spólur
+    "perfect4tense",
     "period4comma",  # punktur fyrir kommu  punctuation meira en áður. Hella meira í sig > meira en áður, hella meira í sig
     "period4conjunction",  # punktur fyrir samtengingu  punctuation ...maður vill gera. Vissulega > ...maður vill gera en vissulega
     "period4ex",  # punktur fyrir upphrópun punctuation Viti menn. > Viti menn!
     "pers4dem",  # persónufornafn í staðinn fyrir ábendingarf.  grammar það > þetta
     "pres4past",  # sögn í nútíð í stað þátíðar grammar Þeir fara út > Þeir fóru út
     "pro4noun",  # fornafn í stað nafnorðs  grammar þau voru spurð > parið var spurt
-    "pro4reflexive",  # nafnorð í stað afturbeygðs fornafns grammar gefur orku til fólks í kringum það > gefur orku til fólks í kringum sig
     "pro4reflexive",  # persónufornafn í stað afturbeygðs fn.   grammar Fólk heldur að það geri það hamingjusamt > Fólk heldur að það geri sig hamingjusamt
+    "pro-inflection",
     "punctuation",  # greinarmerki  punctuation hún mætti og hann var ekki tilbúinn > hún mætti en hann var ekki tilbúinn
     "qm4ex",  # spurningarmerki fyrir upphrópun punctuation Algjört hrak sjálf? > Algjört hrak sjálf!
     "reflexive4noun",  # afturbeygt fornafn í stað nafnorðs grammar félagið hélt aðalfund þess > félagið hélt aðalfund sinn
@@ -207,15 +259,20 @@ OUT_OF_SCOPE = {
     "simple4cont",  # nútíð í stað vera að + nafnh. grammar ók > var að aka
     "square4bracket",  # hornklofi fyrir sviga  punctuation [börnin] > (börnin)
     "style",  # stíll   style   urðu ekkert frægir > urðu ekki frægir
-    "sub4ind",  # viðtengingarh. fyrir fh.  grammar Stjórnvöld vildu auka rétt borgara og geri þeim kleift > Stjórnvöld vildu auka rétt borgara og gera þeim kleift
+    "syntax-other",
+    "tense4perfect",
     "unicelandic",  # óíslenskuleg málnotkun    style   ...fer eftir persónunni... > ...fer eftir manneskjunni...
     "upper4lower-proper",  # stór stafur í sérnafni þar sem hann á ekki að vera capitalization  Mál og Menning > Mál og menning
+    "upper4lower-noninitial",
+    "v3-subordinate",
     "wording",  # orðalag   wording ...gerðum allt í raun... > ...gerðum í raun allt...
+    "word4number",
     "xxx",  # unclassified  unclassified
     "zzz",  # to revisit    unannotated
 }
 
 # Default glob path of the development corpus TEI XML files to be processed
+# Using a symlink (ln -s /my/location/of/iceErrorCorpus .) can be a good idea
 _DEV_PATH = "iceErrorCorpus/data/**/*.xml"
 
 # Default glob path of the test corpus TEI XML files to be processed
@@ -234,6 +291,275 @@ NAMES = {
     "wrong_corr": "Wrong correction",
     "right_span": "Right span",
     "wrong_span": "Wrong span",
+}
+
+# Supercategories according to SÍM and corresponding subcategories
+# Errors go into the first possible category. Error categories that
+# can both be independent and dependent of context go under the former.
+SIMCATEGORIES = {
+    "context-independent": [
+        "caps4low",
+        "number-fail",
+        "lower4upper-proper",
+        "lower4upper-acro",
+        "though",
+        "compound-collocation",
+        "compound-nonword",
+        "nonword",
+        "swapped-letters",
+        "letter-rep",
+        "missing-letter",
+        "missing-letters",
+        "missing-accent",
+        "wrong-accent",
+        "merged-words",
+        "split-word",
+        "extra-accent",
+        "extra-letter",
+        "ngnk",
+        "i4y",
+        "y4i",
+        "í4ý",
+        "ý4í",
+        "n4nn",
+        "nn4n",
+        "pronun-writing",
+        "kv4hv",
+        "hv4kv",
+        "bad-contraction",
+        "fw",
+        "foreign-error",
+        "abbreviation-period",
+        "abbreviation",
+    ],
+    "context-dependent": [
+        "lower4upper-initial",
+        "upper4lower-common",
+        "upper4lower-proper",
+        "upper4lower-noninitial",
+        "low4caps",
+        "collocation",
+        "collocation-idiom",
+        "missing-word",
+        "missing-words",
+        "missing-prep",
+        "split-compound",
+        "split-words",
+        "missing-dash",
+        "missing-space",
+        "extra-space",
+        "extra-word",
+        "extra-words",
+        "extra-prep",
+        "repeat-word",
+        "repeat-word-split",
+        "name-error",
+        "gendered",
+        "number4word",
+        "word4number",
+    ],
+    "grammar": [
+        "agreement",
+        "agreement-concord",
+        "agreement-pred",
+        "agreement-pro",
+        "case-verb",
+        "case-prep",
+        "case-adj",
+        "case-collocation",
+        "ind4def",
+        "def4ind",
+        "ind4sub",
+        "sub4ind",
+        "verb-inflection",
+        "nominal-inflection",
+        "numeral-inflection",
+        "pro-inflection",
+        "plural4singular",
+        "singular4plural",
+        "conjunction",
+        "adjective-inflection",
+        "dative-sub",
+        "dir4loc",
+        "loc4dir",
+        "mid4act",
+        "act4mid",
+        "mid4pass",
+        "pass4mid",
+        "act4pass",
+        "pass4act",
+        "passive",
+        "new-passive",
+        "each",
+        "noun4pro",
+        "pro4noun",
+        "reflexive4pro",
+        "pro4reflexive",
+        "reflexive4noun",
+        "pres4past",
+        "past4pres",
+        "tense4perfect",
+        "perfect4tense",
+        "pers4dem",
+        "dem-pro",
+        "missing-dem-pro",
+        "extra-dem-pro",
+        "indef-pro",
+        "marked4unmarked",
+        "adj4adv",
+        "adv4adj",
+        "have",
+        "cont4simple",
+        "missing-inf-part",
+        "want",
+        "dem4pers",
+        "nom4acc-sub",
+        "acc4nom-sub",
+        "simple4cont",
+        "extra-inf-part",
+        "gen-escape",
+        "genitive",
+        "dem4noun",
+        "noun4dem",
+        "geta",
+        "adj4noun",
+        "noun4adj",
+        "extra-sub",
+        "missing-fin-verb",
+        "missing-sub",
+        "missing-obj",
+        "að4af",
+        "af4að",
+        "wrong-prep",
+        "interr-pro",
+        "hypercorr",
+        "v3",
+        "v3-subordinate",
+        "syntax-other",
+        "aux",
+    ],
+    "style": [
+        "wording",
+        "extra-number",
+        "symbol4number",
+        "number4symbol",
+        "style",
+        "unicelandic",
+        "taboo-word",
+        "loan-syntax",
+        "u4y",
+        "fw4ice",
+        "ice4fw",
+        "nonit4it",
+        "it4nonit",
+        "extra-munu",
+        "words4abbreviation",
+        "abbreviation4words",
+        "symbol4word",
+        "extra-symbol",
+        "dep",
+        "þar4það",
+        "context",
+        "foreign-name",
+    ],
+    "punctuation": [
+        "bracket4comma",
+        "bracket4period",
+        "bracket4square",
+        "colon4comma",
+        "colon4period",
+        "comma-plus-conjunction",
+        "comma4bracket",
+        "comma4colon",
+        "comma4conjunction",
+        "comma4dash",
+        "comma4ex",
+        "comma4period",
+        "comma4qm",
+        "comma4semicolon",
+        "conjunction-drop",
+        "conjunction4comma",
+        "conjunction4period",
+        "conjunction4qm",
+        "conjunction4semicolon",
+        "endash4colon",
+        "endash4comma",
+        "endash4period",
+        "endash4semicolon",
+        "endash4word",
+        "date-abbreviation",
+        "date-period",
+        "dots4comma",
+        "dots4period",
+        "double-punctuation",
+        "ex4comma",
+        "ex4period",
+        "extra-abbreviation",
+        "extra-bracket",
+        "extra-brackets",
+        "extra-colon",
+        "extra-comma",
+        "extra-commas",
+        "extra-conjunction",
+        "extra-endash",
+        "extra-hyphen",
+        "extra-period",
+        "extra-punctuation",
+        "extra-qm",
+        "extra-quot",
+        "extra-quots",
+        "extra-semicolon",
+        "extra-square",
+        "hyphen4colon",
+        "hyphen4comma",
+        "hyphen4endash",
+        "hyphen4period",
+        "hyphen4semicolon",
+        "hyphen4word",
+        "iteration-colon",
+        "misplaced-quot",
+        "missing-bracket",
+        "missing-colon",
+        "missing-comma",
+        "missing-commas",
+        "missing-conjunction",
+        "missing-ex",
+        "missing-endash",
+        "missing-hyphen",
+        "missing-period",
+        "missing-qm",
+        "missing-quot",
+        "missing-quots",
+        "missing-semicolon",
+        "missing-slash",
+        "missing-square",
+        "missing-symbol",
+        "nonsup4sup",
+        "ordinal-period",
+        "period-plus-conjunction",
+        "period4colon",
+        "period4comma",
+        "period4conjunction",
+        "period4endash",
+        "period4ex",
+        "period4qm",
+        "period4semicolon",
+        "qm4comma",
+        "qm4ex",
+        "qm4period",
+        "semicolon4colon",
+        "semicolon4comma",
+        "semicolon4period",
+        "slash4dash",
+        "slash4hyphen",
+        "slash4or",
+        "square4bracket",
+        "word4endash",
+        "word4symbol",
+        "wrong-dash",
+        "wrong-quot",
+        "wrong-quots",
+    ],
 }
 
 # Supercategories in iceErrorCorpus and corresponding subcategories
@@ -334,6 +660,7 @@ SUPERCATEGORIES = {
         "wrong-accent",
         "extra-accent",
         "extra-letter",
+        "extra-letters",
     ],
     "punctuation": [
         "comma4period",
@@ -483,258 +810,91 @@ SUPERCATEGORIES = {
     "unnannotated": ["zzz", "xxx",],
 }
 
-# Supercategories according to SÍM and corresponding subcategories
-# Errors go into the first possible category. Error categories that
-# can both be independent and dependent of context go under the former.
-SIMCATEGORIES = {
-    "context-independent": [
-        "caps4low",
-        "number-fail",
-        "lower4upper-proper",
-        "lower4upper-acro",
-        "though",
-        "compound-collocation",
-        "compound-nonword",
-        "nonword",
-        "swapped-letters",
-        "letter-rep",
-        "missing-letter",
-        "missing-accent",
-        "wrong-accent",
-        "merged-words",
-        "split-word",
-        "extra-accent",
-        "extra-letter",
-        "ngnk",
-        "i4y",
-        "y4i",
-        "í4ý",
-        "ý4í",
-        "n4nn",
-        "nn4n",
-        "pronun-writing",
-        "kv4hv",
-        "hv4kv",
-        "bad-contraction",
-        "fw",
-        "foreign-error",
-        "abbreviation-period",
-        "abbreviation",
-    ],
-    "context-dependent": [
-        "lower4upper-initial",
-        "upper4lower-common",
-        "upper4lower-proper",
-        "upper4lower-noninitial",
-        "collocation",
-        "collocation-idiom",
-        "missing-word",
-        "missing-words",
-        "missing-prep",
-        "split-compound",
-        "split-words",
-        "missing-dash",
-        "missing-space",
-        "extra-space",
-        "extra-word",
-        "extra-words",
-        "extra-prep",
-        "repeat-word",
-        "repeat-word-split",
-        "name-error",
-        "gendered",
-        "number4word",
-        "word4number",
-    ],
-    "grammar": [
-        "agreement",
-        "agreement-concord",
-        "agreement-pred",
-        "agreement-pro",
-        "case-verb",
-        "case-prep",
-        "case-adj",
-        "case-collocation",
-        "ind4def",
-        "def4ind",
-        "ind4sub",
-        "sub4ind",
-        "verb-inflection",
-        "nominal-inflection",
-        "numeral-inflection",
-        "pro-inflection",
-        "plural4singular",
-        "singular4plural",
-        "conjunction",
-        "adjective-inflection",
-        "dative-sub",
-        "dir4loc",
-        "loc4dir",
-        "mid4act",
-        "act4mid",
-        "mid4pass",
-        "pass4mid",
-        "act4pass",
-        "pass4act",
-        "passive",
-        "new-passive",
-        "each",
-        "noun4pro",
-        "pro4noun",
-        "reflexive4pro",
-        "pro4reflexive",
-        "pres4past",
-        "past4pres",
-        "tense4perfect",
-        "perfect4tense",
-        "pers4dem",
-        "dem-pro",
-        "missing-dem-pro",
-        "extra-dem-pro",
-        "indef-pro",
-        "marked4unmarked",
-        "adj4adv",
-        "adv4adj",
-        "have",
-        "cont4simple",
-        "missing-inf-part",
-        "want",
-        "dem4pers",
-        "nom4acc-sub",
-        "acc4nom-sub",
-        "simple4cont",
-        "extra-inf-part",
-        "gen-escape",
-        "genitive",
-        "dem4noun",
-        "noun4dem",
-        "geta",
-        "adj4noun",
-        "noun4adj",
-        "extra-sub",
-        "missing-fin-verb",
-        "missing-sub",
-        "missing-obj",
-        "að4af",
-        "af4að",
-        "wrong-prep",
-        "interr-pro",
-        "hypercorr",
-        "v3",
-        "v3-subordinate",
-        "syntax-other",
-        "aux",
-    ],
-    "style": [
-        "wording",
-        "extra-number",
-        "symbol4number",
-        "number4symbol",
-        "style",
-        "unicelandic",
-        "taboo-word",
-        "loan-syntax",
-        "u4y",
-        "fw4ice",
-        "ice4fw",
-        "nonit4it",
-        "it4nonit",
-        "extra-munu",
-        "words4abbreviation",
-        "abbreviation4words",
-        "symbol4word",
-        "extra-symbol",
-        "dep",
-        "þar4það",
-        "context",
-    ],
-    "punctuation": [
-        "comma4period",
-        "comma4qm",
-        "comma4colon",
-        "double-punctuation",
-        "extra-abbreviation",
-        "extra-dash",
-        "iteration-colon",
-        "missing-colon",
-        "missing-comma",
-        "missing-commas",
-        "missing-period",
-        "missing-qm",
-        "missing-conjunction",
-        "missing-quot",
-        "missing-quots",
-        "misplaced-quot",
-        "wrong-quots",
-        "extra-quot",
-        "extra-quots",
-        "extra-punctuation",
-        "extra-comma",
-        "extra-period",
-        "period4comma",
-        "period4colon",
-        "period4conjunction",
-        "conjunction4period",
-        "conjunction4comma",
-        "comma4conjunction",
-        "period4qm",
-        "period-plus-conjunction",
-        "comma-plus-conjunction",
-        "comma4ex",
-        "period4ex",
-        "semicolon4colon",
-        "extra-semicolon",
-        "ordinal-period",
-        "conjunction-drop",
-        "extra-conjunction",
-        "semicolon4comma",
-        "conjunction4qm",
-        "missing-slash",
-        "comma4bracket",
-        "qm4comma",
-        "missing-ex",
-        "qm4ex",
-        "qm4period",
-        "bracket4square",
-        "square4bracket",
-        "dash4comma",
-        "date-period",
-        "comma4semicolon",
-        "word4dash",
-        "dash4word",
-        "missing-semicolon",
-        "slash4or",
-        "dash4period",
-        "ex4comma",
-        "colon4period",
-        "colon4comma",
-        "ex4period",
-        "extra-colon",
-        "bracket4comma",
-        "extra-qm",
-        "comma4dash",
-        "dash4semicolon",
-        "wrong-dash",
-        "dash4colon",
-        "dots4comma",
-        "missing-symbol",
-        "dots4period",
-        "extra-square",
-        "bracket4period",
-        "word4symbol",
-        "nonsup4sup",
-        "semicolon4period",
-        "period4semicolon",
-        "period4dash",
-        "missing-square",
-        "slash4dash",
-        "extra-commas",
-        "conjunction4semicolon",
-        "missing-bracket",
-        "extra-bracket",
-        "date-abbreviation",
-    ],
+GCtoIEC = {
+    "A001": ["abbreviation-period"],
+    "A002": ["abbreviation-period"],
+    "Z001": ["upper4lower-common", "upper4lower-proper", "upper4lower-noninitial"],
+    "Z002": ["lower4upper-initial", "lower4upper-proper", "lower4upper-acro"],
+    "Z003": ["upper4lower-common"],
+    "Z004": ["upper4lower-common"],
+    "Z005": ["upper4lower-common"],
+    "Z006": ["lower4upper-acro"],
+    # "E001" : ["XXX"],
+    # "E002" : ["XXX"],
+    # "E003" : ["XXX"],
+    "E004": ["fw"],
+    "C001": ["repeat-word"],
+    "C002": ["merged-words"],
+    "C003": ["split-compound", "split-word", "split-words"],
+    "C004": ["repeat-word"],
+    "C005": ["split-compound", "split-word", "split-words"],
+    "C006": ["compound-nonword"],
+    "P_NT_Að_w": ["extra-conjunction"],
+    "P_NT_AnnaðHvort": ["conjunction"],
+    "P_NT_Annaðhvort": ["conjunction"],
+    "P_NT_Annara": ["pro-inflection"],
+    "P_NT_Annarar": ["pro-inflection"],
+    "P_NT_Annari": ["pro-inflection"],
+    "P_NT_Einkunn": ["agreement-concord"],
+    "P_NT_EinnAf": ["agreement"],
+    "P_NT_EndingANA": ["n4nn"],
+    "P_NT_EndingIR": ["nominal-inflection"],
+    "P_NT_FjöldiHluti": ["agreement"],
+    "P_NT_FráÞvíAð": ["missing-conjunction"],
+    "P_NT_FsMeðFallstjórn": ["case-prep"],
+    "P_NT_Heldur_w": ["conjunction"],
+    "P_NT_ÍTölu": ["plural4singular", "singular4plural"],
+    "P_NT_Komma_w": ["extra-comma"],
+    "P_NT_Né": ["conjunction"],
+    "P_NT_Sem_w": ["extra-conjunction"],
+    "P_NT_Síðan_w": ["extra-word"],
+    "P_NT_Síðastliðinn": ["split-compound"],
+    "P_NT_SvigaInnihaldNl": ["case-verb", "case-prep", "case-adj"],
+    "P_NT_TvípunkturFs": ["extra-colon"],
+    "P_NT_VantarKommu": ["missing-comma"],
+    "P_NT_VístAð": ["conjunction"],
+    "P_NT_ÞóAð": ["conjunction"],
+    "P_redundant_word": ["extra-word"],
+    "P_wrong_person": ["verb-inflection"],
+    "P_wrong_phrase": ["wording"],
+    "P_wrong_word": ["wording"],
+    "P_wrong_case": ["case-noun"],
+    "P_WRONG_CASE_nf_þf": ["case-verb"],
+    "P_WRONG_CASE_nf_þgf": ["case-verb"],
+    "P_WRONG_CASE_nf_ef": ["case-verb"],
+    "P_WRONG_CASE_þf_nf": ["case-verb"],
+    "P_WRONG_CASE_þf_þgf": ["case-verb"],
+    "P_WRONG_CASE_þf_ef": ["case-verb"],
+    "P_WRONG_CASE_þgf_nf": ["case-verb"],
+    "P_WRONG_CASE_þgf_þf": ["case-verb"],
+    "P_WRONG_CASE_þgf_ef": ["case-verb"],
+    "P_WRONG_CASE_ef_nf": ["case-verb"],
+    "P_WRONG_CASE_ef_þf": ["case-verb"],
+    "P_WRONG_CASE_ef_þgf": ["case-verb"],
+    "P_WRONG_NOUN_WITH_VERB": ["collocation"],
+    "P_WRONG_OP_FORM": ["verb-inflection"],
+    "P_WRONG_PLACE_PP": ["wrong-prep"],
+    "P_yi": ["i4y"],
+    "P_aðaf": ["að4af"],
+    "P_WRONG_PREP_AÐ": ["að4af"],
+    "P_WRONG_PREP_AF": ["af4að"],
+    "P_WRONG_VERB_USE": ["collocation"],
+    "X_number4word": ["number4word"],
+    "N001": ["wrong-quot"],
+    "N002": ["extra-punctuation"],
+    "N003": ["extra-punctuation"],
+    "S001": ["nonword"],
+    "S002": ["nonword"],
+    "S003": ["nonword"],
+    "S004": ["nonword"],
+    "T001": ["taboo-word"],
+    "T001_w": ["taboo-word"],
+    "U001": ["fw"],
+    "U001_w": ["fw"],
+    "W001_w": ["nonword"],
 }
+
+GCSKIPCODES = frozenset(("E001", "C005", "Z002", "W001"))
 
 # Define the command line arguments
 
@@ -794,9 +954,39 @@ parser.add_argument(
     help="output individual sentences as well as results, even for the test corpus",
 )
 
+parser.add_argument(
+    "-x", "--exclude", action="store_true", help="Exclude sentences marked exclude",
+)
+
+parser.add_argument(
+    "-s",
+    "--single",
+    type=str,
+    default="",
+    help="Get results for a single error category",
+)
+
+parser.add_argument(
+    "-a",
+    "--analysis",
+    action="store_true",
+    help="Create an analysis report for token results",
+)
+
 # This boolean global is set to True for quiet output,
 # which is the default when processing the test corpus
 QUIET = False
+
+# This boolean global is set to True if only a single
+# error category should be analyzed
+SINGLE = False
+
+# This boolean global is set to True if sentences marked
+# with an exclusion flag should be excluded from processing
+EXCLUDE = False
+
+# This boolean global is set to True for token-level analysis
+ANALYSIS = False
 
 
 def element_text(element: ET.Element) -> str:
@@ -815,20 +1005,22 @@ class Stats:
         self._files: Dict[str, int] = defaultdict(int)
         # We employ a trick to make the defaultdicts picklable between processes:
         # instead of the usual lambda: defaultdict(int), use defaultdict(int).copy
-        self._sentences: CategoryStatsDict = CategoryStatsDict(SentenceStatsDict(int).copy)
-        self._errtypes: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs(int).copy)
-        self._true_positives: Dict[str, int] = defaultdict(int)
-        self._false_negatives: Dict[str, int] = defaultdict(int)
-        self._tp: Dict[str, int] = defaultdict(int)
-        self._tn: Dict[str, int] = defaultdict(int)
-        self._fp: Dict[str, int] = defaultdict(int)
-        self._fn: Dict[str, int] = defaultdict(int)
-        self._right_corr: Dict[str, int] = defaultdict(int)
-        self._wrong_corr: Dict[str, int] = defaultdict(int)
-        self._right_span: Dict[str, int] = defaultdict(int)
-        self._wrong_span: Dict[str, int] = defaultdict(int)
+        self._sentences: CategoryStatsDict = CategoryStatsDict(
+            SentenceStatsDict(int).copy
+        )
+        self._errtypes: ErrTypeStatsDict = ErrTypeStatsDict(Counter)
+        self._true_positives: DefaultDict[str, int] = defaultdict(int)
+        self._false_negatives: DefaultDict[str, int] = defaultdict(int)
+        self._tp: DefaultDict[str, int] = defaultdict(int)
+        self._tn: DefaultDict[str, int] = defaultdict(int)
+        self._fp: DefaultDict[str, int] = defaultdict(int)
+        self._fn: DefaultDict[str, int] = defaultdict(int)
+        self._right_corr: DefaultDict[str, int] = defaultdict(int)
+        self._wrong_corr: DefaultDict[str, int] = defaultdict(int)
+        self._right_span: DefaultDict[str, int] = defaultdict(int)
+        self._wrong_span: DefaultDict[str, int] = defaultdict(int)
         # reference error code : freq - for hypotheses with the unparsable error code
-        self._tp_unparsables: Dict[str, int] = defaultdict(int)
+        self._tp_unparsables: DefaultDict[str, int] = defaultdict(int)
 
     def add_file(self, category: str) -> None:
         """ Add a processed file in a given content category """
@@ -910,6 +1102,9 @@ class Stats:
 
         # Accumulate standard output in a buffer, for writing in one fell
         # swoop at the end (after acquiring the output lock)
+        if SINGLE:
+            bprint(f"")
+
         num_sentences: int = sum(
             cast(int, d["count"]) for d in self._sentences.values()
         )
@@ -971,7 +1166,7 @@ class Stats:
             recs: str,
             precs: str,
         ) -> None:
-            """ Calculate precision, recall and F1-score """
+            """ Calculate precision, recall, F1-score and F0.5-score """
             # Recall
             if tp + fn == 0:
                 result = "N/A"
@@ -1025,6 +1220,28 @@ class Stats:
                 else:
                     bprint(f"   {c:<13}:           N/A")
 
+            # F0.5 score
+            if precision + recall > 0.0:
+                f05 = 1.25 * (precision * recall) / (0.25 * precision + recall)
+                result = f"{f05:1.4f}"
+            else:
+                f05 = 0.0
+                result = "N/A"
+
+            bprint(f"\nF0.5 score:                   {result}")
+            for c in CATEGORIES:
+                d = self._sentences[c]
+                if recs not in d or precs not in d:
+                    bprint(f"   {c:<13}:              N/A")
+                    continue
+                rc = d[recs]
+                p = d[precs]
+                if p + rc > 0.0:
+                    f05 = 1.25 * (p * rc) / (0.25 * p + rc)
+                    bprint(f"   {c:<13}:           {f1:1.4f}")
+                else:
+                    bprint(f"   {c:<13}:           N/A")
+
         def calc_recall(
             right: int, wrong: int, rights: str, wrongs: str, recs: str
         ) -> None:
@@ -1047,7 +1264,7 @@ class Stats:
                     bprint(f"   {c:<13}:           {rc:1.4f}")
 
         def calc_error_category_metrics(cat: str) -> CatResultDict:
-            """ Calculates precision, recall and f1-score for a single error category
+            """ Calculates precision, recall, f1-score and f0.5-score for a single error category
                 N = Number of errors in category z in reference corpus, 
                 Nall =  number of tokens
                 TP = Errors correctly classified as category z
@@ -1055,8 +1272,10 @@ class Stats:
                 FN = Errors in category z in reference but not hypothesis
                 Recall = TPz/(TPz+FPz)
                 Precision = TPz/(TPz+FNz)
+                F1-score = 2*(P*R)/(P+R)
+                F0.5-score = 1.25*(P*R)/(0.25*P+R)
             """
-            catdict: CatResultDict = { k: v for k, v in self._errtypes[cat].items() }
+            catdict: CatResultDict = {k: v for k, v in self._errtypes[cat].items()}
             tp = cast(int, catdict.get("tp", 0))
             fn = cast(int, catdict.get("fn", 0))
             fp = cast(int, catdict.get("fp", 0))
@@ -1066,7 +1285,8 @@ class Stats:
             if tp + fn + fp == 0:  # No values in category
                 catdict["recall"] = "N/A"
                 catdict["precision"] = "N/A"
-                catdict["fscore"] = "N/A"
+                catdict["f1score"] = "N/A"
+                catdict["f05score"] = "N/A"
             else:
                 # Recall
                 if tp + fn != 0:
@@ -1074,10 +1294,15 @@ class Stats:
                 # Precision
                 if tp + fp != 0:
                     precision = catdict["precision"] = tp / (tp + fp)
+                # F1 score and F0.5 score
                 if recall + precision > 0.0:
-                    catdict["fscore"] = 2 * precision * recall / (precision + recall)
+                    catdict["f1score"] = 2 * precision * recall / (precision + recall)
+                    catdict["f05score"] = (
+                        1.25 * (precision * recall) / (0.25 * precision + recall)
+                    )
                 else:
-                    catdict["fscore"] = 0.0
+                    catdict["f1score"] = 0.0
+                    catdict["f05score"] = 0.0
                 # Correction recall
                 right_corr = cast(int, catdict.get("right_corr", 0))
                 if right_corr > 0:
@@ -1098,12 +1323,6 @@ class Stats:
 
         def output_sentence_scores() -> None:
             """ Calculate and write sentence scores to stdout """
-            ### SENTENCE SCORES
-            # Fær sent inn TN, TP, FP og FN - er þá búin að summa það upp
-            # Get sent inn aukagildi, sem segir t.d. hvort nota á F0,5 eða F1
-            # Og hvað er verið að reikna?
-            # Get líka sent inn texta sem segir hvað er verið að reikna,
-            # s.s. "Results for Error detection" eða "Results for sentence correctness"?
 
             # Total number of true negatives found
             bprint(f"\nResults for error detection for whole sentences")
@@ -1149,7 +1368,7 @@ class Stats:
                     result = f"{100.0*true_results/num_sents:3.2f}%/{100.0*false_results/num_sents:3.2f}%"
                 bprint(f"   {c:<13}: {result:>16}")
 
-            # Precision, recall, F1-score
+            # Precision, recall, F1-score, F0.5-score
             calc_PRF(
                 true_positives,
                 true_negatives,
@@ -1187,8 +1406,6 @@ class Stats:
 
         def output_token_scores() -> None:
             """ Calculate and write token scores to stdout """
-
-            ### TOKEN ERROR SCORES
 
             bprint(f"\n\nResults for error detection within sentences")
 
@@ -1261,50 +1478,58 @@ class Stats:
             """ Calculate and write scores for each error category to stdout """
             bprint(f"\n\nResults for each error category in order by frequency")
             freqdict: Dict[str, int] = dict()
-            micro: float = 0.0
+            microf1: float = 0.0
+            microf05: float = 0.0
             nfreqs: int = 0
-            microall: float = 0.0
+            microf1all: float = 0.0
+            microf05all: float = 0.0
             nfreqsall: int = 0
             resultdict: Dict[str, CatResultDict] = dict()
 
             # Iterate over category counts
             for cat in self._errtypes.keys():
-                # Get recall, precision and F1; recall for correction and span
+                # Get recall, precision, F1 and F0.5; recall for correction and span
                 catdict = resultdict[cat] = calc_error_category_metrics(cat)
 
                 # Collect micro scores, both overall and for in-scope categories
                 freq = cast(int, catdict["freq"])
                 assert isinstance(freq, int)
-                fscore = cast(float, catdict["fscore"])
-                assert isinstance(fscore, float)
+                f1score = cast(float, catdict["f1score"])
+                f05score = cast(float, catdict["f05score"])
+                assert isinstance(f1score, float)
+                assert isinstance(f05score, float)
                 if cat not in OUT_OF_SCOPE:
-                    micro += fscore * freq
+                    microf1 += f1score * freq
+                    microf05 += f05score * freq
                     nfreqs += freq
-                microall += fscore * freq
+                microf1all += f1score * freq
+                microf05all += f05score * freq
                 nfreqsall += freq
 
                 # Create freqdict for sorting error categories by frequency
                 freqdict[cat] = freq
 
-            # print results for each category by frequency
-            for k in sorted(freqdict, key=freqdict.get, reverse=True):
+            # Print results for each category by frequency
+            for k in sorted(freqdict, key=freqdict.__getitem__, reverse=True):
                 rk = resultdict[k]
                 bprint("{} (in_scope={})".format(k, k not in OUT_OF_SCOPE))
                 bprint(
                     "\tTP, FP, FN: {}, {}, {}".format(
-                        rk.get("tp", 0),
-                        rk.get("fp", 0),
-                        rk.get("fn", 0),
+                        rk.get("tp", 0), rk.get("fp", 0), rk.get("fn", 0),
                     )
                 )
                 bprint(
-                    "\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}".format(
+                    "\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}|{:3.2f}".format(
                         cast(float, rk.get("recall", 0.0)) * 100.0,
                         cast(float, rk.get("precision", 0.0)) * 100.0,
-                        cast(float, rk.get("fscore", 0.0)) * 100.0,
+                        cast(float, rk.get("f1score", 0.0)) * 100.0,
+                        cast(float, rk.get("f05score", 0.0)) * 100.0,
                     )
                 )
-                if rk.get("corr_rec", "N/A") == "N/A" or rk.get("span_rec", "N/A") == "N/A":
+                if (
+                    rk.get("corr_rec", "N/A") == "N/A"
+                    or rk.get("span_rec", "N/A") == "N/A"
+                ):
                     bprint("\tCorr, span:    N/A,    N/A")
                 else:
                     bprint(
@@ -1319,48 +1544,74 @@ class Stats:
             if nfreqs != 0:
                 bprint(
                     "Micro F1-score: {:3.2f}  ({:3.2f})".format(
-                        micro / nfreqs * 100.0, microall / nfreqsall * 100.0
+                        microf1 / nfreqs * 100.0, microf1all / nfreqsall * 100.0
                     )
                 )
             else:
                 bprint(f"Micro F1-score: N/A")
+            # Micro F0.5-score
+            # Results for in-scope categories and all categories
+            if nfreqs != 0:
+                bprint(
+                    "Micro F0.5-score: {:3.2f}  ({:3.2f})".format(
+                        microf05 / nfreqs * 100.0, microf05all / nfreqsall * 100.0
+                    )
+                )
+            else:
+                bprint(f"Micro F0.5-score: N/A")
 
         def output_supercategory_scores(errorcats: Dict[str, List[str]]) -> None:
             """ Results for each SÍM category
                 (context-dependent, context-independent, grammar, style) """
             for entry, catlist in errorcats.items():
-                micro = 0.0
+                microf1 = 0.0
+                microf05 = 0.0
                 nfreqs = 0
-                microall = 0.0
+                microf1all = 0.0
+                microf05all = 0.0
                 nfreqsall = 0
                 correcs = 0.0
                 correcsall = 0.0
+                # microrec = 0.0
+                # microrecall = 0.0
+                # microprec = 0.0
+                # microprecall = 0.0
                 # TODO taka saman corr_rec og span_rec; skoða hvernig fæ F-skor,
                 # svipað og fyrir hitt, þegar er ekki með TN inni
                 bprint("\n{}:".format(entry.capitalize()))
                 for cat in catlist:
                     et = calc_error_category_metrics(cat)
-                    if et.get("fscore", "N/A") == "N/A":
+                    if et.get("f1score", "N/A") == "N/A":
                         continue
                     freq = cast(int, et["freq"])
                     if cat not in OUT_OF_SCOPE:
-                        micro += cast(float, et["fscore"]) * freq
+                        microf1 += cast(float, et["f1score"]) * freq
+                        microf05 += cast(float, et["f05score"]) * freq
                         if et["corr_rec"] != "N/A":
                             correcs += cast(float, et["corr_rec"]) * freq
                         nfreqs += freq
                         bprint(
-                            "\t{}   {:3.2f}   {:>6}".format(
-                                cat, cast(float, et["fscore"]) * 100.0, freq
+                            "\t{}   {:3.2f}|{:3.2f}|{:>6}".format(
+                                cat,
+                                cast(float, et["f1score"]) * 100.0,
+                                cast(float, et["f05score"]) * 100.0,
+                                freq,
                             )
                         )
-                    microall += cast(float, et["fscore"]) * freq
+                    microf1all += cast(float, et["f1score"]) * freq
+                    microf05all += cast(float, et["f05score"]) * freq
                     if et.get("corr_rec", "N/A") != "N/A":
                         correcsall += cast(float, et["corr_rec"]) * freq
                     nfreqsall += freq
                 if nfreqs != 0:
                     bprint(
                         "Micro F1-score: {:3.2f}  ({:3.2f})".format(
-                            micro / nfreqs * 100.0, microall / nfreqsall * 100.0
+                            microf1 / nfreqs * 100.0, microf1all / nfreqsall * 100.0
+                        )
+                    )
+                    bprint(
+                        "Micro F0.5-score: {:3.2f}  ({:3.2f})".format(
+                            microf05 / nfreqs * 100.0, microf05all / nfreqsall * 100.0
                         )
                     )
                     bprint(
@@ -1370,6 +1621,7 @@ class Stats:
                     )
                 else:
                     bprint(f"Micro F1-score: N/A")
+                    bprint(f"Micro F0.5-score: N/A")
                     bprint(f"Error correction recall: N/A")
 
         output_duration()
@@ -1401,7 +1653,7 @@ def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
 buffer: List[str] = []
 
 
-def bprint(s: str) -> None:
+def bprint(s: str):
     """ Buffered print: accumulate output for printing at the end """
     buffer.append(s)
 
@@ -1434,7 +1686,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
     # Counter of iceErrorCorpus error types in unparsable sentences
     ups: Dict[str, int] = defaultdict(int)
     # Stats for each error type (xtypes)
-    errtypefreqs: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs(int).copy)
+    errtypefreqs: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs().copy)
 
     try:
 
@@ -1456,6 +1708,12 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
         root = tree.getroot()
         # Iterate through the sentences in the file
         for sent in root.findall("ns:text/ns:body/ns:p/ns:s", ns):
+            # Skip sentence if find exclude
+            if EXCLUDE:
+                exc = sent.attrib.get("exclude", "")
+                if exc:
+                    continue
+            check = False  # When args.single, checking single error category
             # Sentence identifier (index)
             index = sent.attrib.get("n", "")
             tokens: List[Tuple[str, str]] = []
@@ -1463,6 +1721,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             # A dictionary of errors by their index (idx field)
             error_indexes: Dict[str, ErrorDict] = {}
             dependencies: List[Tuple[str, ErrorDict]] = []
+            analysisblob: List[str] = []
             # Error corpora annotations for sentences marked as unparsable
             # Enumerate through the tokens in the sentence
             for el in sent:
@@ -1528,6 +1787,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 bprint(
                                     f"\n{index}: *** 'depId' attribute missing for dependency ***"
                                 )
+                        if SINGLE and xtype == SINGLE:
+                            check = True
                 else:
                     tokens.append((tag, element_text(el)))
             # Fix up the dependencies, if any
@@ -1540,29 +1801,32 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     # Copy the in_scope attribute from the original error
                     error["in_scope"] = error_indexes[dep_id]["in_scope"]
 
+            if SINGLE and not check:
+                continue
+
             # Reconstruct the original sentence
             # TODO switch for sentence from original text file
             text = correct_spaces(tokens)
             if not text:
                 # Nothing to do: drop this and go to the next sentence
                 continue
-
             # Pass it to GreynirCorrect
             pg = [list(p) for p in gc.check(text)]
             s: Optional[_Sentence] = None
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 s = pg[0][0]
             if len(pg) > 1 or (len(pg) == 1 and len(pg[0]) > 1):
-                if QUIET:
-                    bprint(f"In file {fpath}:")
-                bprint(
-                    f"\n{index}: *** Input contains more than one sentence *** {text}"
-                )
+                # if QUIET:
+                #     bprint(f"In file {fpath}:")
+                # bprint(
+                #     f"\n{index}: *** Input contains more than one sentence *** {text}"
+                # )
+                pass
             if s is None:
-                if QUIET:
-                    bprint(f"In file {fpath}:")
-                bprint(f"\n{index}: *** No parse for sentence *** {text}")
-                continue
+                # if QUIET:
+                #     bprint(f"In file {fpath}:")
+                # bprint(f"\n{index}: *** No parse for sentence *** {text}")
+                pass
             if not QUIET:
                 # Output the original sentence
                 bprint(f"\n{index}: {text}")
@@ -1622,82 +1886,232 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         bprint("!++ False positive")
                 return gc_error, ice_error
 
+            assert s is not None
+            assert isinstance(s, AnnotatedSentence)
             gc_error, ice_error = sentence_results(s.annotations, errors)
 
             def token_results(
-                hyp_annotations: List[gc.Annotation], ref_annotations: List[ErrorDict]
+                hyp_annotations: Iterable[gc.Annotation],
+                ref_annotations: Iterable[ErrorDict],
             ) -> Tuple[int, int, int, int, int, int, int]:
+                """ Calculate statistics on annotations at the token span level """
                 tp, fp, fn = 0, 0, 0  # tn comes from len(tokens)-(tp+fp+fn) later on
                 right_corr, wrong_corr = 0, 0
                 right_span, wrong_span = 0, 0
+                if not hyp_annotations and not ref_annotations:
+                    # No need to go any further
+                    return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
+                y = iter(hyp_annotations)  # GreynirCorrect annotations
+                x = iter(ref_annotations)  # iEC annotations
+                ytok: Optional[gc.Annotation] = None
+                xtok: Optional[ErrorDict] = None
 
-                x = (d for d in hyp_annotations)  # GreynirCorrect annotations
-                y = (l for l in ref_annotations)  # iEC annotations
+                if ANALYSIS:
+                    analysisblob.append("\n{}".format(text))
 
-                xtok = None
-                ytok = None
+                    analysisblob.append("\tiEC:")
+                    for iec_ann in ref_annotations:
+                        analysisblob.append("\t\t{}".format(iec_ann))
+
+                    analysisblob.append("\tGC:")
+                    for gc_ann in hyp_annotations:
+                        analysisblob.append("\t\t{}".format(gc_ann))
+
+                xspanlast = set([-1])
                 try:
-                    xtok = next(x)
                     ytok = next(y)
+                    xtok = next(x)
                     while True:
-
+                        ystart, yend = ytok.start, ytok.end
+                        xstart, xend = cast(int, xtok["start"]), cast(int, xtok["end"])
+                        samespan = False
                         # 1. Error detection
-                        xtoks = set(range(xtok.start, xtok.end + 1))
-                        ytoks = set(
-                            range(cast(int, ytok["start"]), cast(int, ytok["end"]) + 1)
-                        )
-                        ytype = cast(str, ytok["xtype"])
-                        if xtoks & ytoks:
+                        # Token span in GreynirCorrect annotation
+                        yspan = set(
+                            range(ystart, yend + 1)
+                        )  # TODO Usually ystart, yend+1, reset when secondary comparison works
+                        # Token span in iEC annotation
+                        xspan = set(range(xstart, xend + 1))
+                        if ytok.original:
+                            yorig = set(ytok.original.split())
+                        else:
+                            yorig = set()
+                        xorig = set(cast(str, xtok["original"]).split())
+                        if ytok.suggest:
+                            if isinstance(ytok.suggest, str):
+                                ysugg = set(ytok.suggest.split())
+                            else:
+                                ysugg = set(ytok.suggest)
+                        else:
+                            ysugg = set()
+                        xsugg = set(cast(str, xtok["corrected"]).split())
+                        if xspan & yspan:
+                            samespan = True
+
+                        # Secondary comparison:
+                        # Check if any common tokens
+                        # and relatively same span
+                        if abs(ystart - xstart) <= 5 or abs(yend - xend) <= 5:
+                            if yorig and xorig and yorig.intersection(xorig):
+                                samespan = True
+                            if ysugg and xsugg and ysugg.intersection(xsugg):
+                                samespan = True
+
+                        # iEC error subcategory
+                        xtype = cast(str, xtok["xtype"])
+                        # By default, use iEC error category
+                        # on the GreynirCorrect side as well
+                        ytype = xtype
+                        if ytok.code in GCtoIEC:
+                            # We have a mapping of the GC code
+                            if xtype not in GCtoIEC[ytok.code]:
+                                # The iEC code is not one that could
+                                # correspond to a GC code.
+                                # We select the iEC code that most commonly
+                                # corresponds to the GC code;
+                                # we're going to get an error for
+                                # a wrong annotation type anyway, as ytype != xtype.
+                                ytype = GCtoIEC[ytok.code][0]
+
+                        if ANALYSIS:
+                            analysisblob.append(
+                                "\tComparing:\n\t          {}\n\t          {} - {} ({})".format(
+                                    xtok, ytok, ytok.text, ytype
+                                )
+                            )
+                            # analysisblob.append("\tXspans:   {} | {}".format(xspanlast, xspan))
+                        # Multiple tags for same error: Skip rest
+                        if xspan == xspanlast:
+                            if ANALYSIS:
+                                analysisblob.append(
+                                    "\t          Same span, skip: {}".format(
+                                        cast(str, xtok["xtype"])
+                                    )
+                                )
+                            xtok = None
+                            xtok = next(x)
+                            continue
+                        if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
+                            # Skip these errors, shouldn't be compared.
+                            if ANALYSIS:
+                                analysisblob.append(
+                                    "\t          Skip: {}".format(ytok.code)
+                                )
+                            ytok = None
+                            ytok = next(y)
+                            continue
+
+                        if samespan:
+                            # The annotation spans overlap
+                            # or almost overlap and contain the same original value or correction
                             tp += 1
-                            errtypefreqs[ytype]["tp"] += 1
+                            errtypefreqs[xtype]["tp"] += 1
+                            if ANALYSIS:
+                                analysisblob.append("\t          TP: {}".format(xtype))
                             # 2. Span detection
-                            if xtoks == ytoks:
+                            if xspan == yspan:
                                 right_span += 1
-                                errtypefreqs[ytype]["right_span"] += 1
+                                errtypefreqs[xtype]["right_span"] += 1
                             else:
                                 wrong_span += 1
-                                errtypefreqs[ytype]["wrong_span"] += 1
+                                errtypefreqs[xtype]["wrong_span"] += 1
                             # 3. Error correction
-                            # Get the 'corrected' attribute if available,
-                            # otherwise use xtok['suggest']
-                            xcorr = getattr(xtok, "corrected", xtok.suggest)
-                            if xcorr == ytok["corrected"]:
+                            ycorr = getattr(ytok, "suggest", "")
+                            if ycorr == xtok["corrected"]:
                                 right_corr += 1
-                                errtypefreqs[ytype]["right_corr"] += 1
+                                errtypefreqs[xtype]["right_corr"] += 1
                             else:
                                 wrong_corr += 1
-                                errtypefreqs[ytype]["wrong_corr"] += 1
+                                errtypefreqs[xtype]["wrong_corr"] += 1
+                            xspanlast = xspan
+                            xtok, ytok = None, None
                             xtok = next(x)
                             ytok = next(y)
-                        else:
-                            if xtok.start < ytok["start"]:
-                                fp += 1
-                                errtypefreqs[ytype]["fp"] += 1
-                                xtok = next(x)
-                            elif xtok.start > ytok["start"]:
-                                ytok = next(y)
-                                fn += 1
-                                errtypefreqs[ytype]["fn"] += 1
-                            else:
-                                xtok = next(x)
-                                ytok = next(y)
-                                fp += 1
-                                fn += 1
-                                errtypefreqs[ytype]["fn"] += 1
+                            continue
+
+                        # The annotation spans do not overlap
+                        if yend < xstart:
+                            # Extraneous GC annotation before next iEC annotation
+                            fp += 1
+                            errtypefreqs[ytype]["fp"] += 1
+                            if ANALYSIS:
+                                analysisblob.append("\t          FP: {}".format(ytype))
+                            ytok = None
+                            ytok = next(y)
+                            continue
+
+                        if ystart > xend:
+                            # iEC annotation with no corresponding GC annotation
+                            fn += 1
+                            errtypefreqs[xtype]["fn"] += 1
+                            if ANALYSIS:
+                                analysisblob.append("\t          FN: {}".format(xtype))
+                            xspanlast = xspan
+                            xtok = None
+                            xtok = next(x)
+                            continue
+
+                        # Should never get here
+                        assert False
+
                 except StopIteration:
                     pass
-                if xtok and not ytok:  # Because of exception to try
-                    pass
-                    # false positive
-                if ytok and not xtok:  # Because of exception to try
-                    pass
-                    # false negative
+
+                # At least one of the iterators has been exhausted
+                # Process the remainder
+                if ANALYSIS and ytok:
+                    analysisblob.append("\tDumping rest of GC errors:")
+                while ytok is not None:
+                    # This is a remaining GC annotation: false positive
+                    if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
+                        # Skip these errors, shouldn't be a part of the results.
+                        if ANALYSIS:
+                            analysisblob.append(
+                                "\t          Skip: {}".format(ytok.code)
+                            )
+                        ytok = next(y, None)
+                        continue
+                    fp += 1
+                    ytype = GCtoIEC[ytok.code][0] if ytok.code in GCtoIEC else ytok.code
+                    errtypefreqs[ytype]["fp"] += 1
+                    if ANALYSIS:
+                        analysisblob.append("\t          FP: {}".format(ytype))
+                    ytok = next(y, None)
+
+                if ANALYSIS and xtok:
+                    analysisblob.append("\tDumping rest of iEC errors:")
+                if not xtok:
+                    # In case try fails on ytok = next(y)
+                    xtok = next(x, None)
+
+                while xtok is not None:
+                    # This is a remaining iEC annotation: false negative
+                    xstart, xend = cast(int, xtok["start"]), cast(int, xtok["end"])
+                    xspan = set(range(xstart, xend + 1))
+                    xtype = cast(str, xtok["xtype"])
+                    if xspan == xspanlast:
+                        # Multiple tags for same error: Skip rest
+                        if ANALYSIS:
+                            analysisblob.append(
+                                "\t          Same span, skip: {}".format(xtype)
+                            )
+                        xtok = None
+                        xtok = next(x, None)
+                    else:
+                        if ANALYSIS:
+                            analysisblob.append("\t          FN: {}".format(xtype))
+                        fn += 1
+                        errtypefreqs[xtype]["fn"] += 1
+                        xspanlast = xspan
+                        xtok = next(x, None)
+
                 return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
 
+            assert isinstance(s, AnnotatedSentence)
             tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span = token_results(
                 s.annotations, errors
             )
-            tn: int = len(tokens) - tp - fp - fn
+            tn = len(tokens) - tp - fp - fn
             # Collect statistics into the stats list, to be returned
             # to the parent process
             if stats is not None:
@@ -1717,7 +2131,10 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         wrong_span,
                     )
                 )
-
+            if ANALYSIS:
+                with open("analysis.txt", "a+") as analysis:
+                    analysis.write("\n".join(analysisblob))
+                analysisblob = []
     except ET.ParseError:
         # Already handled the exception: exit as gracefully as possible
         pass
@@ -1725,10 +2142,9 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
     finally:
         # Print the accumulated output before exiting
         with OUTPUT_LOCK:
-            for s in buffer:
-                print(s)
-            if not QUIET:
-                print("", flush=True)
+            for txt in buffer:
+                print(txt)
+            print("", flush=True)
 
     # This return value will be pickled and sent back to the parent process
     return dict(
@@ -1758,12 +2174,21 @@ def main() -> None:
     if args.quiet is not None:
         QUIET = True
 
+    global EXCLUDE
+    EXCLUDE = args.exclude
+
+    global SINGLE
+    SINGLE = args.single
+
+    global ANALYSIS
+    ANALYSIS = args.analysis
+
     # Maximum number of files to process (0=all files)
     max_count = args.number
     # Initialize the statistics collector
     stats = Stats()
     # The glob path of the XML files to process
-    path = args.path
+    path: str = args.path
     # When running measurements only, we use _TEST_PATH as the default,
     # otherwise _DEV_PATH
     if path is None:

@@ -9,7 +9,7 @@ Copyright and Licensing
 
 **MIT License**
 
-GreynirCorrect is *copyright © 2020 Miðeind ehf.*, Reykjavík, Iceland.
+GreynirCorrect is *copyright © 2021 Miðeind ehf.*, Reykjavík, Iceland.
 
 The project's original author is *Vilhjálmur Þorsteinsson*.
 
@@ -33,20 +33,14 @@ The project's original author is *Vilhjálmur Þorsteinsson*.
 
 .. note::
 
-    GreynirCorrect indirectly embeds the `Database of Modern Icelandic Inflection <http://bin.arnastofnun.is/DMII/>`_
-    (`Beygingarlýsing íslensks nútímamáls <http://bin.arnastofnun.is>`_, abbreviated BÍN)
-    in compressed form. It is not permitted to reverse engineer this file format
-    in order to extract the original BÍN source data. These source data
-    are subject to a license from *The Árni Magnússon Institute for Icelandic Studies*
-    of Reykjavík, Iceland, which holds the copyright to BÍN.
+    GreynirCorrect embeds the `Database of Modern Icelandic Inflection <https://bin.arnastofnun.is>`_
+    (`Beygingarlýsing íslensks nútímamáls <https://bin.arnastofnun.is>`_), abbreviated BÍN.
 
-    The BÍN source data should only be obtained via the official application
-    process at the http://bin.arnastofnun.is website and in accordance with the terms
-    of that license, cf. http://bin.arnastofnun.is/gogn/skilmalar/
+    The BÍN source data are publicly available under the CC-BY-4.0 license, as further
+    detailed `here in English <https://bin.arnastofnun.is/DMII/LTdata/conditions/>`_
+    and `here in Icelandic <https://bin.arnastofnun.is/gogn/mimisbrunnur/>`_.
 
-    Miðeind ehf. is a licensee of the BÍN source data in accordance with the above
-    mentioned terms. With reference to article 3 of the license terms, the data
-    are redistributed in a proprietary binary format, exclusively as an integral
-    part of the Greynir project. *Any subsequent distribution of the data must be
-    done only in full compliance with the original BÍN license terms.*
+    In accordance with the BÍN license terms, credit is hereby given as follows:
+
+    *Beygingarlýsing íslensks nútímamáls. Stofnun Árna Magnússonar í íslenskum fræðum. Höfundur og ritstjóri Kristín Bjarnadóttir.*
 

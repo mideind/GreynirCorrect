@@ -2,7 +2,7 @@
 
     Greynir: Natural language processing for Icelandic
 
-    Copyright (C) 2020 Miðeind ehf.
+    Copyright (C) 2021 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -29,14 +29,14 @@
 
 # Expose the reynir-correct API
 
-from reynir import Greynir, correct_spaces, mark_paragraphs
+from reynir import Greynir, correct_spaces, mark_paragraphs, Sentence, Paragraph
+from tokenizer import detokenize
 from .settings import Settings
 
 # Token-level correction
 from .errtokenizer import (
     CorrectionPipeline,
     tokenize,
-    detokenize,
     Correct_TOK,
 )
 
@@ -47,6 +47,7 @@ from .checker import (
     check_single,
     check_with_stats,
     check_with_custom_parser,
+    AnnotatedSentence,
 )
 
 # Annotations
@@ -54,9 +55,9 @@ from .annotation import Annotation
 
 
 __author__ = u"Miðeind ehf"
-__copyright__ = "(C) 2020 Miðeind ehf."
+__copyright__ = "(C) 2021 Miðeind ehf."
 # Remember to update the version in setup.py as well
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 
 
 Settings.read("config/GreynirCorrect.conf")
