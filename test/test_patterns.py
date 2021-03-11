@@ -84,7 +84,7 @@ def test_verb_að(rc):
     s = "Við höfum öll verið hluti að heildinni."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Vissulega er hægt að vera hluti að heildinni."
-    check_sentence(rc, s, [(1, 7, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(1, 7, "P_VeraAð"), (4, 7, "P_WRONG_PREP_AÐ")])
     s = "Þeir sögðu að ég hefði verið hluti að heildinni."
     check_sentence(rc, s, [(6, 7, "P_WRONG_PREP_AÐ")])
     s = "Þar að leiðandi virkar þetta."
@@ -108,7 +108,7 @@ def test_verb_að(rc):
     s = "Hún á heiðurinn að þessu."
     check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
     s = "Hún hafði ekki átt heiðurinn að þessu en fékk heiðurinn að þessu."
-    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ"), (9, 10, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ"), (9, 11, "P_WRONG_PREP_AÐ")])
     s = "Hún hlaut heiðurinn að þessu."
     check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
     s = "Hún á heilan helling að börnum."
