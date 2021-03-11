@@ -140,7 +140,7 @@ def test_verb_að(rc):
     s = "Verkefni að þessum toga eru erfið."
     check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AÐ")])
     s = "Hann gerði það að sjálfsdáðum."
-    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(3, 4, "P_aðaf")])
     s = "Hún hefur ekki gert þetta að miklum krafti."
     check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
     
