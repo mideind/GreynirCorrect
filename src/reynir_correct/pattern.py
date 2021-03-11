@@ -902,6 +902,8 @@ class PatternMatcher:
         )
 
     def vera_að(self, match: SimpleTree) -> None:
+        """ 'vera að' in front of verb is unneccessary """
+        # TODO don't match verbs that allow 'vera að'
         start, end = match.span
         text = "Mælt er með að sleppa 'vera að' og beygja frekar sögnina."
         detail = text
@@ -914,6 +916,31 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original="vera að",
+            )
+        )
+
+    def wrong_mood_concessive(self, match: SimpleTree) -> None:
+        """ Indicative mood is used instead of subjunctive 
+        in  concessive subclauses """
+        vp = match.first_match("VP > { so }")
+        assert vp is not None
+        verb = next(ch for ch in vp.children if ch.tcat == "so")
+        assert "fh" in verb.all_variants
+        start, end = min(verb.span), max(verb.span)
+
+        text = "Sögnin {0} skal vera í viðtengingarhætti í viðurkenningarsetningum".format(verb.text)
+        detail = text
+        tidy_text = match.tidy_text
+        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN, is that possible?
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_concessive_indicative",
+                text=text,
+                detail=detail,
+                original="", 
+                #suggest=suggest,
             )
         )
 
@@ -1459,6 +1486,16 @@ class PatternMatcher:
                 "vera",  # Trigger lemma for this pattern
                 "VP > [VP > { @'vera' } (ADVP|NP-SUBJ)? IP-INF > {TO > nhm}]",
                 lambda self, match: self.vera_að(match),
+                None,
+            )
+        )
+
+        # Check use of indicative mood in concessive subclauses instead of the subjunctive
+        p.append(
+            (
+                "þótt", # Trigger lemma for this pattern
+                "CP-ADV-ACK >> so",
+                lambda self, match: self.wrong_mood_concessive(match),
                 None,
             )
         )
