@@ -768,7 +768,7 @@ def test_capitalization(verbose=False):
     assert "ferðamála-, iðnaðar- og nýsköpunarráðherra" in s
 
     g = rc.tokenize(
-        "Þau gengu laugaveg í sumar og fóru á þingvelli, heimsóttu austur-evrópu og vestur-evrópu og Austurevrópskt fólk."
+        "Þau gengu laugaveg í sumar og fóru á þingvelli, heimsóttu austur-evrópu, vestur-evrópu, Austurevrópskt fólk, mið-austurlönd og litla-hraun."
     )
     g = list(g)
     if verbose: dump(g)
@@ -778,6 +778,17 @@ def test_capitalization(verbose=False):
     assert "Austur-Evrópu" in s
     assert "Vestur-Evrópu" in s
     assert "austurevrópskt" in s
+    assert "Mið-Austurlönd" in s
+    assert "Litla-Hraun" in s
+
+    g = rc.tokenize(
+        "Þjóðin tók þátt í vetrarólympíuleikunum en líbanar ekki."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Vetrarólympíuleikunum" in s
+    assert "Líbanar" in s
 
 
 def test_acronyms(verbose=False):
