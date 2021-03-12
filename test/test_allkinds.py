@@ -709,24 +709,43 @@ def test_capitalization(verbose=False):
     assert g[12].error_code == "Z003"  # nóvember
 
     g = rc.tokenize(
-        "Í norður-belfast og norður-Belfast er rigning en ekki í suður-Afríku."
+        "Í norður-belfast og norður-Belfast er rigning en ekki í suður-afríku hjá suður-afríkumönnum."
     )
     g = list(g)
     if verbose: dump(g)
     s = normalize(g)
     #assert "Norður-Belfast" in s
-    #assert "Suður-Afríku" in s
-    #assert "Suður-afríku" in s
+    assert "Suður-Afríku" in s
+    assert "Suður-Afríkumönnum" in s
 
     g = rc.tokenize(
-        "Þau gengu frá norður-noregi og þaðan á norður-hliðina og norður- og suðurhlutann."
+        "Þau gengu frá suður-kóreu og þaðan á norður-hliðina og norður- og suðurhlutann."
     )
     g = list(g)
     if verbose: dump(g)
     s = normalize(g)
-    #assert "Norður-Noregi" in s
-    assert "norðurhliðina" in s     #verður að Norður-Hliðina, vandamál sem tengist frekar extra-dash?
+    assert "Suður-Kóreu" in s
+    assert "norðurhliðina" in s
     assert "norður-" in s
+
+    g = rc.tokenize(
+        "Í norður-kóreu er menningin önnur en í suður-kóreu og allt önnur á nýja-sjálandi."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Norður-Kóreu" in s
+    assert "Suður-Kóreu" in s
+    assert "Nýja-Sjálandi" in s
+
+    g = rc.tokenize(
+        "Í karíbahafi eru Karabísk mál töluð."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Karíbahafi" in s
+    assert "karabísk" in s
 
     g = rc.tokenize(
         "Á internetinu finna Súnnítar ýmsar Upplýsingar."
@@ -737,6 +756,29 @@ def test_capitalization(verbose=False):
     assert "Internetinu" in s
     assert "súnnítar" in s   
     #assert "upplýsingar" in s
+
+    g = rc.tokenize(
+        "Ég er með Alzheimers-sjúkdóm en Félags- og Barnamálaráðherra ekki og heldur ekki Ferðamála-, iðnaðar- og nýsköpunarráðherra."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "alzheimers-sjúkdóm" in s
+    assert "félags- og barnamálaráðherra" in s
+    assert "ferðamála-, iðnaðar- og nýsköpunarráðherra" in s
+
+    g = rc.tokenize(
+        "Þau gengu laugaveg í sumar og fóru á þingvelli, heimsóttu austur-evrópu og vestur-evrópu og Austurevrópskt fólk."
+    )
+    g = list(g)
+    if verbose: dump(g)
+    s = normalize(g)
+    assert "Laugaveg" in s
+    assert "Þingvelli" in s
+    assert "Austur-Evrópu" in s
+    assert "Vestur-Evrópu" in s
+    assert "austurevrópskt" in s
+
 
 def test_acronyms(verbose=False):
 
