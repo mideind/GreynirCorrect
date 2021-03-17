@@ -149,6 +149,8 @@ class PatternMatcher:
     ctx_verb_02: ContextDict = cast(ContextDict, None)
     ctx_noun_að: ContextDict = cast(ContextDict, None)
     ctx_place_names: ContextDict = cast(ContextDict, None)
+    ctx_uncertain_verbs: ContextDict = cast(ContextDict, None)
+    ctx_confident_verbs: ContextDict = cast(ContextDict, None)
 
     def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
@@ -921,7 +923,7 @@ class PatternMatcher:
 
     def wrong_mood_concessive(self, match: SimpleTree) -> None:
         """ Indicative mood is used instead of subjunctive 
-        in  concessive subclauses """
+            in concessive subclauses """
         vp = match.first_match("VP > { so }")
         assert vp is not None
         verb = next(ch for ch in vp.children if ch.tcat == "so")
@@ -931,7 +933,7 @@ class PatternMatcher:
         text = "Sögnin {0} skal vera í viðtengingarhætti í viðurkenningarsetningum".format(verb.text)
         detail = text
         tidy_text = match.tidy_text
-        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN, is that possible?
+        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN
         self._ann.append(
             Annotation(
                 start=start,
@@ -943,6 +945,107 @@ class PatternMatcher:
                 #suggest=suggest,
             )
         )
+
+    def wrong_mood_temporal(self, match: SimpleTree) -> None:
+        """ Subjunctive mood used instead of subjunctive in temporal subclauses """
+        vp = match.first_match("VP > { so }")
+        assert vp is not None
+        verb = next(ch for ch in vp.children if ch.tcat == "so")
+        assert "vh" in verb.all_variants
+        start, end = min(verb.span), max(verb.span)
+
+        text = "Sögnin {0} skal vera í framsöguhætti".format(verb.text)
+        detail = text
+        tidy_text = match.tidy_text
+        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_temporal_subjunctive",
+                text=text,
+                detail=detail,
+                original="", 
+                #suggest=suggest,
+            )
+        )
+
+    def wrong_mood_relative(self, match: SimpleTree) -> None:
+        """ Subjunctive mood used instead of subjunctive in temporal subclauses """
+        vp = match.first_match("VP > { so }")
+        assert vp is not None
+        verb = next(ch for ch in vp.children if ch.tcat == "so")
+        assert "vh" in verb.all_variants
+        start, end = min(verb.span), max(verb.span)
+
+        text = "Sögnin {0} skal vera í framsöguhætti".format(verb.text)
+        detail = text
+        tidy_text = match.tidy_text
+        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_relative_subjunctive",
+                text=text,
+                detail=detail,
+                original="", 
+                #suggest=suggest,
+            )
+        )
+
+
+    def wrong_uncertain_verbs(self, match: SimpleTree, context: ContextDict) -> None:
+        """ Indicative mood used instead of subjunctive with verbs denoting uncertainty """
+        vp = match.first_match("CP-THT >> VP")
+        vp = vp.first_match("VP > { so }")
+        assert vp is not None
+
+        verb = next(ch for ch in vp.children if ch.tcat == "so")
+        #assert "fh" in verb.all_variants # TODO uncomment when can check earlier, in original match case
+        start, end = min(verb.span), max(verb.span)
+
+        text = "Sögnin {0} skal vera í viðtengingarhætti".format(verb.text)
+        detail = text
+        tidy_text = match.tidy_text
+        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_uncertainty_indicative",
+                text=text,
+                detail=detail,
+                original="", 
+                #suggest=suggest,
+            )
+        )
+
+    def wrong_confident_verbs(self, match: SimpleTree, context: ContextDict) -> None:
+        """ Subjunctive mood used instead of indicative with verbs denoting confidence in statement """
+        vp = match.first_match("CP-THT >> VP")
+        vp = vp.first_match("VP > { so }")
+        assert vp is not None
+        verb = next(ch for ch in vp.children if ch.tcat == "so")
+        #assert "vh" in verb.all_variants # TODO uncomment when can check in original match case
+        start, end = min(verb.span), max(verb.span)
+
+        text = "Sögnin {0} skal vera í framsöguhætti".format(verb.text)
+        detail = text
+        tidy_text = match.tidy_text
+        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_confident_subjunctive",
+                text=text,
+                detail=detail,
+                original="", 
+                #suggest=suggest,
+            )
+        )
+            
 
     @classmethod
     def create_patterns(cls) -> None:
@@ -1493,10 +1596,80 @@ class PatternMatcher:
         # Check use of indicative mood in concessive subclauses instead of the subjunctive
         p.append(
             (
-                "þótt", # Trigger lemma for this pattern
+                None,  #"þótt", "þó" # Trigger lemma for this pattern
                 "CP-ADV-ACK >> so",
                 lambda self, match: self.wrong_mood_concessive(match),
                 None,
+            )
+        )
+        p.append(
+            (
+                None, # Trigger lemma for this pattern
+                "CP-ADV-TEMP >> so",        # TODO check mood and tense of parent clause; "so_vh_nt"
+                lambda self, match: self.wrong_mood_temporal(match),
+                None,
+            )
+        )
+
+        p.append(
+            (
+                "sem", # Trigger lemma for this pattern
+                "CP-REL >> so",        # TODO check mood and tense of parent clause; "so_vh_nt"
+                lambda self, match: self.wrong_mood_relative(match),
+                None,
+            )
+        )
+
+        def uncertain_verbs(verbs: Set[str], tree: SimpleTree) -> bool:
+            """ Context matching function for the %noun macro in combination
+                with 'að' """
+            lemma = tree.own_lemma
+            if not lemma:
+                # The passed-in tree node is probably not a terminal
+                return False
+            return lemma in verbs
+
+        UNCERTAIN_VERBS: Set[str] = {
+            "telja",
+            "halda",
+            "álíta",
+        }
+        # The macro %verb is resolved by calling the function uncertain_verbs()
+        # with the potentially matching tree node as an argument.
+        cls.ctx_uncertain_verbs = {"verb": partial(uncertain_verbs, UNCERTAIN_VERBS)}
+        p.append(
+            (
+                "að",  # Trigger lemma for this pattern
+                "VP >> {VP >> {%verb} NP > {CP-THT}}",
+                lambda self, match: self.wrong_uncertain_verbs(match, cls.ctx_uncertain_verbs),
+                cls.ctx_uncertain_verbs,
+            )
+        )
+
+        def confident_verbs(verbs: Set[str], tree: SimpleTree) -> bool:
+            """ Context matching function for the %noun macro in combination
+                with 'að' """
+            lemma = tree.own_lemma
+            if not lemma:
+                # The passed-in tree node is probably not a terminal
+                return False
+            return lemma in verbs
+
+        CONFIDENT_VERBS: Set[str] = {
+            "sannreyna",
+            "vita",
+            "sýna",
+            "þýða",
+        }
+        # The macro %verb is resolved by calling the function confident_verbs()
+        # with the potentially matching tree node as an argument.
+        cls.ctx_confident_verbs = {"verb": partial(confident_verbs, CONFIDENT_VERBS)}
+        p.append(
+            (
+                "að",  # Trigger lemma for this pattern
+                "VP >> {VP >> {%verb} NP > {CP-THT}}",
+                lambda self, match: self.wrong_confident_verbs(match, cls.ctx_confident_verbs),
+                cls.ctx_confident_verbs,
             )
         )
 
