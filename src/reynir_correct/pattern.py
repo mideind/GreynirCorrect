@@ -149,6 +149,7 @@ class PatternMatcher:
     ctx_verb_02: ContextDict = cast(ContextDict, None)
     ctx_noun_að: ContextDict = cast(ContextDict, None)
     ctx_place_names: ContextDict = cast(ContextDict, None)
+    ctx_dir_loc: ContextDict = cast(ContextDict, None)
 
     def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
@@ -917,6 +918,176 @@ class PatternMatcher:
             )
         )
 
+    def dir_loc(self, match: SimpleTree) -> None:
+        adv = match.first_match("( 'inn'|'út'|'upp'|'niður' )", self.ctx_dir_loc)
+        pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }", self.ctx_dir_loc)
+        assert adv is not None
+        assert pp is not None
+        start, end = min(adv.span[0], pp.span[0]), max(adv.span[1], pp.span[1])
+        if adv.span < pp.span:
+            narrow_match = adv.tidy_text + ' ' + pp.tidy_text
+        elif pp.span < adv.span:
+            narrow_match = pp.tidy_text + ' ' + adv.tidy_text
+        correction = adv.tidy_text+'i'
+        text = "Hér á líklega að vera {0} í stað {1}".format(
+            correction, adv.tidy_text
+        )
+        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+            narrow_match, correction, adv.tidy_text
+        )
+        suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_DIR_LOC",
+                text=text,
+                detail=detail,
+                original=adv.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def dir_loc_comp(self, match: SimpleTree) -> None:
+        p = match.first_match("P > ( 'inná'|'inní'|'útá'|'útí'|'uppá'|'uppí' ) ")
+        assert p is not None
+        start, end = match.span
+        correction = p.tidy_text[:-1]+'i'+' '+p.tidy_text[-1]
+        text = "Hér á líklega að vera {0} í stað {1}".format(
+            correction, p.tidy_text
+        )
+        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+            match.tidy_text, correction, p.tidy_text
+        )
+        suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_DIR_LOC",
+                text=text,
+                detail=detail,
+                original=p.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def dir_loc_ut_um(self, match: SimpleTree) -> None:
+        advp = match.first_match("ADVP > { 'út' }", self.ctx_dir_loc)
+        start, end = match.span
+        correction = advp.tidy_text+'i'
+        text = "Hér á líklega að vera {0} í stað {1}".format(
+            correction, advp.tidy_text
+        )
+        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+            match.tidy_text, correction, advp.tidy_text
+        )
+        suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_DIR_LOC",
+                text=text,
+                detail=detail,
+                original=advp.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def dir_loc_standa(self, match: SimpleTree) -> None:
+        advp = match.first_match("ADVP > { 'upp' }", self.ctx_dir_loc)
+        start, end = match.span
+        correction = advp.tidy_text+'i'
+        text = "Hér á líklega að vera {0} í stað {1}".format(
+            correction, advp.tidy_text
+        )
+        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+            match.tidy_text, correction, advp.tidy_text
+        )
+        suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_DIR_LOC",
+                text=text,
+                detail=detail,
+                original=advp.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def dir_loc_safna(self, match: SimpleTree) -> None:
+        advp = match.first_match("ADVP > { 'inn' }", self.ctx_dir_loc)
+        start, end = match.span
+        correction = advp.tidy_text+'i'
+        text = "Hér á líklega að vera {0} í stað {1}".format(
+            correction, advp.tidy_text
+        )
+        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+            match.tidy_text, correction, advp.tidy_text
+        )
+        suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_DIR_LOC",
+                text=text,
+                detail=detail,
+                original=advp.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def dir_loc_búð(self, match: SimpleTree) -> None:
+        advp = match.first_match("ADVP > { 'út' }", self.ctx_dir_loc)
+        start, end = match.span
+        correction = advp.tidy_text+'i'
+        text = "Hér á líklega að vera {0} í stað {1}".format(
+            correction, advp.tidy_text
+        )
+        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+            match.tidy_text, correction, advp.tidy_text
+        )
+        suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_DIR_LOC",
+                text=text,
+                detail=detail,
+                original=advp.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def dir_loc_læsa(self, match: SimpleTree) -> None:
+        advp = match.first_match("ADVP > { 'inn' }", self.ctx_dir_loc)
+        start, end = match.span
+        correction = advp.tidy_text+'i'
+        text = "Hér á líklega að vera {0} í stað {1}".format(
+            correction, advp.tidy_text
+        )
+        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+            match.tidy_text, correction, advp.tidy_text
+        )
+        suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_DIR_LOC",
+                text=text,
+                detail=detail,
+                original=advp.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+
     @classmethod
     def create_patterns(cls) -> None:
         """ Initialize the list of patterns and handling functions """
@@ -1469,6 +1640,145 @@ class PatternMatcher:
                 None,
             )
         )
+
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > [ .* ADVP > { 'út' } PP > { P > { ( 'í'|'á'|'um' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } ]",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "( IP|NP|VP ) > { IP >> { ADVP > { 'út' } } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > [ .* ADVP > { 'inn' } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } ]",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "( IP|NP|VP ) > { IP >> { ADVP > { 'inn' } } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inná",  # Trigger lemma for this pattern
+                "PP > { P > { 'inná' } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                lambda self, match: self.dir_loc_comp(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inní",  # Trigger lemma for this pattern
+                "PP > { P > { 'inní' } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                lambda self, match: self.dir_loc_comp(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        # Catches "Það liggur í augum upp."
+        p.append(
+            (
+                "upp",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > { ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "upp",  # Trigger lemma for this pattern
+                "( IP|NP|VP ) > { IP >> { ADVP > { 'upp' } } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "niður",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > [ .* ADVP > { 'niður' } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } ]",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+    #    p.append(
+    #        (
+    #            "niður",  # Trigger lemma for this pattern
+    #            "( IP|NP|VP ) > { IP >> { ADVP > { 'niður' } } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|#pfn_et_þgf|pfn_ft_þgf ) } }",
+    #            lambda self, match: self.dir_loc(match),
+    #            cls.ctx_dir_loc,
+    #        )
+    #    )
+    #    p.append(
+    #        (
+    #            "teningur",  # Trigger lemma for this pattern
+    #            "( S|IP|VP ) > { ADVP > { 'upp' } PP > { P > { 'á' } NP > { 'teningur' } } }",
+    #            lambda self, match: self.dir_loc(match),
+    #            cls.ctx_dir_loc,
+    #        )
+    #    )
+        p.append(
+            (
+                "verða",  # Trigger lemma for this pattern
+                "VP > { VP > { 'verða' } NP > { 'sig' PP > { ADVP > { 'út' } PP > { P > 'um' } } } }",
+                lambda self, match: self.dir_loc_ut_um(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "standa",  # Trigger lemma for this pattern
+                "IP > { ADVP > { 'upp' } VP > { VP > { 'vera' } NP > { 'standa' } } }",
+                lambda self, match: self.dir_loc_standa(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "safna",  # Trigger lemma for this pattern
+                "VP > { VP > { 'safna' } ADVP > { 'saman' } PP > { ADVP > { 'inn' } P > { 'í' } NP } }",
+                lambda self, match: self.dir_loc_safna(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "búð",  # Trigger lemma for this pattern
+                "VP > { VP > { 'kaupa' } NP > { PP > { ADVP > { 'út' } P > { 'í' } NP > { 'búð' } } } }",
+                lambda self, match: self.dir_loc_búð(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "VP > { VP > { 'vera' } NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } }",
+                lambda self, match: self.dir_loc_búð(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "læsa",  # Trigger lemma for this pattern
+                "VP > { VP > { 'læsa' } NP > { PP > { ADVP > { 'inn' } P > { 'á' } } } }",
+                lambda self, match: self.dir_loc_læsa(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        
 
     def go(self) -> None:
         """ Apply the patterns to the sentence """
