@@ -1640,7 +1640,7 @@ class PatternMatcher:
         p.append(
             (
                 "að",  # Trigger lemma for this pattern
-                "VP >> {VP >> {%verb} NP > {CP-THT}}",
+                "VP >> {VP >> {%verb} NP > {CP-THT >> {so_fh}}}",
                 lambda self, match: self.wrong_uncertain_verbs(match, cls.ctx_uncertain_verbs),
                 cls.ctx_uncertain_verbs,
             )
@@ -1667,7 +1667,7 @@ class PatternMatcher:
         p.append(
             (
                 "að",  # Trigger lemma for this pattern
-                "VP >> {VP >> {%verb} NP > {CP-THT}}",
+                "VP >> {VP >> {%verb} NP > {CP-THT >> {so_vh}}}",
                 lambda self, match: self.wrong_confident_verbs(match, cls.ctx_confident_verbs),
                 cls.ctx_confident_verbs,
             )
