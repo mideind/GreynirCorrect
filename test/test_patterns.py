@@ -165,3 +165,39 @@ def test_verb_líst(rc):
     check_sentence(rc, s, [], ignore_warnings=True)
     # TODO: The following gets no annotation:
     # 'Ég verð að segja að mér lýst ekkert á þetta.'
+
+def test_dir_loc(rc):
+    s = "Börnin voru út á túni allan daginn."
+    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
+    s = "Börnin voru útá túni allan daginn."
+    check_sentence(rc, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
+    s = "Út í heimi er þetta öðruvísi."
+    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
+    s = "Útí heimi er þetta öðruvísi."
+    check_sentence(rc, s, [(0, 1, "P_DIR_LOC"), (0, 0, "W001/w")])
+    s = "Börnin voru inn á vellinum allan daginn."
+    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
+    s = "Börnin voru inná vellinum allan daginn."
+    check_sentence(rc, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
+    s = "Hann var oft upp á hestinum."
+    check_sentence(rc, s, [(3, 5, "P_DIR_LOC")])
+    s = "Málið liggur í augum upp."
+    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
+#    s = "Þau eru alltaf uppí bústað."
+#    check_sentence(rc, s, [(1, 4, "P_DIR_LOC"), (3, 3, "W001/w")])     # Span is either 1,4 or 3,4, but always corrected.
+    s = "Hún var niður í bæ í gær."
+    check_sentence(rc, s, [(1, 5, "P_DIR_LOC")])
+    s = "Ég varð mér út um smá mat."
+    check_sentence(rc, s, [(1, 6, "P_DIR_LOC")])
+    s = "Þegar upp er staðið erum við öll eins."
+    check_sentence(rc, s, [(1, 3, "P_DIR_LOC")])
+    s = "Út í heimi er þetta öðruvísi."
+    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
+    s = "Börnin safnast saman inn í búð."
+    check_sentence(rc, s, [(1, 5, "P_DIR_LOC")])
+    s = "Ég keypti þetta út í búð."
+    check_sentence(rc, s, [(1, 5, "P_DIR_LOC")])
+    s = "Illgresið er út um allt."
+    check_sentence(rc, s, [(1, 4, "P_DIR_LOC")])
+    s = "Hann læsti sig inn í gær."
+    check_sentence(rc, s, [(1, 4, "P_DIR_LOC")])
