@@ -879,6 +879,7 @@ GCtoIEC = {
     "P_WRONG_PREP_AÐ": ["að4af"],
     "P_WRONG_PREP_AF": ["af4að"],
     "P_WRONG_VERB_USE": ["collocation"],
+    "P_DIR_LOC": ["dir4loc"],
     "X_number4word": ["number4word"],
     "N001": ["wrong-quot"],
     "N002": ["extra-punctuation"],
