@@ -587,6 +587,8 @@ class PatternMatcher:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending preposition
         pp = match.first_match("P > { 'að' }", self.ctx_að)
+        if pp is None:
+            pp = match.first_match("ADVP > { 'að' }", self.ctx_að)
         assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp.span[0], pp.span[1]
@@ -919,13 +921,18 @@ class PatternMatcher:
         )
 
     def dir_loc(self, match: SimpleTree) -> None:
-        adv = match.first_match("( 'inn'|'út'|'upp'|'niður' )", self.ctx_dir_loc)
+        adv = match.first_match("( 'inn'|'út'|'upp' )", self.ctx_dir_loc)
         pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }", self.ctx_dir_loc)
+        if pp is None:
+            pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þf|no_ft_þf|pfn_et_þf|pfn_ft_þf ) } }", self.ctx_dir_loc)
         assert adv is not None
         assert pp is not None
         start, end = min(adv.span[0], pp.span[0]), max(adv.span[1], pp.span[1])
         if adv.span < pp.span:
-            narrow_match = adv.tidy_text + ' ' + pp.tidy_text
+            if pp.tidy_text.startswith(adv.tidy_text):
+                narrow_match = pp.tidy_text
+            else:
+                narrow_match = adv.tidy_text + ' ' + pp.tidy_text
         elif pp.span < adv.span:
             narrow_match = pp.tidy_text + ' ' + adv.tidy_text
         correction = adv.tidy_text+'i'
@@ -973,14 +980,31 @@ class PatternMatcher:
         )
 
     def dir_loc_ut_um(self, match: SimpleTree) -> None:
-        advp = match.first_match("ADVP > { 'út' }", self.ctx_dir_loc)
-        start, end = match.span
-        correction = advp.tidy_text+'i'
+        advp = match.first_match("ADVP > { ( 'út'|'útum' ) }", self.ctx_dir_loc)
+        if advp is None:
+            advp = match.first_match("( 'út'|'útum' )", self.ctx_dir_loc)
+        pp = match.first_match("PP > { 'um' }", self.ctx_dir_loc)
+        if pp is None:
+            pp = match.first_match("NP > { 'um' }", self.ctx_dir_loc)
+        assert advp is not None
+        assert pp is not None
+        start, end = min(advp.span[0], pp.span[0]), max(advp.span[1], pp.span[1])
+        if advp.tidy_text == 'útum':
+            correction = 'úti um'
+        else:
+            correction = advp.tidy_text+'i'
+        if pp.tidy_text.startswith(advp.tidy_text):
+            context = pp.tidy_text
+        else:
+            if pp.span < advp.span:
+                context = pp.tidy_text+' '+advp.tidy_text
+            else:
+                context = advp.tidy_text+' '+pp.tidy_text
         text = "Hér á líklega að vera {0} í stað {1}".format(
             correction, advp.tidy_text
         )
         detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            match.tidy_text, correction, advp.tidy_text
+            context, correction, advp.tidy_text
         )
         suggest = ""
         self._ann.append(
@@ -1022,6 +1046,29 @@ class PatternMatcher:
         advp = match.first_match("ADVP > { 'inn' }", self.ctx_dir_loc)
         start, end = match.span
         correction = advp.tidy_text+'i'
+        text = "Hér á líklega að vera {0} í stað {1}".format(
+            correction, advp.tidy_text
+        )
+        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+            match.tidy_text, correction, advp.tidy_text
+        )
+        suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_DIR_LOC",
+                text=text,
+                detail=detail,
+                original=advp.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def dir_loc_niður(self, match: SimpleTree) -> None:
+        advp = match.first_match("ADVP > { 'niður' }", self.ctx_dir_loc)
+        start, end = match.span
+        correction = 'niðri'
         text = "Hér á líklega að vera {0} í stað {1}".format(
             correction, advp.tidy_text
         )
@@ -1659,6 +1706,22 @@ class PatternMatcher:
         )
         p.append(
             (
+                "útá",  # Trigger lemma for this pattern
+                "PP > { P > { 'útá' } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                lambda self, match: self.dir_loc_comp(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "útí",  # Trigger lemma for this pattern
+                "PP > { P > { 'útí' } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                lambda self, match: self.dir_loc_comp(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
                 "inn",  # Trigger lemma for this pattern
                 "( PP|VP|IP ) > [ .* ADVP > { 'inn' } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } ]",
                 lambda self, match: self.dir_loc(match),
@@ -1689,6 +1752,22 @@ class PatternMatcher:
                 cls.ctx_dir_loc,
             )
         )
+        p.append(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { ( 'verða'|'vera' ) } ADVP > { 'inn' } PP > { P > { 'á' } } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { 'vera' } ADVP > { 'inn' } PP > { P > { 'í' } } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
         # Catches "Það liggur í augum upp."
         p.append(
             (
@@ -1708,9 +1787,41 @@ class PatternMatcher:
         )
         p.append(
             (
+                "uppá",  # Trigger lemma for this pattern
+                "PP > { P > { 'uppá' } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                lambda self, match: self.dir_loc_comp(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "uppí",  # Trigger lemma for this pattern
+                "PP > { P > { 'uppí' } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                lambda self, match: self.dir_loc_comp(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "uppí",  # Trigger lemma for this pattern
+                "VP > { VP > { 'vera' } PP > { P > { 'uppí' } NP > { ( no_et_þf|no_ft_þf|pfn_et_þf|pfn_ft_þf ) } } }",
+                lambda self, match: self.dir_loc_comp(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
                 "niður",  # Trigger lemma for this pattern
                 "( PP|VP|IP ) > [ .* ADVP > { 'niður' } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } ]",
-                lambda self, match: self.dir_loc(match),
+                lambda self, match: self.dir_loc_niður(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "niður",  # Trigger lemma for this pattern
+                "VP > { VP > { 'vera' } PP > { ADVP > { 'niður' } P > { 'í' } NP } }",
+                lambda self, match: self.dir_loc_niður(match),
                 cls.ctx_dir_loc,
             )
         )
@@ -1718,7 +1829,7 @@ class PatternMatcher:
     #        (
     #            "niður",  # Trigger lemma for this pattern
     #            "( IP|NP|VP ) > { IP >> { ADVP > { 'niður' } } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|#pfn_et_þgf|pfn_ft_þgf ) } }",
-    #            lambda self, match: self.dir_loc(match),
+    #            lambda self, match: self.dir_loc_niður(match),
     #            cls.ctx_dir_loc,
     #        )
     #    )
@@ -1733,7 +1844,7 @@ class PatternMatcher:
         p.append(
             (
                 "verða",  # Trigger lemma for this pattern
-                "VP > { VP > { 'verða' } NP > { 'sig' PP > { ADVP > { 'út' } PP > { P > 'um' } } } }",
+                "VP > { VP > { 'verða' } NP > { ( pfn_et_þgf|pfn_ft_þgf|abfn_þgf ) } NP > { 'út' 'um' } }",
                 lambda self, match: self.dir_loc_ut_um(match),
                 cls.ctx_dir_loc,
             )
@@ -1772,9 +1883,73 @@ class PatternMatcher:
         )
         p.append(
             (
+                "út",  # Trigger lemma for this pattern
+                "VP > { VP > { 'vera' } NP > { 'út' 'um' } }",
+                lambda self, match: self.dir_loc_ut_um(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "útum",  # Trigger lemma for this pattern
+                "VP > { VP > { 'vera' } NP > { 'útum' } }",
+                lambda self, match: self.dir_loc_ut_um(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "útum",  # Trigger lemma for this pattern
+                "VP > { VP > { 'sækja' } PP > { 'um' } NP > { 'útum' } }",
+                lambda self, match: self.dir_loc_ut_um(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "VP > { VP > { 'vera' } ADVP > { 'út' } PP > { P > { 'um' } NP } }",
+                lambda self, match: self.dir_loc_ut_um(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "VP > { VP > { 'gera' } NP > { PP > { ADVP > { 'út' } P > { 'í' } } } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
                 "læsa",  # Trigger lemma for this pattern
-                "VP > { VP > { 'læsa' } NP > { PP > { ADVP > { 'inn' } P > { 'á' } } } }",
+                "VP > { VP > { 'læsa' } NP > { PP > { ADVP > { 'inn' } } } }",
                 lambda self, match: self.dir_loc_læsa(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "læsa",  # Trigger lemma for this pattern
+                "VP > { VP > { 'læsa' } ADVP > { 'inn' } }",
+                lambda self, match: self.dir_loc_læsa(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP >> { ADVP > { 'hér' } } PP > { ADVP > { 'inn' } } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "Skagi",  # Trigger lemma for this pattern
+                "VP > { VP > { 'vera' } PP >> { PP > { ADVP > { 'upp' } P > { 'á' } NP > { 'Skagi' } } } }",
+                lambda self, match: self.dir_loc(match),
                 cls.ctx_dir_loc,
             )
         )
