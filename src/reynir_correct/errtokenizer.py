@@ -218,6 +218,8 @@ class CorrectToken(Tok):
 
     def __init__(self, kind: int, txt: str, val: ValType) -> None:
         super().__init__(kind, txt, val)
+        # The following seems to be required for mypy
+        self.val: ValType
         # Error annotation
         self._err: Union[None, Error, bool] = None
         # Capitalization state: indicates where this token appears in a sentence.
@@ -399,7 +401,7 @@ class CorrectToken(Tok):
         # with a SpellingSuggestion error
         assert isinstance(self._err, SpellingSuggestion)
         if self.val is None:
-            self.val = m[:]
+            self.val = list(m)
         else:
             assert isinstance(self.val, list)
             cast(List[BIN_Tuple], self.val).extend(m)

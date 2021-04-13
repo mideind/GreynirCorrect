@@ -491,15 +491,9 @@ class Settings:
     @staticmethod
     def _handle_settings(s: str) -> None:
         """ Handle config parameters in the settings section """
-        a = s.lower().split("=", maxsplit=1)
+        a: List[str] = s.lower().split("=", maxsplit=1)
         par = a[0].strip().lower()
-        val= a[1].strip()
-        if val.lower() == "none":
-            val = None
-        elif val.lower() == "true":
-            val = True
-        elif val.lower() == "false":
-            val = False
+        val = a[1].strip()
         try:
             if par == "debug":
                 Settings.DEBUG = val in TRUE
