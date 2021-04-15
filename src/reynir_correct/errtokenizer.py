@@ -226,20 +226,20 @@ class CorrectToken(Tok):
         # None or one of ("sentence_start", "after_ordinal", "in_sentence")
         self._cap: Optional[str] = None
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, o: Any) -> bool:
         """ Comparison between two CorrectToken instances """
-        if not isinstance(other, CorrectToken):
+        if not isinstance(o, CorrectToken):
             return False
         return (
-            self.kind == other.kind
-            and self.txt == other.txt
-            and self.val == other.val
-            and self._err == other._err
+            self.kind == o.kind
+            and self.txt == o.txt
+            and self.val == o.val
+            and self._err == o._err
         )
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, o: Any) -> bool:
         """ Comparison between two CorrectToken instances """
-        return not self.__eq__(other)
+        return not self.__eq__(o)
 
     @staticmethod
     def dump(tok: Tok) -> Tuple[Any, ...]:
@@ -442,15 +442,15 @@ class Error(ABC):
         self._original = original
         self._suggest = suggest
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, o: Any) -> bool:
         return (
-            isinstance(other, Error)
-            and self._code == other._code
-            and self._span == other._span
+            isinstance(o, Error)
+            and self._code == o._code
+            and self._span == o._span
         )
 
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+    def __ne__(self, o: Any) -> bool:
+        return not self.__eq__(o)
 
     @property
     def code(self) -> str:
