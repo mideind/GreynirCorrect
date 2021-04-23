@@ -2133,7 +2133,7 @@ class PatternMatcher:
         )
         
 
-    def go(self) -> None:
+    def run(self) -> None:
         """ Apply the patterns to the sentence """
         tree = None if self._sent is None else self._sent.tree
         if tree is None:
