@@ -909,7 +909,7 @@ class PatternMatcher:
         start, end = match.span
         text = "Mælt er með að sleppa 'vera að' og beygja frekar sögnina."
         detail = text
-        tidy_text = match.tidy_text
+        # tidy_text = match.tidy_text
         self._ann.append(
             Annotation(
                 start=start,
@@ -1211,15 +1211,12 @@ class PatternMatcher:
             # Note that we use the own_lemma_mm property instead of own_lemma. This
             # means that the lambda condition matches middle voice stem forms,
             # such as 'dást' instead of 'dá'.
-            cls.ctx_af = cast(
-                ContextDict,
-                {
-                    "verb": lambda tree: (
-                        tree.own_lemma_mm in verbs_af
-                        and not (set(tree.variants) & {"1", "2"})
-                    )
-                },
-            )
+            cls.ctx_af = {
+                "verb": lambda tree: (
+                    tree.own_lemma_mm in verbs_af
+                    and not (set(tree.variants) & {"1", "2"})
+                )
+            }
             # Catch sentences such as 'Jón leitaði af kettinum'
             p.append(
                 (
@@ -1263,15 +1260,12 @@ class PatternMatcher:
 
         if verbs_að:
             # Create matching patterns with a context that catches the að/af verbs.
-            cls.ctx_að = cast(
-                ContextDict,
-                {
-                    "verb": lambda tree: (
-                        tree.own_lemma_mm in verbs_að
-                        and not (set(tree.variants) & {"1", "2"})
-                    )
-                },
-            )
+            cls.ctx_að = {
+                "verb": lambda tree: (
+                    tree.own_lemma_mm in verbs_að
+                    and not (set(tree.variants) & {"1", "2"})
+                )
+            }
             # Catch sentences such as 'Jón heillaðist að kettinum'
             p.append(
                 (

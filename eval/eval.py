@@ -90,11 +90,11 @@ from typing import (
     Dict,
     List,
     Optional,
+    Set,
     Union,
     Tuple,
     Iterable,
     cast,
-    NamedTuple,
     Any,
     DefaultDict,
     Counter,
@@ -109,8 +109,6 @@ import heapq
 import argparse
 import xml.etree.ElementTree as ET
 import multiprocessing
-
-from typing_extensions import Annotated
 
 # import multiprocessing.dummy as multiprocessing
 
@@ -1933,16 +1931,15 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         )  # TODO Usually ystart, yend+1, reset when secondary comparison works
                         # Token span in iEC annotation
                         xspan = set(range(xstart, xend + 1))
+                        yorig: Set[str]
+                        ysugg: Set[str]
                         if ytok.original:
                             yorig = set(ytok.original.split())
                         else:
                             yorig = set()
                         xorig = set(cast(str, xtok["original"]).split())
                         if ytok.suggest:
-                            if isinstance(ytok.suggest, str):
-                                ysugg = set(ytok.suggest.split())
-                            else:
-                                ysugg = set(ytok.suggest)
+                            ysugg = set(ytok.suggest.split())
                         else:
                             ysugg = set()
                         xsugg = set(cast(str, xtok["corrected"]).split())

@@ -47,7 +47,7 @@
 
 """
 
-from typing import cast, Iterable, Iterator, List, Tuple, Dict, Type, Optional
+from typing import Any, cast, Iterable, Iterator, List, Tuple, Dict, Type, Optional
 
 from threading import Lock
 
@@ -57,104 +57,26 @@ from reynir import (
     TOK,
     Tok,
     TokenList,
-    _Job,
+    Sentence,
     _Sentence,
     _Paragraph,
     ProgressFunc,
     ParseResult,
     ICELANDIC_RATIO,
 )
-from reynir.binparser import BIN_Token, BIN_Grammar, BIN_Parser
+from reynir.reynir import Job
 from reynir.bintokenizer import StringIterable
+from reynir.binparser import BIN_Grammar, BIN_Parser, VariantHandler
 from reynir.fastparser import (
     Fast_Parser,
     ffi,  # type: ignore
 )
 from reynir.reducer import Reducer
-from reynir.reynir import Job, Sentence
-from reynir.settings import VerbSubjects
 
 from .annotation import Annotation
 from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
-from .errfinder import ErrorFinder
+from .errfinder import ErrorFinder, ErrorDetectionToken
 from .pattern import PatternMatcher
-
-
-class ErrorDetectionToken(BIN_Token):
-
-    """ A subclass of BIN_Token that adds error detection behavior
-        to the base class """
-
-    _VERB_ERROR_SUBJECTS = VerbSubjects.VERBS_ERRORS
-
-    def __init__(self, t: Tok, original_index: int) -> None:
-        """ original_index is the index of this token in
-            the original token list, as submitted to the parser,
-            including not-understood tokens such as quotation marks """
-        super().__init__(t, original_index)
-        # Store the capitalization state, carried over from CorrectToken instances.
-        # The state is one of (None, "sentence_start", "after_ordinal", "in_sentence").
-        # Since some token objects may be instances of Tok, not CorrectToken,
-        # we tread carefully here.
-        self._cap = getattr(t, "_cap", None)
-
-    @property
-    def cap_sentence_start(self) -> bool:
-        """ True if this token appears at sentence start """
-        return self._cap == "sentence_start"
-
-    @property
-    def cap_after_ordinal(self) -> bool:
-        """ True if this token appears after an ordinal at sentence start """
-        return self._cap == "after_ordinal"
-
-    @property
-    def cap_in_sentence(self) -> bool:
-        """ True if this token appears within a sentence """
-        return self._cap == "in_sentence"
-
-    @classmethod
-    def verb_is_strictly_impersonal(cls, verb: str, form: str) -> bool:
-        """ Return True if the given verb should not be allowed to match
-            with a normal (non _op) verb terminal """
-        if "OP" in form and not VerbSubjects.is_strictly_impersonal(verb):
-            # We have a normal terminal, but an impersonal verb form. However,
-            # that verb is not marked with an error correction from nominative
-            # case to another case. We thus return True to prevent token-terminal
-            # matching, since we don't have this specified as a verb error.
-            return True
-        # For normal terminals and impersonal verbs, we allow the match to
-        # proceed if we have a specified error correction from a nominative
-        # subject case to a different subject case.
-        # Example: 'Tröllskessan dagaði uppi' where 'daga' is an impersonal verb
-        # having a specified correction from nominative to accusative case.
-        return False
-
-    @classmethod
-    def verb_cannot_be_impersonal(cls, verb: str, form: str) -> bool:
-        """ Return True if this verb cannot match an so_xxx_op terminal. """
-        # We have a relaxed condition here because we want to catch
-        # verbs being used impersonally that shouldn't be. So we don't
-        # check for "OP" (impersonal) in the form, but we're not so relaxed
-        # that we accept "BH" (imperative) or "NH" (infinitive) forms.
-        # We also don't accept plural forms, as those errors would be
-        # very improbable ("okkur hlökkum til jólanna").
-        return any(f in form for f in ("BH", "NH", "FT"))
-
-    # Variants that must be present in the verb form if they
-    # are present in the terminal. We cut away the "op"
-    # element of the tuple, since we want to allow impersonal
-    # verbs to appear as normal verbs.
-    _RESTRICTIVE_VARIANTS = ("sagnb", "lhþt", "bh")
-
-    @classmethod
-    def verb_subject_matches(cls, verb: str, subj: str) -> bool:
-        """ Returns True if the given subject type/case is allowed
-            for this verb or if it is an erroneous subject
-            which we can flag """
-        return subj in cls._VERB_SUBJECTS.get(
-            verb, set()
-        ) or subj in cls._VERB_ERROR_SUBJECTS.get(verb, set())
 
 
 class ErrorDetectingGrammar(BIN_Grammar):
@@ -194,7 +116,7 @@ class ErrorDetectingParser(Fast_Parser):
     _grammar_class = ErrorDetectingGrammar
 
     # Also keep separate class instances of the C grammar and its timestamp
-    _c_grammar = ffi.NULL
+    _c_grammar: Any = cast(Any, ffi).NULL
     _c_grammar_ts: Optional[float] = None
 
     @staticmethod
@@ -218,20 +140,20 @@ class GreynirCorrect(Greynir):
     def __init__(self) -> None:
         super().__init__()
 
-    def tokenize(self, text_or_gen: StringIterable) -> Iterator[Tok]:
+    def tokenize(self, text: StringIterable) -> Iterator[Tok]:
         """ Use the correcting tokenizer instead of the normal one """
         # The CorrectToken class is a duck-typing implementation of Tok
-        return cast(Iterator[Tok], tokenize_and_correct(text_or_gen))
+        return tokenize_and_correct(text)
 
-    @staticmethod
-    def _dump_token(tok: Tok) -> Tuple:
+    @classmethod
+    def _dump_token(cls, tok: Tok) -> Tuple[Any, ...]:
         """ Override token dumping function from Greynir,
             providing a JSON-dumpable object """
         assert isinstance(tok, CorrectToken)
         return CorrectToken.dump(tok)
 
     @classmethod
-    def _load_token(cls, *args) -> CorrectToken:
+    def _load_token(cls, *args: Any) -> CorrectToken:
         """ Load token from serialized data """
         largs = len(args)
         if largs == 3:
@@ -307,13 +229,14 @@ class GreynirCorrect(Greynir):
                     # For the call to suggestion_does_not_match(), we need a
                     # BIN_Token instance, which we can obtain in a bit of a hacky
                     # way by creating it on the fly
-                    bin_token = BIN_Parser.wrap_token(cast(Tok, t), ix)
+                    bin_token = BIN_Parser.wrap_token(t, ix)
                     # Obtain the original BIN_Terminal instance from the grammar
                     terminal_index = token_to_terminal[ix]
                     terminal_node = sent.terminal_nodes[terminal_index]
                     original_terminal = terminal_node.original_terminal
                     assert original_terminal is not None
                     terminal = grammar.terminals[original_terminal]
+                    assert isinstance(terminal, VariantHandler)
                     if t.suggestion_does_not_match(terminal, bin_token):
                         # If this token is annotated with a spelling suggestion,
                         # do not add it unless it works grammatically
@@ -373,10 +296,10 @@ class GreynirCorrect(Greynir):
             # Successfully parsed:
             # Add annotations for error-marked nonterminals from the grammar
             # found in the parse tree
-            ErrorFinder(ann, sent).go()
+            ErrorFinder(ann, sent).run()
             # Run the pattern matcher on the sentence,
             # annotating questionable patterns
-            PatternMatcher(ann, sent).go()
+            PatternMatcher(ann, sent).run()
         # Sort the annotations by their start token index,
         # and then by decreasing span length
         ann.sort(key=lambda a: (a.start, -a.end))
@@ -438,6 +361,6 @@ def check_with_custom_parser(
     )
 
 
-def check_with_stats(text: str, *, split_paragraphs: bool = False) -> Dict:
+def check_with_stats(text: str, *, split_paragraphs: bool = False) -> ParseResult:
     """ Return a dict containing parsed paragraphs as well as statistics """
     return check_with_custom_parser(text, split_paragraphs=split_paragraphs)

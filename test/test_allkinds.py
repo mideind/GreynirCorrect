@@ -1,3 +1,4 @@
+# type: ignore
 """
 
     test_allkinds.py
@@ -38,11 +39,7 @@
 import reynir_correct as rc
 import tokenizer
 
-from reynir_correct.checker import AnnotatedSentence
-
-
 # Tests for errtokenizer.py
-
 
 def dump(tokens):
     print("\n{0} tokens:\n".format(len(tokens)))
@@ -601,8 +598,8 @@ def test_rare_word_errors(verbose=False):
     if verbose:
         dump(g)
     s = normalize(g)
-    # assert "Hann finnur" in s      # TODO Fæ uppástungu en ekki nógu sterka leiðréttingu
-    # assert "fyrir" in s           # TODO Virkar ekki
+    # assert "Hann finnur" in s         # TODO Fæ uppástungu en ekki nógu sterka leiðréttingu
+    # assert "fyrir" in s               # TODO Virkar ekki
     assert "kyns" in s
     # assert g[2].error_code == "S004"  # TODO virkar ekki, fæ S001
     # assert g[3].error_code == "S004"  # TODO virkar ekki, fæ W001 virðist vera.
@@ -614,8 +611,7 @@ def test_rare_word_errors(verbose=False):
         dump(g)
     s = normalize(g)
     assert g[3].error_code == "W001/w"  # arða
-    assert "glugga " in s
-    assert "gluggs " not in s
+    assert g[4].error_code == "W001/w"  # gluggs
     assert g[6].error_code == "W001/w"  # leists
 
 
@@ -1037,8 +1033,8 @@ def test_single_first_parts(verbose=False):
     # assert "all kaldur" not in s
     assert "hálfber" in s
     assert "hálf ber" not in s
-    assert g[3].error_code == "C003"
-    # assert g[10].error_code == "C005"
+    assert g[3].error_code == "C005/w"  # all
+    assert g[11].error_code == "C003"  # hálfber
 
     g = rc.tokenize("Hún setti honum afar kosti í for vinnunni.")
     g = list(g)
