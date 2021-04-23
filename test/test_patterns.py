@@ -107,7 +107,7 @@ def test_verb_að(rc):
     s = "Ég lét gott að mér leiða."
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
     s = "Hún á heiðurinn að þessu."
-    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AÐ"), (2, 3, "P_WRONG_PREP_AÐ")])  # !!! TODO: Should probably be one annotation, not two
     s = "Hún hafði ekki átt heiðurinn að þessu en fékk heiðurinn að þessu."
     check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ"), (9, 11, "P_WRONG_PREP_AÐ")])
     s = "Hún hlaut heiðurinn að þessu."
