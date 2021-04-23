@@ -44,6 +44,7 @@ import json
 from functools import partial
 
 from tokenizer import Tok, detokenize, normalized_text_from_tokens
+from tokenizer.definitions import AmountTuple, NumberTuple
 from .errtokenizer import TOK, CorrectToken, Error, tokenize
 
 
@@ -108,7 +109,7 @@ def main() -> None:
         """ Generate the lines of text in the input file """
         yield from f
 
-    def val(t: CorrectToken, quote_word: bool=False) -> Union[None, str, Tuple, Sequence]:
+    def val(t: CorrectToken, quote_word: bool=False) -> Union[None, str, float, Tuple[Any, ...], Sequence[Any]]:
         """ Return the value part of the token t """
         if t.val is None:
             return None
@@ -116,16 +117,17 @@ def main() -> None:
             # No need to return list of meanings
             return None
         if t.kind in {TOK.PERCENT, TOK.NUMBER, TOK.CURRENCY}:
-            return t.val[0]
+            return cast(NumberTuple, t.val)[0]
         if t.kind == TOK.AMOUNT:
+            num, iso, _, _ = cast(AmountTuple, t.val)
             if quote_word:
                 # Format as "1234.56|USD"
-                return "\"{0}|{1}\"".format(t.val[0], t.val[1])
-            return t.val[0], t.val[1]
+                return "\"{0}|{1}\"".format(num, iso)
+            return num, iso
         if t.kind == TOK.S_BEGIN:
             return None
         if t.kind == TOK.PUNCTUATION:
-            punct = cast(str, t.val[1])
+            punct = t.punctuation
             return quote(punct) if quote_word else punct
         if quote_word and t.kind in {
             TOK.DATE, TOK.TIME, TOK.DATEABS, TOK.DATEREL, TOK.TIMESTAMP,
@@ -133,7 +135,7 @@ def main() -> None:
             TOK.MEASUREMENT
         }:
             # Return a |-delimited list of numbers
-            return quote("|".join(str(v) for v in t.val))
+            return quote("|".join(str(v) for v in cast(Iterable[Any], t.val)))
         if quote_word and isinstance(t.val, str):
             return quote(t.val)
         return t.val

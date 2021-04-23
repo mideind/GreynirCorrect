@@ -1232,7 +1232,7 @@ class PatternMatcher:
         start, end = match.span
         text = "Mælt er með að sleppa 'vera að' og beygja frekar sögnina."
         detail = text
-        tidy_text = match.tidy_text
+        # tidy_text = match.tidy_text
         self._ann.append(
             Annotation(
                 start=start,
@@ -1299,15 +1299,12 @@ class PatternMatcher:
             # Note that we use the own_lemma_mm property instead of own_lemma. This
             # means that the lambda condition matches middle voice stem forms,
             # such as 'dást' instead of 'dá'.
-            cls.ctx_af = cast(
-                ContextDict,
-                {
-                    "verb": lambda tree: (
-                        tree.own_lemma_mm in verbs_af
-                        and not (set(tree.variants) & {"1", "2"})
-                    )
-                },
-            )
+            cls.ctx_af = {
+                "verb": lambda tree: (
+                    tree.own_lemma_mm in verbs_af
+                    and not (set(tree.variants) & {"1", "2"})
+                )
+            }
             # Catch sentences such as 'Jón leitaði af kettinum'
             p.append(
                 (
@@ -1547,15 +1544,12 @@ class PatternMatcher:
 
         if verbs_að:
             # Create matching patterns with a context that catches the að/af verbs.
-            cls.ctx_að = cast(
-                ContextDict,
-                {
-                    "verb": lambda tree: (
-                        tree.own_lemma_mm in verbs_að
-                        and not (set(tree.variants) & {"1", "2"})
-                    )
-                },
-            )
+            cls.ctx_að = {
+                "verb": lambda tree: (
+                    tree.own_lemma_mm in verbs_að
+                    and not (set(tree.variants) & {"1", "2"})
+                )
+            }
             # Catch sentences such as 'Jón heillaðist að kettinum'
             p.append(
                 (
@@ -1654,8 +1648,8 @@ class PatternMatcher:
             # Catch "Ég lagði ekki mikið að mörkum.", "Ég hafði (ekki) lagt mikið að mörkum."
             p.append(
                 (
-                    "mark",  # Trigger lemma for this pattern
-                    "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { 'mark' } } }",
+                    "mörk",  # Trigger lemma for this pattern
+                    "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { 'mörk' } } }",
                     cls.wrong_preposition_að_mörkum,
                     None,
                 )
@@ -1665,7 +1659,15 @@ class PatternMatcher:
             p.append(
                 (
                     "leiða",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'láta' } VP > { PP > { 'að' } VP > 'leiða' } }",
+                    "VP > { VP > { 'láta' } VP > { PP > { 'að' } VP > { 'leiða' } } }",
+                    cls.wrong_preposition_að_leiða,
+                    None,
+                )
+            )
+            p.append(
+                (
+                    "leiður",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'láta' } PP > { P > { 'að' } 'leiður' } }",
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
@@ -2072,7 +2074,7 @@ class PatternMatcher:
             )
         )
 
-    def go(self) -> None:
+    def run(self) -> None:
         """ Apply the patterns to the sentence """
         tree = None if self._sent is None else self._sent.tree
         if tree is None:

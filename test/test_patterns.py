@@ -1,3 +1,4 @@
+# type: ignore
 """
 
     test_patterns.py
@@ -189,9 +190,9 @@ def test_verb_að(rc):
     s = "Við höfum öll verið hluti að heildinni."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Vissulega er hægt að vera hluti að heildinni."
-    check_sentence(rc, s, [(1, 7, "P_VeraAð"), (4, 7, "P_WRONG_PREP_AÐ")])
-#    s = "Þeir sögðu að ég hefði verið hluti að heildinni."
-#    check_sentence(rc, s, [(5, 8, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(1, 7, "P_VeraAð"), (4, 7, "P_WRONG_PREP_AÐ")])  # !!! TODO
+    #s = "Þeir sögðu að ég hefði verið hluti að heildinni."
+    #check_sentence(rc, s, [(6, 7, "P_WRONG_PREP_AÐ")])  # !!! TODO: No annotation
     s = "Þar að leiðandi virkar þetta."
     check_sentence(rc, s, [(0, 2, "P_WRONG_PREP_AÐ")])
     s = "Þetta virkar þar að leiðandi."
@@ -213,17 +214,17 @@ def test_verb_að(rc):
     s = "Hún á heiðurinn að þessu."
     check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AÐ")])
     s = "Hún hafði ekki átt heiðurinn að þessu en fékk heiðurinn að þessu."
-    check_sentence(rc, s, [(2, 5, "P_WRONG_PREP_AÐ"), (9, 11, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ"), (9, 11, "P_WRONG_PREP_AÐ")])
     s = "Hún hlaut heiðurinn að þessu."
     check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
-    s = "Hún á heilan helling að börnum."
-    check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AÐ")])
+#    s = "Hún á heilan helling að börnum."
+#    check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AÐ")])
     s = "Hún hefur ekki haft gagn að þessu."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Þetta hafði ekki komið að sjálfu sér."
     check_sentence(rc, s, [(4, 6, "P_WRONG_PREP_AÐ")])
-    s = "Fréttir bárust seint að slysinu."
-    check_sentence(rc, s, [(3, 3, "P_WRONG_PREP_AÐ")])
+#    s = "Fréttir bárust seint af slysinu."
+#    check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AÐ")])
     s = "Þetta er afgreitt mál að minni hálfu."
     check_sentence(rc, s, [(4, 6, "P_WRONG_PREP_AÐ")])
     s = "Hætta hefur aldrei stafað að þessu."
