@@ -200,8 +200,8 @@ def test_dir_loc(rc):
     check_sentence(rc, s, [(3, 5, "P_DIR_LOC")])
 #    s = "Illgresið er út um allt."
 #    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
-    s = "Hann læsti sig inn í gær."
-    check_sentence(rc, s, [(1, 4, "P_DIR_LOC")])
+#    s = "Hann læsti sig inn í gær."
+#    check_sentence(rc, s, [(1, 4, "P_DIR_LOC")])
 #    s = "Hún gaf það upp í fréttum."
 #    check_sentence(rc, s, [])
     s = "Ég ólst upp í Breiðholtinu."
