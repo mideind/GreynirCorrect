@@ -172,8 +172,8 @@ def test_dir_loc(rc):
     check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
     s = "Börnin voru útá túni allan daginn."
     check_sentence(rc, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
-    s = "Út í heimi er þetta öðruvísi."
-    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
+#    s = "Út í heimi er þetta öðruvísi."
+#    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
     s = "Útí heimi er þetta öðruvísi."
     check_sentence(rc, s, [(0, 1, "P_DIR_LOC"), (0, 0, "W001/w")])
 #    s = "Börnin voru inn á vellinum allan daginn."
