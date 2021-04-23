@@ -921,8 +921,7 @@ class PatternMatcher:
         )
 
     def dir_loc(self, match: SimpleTree) -> None:
-        if adv is None:
-            adv = match.first_match("( 'inn'|'út'|'upp' )")
+        adv = match.first_match("( 'inn'|'út'|'upp' )")
         pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }")  
         if pp is None:
             pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þf|no_ft_þf|pfn_et_þf|pfn_ft_þf ) } }") 
