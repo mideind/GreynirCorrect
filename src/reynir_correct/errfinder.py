@@ -39,7 +39,7 @@
 """
 
 from typing import (
-    TYPE_CHECKING,
+    Mapping,
     Tuple,
     List,
     Dict,
@@ -53,7 +53,7 @@ from typing_extensions import Protocol
 
 import re
 
-from reynir import correct_spaces, TOK, _Sentence
+from reynir import correct_spaces, Tok, TOK, _Sentence
 from reynir.fastparser import ParseForestNavigator, Node
 from reynir.binparser import BIN_Terminal, BIN_Token
 from reynir.settings import VerbSubjects
@@ -61,9 +61,6 @@ from reynir.simpletree import SimpleTree
 
 from .annotation import Annotation
 from .errtokenizer import emulate_case
-
-if TYPE_CHECKING:
-    from .checker import ErrorDetectionToken
 
 # Typing stuff
 AnnotationDict = Dict[str, Union[str, int]]
@@ -133,6 +130,83 @@ ORDINALS = {
 }
 
 
+class ErrorDetectionToken(BIN_Token):
+
+    """ A subclass of BIN_Token that adds error detection behavior
+        to the base class """
+
+    _VERB_ERROR_SUBJECTS = VerbSubjects.VERBS_ERRORS
+
+    def __init__(self, t: Tok, original_index: int) -> None:
+        """ original_index is the index of this token in
+            the original token list, as submitted to the parser,
+            including not-understood tokens such as quotation marks """
+        super().__init__(t, original_index)
+        # Store the capitalization state, carried over from CorrectToken instances.
+        # The state is one of (None, "sentence_start", "after_ordinal", "in_sentence").
+        # Since some token objects may be instances of Tok, not CorrectToken,
+        # we tread carefully here.
+        self._cap = getattr(t, "_cap", None)
+
+    @property
+    def cap_sentence_start(self) -> bool:
+        """ True if this token appears at sentence start """
+        return self._cap == "sentence_start"
+
+    @property
+    def cap_after_ordinal(self) -> bool:
+        """ True if this token appears after an ordinal at sentence start """
+        return self._cap == "after_ordinal"
+
+    @property
+    def cap_in_sentence(self) -> bool:
+        """ True if this token appears within a sentence """
+        return self._cap == "in_sentence"
+
+    @classmethod
+    def verb_is_strictly_impersonal(cls, verb: str, form: str) -> bool:
+        """ Return True if the given verb should not be allowed to match
+            with a normal (non _op) verb terminal """
+        if "OP" in form and not VerbSubjects.is_strictly_impersonal(verb):
+            # We have a normal terminal, but an impersonal verb form. However,
+            # that verb is not marked with an error correction from nominative
+            # case to another case. We thus return True to prevent token-terminal
+            # matching, since we don't have this specified as a verb error.
+            return True
+        # For normal terminals and impersonal verbs, we allow the match to
+        # proceed if we have a specified error correction from a nominative
+        # subject case to a different subject case.
+        # Example: 'Tröllskessan dagaði uppi' where 'daga' is an impersonal verb
+        # having a specified correction from nominative to accusative case.
+        return False
+
+    @classmethod
+    def verb_cannot_be_impersonal(cls, verb: str, form: str) -> bool:
+        """ Return True if this verb cannot match an so_xxx_op terminal. """
+        # We have a relaxed condition here because we want to catch
+        # verbs being used impersonally that shouldn't be. So we don't
+        # check for "OP" (impersonal) in the form, but we're not so relaxed
+        # that we accept "BH" (imperative) or "NH" (infinitive) forms.
+        # We also don't accept plural forms, as those errors would be
+        # very improbable ("okkur hlökkum til jólanna").
+        return any(f in form for f in ("BH", "NH", "FT"))
+
+    # Variants that must be present in the verb form if they
+    # are present in the terminal. We cut away the "op"
+    # element of the tuple, since we want to allow impersonal
+    # verbs to appear as normal verbs.
+    _RESTRICTIVE_VARIANTS = ("sagnb", "lhþt", "bh")
+
+    @classmethod
+    def verb_subject_matches(cls, verb: str, subj: str) -> bool:
+        """ Returns True if the given subject type/case is allowed
+            for this verb or if it is an erroneous subject
+            which we can flag """
+        return subj in cls._VERB_SUBJECTS.get(
+            verb, set()
+        ) or subj in cls._VERB_ERROR_SUBJECTS.get(verb, dict())
+
+
 class ErrorFinder(ParseForestNavigator):
 
     """ Utility class to find nonterminals in parse trees that are
@@ -146,7 +220,7 @@ class ErrorFinder(ParseForestNavigator):
         "ef": cast(CastFunction, SimpleTree.genitive_np),
     }
 
-    _NON_OP_VERB_FORMS = {
+    _NON_OP_VERB_FORMS: Mapping[str, Tuple[str, str]] = {
         "lýst": (
             "líst",
             "'Lýst' á sennilega að vera 'líst', þ.e. sögnin 'að líta(st)' "
@@ -165,7 +239,7 @@ class ErrorFinder(ParseForestNavigator):
         # Terminal node list
         self._terminal_nodes = sent.terminal_nodes
 
-    def go(self):
+    def run(self) -> Any:
         """ Start navigating the deep tree structure of the sentence """
         return super().go(self._sent.deep_tree)
 
@@ -193,7 +267,7 @@ class ErrorFinder(ParseForestNavigator):
     def _node_text(self, node: Node, original_case: bool = False) -> str:
         """ Return the text within the span of the node """
 
-        def text(t):
+        def text(t: Tok) -> str:
             """ If the token t is a word token, return a lower case
                 version of its text, unless we have a reason to keep
                 the original case, i.e. if it is a lemma that is upper case
@@ -204,7 +278,7 @@ class ErrorFinder(ParseForestNavigator):
             if len(t.txt) > 1 and t.txt.isupper():
                 # All uppercase: keep it that way
                 return t.txt
-            if t.val and any(m.stofn[0].isupper() for m in t.val):
+            if t.val and any(m.stofn[0].isupper() for m in t.meanings):
                 # There is an uppercase lemma for this word in BÍN:
                 # keep the original form
                 return t.txt
@@ -212,7 +286,7 @@ class ErrorFinder(ParseForestNavigator):
             return t.txt.lower()
 
         first, last = self._node_span(node)
-        text_func = (lambda t: t.txt) if original_case else text
+        text_func: Callable[[Tok], str] = (lambda t: t.txt) if original_case else text
         return correct_spaces(
             " ".join(text_func(t) for t in self._tokens[first : last + 1] if t.txt)
         )
@@ -666,7 +740,7 @@ class ErrorFinder(ParseForestNavigator):
         tnode = self._terminal_nodes[node.start]
         verb = tnode.lemma
 
-        def annotate_wrong_subject_case(subj_case_abbr, correct_case_abbr):
+        def annotate_wrong_subject_case(subj_case_abbr: str, correct_case_abbr: str) -> None:
             """ Create an annotation that describes a verb having a subject
                 in the wrong case """
             wrong_case = CASE_NAMES[subj_case_abbr]
@@ -705,6 +779,7 @@ class ErrorFinder(ParseForestNavigator):
             else:
                 # We don't seem to find the subject, so just annotate the verb.
                 # In this case, there's no suggested correction.
+                assert node.token is not None
                 index = node.token.index
                 self._ann.append(
                     Annotation(
@@ -790,11 +865,11 @@ class ErrorFinder(ParseForestNavigator):
             # Yes, this appears to be an erroneous subject case
             annotate_wrong_subject_case(subj_case_abbr, errors[subj_case_abbr])
 
-    def visit_token(self, level: int, node: Node) -> None:
+    def visit_token(self, level: int, w: Node) -> None:
         """ Entering a terminal/token match node """
-        terminal = cast(BIN_Terminal, node.terminal)
+        terminal = cast(BIN_Terminal, w.terminal)
         if terminal.category == "so":
-            self._annotate_verb(node)
+            self._annotate_verb(w)
         # TODO: The following actually reduces GreynirCorrect's score on the
         # iceErrorCorpus test set, so we comment it out for the time being.
         # elif terminal.category == "raðnr":
@@ -848,8 +923,7 @@ class ErrorFinder(ParseForestNavigator):
                     ann_text, suggestion = cast(AnnotationTuple2, ann)
                 else:
                     ann_text, start, end, suggestion = cast(AnnotationTuple4, ann)
-            elif isinstance(ann, dict):
-                ann = cast(AnnotationDict, ann)
+            else:
                 if len(ann) == 0:
                     # Empty dict: this means that upon closer inspection,
                     # there was no need to annotate
@@ -860,8 +934,6 @@ class ErrorFinder(ParseForestNavigator):
                 suggestion = cast(str, ann.get("suggest"))
                 start = cast(int, ann.get("start", start))
                 end = cast(int, ann.get("end", end))
-            else:
-                assert False, "Text function {0} returns illegal type".format(name)
         else:
             # No: use a default text
             ann_text = "'{0}' er líklega rangt".format(span_text)

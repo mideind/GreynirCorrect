@@ -1,3 +1,4 @@
+# type: ignore
 """
 
     test_annotator.py
@@ -119,7 +120,9 @@ def check_sentence(
         else:
             assert len(sent.annotations) == len(annotations)
             for a, (start, end, code) in zip(sent.annotations, annotations):
-                assert a.start == start
+                assert a.start == start, (
+                    f"Mismatch between ({a.start}, {a.end}, {a.code}) and ({start}, {end}, {code})"
+                )
                 assert a.end == end
                 assert a.code == code
 
@@ -258,7 +261,7 @@ def test_foreign_sentences(rc):
     check_sentence(
         rc,
         "Praise the Lord.",
-        [(0, 2, "E004")],  # Note: the tokenizer amalgams 'Praise the' into one token
+        [(0, 1, "E004")],  # Note: the tokenizer amalgams 'Praise the Lord' into one token
         is_foreign=True,
     )
     check_sentence(
