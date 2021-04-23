@@ -150,7 +150,6 @@ class PatternMatcher:
     ctx_noun_að: ContextDict = cast(ContextDict, None)
     ctx_place_names: ContextDict = cast(ContextDict, None)
     ctx_dir_loc: ContextDict = cast(ContextDict, None)
-    ctx_loc_dir: ContextDict = cast(ContextDict, None)
 
     def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
@@ -1686,37 +1685,6 @@ class PatternMatcher:
                 "VP > [VP > { @'vera' } (ADVP|NP-SUBJ)? IP-INF > {TO > nhm}]",
                 lambda self, match: self.vera_að(match),
                 None,
-            )
-        )
-
-        def loc4dir(verbs: Set[str], tree: SimpleTree) -> bool:
-            """ Context matching function for the %noun macro in combination
-                with 'að' """
-            lemma = tree.own_lemma
-            if not lemma:
-                # The passed-in tree node is probably not a terminal
-                return False
-            return lemma in verbs
-
-        VERBS_dir: Set[str] = {
-            "gefa",
-            "bera",
-            "stíga",
-            "byggja",
-            "koma",
-            "skipta",
-            "ala",
-            "detta"
-        }
-        # The macro %verb is resolved by calling the function dir4loc()
-        # with the potentially matching tree node as an argument.
-        cls.ctx_loc_dir = {"verb": partial(loc4dir, VERBS_dir)}
-        p.append(
-            (
-                "uppi",  # Trigger lemma for this pattern
-                "VP > { VP >> { %verb } ADVP > { 'uppi' } }",
-                lambda self, match: self.loc_dir(match),
-                cls.ctx_loc_dir,
             )
         )
 
