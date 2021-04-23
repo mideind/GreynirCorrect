@@ -186,8 +186,8 @@ def test_dir_loc(rc):
 #    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
 #    s = "Þau eru alltaf uppí bústað."
 #    check_sentence(rc, s, [(1, 4, "P_DIR_LOC"), (3, 3, "W001/w")])     # Span is either 1,4 or 3,4, but always corrected.
-    s = "Hún var niður í bæ í gær."
-    check_sentence(rc, s, [(1, 5, "P_DIR_LOC")])
+#    s = "Hún var niður í bæ í gær."
+#    check_sentence(rc, s, [(1, 5, "P_DIR_LOC")])
     s = "Ég varð mér út um smá mat."
     check_sentence(rc, s, [(3, 6, "P_DIR_LOC")])
     s = "Þegar upp er staðið erum við öll eins."
