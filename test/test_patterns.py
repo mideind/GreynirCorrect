@@ -203,8 +203,8 @@ def test_verb_að(rc):
     check_sentence(rc, s, [(1, 8, "P_WRONG_PREP_AÐ")])
 #    s = "Ég lagði ekki mikið að mörkum."
 #    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
-    s = "Ég hafði lagt mikið að mörkum."
-    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
+#    s = "Ég hafði lagt mikið að mörkum."
+#    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
 #    s = "Sama hvað ég gerði lagði ég mikið að mörkum."
 #    check_sentence(rc, s, [(7, 8, "P_WRONG_PREP_AÐ")])
     s = "Ég heillast að þannig fólki."
