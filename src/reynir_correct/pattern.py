@@ -150,6 +150,7 @@ class PatternMatcher:
     ctx_noun_að: ContextDict = cast(ContextDict, None)
     ctx_place_names: ContextDict = cast(ContextDict, None)
     ctx_dir_loc: ContextDict = cast(ContextDict, None)
+    ctx_loc_dir: ContextDict = cast(ContextDict, None)
 
     def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
@@ -920,8 +921,28 @@ class PatternMatcher:
             )
         )
 
-    def dir_loc(self, match: SimpleTree) -> None:
-        adv = match.first_match("( 'inn'|'út'|'upp' )", self.ctx_dir_loc)
+    def loc_dir(self, match: SimpleTree) -> None:
+        adv = match.first_match("( 'inni'|'úti'|'uppi' )", self.ctx_loc_dir)
+        start, end = match.span
+        text = "LOC4DIR."
+        detail = text
+        tidy_text = match.tidy_text
+        suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_LOC_DIR",
+                text=text,
+                detail=detail,
+                original=adv.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def dir_loc(self, match: SimpleTree, adv=None) -> None:
+        if adv is None:
+            adv = match.first_match("( 'inn'|'út'|'upp' )", self.ctx_dir_loc)
         pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }", self.ctx_dir_loc)
         if pp is None:
             pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þf|no_ft_þf|pfn_et_þf|pfn_ft_þf ) } }", self.ctx_dir_loc)
@@ -1688,10 +1709,92 @@ class PatternMatcher:
             )
         )
 
+        def loc4dir(verbs: Set[str], tree: SimpleTree) -> bool:
+            """ Context matching function for the %noun macro in combination
+                with 'að' """
+            lemma = tree.own_lemma
+            if not lemma:
+                # The passed-in tree node is probably not a terminal
+                return False
+            return lemma in verbs
+
+        VERBS_dir: Set[str] = {
+            "gefa",
+            "bera",
+            "stíga",
+            "byggja",
+            "koma",
+            "skipta",
+            "ala",
+            "detta"
+        }
+        # The macro %verb is resolved by calling the function dir4loc()
+        # with the potentially matching tree node as an argument.
+        cls.ctx_loc_dir = {"verb": partial(loc4dir, VERBS_dir)}
+        p.append(
+            (
+                "uppi",  # Trigger lemma for this pattern
+                "VP > { VP >> { %verb } ADVP > { 'uppi' } }",
+                lambda self, match: self.loc_dir(match),
+                cls.ctx_loc_dir,
+            )
+        )
+
+        def dir4loc(verbs: Set[str], tree: SimpleTree) -> bool:
+            """ Context matching function for the %noun macro in combination
+                with 'að' """
+            lemma = tree.own_lemma
+            if not lemma:
+                # The passed-in tree node is probably not a terminal
+                return False
+            return lemma in verbs
+
+        VERBS: Set[str] = {
+            "safna",
+            "kaupa",
+            "læsa",
+            "geyma"
+        }
+        # The macro %verb is resolved by calling the function dir4loc()
+        # with the potentially matching tree node as an argument.
+        cls.ctx_dir_loc = {"verb": partial(dir4loc, VERBS)}
         p.append(
             (
                 "út",  # Trigger lemma for this pattern
-                "( PP|VP|IP ) > [ .* ADVP > { 'út' } PP > { P > { ( 'í'|'á'|'um' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } ]",
+                "VP > { VP > { %verb } NP > { PP > { ADVP > { 'út' } P > { 'í' } NP > { 'búð' } } } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { %verb } ADVP > { 'saman' } PP > { ADVP > { 'inn' } P > { 'í' } NP } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { %verb } NP > { PP > { ADVP > { 'inn' } } } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { %verb } ADVP > { 'inn' } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > [ .* ^(bera|koma|fara|gefa|brjóta|dreifa) ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] ]",
                 lambda self, match: self.dir_loc(match),
                 cls.ctx_dir_loc,
             )
@@ -1699,7 +1802,48 @@ class PatternMatcher:
         p.append(
             (
                 "út",  # Trigger lemma for this pattern
-                "( IP|NP|VP ) > { IP >> { ADVP > { 'út' } } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] }",
+                "( PP|VP|IP ) > [ .* VP > { 'hafa' } .* ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] ]",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "NP > [ ( no_et_nf|no_ft_nf|pfn_et_nf|pfn_ft_nf ) PP > [ ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] ] ]",
+                #"( PP|VP|IP ) > [ .* ^(bera|koma|fara|gefa|brjóta|dreifa) ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] ]",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "( IP|NP|VP ) > { IP >> [ .*[^(bera|koma|fara|gefa|brjóta|dreifa)] ADVP > { 'út' } ] PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "( IP|NP|VP ) > { VP > { 'vera' } ADVP > { 'út' } PP > { P > { ( 'í'|'á'|'um' ) } NP > { 'tún' } } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "VP > [ .* VP > { VP > [ 'vera' ] IP >> { ADVP > [ 'út' ] } } .* PP > [ P > [ 'á' ] NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } ] .* ]",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "VP > [ VP > [ 'gera' ] NP > [ .* PP > { ADVP > { 'út' } P > [ 'í' ] NP } ] ]",
                 lambda self, match: self.dir_loc(match),
                 cls.ctx_dir_loc,
             )
@@ -1723,7 +1867,8 @@ class PatternMatcher:
         p.append(
             (
                 "inn",  # Trigger lemma for this pattern
-                "( PP|VP|IP ) > [ .* ADVP > { 'inn' } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } ]",
+                "( PP|VP|IP ) > [ .*[^(vinna|fara|flæða|ráða)] ADVP > { 'inn' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } } .* ]",
+            #    "( PP|VP|IP ) > [ .* ADVP > { 'inn' } .* PP > { P > { ( 'í'|'á' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } } .* ]",
                 lambda self, match: self.dir_loc(match),
                 cls.ctx_dir_loc,
             )
@@ -1731,7 +1876,31 @@ class PatternMatcher:
         p.append(
             (
                 "inn",  # Trigger lemma for this pattern
-                "( IP|NP|VP ) > { IP >> { ADVP > { 'inn' } } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                "( IP|NP|VP ) > { IP >> [ .*[^(fara|flæða|ráða)] ADVP > { 'inn' } ] PP > [ P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "NP > { IP >> { VP > { 'vera' } ADVP > { 'inn' } } PP > [ P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { 'verða' } ADVP > { 'inn' } PP > [ P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { 'geyma' } ADVP > { 'inn' } PP }",
                 lambda self, match: self.dir_loc(match),
                 cls.ctx_dir_loc,
             )
@@ -1747,7 +1916,8 @@ class PatternMatcher:
         p.append(
             (
                 "inní",  # Trigger lemma for this pattern
-                "PP > { P > { 'inní' } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                "VP > { VP > [ .*[^(ráða)] ] NP > { PP > { P > { 'inní' } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } } } }",
+                #"PP > { P > { 'inní' } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
                 lambda self, match: self.dir_loc_comp(match),
                 cls.ctx_dir_loc,
             )
@@ -1755,7 +1925,7 @@ class PatternMatcher:
         p.append(
             (
                 "inn",  # Trigger lemma for this pattern
-                "VP > { VP > { ( 'verða'|'vera' ) } ADVP > { 'inn' } PP > { P > { 'á' } } }",
+                "VP > [ VP > { ( 'verða'|'vera' ) } .*[^(flæða)] ADVP > { 'inn' } PP > { P > { 'á' } } ]",
                 lambda self, match: self.dir_loc(match),
                 cls.ctx_dir_loc,
             )
@@ -1763,7 +1933,23 @@ class PatternMatcher:
         p.append(
             (
                 "inn",  # Trigger lemma for this pattern
-                "VP > { VP > { 'vera' } ADVP > { 'inn' } PP > { P > { 'í' } } }",
+                "VP > [ VP > { 'vera' } .*[^(flæða)] ADVP > { 'inn' } PP > { P > { 'í' } } ]",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "upp",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > [ VP > { ^(byggja) } ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } } ]",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "upp",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > [ VP > { ('standa'|'hafa') } ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } } ]",
                 lambda self, match: self.dir_loc(match),
                 cls.ctx_dir_loc,
             )
@@ -1772,7 +1958,7 @@ class PatternMatcher:
         p.append(
             (
                 "upp",  # Trigger lemma for this pattern
-                "( PP|VP|IP ) > { ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } } }",
+                "VP > [ VP > [ 'liggja' ] PP > [ P > { ( 'í'|'á' ) } NP > { 'auga' } ] ADVP > [ 'upp' ] ]",
                 lambda self, match: self.dir_loc(match),
                 cls.ctx_dir_loc,
             )
@@ -1780,7 +1966,23 @@ class PatternMatcher:
         p.append(
             (
                 "upp",  # Trigger lemma for this pattern
-                "( IP|NP|VP ) > { IP >> { ADVP > { 'upp' } } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                "PP > [ .* ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { 'teningur' } } ]",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "upp",  # Trigger lemma for this pattern
+                "( IP|NP|VP ) > [ IP >> { ADVP > { 'upp' } } PP > [ P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] ]",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "upp",  # Trigger lemma for this pattern
+                "VP > [ VP >> { VP > { VP > { 'hafa' } ADVP > { 'upp' } } } PP > [ P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) ] .* ]",
                 lambda self, match: self.dir_loc(match),
                 cls.ctx_dir_loc,
             )
@@ -1788,7 +1990,7 @@ class PatternMatcher:
         p.append(
             (
                 "uppá",  # Trigger lemma for this pattern
-                "PP > { P > { 'uppá' } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }",
+                "VP > { VP > { 'taka' } NP > { PP > { P > { 'uppá' } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf|no_et_þf|no_ft_þf|pfn_et_þf|pfn_ft_þf ) } } } }",
                 lambda self, match: self.dir_loc_comp(match),
                 cls.ctx_dir_loc,
             )
@@ -1812,7 +2014,7 @@ class PatternMatcher:
         p.append(
             (
                 "niður",  # Trigger lemma for this pattern
-                "( PP|VP|IP ) > [ .* ADVP > { 'niður' } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } ]",
+                "( PP|VP|IP ) > [ .*^[(skrifa|færa)] ADVP > { 'niður' } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } ]",
                 lambda self, match: self.dir_loc_niður(match),
                 cls.ctx_dir_loc,
             )
@@ -1820,27 +2022,11 @@ class PatternMatcher:
         p.append(
             (
                 "niður",  # Trigger lemma for this pattern
-                "VP > { VP > { 'vera' } PP > { ADVP > { 'niður' } P > { 'í' } NP } }",
+                "VP > [ VP > { 'vera' } .*[^(færa)] PP > { ADVP > { 'niður' } P > { 'í' } NP } ]",
                 lambda self, match: self.dir_loc_niður(match),
                 cls.ctx_dir_loc,
             )
         )
-    #    p.append(
-    #        (
-    #            "niður",  # Trigger lemma for this pattern
-    #            "( IP|NP|VP ) > { IP >> { ADVP > { 'niður' } } PP > { P > { ( 'í'|'á' ) } NP > ( no_et_þgf|no_ft_þgf|#pfn_et_þgf|pfn_ft_þgf ) } }",
-    #            lambda self, match: self.dir_loc_niður(match),
-    #            cls.ctx_dir_loc,
-    #        )
-    #    )
-    #    p.append(
-    #        (
-    #            "teningur",  # Trigger lemma for this pattern
-    #            "( S|IP|VP ) > { ADVP > { 'upp' } PP > { P > { 'á' } NP > { 'teningur' } } }",
-    #            lambda self, match: self.dir_loc(match),
-    #            cls.ctx_dir_loc,
-    #        )
-    #    )
         p.append(
             (
                 "verða",  # Trigger lemma for this pattern
@@ -1859,16 +2045,8 @@ class PatternMatcher:
         )
         p.append(
             (
-                "safna",  # Trigger lemma for this pattern
-                "VP > { VP > { 'safna' } ADVP > { 'saman' } PP > { ADVP > { 'inn' } P > { 'í' } NP } }",
-                lambda self, match: self.dir_loc_safna(match),
-                cls.ctx_dir_loc,
-            )
-        )
-        p.append(
-            (
-                "búð",  # Trigger lemma for this pattern
-                "VP > { VP > { 'kaupa' } NP > { PP > { ADVP > { 'út' } P > { 'í' } NP > { 'búð' } } } }",
+                "út",  # Trigger lemma for this pattern
+                "VP > { VP > [ 'vera' .*[^(dreifa)] ] NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } }",
                 lambda self, match: self.dir_loc_búð(match),
                 cls.ctx_dir_loc,
             )
@@ -1876,7 +2054,7 @@ class PatternMatcher:
         p.append(
             (
                 "út",  # Trigger lemma for this pattern
-                "VP > { VP > { 'vera' } NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } }",
+                "VP > { VP > [ 'vera' ] NP > [ .* PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } ] }",
                 lambda self, match: self.dir_loc_búð(match),
                 cls.ctx_dir_loc,
             )
@@ -1884,7 +2062,23 @@ class PatternMatcher:
         p.append(
             (
                 "út",  # Trigger lemma for this pattern
-                "VP > { VP > { 'vera' } NP > { 'út' 'um' } }",
+                "VP > { VP PP >> { NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } } }",
+                lambda self, match: self.dir_loc_búð(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "VP > { VP > [ 'vera' ] ADVP > [ 'út' ] PP > { P > [ 'um' ] } }",
+                lambda self, match: self.dir_loc_ut_um(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        p.append(
+            (
+                "út",  # Trigger lemma for this pattern
+                "VP > { VP > [ 'vera' .*[^(dreifa)] ] NP > { 'út' 'um' } }",
                 lambda self, match: self.dir_loc_ut_um(match),
                 cls.ctx_dir_loc,
             )
@@ -1908,7 +2102,7 @@ class PatternMatcher:
         p.append(
             (
                 "út",  # Trigger lemma for this pattern
-                "VP > { VP > { 'vera' } ADVP > { 'út' } PP > { P > { 'um' } NP } }",
+                "VP > { VP > [ 'vera' .*[^(dreifa)] ] ADVP > { 'út' } PP > { P > { 'um' } NP } }",
                 lambda self, match: self.dir_loc_ut_um(match),
                 cls.ctx_dir_loc,
             )
@@ -1916,24 +2110,8 @@ class PatternMatcher:
         p.append(
             (
                 "út",  # Trigger lemma for this pattern
-                "VP > { VP > { 'gera' } NP > { PP > { ADVP > { 'út' } P > { 'í' } } } }",
+                "VP > { VP > { 'gera' } NP > [ .*[^kasta] PP > { ADVP > { 'út' } P > { 'í' } } ] }",
                 lambda self, match: self.dir_loc(match),
-                cls.ctx_dir_loc,
-            )
-        )
-        p.append(
-            (
-                "læsa",  # Trigger lemma for this pattern
-                "VP > { VP > { 'læsa' } NP > { PP > { ADVP > { 'inn' } } } }",
-                lambda self, match: self.dir_loc_læsa(match),
-                cls.ctx_dir_loc,
-            )
-        )
-        p.append(
-            (
-                "læsa",  # Trigger lemma for this pattern
-                "VP > { VP > { 'læsa' } ADVP > { 'inn' } }",
-                lambda self, match: self.dir_loc_læsa(match),
                 cls.ctx_dir_loc,
             )
         )
