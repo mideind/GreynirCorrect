@@ -921,39 +921,12 @@ class PatternMatcher:
             )
         )
 
-<<<<<<< HEAD
     def dir_loc(self, match: SimpleTree) -> None:
-        adv = match.first_match("( 'inn'|'út'|'upp' )")
-        pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }")
-        if pp is None:
-            pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þf|no_ft_þf|pfn_et_þf|pfn_ft_þf ) } }")
-=======
-    def loc_dir(self, match: SimpleTree) -> None:
-        adv = match.first_match("( 'inni'|'úti'|'uppi' )", self.ctx_loc_dir)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
-        start, end = match.span
-        text = "LOC4DIR."  # !!! FIXME (probably not correct text?)
-        detail = text
-        tidy_text = match.tidy_text  # !!! FIXME (never used)
-        suggest = ""
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_LOC_DIR",
-                text=text,
-                detail=detail,
-                original=adv.tidy_text,  # !!! FIXME (adv can be None)
-                suggest=suggest,
-            )
-        )
-
-    def dir_loc(self, match: SimpleTree, adv=None) -> None:  # !!! FIXME Missing type annotation on adv
         if adv is None:
-            adv = match.first_match("( 'inn'|'út'|'upp' )", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
-        pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
+            adv = match.first_match("( 'inn'|'út'|'upp' )")
+        pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þgf|no_ft_þgf|pfn_et_þgf|pfn_ft_þgf ) } }")  
         if pp is None:
-            pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þf|no_ft_þf|pfn_et_þf|pfn_ft_þf ) } }", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
->>>>>>> b9eff38da8de2500127d5ebc3b27c337f4ccfd1b
+            pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_et_þf|no_ft_þf|pfn_et_þf|pfn_ft_þf ) } }") 
         assert adv is not None
         assert pp is not None
         start, end = min(adv.span[0], pp.span[0]), max(adv.span[1], pp.span[1])
@@ -1009,21 +982,12 @@ class PatternMatcher:
         )
 
     def dir_loc_ut_um(self, match: SimpleTree) -> None:
-<<<<<<< HEAD
-        advp = match.first_match("ADVP > { ( 'út'|'útum' ) }")
+        advp = match.first_match("ADVP > { ( 'út'|'útum' ) }")  
         if advp is None:
-            advp = match.first_match("( 'út'|'útum' )")
-        pp = match.first_match("PP > { 'um' }")
+            advp = match.first_match("( 'út'|'útum' )")  
+        pp = match.first_match("PP > { 'um' }")  
         if pp is None:
-            pp = match.first_match("NP > { 'um' }")
-=======
-        advp = match.first_match("ADVP > { ( 'út'|'útum' ) }", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
-        if advp is None:
-            advp = match.first_match("( 'út'|'útum' )", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
-        pp = match.first_match("PP > { 'um' }", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
-        if pp is None:
-            pp = match.first_match("NP > { 'um' }", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
->>>>>>> b9eff38da8de2500127d5ebc3b27c337f4ccfd1b
+            pp = match.first_match("NP > { 'um' }")  
         assert advp is not None
         assert pp is not None
         start, end = min(advp.span[0], pp.span[0]), max(advp.span[1], pp.span[1])
@@ -1058,11 +1022,7 @@ class PatternMatcher:
         )
 
     def dir_loc_standa(self, match: SimpleTree) -> None:
-<<<<<<< HEAD
         advp = match.first_match("ADVP > { 'upp' }")
-=======
-        advp = match.first_match("ADVP > { 'upp' }", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
->>>>>>> b9eff38da8de2500127d5ebc3b27c337f4ccfd1b
         assert advp is not None
         start, end = match.span
         correction = advp.tidy_text+'i'
@@ -1086,11 +1046,7 @@ class PatternMatcher:
         )
 
     def dir_loc_safna(self, match: SimpleTree) -> None:
-<<<<<<< HEAD
-        advp = match.first_match("ADVP > { 'inn' }")
-=======
-        advp = match.first_match("ADVP > { 'inn' }", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
->>>>>>> b9eff38da8de2500127d5ebc3b27c337f4ccfd1b
+        advp = match.first_match("ADVP > { 'inn' }")  
         assert advp is not None
         start, end = match.span
         correction = advp.tidy_text+'i'
@@ -1114,11 +1070,7 @@ class PatternMatcher:
         )
 
     def dir_loc_niður(self, match: SimpleTree) -> None:
-<<<<<<< HEAD
-        advp = match.first_match("ADVP > { 'niður' }")
-=======
-        advp = match.first_match("ADVP > { 'niður' }", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
->>>>>>> b9eff38da8de2500127d5ebc3b27c337f4ccfd1b
+        advp = match.first_match("ADVP > { 'niður' }")  
         assert advp is not None
         start, end = match.span
         correction = 'niðri'
@@ -1142,11 +1094,7 @@ class PatternMatcher:
         )
 
     def dir_loc_búð(self, match: SimpleTree) -> None:
-<<<<<<< HEAD
-        advp = match.first_match("ADVP > { 'út' }")
-=======
-        advp = match.first_match("ADVP > { 'út' }", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
->>>>>>> b9eff38da8de2500127d5ebc3b27c337f4ccfd1b
+        advp = match.first_match("ADVP > { 'út' }")  
         assert advp is not None
         start, end = match.span
         correction = advp.tidy_text+'i'
@@ -1170,11 +1118,7 @@ class PatternMatcher:
         )
 
     def dir_loc_læsa(self, match: SimpleTree) -> None:
-<<<<<<< HEAD
-        advp = match.first_match("ADVP > { 'inn' }")
-=======
-        advp = match.first_match("ADVP > { 'inn' }", self.ctx_dir_loc)  # !!! FIXME: A context is not needed if there is no %macro in the pattern
->>>>>>> b9eff38da8de2500127d5ebc3b27c337f4ccfd1b
+        advp = match.first_match("ADVP > { 'inn' }")  
         assert advp is not None
         start, end = match.span
         correction = advp.tidy_text+'i'
