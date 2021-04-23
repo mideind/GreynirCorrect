@@ -1,3 +1,4 @@
+# type: ignore
 
 import sys
 import reynir_correct as rc
@@ -37,9 +38,9 @@ sys.exit(0)
 import time
 
 from reynir_correct.spelling import Corrector
-from reynir.bindb import BIN_Db
+from reynir.bindb import GreynirBin
 
-with BIN_Db.get_db() as db:
+with GreynirBin.get_db() as db:
     c = Corrector(db)  # type: Corrector
 
 

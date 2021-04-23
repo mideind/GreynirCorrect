@@ -1,3 +1,4 @@
+# type: ignore
 """
 
     test_serializers.py
@@ -22,8 +23,6 @@
 """
 
 import json
-
-import pytest
 
 import reynir_correct as rc
 
