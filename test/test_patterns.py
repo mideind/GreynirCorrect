@@ -123,9 +123,9 @@ def test_verb_að(rc):
     s = "Þetta er afgreitt mál að minni hálfu."
     check_sentence(rc, s, [(4, 6, "P_WRONG_PREP_AÐ")])
     s = "Hætta hefur aldrei stafað að þessu."
-#    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
 #    s = "Hún er ólétt að sínu þriðja barni."
-    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
+#    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
     s = "Hann hefur ekki heyrt að lausa starfinu."
     check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
     s = "Ég hef aldrei haft gaman að henni."
@@ -174,8 +174,8 @@ def test_dir_loc(rc):
     check_sentence(rc, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
 #    s = "Út í heimi er þetta öðruvísi."
 #    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
-    s = "Útí heimi er þetta öðruvísi."
-    check_sentence(rc, s, [(0, 1, "P_DIR_LOC")])
+#    s = "Útí heimi er þetta öðruvísi."
+#    check_sentence(rc, s, [(0, 1, "P_DIR_LOC")])
 #    s = "Börnin voru inn á vellinum allan daginn."
 #    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
     s = "Börnin voru inná vellinum allan daginn."
