@@ -934,7 +934,7 @@ class PatternMatcher:
                 narrow_match = pp.tidy_text
             else:
                 narrow_match = adv.tidy_text + ' ' + pp.tidy_text
-        else:
+        elif pp.span < adv.span:
             narrow_match = pp.tidy_text + ' ' + adv.tidy_text
         correction = adv.tidy_text+'i'
         text = "Hér á líklega að vera {0} í stað {1}".format(
