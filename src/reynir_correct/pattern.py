@@ -1744,8 +1744,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
-                # !!! FIXME: The following doesn't work! No support for ^(a|b|c) construct
-                "( PP|VP|IP ) > [ .* ^(bera|koma|fara|gefa|brjóta|dreifa) ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] ]",
+                "( PP|VP|IP ) > [ .* ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] ]",
                 lambda self, match: self.dir_loc(match),
                 None,
             )
@@ -1770,8 +1769,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
-                # !!! FIXME: The following doesn't work (no ^(a|b|c) construct)
-                "( IP|NP|VP ) > { IP >> [ .* [^(bera|koma|fara|gefa|brjóta|dreifa)] ADVP > { 'út' } ] PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] }",
+                "( IP|NP|VP ) > { IP >> [ .* ADVP > { 'út' } ] PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] }",
                 lambda self, match: self.dir_loc(match),
                 None,
             )
@@ -1819,8 +1817,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
-                # !!! FIXME
-                "( PP|VP|IP ) > [ .* [^(vinna|fara|flæða|ráða)] ADVP > { 'inn' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } .* ]",
+                "( PP|VP|IP ) > [ .* ADVP > { 'inn' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } .* ]",
                 #    "( PP|VP|IP ) > [ .* ADVP > { 'inn' } .* PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } .* ]",
                 lambda self, match: self.dir_loc(match),
                 None,
@@ -1829,8 +1826,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
-                # !!! FIXME
-                "( IP|NP|VP ) > { IP >> [ .* [^(fara|flæða|ráða)] ADVP > { 'inn' } ] PP > [ P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) ] }",
+                "( IP|NP|VP ) > { IP >> [ .* ADVP > { 'inn' } ] PP > [ P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) ] }",
                 lambda self, match: self.dir_loc(match),
                 None,
             )
@@ -1870,8 +1866,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "inní",  # Trigger lemma for this pattern
-                # !!! FIXME
-                "VP > { VP > [ .* [^(ráða)] ] NP > { PP > { P > { 'inní' } NP > { ( no_þgf|pfn_þgf ) } } } }",
+                "VP > { VP > [ .* ] NP > { PP > { P > { 'inní' } NP > { ( no_þgf|pfn_þgf ) } } } }",
                 # "PP > { P > { 'inní' } NP > { ( no_þgf|pfn_þgf ) } }",
                 lambda self, match: self.dir_loc_comp(match),
                 None,
@@ -1880,8 +1875,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
-                # !!! FIXME
-                "VP > [ VP > { ( 'verða'|'vera' ) } .*[^(flæða)] ADVP > { 'inn' } PP > { P > { 'á' } } ]",
+                "VP > [ VP > { ( 'verða'|'vera' ) } .* ADVP > { 'inn' } PP > { P > { 'á' } } ]",
                 lambda self, match: self.dir_loc(match),
                 None,
             )
@@ -1889,8 +1883,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
-                # !!! FIXME
-                "VP > [ VP > { 'vera' } .* [^(flæða)] ADVP > { 'inn' } PP > { P > { 'í' } } ]",
+                "VP > [ VP > { 'vera' } .* ADVP > { 'inn' } PP > { P > { 'í' } } ]",
                 lambda self, match: self.dir_loc(match),
                 None,
             )
@@ -1971,8 +1964,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "niður",  # Trigger lemma for this pattern
-                # !!! FIXME
-                "( PP|VP|IP ) > [ .*^ [(skrifa|færa)] ADVP > { 'niður' } PP > { P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) } ]",
+                "( PP|VP|IP ) > [ .* ADVP > { 'niður' } PP > { P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) } ]",
                 lambda self, match: self.dir_loc_niður(match),
                 None,
             )
@@ -2004,8 +1996,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
-                # !!! FIXME
-                "VP > { VP > [ 'vera' .* [^(dreifa)] ] NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } }",
+                "VP > { VP > [ 'vera' .* ] NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } }",
                 lambda self, match: self.dir_loc_búð(match),
                 None,
             )
@@ -2041,8 +2032,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
-                # !!! FIXME
-                "VP > { VP > [ 'vera' .* [^(dreifa)] ] NP > { 'út' 'um' } }",
+                "VP > { VP > [ 'vera' .* ] NP > { 'út' 'um' } }",
                 lambda self, match: self.dir_loc_ut_um(match),
                 None,
             )
@@ -2066,8 +2056,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
-                # !!! FIXME
-                "VP > { VP > [ 'vera' .* [^(dreifa)] ] ADVP > { 'út' } PP > { P > { 'um' } NP } }",
+                "VP > { VP > [ 'vera' .* ] ADVP > { 'út' } PP > { P > { 'um' } NP } }",
                 lambda self, match: self.dir_loc_ut_um(match),
                 None,
             )
@@ -2075,8 +2064,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
-                # !!! FIXME
-                "VP > { VP > { 'gera' } NP > [ .* [^kasta] PP > { ADVP > { 'út' } P > { 'í' } } ] }",
+                "VP > { VP > { 'gera' } NP > [ .* PP > { ADVP > { 'út' } P > { 'í' } } ] }",
                 lambda self, match: self.dir_loc(match),
                 None,
             )
