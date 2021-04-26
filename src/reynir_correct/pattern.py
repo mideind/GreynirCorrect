@@ -557,32 +557,6 @@ class PatternMatcher:
             )
         )
 
-    def wrong_preposition_að_sjalfu(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
-        start, end = match.span
-        text = "'að sjálfu sér' á sennilega að vera 'af sjálfu sér'"
-        detail = (
-            "Orðasambandið 'af sjálfu sér' tekur yfirleitt með sér "
-            "forsetninguna 'af', ekki 'að'."
-        )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_WRONG_PREP_AÐ",
-                text=text,
-                detail=detail,
-                original="að",
-                suggest=suggest,
-            )
-        )
-
     def wrong_preposition_frettir_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending preposition
@@ -1266,8 +1240,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "að",  # Trigger lemma for this pattern
-                    # !!! TODO: Consider whether the dot as a parent is necessary
-                    '. > { (NP-PRD | IP-INF) > { VP > { %verb } } PP >> { P > { "að" } } }',
+                    '(NP-PRD | IP-INF) > { VP > { %verb } } PP >> { P > { "að" } }',
                     cls.wrong_preposition_að,
                     cls.ctx_að,
                 )
@@ -1345,15 +1318,6 @@ class PatternMatcher:
                 (
                     "leiða",  # Trigger lemma for this pattern
                     "VP > { VP > { 'láta' } VP > { PP > { 'að' } VP > { 'leiða' } } }",
-                    cls.wrong_preposition_að_leiða,
-                    None,
-                )
-            )
-            # !!! TODO: a lemma of 'leiður' here is actually a parse/grammar error
-            cls.add_pattern(
-                (
-                    "leiður",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'láta' } PP > { P > { 'að' } 'leiður' } }",
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
@@ -1450,17 +1414,6 @@ class PatternMatcher:
                     "gagn",  # Trigger lemma for this pattern
                     "S > { NP > { 'gagn' } IP > { VP > { VP > { 'hafa' } PP > { 'að' } } } }",
                     cls.wrong_preposition_gagn_að,
-                    None,
-                )
-            )
-
-            # Catch "Þetta kom (ekki) að sjálfu sér.", "Þetta hafði (ekki) komið að sjálfu sér."
-            # !!! TODO: Might be better and simpler to catch this using a multi-word phrase
-            cls.add_pattern(
-                (
-                    "sjálfur",  # Trigger lemma for this pattern
-                    "PP > { P > { 'að' } NP > { 'sjálfur' } }",
-                    cls.wrong_preposition_að_sjalfu,
                     None,
                 )
             )
@@ -2005,9 +1958,9 @@ class PatternMatcher:
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP > [ 'vera' ] NP > [ .* PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } ] }",
-                lambda self, match: self.dir_loc_búð(
+                lambda self, match: self.dir_loc_ut_um(
                     match
-                ),  # !!! TODO: Is this correct?
+                ),
                 None,
             )
         )
@@ -2015,9 +1968,9 @@ class PatternMatcher:
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP PP >> { NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } } }",
-                lambda self, match: self.dir_loc_búð(
+                lambda self, match: self.dir_loc_ut_um(
                     match
-                ),  # !!! TODO: Is this correct?
+                ),
                 None,
             )
         )
