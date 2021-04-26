@@ -37,9 +37,9 @@
 from typing import (
     Mapping,
     Sequence,
-    TypeVar,
     cast,
     Any,
+    TypeVar,
     Type,
     Union,
     Tuple,
@@ -207,17 +207,23 @@ def is_cap(word: str) -> bool:
 
 class CorrectToken(Tok):
 
-    """ This class sneakily replaces the tokenizer.Tok tuple in the tokenization
-        pipeline. When applying a CorrectionPipeline (instead of a DefaultPipeline,
+    """ Instances of this class, which is derived from tokenizer.Tok,
+        replace tokenizer.Tok instances in the tokenization pipeline.
+        When applying a CorrectionPipeline (instead of a DefaultPipeline,
         as defined in binparser.py in GreynirPackage), tokens get translated to
-        instances of this class in the correct() phase. This works due to Python's
-        duck typing, because a CorrectToken class instance is able to walk and quack
-        - i.e. behave - like a tokenizer.Tok tuple. It adds an _err attribute to hold
-        information about spelling and grammar errors, and some higher level functions
-        to aid in error reporting and correction. """
+        instances of this class in the correct() phase. It adds an _err attribute
+        to hold information about spelling and grammar errors, and some
+        higher level functions to aid in error reporting and correction. """
 
-    def __init__(self, kind: int, txt: str, val: ValType) -> None:
-        super().__init__(kind, txt, val)
+    def __init__(
+        self,
+        kind: int,
+        txt: str,
+        val: ValType,
+        original: Optional[str] = None,
+        origin_spans: Optional[List[int]] = None,
+    ) -> None:
+        super().__init__(kind, txt, val, original, origin_spans)
         # The following seems to be required for mypy
         self.val: ValType
         # Error annotation
@@ -283,11 +289,6 @@ class CorrectToken(Tok):
         instance.__dict__.update(error_dict)
         ct.set_error(instance)
         return ct
-
-    @classmethod
-    def from_token(cls, token: Tok) -> "CorrectToken":
-        """ Wrap a raw token in a CorrectToken """
-        return cls(token.kind, token.txt, token.val)
 
     @classmethod
     def word(cls, txt: str, val: Optional[BIN_TupleList] = None) -> "CorrectToken":
@@ -443,11 +444,7 @@ class Error(ABC):
         self._suggest = suggest
 
     def __eq__(self, o: Any) -> bool:
-        return (
-            isinstance(o, Error)
-            and self._code == o._code
-            and self._span == o._span
-        )
+        return isinstance(o, Error) and self._code == o._code and self._span == o._span
 
     def __ne__(self, o: Any) -> bool:
         return not self.__eq__(o)
@@ -1744,7 +1741,9 @@ def lookup_unknown_words(
             # We use context[-3:-1] since the current token is the last item
             # in the context tuple, and we want the bigram preceding it.
             corrected_txt = corrector.correct(
-                token.txt, context=tuple(context[-3:-1]), at_sentence_start=at_sentence_start
+                token.txt,
+                context=tuple(context[-3:-1]),
+                at_sentence_start=at_sentence_start,
             )
             if corrected_txt != token.txt:
                 # We have a candidate correction: take a closer look at it
@@ -2225,7 +2224,9 @@ class Correct_TOK(TOK):
 
     @staticmethod
     def Word(
-        t: Union[Tok, str], m: Optional[BIN_TupleList] = None, token: Optional[CorrectToken] = None
+        t: Union[Tok, str],
+        m: Optional[BIN_TupleList] = None,
+        token: Optional[CorrectToken] = None,
     ) -> CorrectToken:
         """ Override the TOK.Word constructor to create a CorrectToken instance """
         assert isinstance(t, str)
@@ -2277,7 +2278,9 @@ class Correct_TOK(TOK):
 
     @staticmethod
     def Person(
-        t: Union[Tok, str], m: Optional[PersonNameList] = None, token: Optional[CorrectToken] = None
+        t: Union[Tok, str],
+        m: Optional[PersonNameList] = None,
+        token: Optional[CorrectToken] = None,
     ) -> CorrectToken:
         """ Override the TOK.Person constructor to create a CorrectToken instance """
         assert isinstance(t, str)
@@ -2290,7 +2293,9 @@ class Correct_TOK(TOK):
         return ct
 
     @staticmethod
-    def Entity(t: Union[Tok, str], token: Optional[CorrectToken] = None) -> CorrectToken:
+    def Entity(
+        t: Union[Tok, str], token: Optional[CorrectToken] = None
+    ) -> CorrectToken:
         """ Override the TOK.Entity constructor to create a CorrectToken instance """
         assert isinstance(t, str)
         ct = CorrectToken(TOK.ENTITY, t, None)
@@ -2388,9 +2393,7 @@ class CorrectionPipeline(DefaultPipeline):
         token_ctor = cast(TokenCtor, self._token_ctor)
         return cast(
             TokenIterator,
-            late_fix_capitalization(
-                ct_stream, self._db, token_ctor, self._only_ci
-            ),
+            late_fix_capitalization(ct_stream, self._db, token_ctor, self._only_ci),
         )
 
 
