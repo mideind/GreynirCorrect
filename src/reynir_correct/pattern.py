@@ -1324,14 +1324,14 @@ class PatternMatcher:
             )
 
             # Catch "Hún á (ekki) heiðurinn að þessu.", "Hún hafði (ekki) átt heiðurinn að þessu."
-            cls.add_pattern(
-                (
-                    "heiður",  # Trigger lemma for this pattern
-                    "VP > { VP >> { VP > { 'eiga' } NP > { 'heiður' } } PP > { 'að' } }",
-                    cls.wrong_preposition_heiður_að,
-                    None,
-                )
-            )
+#            cls.add_pattern(
+#                (
+#                    "heiður",  # Trigger lemma for this pattern
+#                    "VP >> { VP > { 'eiga' } NP > { 'heiður' } } PP > { 'að' }",
+#                    cls.wrong_preposition_heiður_að,
+#                    None,
+#                )
+#            )
 
             # Catch "Hún fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu."
             cls.add_pattern(
@@ -1342,14 +1342,14 @@ class PatternMatcher:
                     None,
                 )
             )
-            cls.add_pattern(
-                (
-                    "heiður",  # Trigger lemma for this pattern
-                    "VP > { VP >> { VP > { NP >> { 'eiga' } NP > { 'heiður' } } } PP > { 'að' } }",
-                    cls.wrong_preposition_heiður_að,
-                    None,
-                )
-            )
+        #    cls.add_pattern(
+        #        (
+        #            "heiður",  # Trigger lemma for this pattern
+        #            "VP > { VP >> { VP > { NP >> { 'eiga' } NP > { 'heiður' } } } PP > { 'að' } }",
+        #            cls.wrong_preposition_heiður_að,
+        #            None,
+        #        )
+        #    )
 
             # Catch "Hún á (ekki) mikið/fullt/helling/gommu... að börnum."
             cls.add_pattern(
@@ -1723,14 +1723,6 @@ class PatternMatcher:
             (
                 "út",  # Trigger lemma for this pattern
                 "( IP|NP|VP ) > { IP >> [ .* ADVP > { 'út' } ] PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] }",
-                lambda self, match: self.dir_loc(match),
-                None,
-            )
-        )
-        cls.add_pattern(
-            (
-                "út",  # Trigger lemma for this pattern
-                "( IP|NP|VP ) > { VP > { 'vera' } ADVP > { 'út' } PP > { P > { ( 'í'|'á'|'um' ) } NP > { 'tún' } } }",
                 lambda self, match: self.dir_loc(match),
                 None,
             )
