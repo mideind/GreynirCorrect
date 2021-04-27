@@ -360,8 +360,6 @@ class CIDErrorForms:
         """ Check whether the word form is in the error forms dictionary,
             either in its original casing or in a lower case form """
         d = CIDErrorForms.DICT
-        if word.islower():  # TODO isn't this if-clause unnecessary?
-            return word in d
         return word in d or word.lower() in d
 
     @staticmethod
