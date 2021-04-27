@@ -241,9 +241,9 @@ class PatternMatcher:
     def wrong_preposition_vitni_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending nominal phrase
-        np = match.first_match(". > { 'vitni' }", self.ctx_af)
+        np = match.first_match(". > { 'vitni' }")
         if np is None:
-            np = match.first_match(". >> { 'vitni' }", self.ctx_af)
+            np = match.first_match(". >> { 'vitni' }")
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "af" }')
         if pp is None:
@@ -278,10 +278,10 @@ class PatternMatcher:
     def wrong_preposition_grin_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal and nominal phrases
-        vp = match.first_match("VP > { 'gera' }", self.ctx_af)
-        np = match.first_match("NP > { 'grín' }", self.ctx_af)
+        vp = match.first_match("VP > { 'gera' }")
+        np = match.first_match("NP > { 'grín' }")
         if np is None:
-            np = match.first_match("NP >> { 'grín' }", self.ctx_af)
+            np = match.first_match("NP >> { 'grín' }")
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "af" }')
         if pp is None:
@@ -319,10 +319,10 @@ class PatternMatcher:
     def wrong_preposition_leida_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal and nominal phrases
-        vp = match.first_match("VP > { 'leiða' }", self.ctx_af)
-        np = match.first_match("NP > { ( 'líkur'|'rök'|'rak' ) }", self.ctx_af)
+        vp = match.first_match("VP > { 'leiða' }")
+        np = match.first_match("NP > { ( 'líkur'|'rök'|'rak' ) }")
         if np is None:
-            np = match.first_match("NP >> { ( 'líkur'|'rök'|'rak' ) }", self.ctx_af)
+            np = match.first_match("NP >> { ( 'líkur'|'rök'|'rak' ) }")
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "af" }')
         if pp is None:
@@ -358,14 +358,14 @@ class PatternMatcher:
     def wrong_preposition_marka_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal and nominal phrases
-        vp = match.first_match("VP > { 'marka' }", self.ctx_af)
+        vp = match.first_match("VP > { 'marka' }")
         if vp is None:
-            vp = match.first_match("NP > { 'markaður' }", self.ctx_af)
-        np = match.first_match("NP > { ( 'upphaf'|'upphafinn' ) }", self.ctx_af)
+            vp = match.first_match("NP > { 'markaður' }")
+        np = match.first_match("NP > { ( 'upphaf'|'upphafinn' ) }")
         if np is None:
-            np = match.first_match("NP >> { ( 'upphaf'|'upphafinn' ) }", self.ctx_af)
+            np = match.first_match("NP >> { ( 'upphaf'|'upphafinn' ) }")
         if np is None:
-            np = match.first_match("VP > { 'upphefja' }", self.ctx_af)
+            np = match.first_match("VP > { 'upphefja' }")
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "af" }')
         if pp is None:
@@ -401,17 +401,17 @@ class PatternMatcher:
     def wrong_preposition_leggja_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal phrase
-        vp = match.first_match("VP > { 'leggja' }", self.ctx_af)
+        vp = match.first_match("VP > { 'leggja' }")
         if vp is None:
-            vp = match.first_match("VP >> { 'leggja' }", self.ctx_af)
+            vp = match.first_match("VP >> { 'leggja' }")
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "af" }')
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
         # Find the offending nominal phrase
-        np = match.first_match("NP > { ( 'völlur'|'vell' ) }", self.ctx_af)
+        np = match.first_match("NP > { ( 'völlur'|'vell' ) }")
         if np is None:
-            np = match.first_match("NP >> { ( 'völlur'|'vell' ) }", self.ctx_af)
+            np = match.first_match("NP >> { ( 'völlur'|'vell' ) }")
         assert vp is not None
         assert pp is not None
         assert np is not None
@@ -443,11 +443,11 @@ class PatternMatcher:
     def wrong_preposition_utan_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending adverbial phrase
-        advp = match.first_match("ADVP > { 'utan' }", self.ctx_af)
+        advp = match.first_match("ADVP > { 'utan' }")
         if advp is None:
-            advp = match.first_match("ADVP >> { 'utan' }", self.ctx_af)
+            advp = match.first_match("ADVP >> { 'utan' }")
         # Find the attached prepositional phrase
-        pp = match.first_match('ADVP > { "af" }', self.ctx_af)
+        pp = match.first_match('ADVP > { "af" }')
         assert advp is not None
         assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
@@ -478,17 +478,17 @@ class PatternMatcher:
     def wrong_preposition_uppvis_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal phrase
-        vp = match.first_match("VP > { 'verða' }", self.ctx_af)
+        vp = match.first_match("VP > { 'verða' }")
         if vp is None:
-            vp = match.first_match("VP >> { 'verða' }", self.ctx_af)
+            vp = match.first_match("VP >> { 'verða' }")
         # Find the attached nominal phrase
-        np = match.first_match("NP > { 'uppvís' }", self.ctx_af)
+        np = match.first_match("NP > { 'uppvís' }")
         if np is None:
-            np = match.first_match("NP >> { 'uppvís' }", self.ctx_af)
+            np = match.first_match("NP >> { 'uppvís' }")
         # Find the attached prepositional phrase
-        pp = match.first_match('PP > { "af" }', self.ctx_af)
+        pp = match.first_match('PP > { "af" }')
         if pp is None:
-            pp = match.first_match("ADVP > { 'af' }", self.ctx_af)
+            pp = match.first_match("ADVP > { 'af' }")
         assert vp is not None
         assert np is not None
         assert pp is not None
@@ -520,17 +520,17 @@ class PatternMatcher:
     def wrong_preposition_verða_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal phrase
-        vp = match.first_match("VP > { 'verða' }", self.ctx_af)
+        vp = match.first_match("VP > { 'verða' }")
         if vp is None:
-            vp = match.first_match("VP >> { 'verða' }", self.ctx_af)
+            vp = match.first_match("VP >> { 'verða' }")
         # Find the attached prepositional phrase
-        pp = match.first_match("P > 'af' ", self.ctx_af)
+        pp = match.first_match("P > 'af' ")
         if pp is None:
-            pp = match.first_match("ADVP > 'af' ", self.ctx_af)
+            pp = match.first_match("ADVP > 'af' ")
         # Find the attached nominal phrase
-        np = match.first_match("NP > 'ósk' ", self.ctx_af)
+        np = match.first_match("NP > 'ósk' ")
         if np is None:
-            np = match.first_match("NP >> 'ósk' ", self.ctx_af)
+            np = match.first_match("NP >> 'ósk' ")
         assert vp is not None
         assert pp is not None
         assert np is not None
@@ -591,40 +591,6 @@ class PatternMatcher:
         start, end = match.span
         text = "'hluti að' á sennilega að vera 'hluti af'"
         detail = "Í samhenginu 'hluti af e-u' er notuð " "forsetningin 'af', ekki 'að'."
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_WRONG_PREP_AÐ",
-                text=text,
-                detail=detail,
-                original="að",
-                suggest=suggest,
-            )
-        )
-
-    def wrong_preposition_að_leiðandi(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
-        # Find the offending adverbial phrase
-        advp = match.first_match("ADVP > { 'þar' }", self.ctx_að)
-        if advp is None:
-            advp = match.first_match("ADVP >> { 'þar' }", self.ctx_að)
-        # Find the attached prepositional phrase
-        vp = match.first_match('VP > { "leiðandi" }')
-        assert advp is not None
-        assert vp is not None
-        # Calculate the start and end token indices, spanning both phrases
-        start, end = min(advp.span[0], vp.span[0]), max(advp.span[1], vp.span[1])
-        text = "'þar að leiðandi' á sennilega að vera 'þar af leiðandi'"
-        detail = (
-            "Í samhenginu 'þar af leiðandi' er notuð " "forsetningin 'af', ekki 'að'."
-        )
         if match.tidy_text.count(" að ") == 1:
             # Only one way to substitute að -> af: do it
             suggest = match.tidy_text.replace(" að ", " af ")
@@ -1526,25 +1492,25 @@ class PatternMatcher:
                 )
             )
             # Catch "Það sem Jón spurði ekki af...", "Jón spyr (ekki) af því."
-            p.append(
+            cls.add_pattern(
                 (
                     "spyrja",  # Trigger lemma for this pattern
                     "IP > { VP >> { 'spyrja' } ADVP > { 'af' } }",
                     cls.wrong_preposition_af,
-                    cls.ctx_af,
+                    None,
                 )
             )
             # Catch "Jón spyr af því."
-            p.append(
+            cls.add_pattern(
                 (
                     "spyrja",  # Trigger lemma for this pattern
                     "IP > { VP >> { 'spyrja' } PP > { 'af' } }",
                     cls.wrong_preposition_af,
-                    cls.ctx_af,
+                    None,
                 )
             )
             # Catch "...vegna þess að dýr leita af öðrum smærri dýrum."
-            p.append(
+            cls.add_pattern(
                 (
                     "leita",  # Trigger lemma for this pattern
                     "VP > { PP >> { %verb } PP > 'af' }",
@@ -1574,7 +1540,7 @@ class PatternMatcher:
                 )
             )
             # Catch ""
-            p.append(
+            cls.add_pattern(
                 (
                     "vitni",  # Trigger lemma for this pattern
                     "VP > { VP > 'verða' NP-PRD > { 'vitni' PP > { P > { 'af' } } } }",
@@ -1583,7 +1549,7 @@ class PatternMatcher:
                 )
             )
             # Catch "Hún gerði grín af því."
-            p.append(
+            cls.add_pattern(
                 (
                     "grín",  # Trigger lemma for this pattern
                     "VP > { VP > [ .* 'gera' .* "
@@ -1593,7 +1559,7 @@ class PatternMatcher:
                 )
             )
             # Catch "Þetta er mesta vitleysa sem ég hef gert grín af."
-            p.append(
+            cls.add_pattern(
                 (
                     "grín",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > { VP > { 'gera' } NP-OBJ > { 'grín' } } } ADVP > { 'af' } }",
@@ -1602,7 +1568,7 @@ class PatternMatcher:
                 )
             )
             # Catch "...og gerir grín af sjálfum sér."
-            p.append(
+            cls.add_pattern(
                 (
                     "grín",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > 'gera' NP-OBJ } PP > { 'af' } }",
@@ -1611,7 +1577,7 @@ class PatternMatcher:
                 )
             )
 
-            p.append(
+            cls.add_pattern(
                 (
                     "grín",  # Trigger lemma for this pattern
                     "VP > { PP > { NP > { 'grín' } } PP > { 'af' } }",
@@ -1621,7 +1587,7 @@ class PatternMatcher:
             )
 
             # Catch "Hann leiðir ekki líkur af því."
-            p.append(
+            cls.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
                     "VP > { VP > { 'leiða' } NP-PRD > { ('líkur' | 'rök' | 'rak') } PP > { P > { 'af' } } } ",
@@ -1630,7 +1596,7 @@ class PatternMatcher:
                 )
             )
             # Catch "Hann leiðir líkur af því.", "Hann leiðir rök af því.", "Hann hefur aldrei leitt líkur af því."
-            p.append(
+            cls.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
                     "VP > { VP >> { VP > { 'leiða' } NP > { ('líkur' | 'rök' | 'rak') } } PP > { 'af' } } ",
@@ -1639,7 +1605,7 @@ class PatternMatcher:
                 )
             )
             # Catch "Tíminn markar upphaf af því."
-            p.append(
+            cls.add_pattern(
                 (
                     "upphaf",  # Trigger lemma for this pattern
                     "VP > { VP > { 'marka' } NP-OBJ > { 'upphaf' PP > { 'af' } } }",
@@ -1648,7 +1614,7 @@ class PatternMatcher:
                 )
             )
             # Catch "Það markar ekki upphaf af því."
-            p.append(
+            cls.add_pattern(
                 (
                     "upphafinn",  # Trigger lemma for this pattern
                     "VP > { VP > { 'marka' } NP > { 'upphafinn' } PP > { 'af' } }",
@@ -1657,7 +1623,7 @@ class PatternMatcher:
                 )
             )
             # Catch "Það markar upphaf af því."
-            p.append(
+            cls.add_pattern(
                 (
                     "upphaf",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > { 'marka' } NP-SUBJ > { 'upphaf' } } PP > { 'af' } }",
@@ -1666,7 +1632,7 @@ class PatternMatcher:
                 )
             )
             # Catch "Það hefur ekki markað upphafið af því."
-            p.append(
+            cls.add_pattern(
                 (
                     "upphefja",  # Trigger lemma for this pattern
                     "VP > { VP > { NP > { 'markaður' } VP > { 'upphefja' } } PP > { 'af' } }",
@@ -1676,7 +1642,7 @@ class PatternMatcher:
             )
 
             # Catch "Jón leggur hann (ekki) af velli."
-            p.append(
+            cls.add_pattern(
                 (
                     "leggja",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > { 'leggja' } } PP > { P > { 'af' } NP > { ( 'völlur'|'vell' ) } } }",
@@ -1685,7 +1651,7 @@ class PatternMatcher:
                 )
             )
             # Catch "Jón hefur lagt hann af velli."
-            p.append(
+            cls.add_pattern(
                 (
                     "leggja",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > { VP > { 'leggja' } } } PP > { P > 'af' NP > ( 'völlur'|'vell' ) } }",
@@ -1695,7 +1661,7 @@ class PatternMatcher:
             )
 
             # Catch "Jón kann það (ekki) utan af."
-            p.append(
+            cls.add_pattern(
                 (
                     "kunna",  # Trigger lemma for this pattern
                     "VP > { VP > { 'kunna' } ADVP > { 'utan' } ADVP > { 'af' } }",
@@ -1704,7 +1670,7 @@ class PatternMatcher:
                 )
             )
             # Catch "Honum varð af ósk sinni."
-            p.append(
+            cls.add_pattern(
                 (
                     "ósk",  # Trigger lemma for this pattern
                     "(S-MAIN | IP) > { VP > { 'verða' } PP > { 'af' NP > { 'ósk' } } }",
@@ -1713,7 +1679,7 @@ class PatternMatcher:
                 )
             )
             # Catch "...en varð ekki af ósk sinni."
-            p.append(
+            cls.add_pattern(
                 (
                     "ósk",  # Trigger lemma for this pattern
                     "IP > { VP > { VP > { 'verða' } PP > { P > { 'af' } NP > { 'ósk' } } } }",
@@ -1723,7 +1689,7 @@ class PatternMatcher:
             )
 
             # Catch "Ég varð (ekki) uppvís af athæfinu."
-            p.append(
+            cls.add_pattern(
                 (
                     "uppvís",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > { 'verða' } NP > { 'uppvís' } } PP > { 'af' } }",
@@ -1732,7 +1698,7 @@ class PatternMatcher:
                 )
             )
             # Catch "Hann varð (ekki) uppvís af því.", "Hann hafði orðið uppvís af því."
-            p.append(
+            cls.add_pattern(
                 (
                     "uppvís",  # Trigger lemma for this pattern
                     "VP > { VP > { 'verða' } NP > { NP > { 'uppvís' } PP > { 'af' } } }",
@@ -1779,7 +1745,7 @@ class PatternMatcher:
                 )
             )
             # Catch "Ég hef lengi verið heillaður að henni."
-            p.append(
+            cls.add_pattern(
                 (
                     "heilla",  # Trigger lemma for this pattern
                     "NP > { NP >> { 'heilla' } PP > { 'að' } }",
@@ -1807,21 +1773,11 @@ class PatternMatcher:
                 )
             )
             # Catch "Þeir sögðu að ég hefði verið hluti að heildinni."
-            p.append(
+            cls.add_pattern(
                 (
                     "hluti",  # Trigger lemma for this pattern
                     "VP > { VP > { 'vera' } NP > { 'hluti' PP > { 'að' } } }",
                     cls.wrong_preposition_hluti_að,
-                    None,
-                )
-            )
-
-            # Catch "Þar að leiðandi virkar þetta.", "Þetta virkar þar að leiðandi."
-            cls.add_pattern(
-                (
-                    "leiða",  # Trigger lemma for this pattern
-                    "(IP | VP) > { ADVP > { 'þar' } ADVP > { 'að' } VP > { 'leiða' } }",
-                    cls.wrong_preposition_að_leiðandi,
                     None,
                 )
             )
@@ -2140,7 +2096,7 @@ class PatternMatcher:
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
         cls.ctx_noun_af = {"noun": partial(wrong_noun_af, NOUNS_AF)}
-        p.append(
+        cls.add_pattern(
             (
                 "af",  # Trigger lemma for this pattern
                 "PP > { P > { 'af' } NP > { %noun } }",
@@ -2173,7 +2129,7 @@ class PatternMatcher:
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
         cls.ctx_noun_af_obj = {"noun": partial(wrong_noun_af, NOUNS_AF_OBJ)}
-        p.append(
+        cls.add_pattern(
             (
                 "af",  # Trigger lemma for this pattern
                 "NP > { %noun PP > { P > { 'af' } } }",
@@ -2183,7 +2139,7 @@ class PatternMatcher:
                 cls.ctx_noun_af_obj,
             )
         )
-        p.append(
+        cls.add_pattern(
             (
                 "af",  # Trigger lemma for this pattern
                 "VP > { VP >> { %noun } PP > { P > { 'af' } } }",
@@ -2193,7 +2149,7 @@ class PatternMatcher:
                 cls.ctx_noun_af_obj,
             )
         )
-        p.append(
+        cls.add_pattern(
             (
                 "af",  # Trigger lemma for this pattern
                 "VP > { PP > { NP > %noun } PP > { 'af' } }",
