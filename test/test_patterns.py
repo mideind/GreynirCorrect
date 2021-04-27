@@ -194,9 +194,9 @@ def test_verb_að(rc):
     #s = "Þeir sögðu að ég hefði verið hluti að heildinni."
     #check_sentence(rc, s, [(6, 7, "P_WRONG_PREP_AÐ")])  # !!! TODO: No annotation
     s = "Þar að leiðandi virkar þetta."
-    check_sentence(rc, s, [(0, 2, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(0, 2, "P_aðaf")])
     s = "Þetta virkar þar að leiðandi."
-    check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(2, 4, "P_aðaf")])
     s = "Ég hef ekki áhyggjur að honum."
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
     s = "Ég hef áhyggjur að því að honum líði illa."
