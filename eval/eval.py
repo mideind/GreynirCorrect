@@ -169,7 +169,7 @@ OUT_OF_SCOPE = {
     "bracket4square",  # svigi fyrir hornklofa  punctuation (Portúgal) > [Portúgal]
     "caps4low",
     "case-verb",
-    "case-prep", 
+    "case-prep",
     "case-adj",
     "case-collocation",
     # "collocation-idiom",  # fast orðasamband með ógagnsæja merkingu collocation hélt hvorki vindi né vatni > hélt hvorki vatni né vindi
@@ -207,7 +207,7 @@ OUT_OF_SCOPE = {
     "have",
     "ice4fw",  # íslenskt orð notað í stað erlends      Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
     "ind4def",  # óákveðið fyrir ákveðið    grammar gítartakta > gítartaktana
-    #"ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
+    # "ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
     "indef-pro",  # óákveðið fornafn    grammar enginn > ekki neinn
     "interr-pro",
     "it4nonit",  # skáletrað fyrir óskáletrað       Studdi Isma'il > Studdi Isma'il
@@ -877,6 +877,7 @@ GCtoIEC = {
     "P_WRONG_PREP_AÐ": ["að4af"],
     "P_WRONG_PREP_AF": ["af4að"],
     "P_WRONG_VERB_USE": ["collocation"],
+    "P_DIR_LOC": ["dir4loc"],
     "X_number4word": ["number4word"],
     "N001": ["wrong-quot"],
     "N002": ["extra-punctuation"],
@@ -1925,9 +1926,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         samespan = False
                         # 1. Error detection
                         # Token span in GreynirCorrect annotation
-                        yspan = set(
-                            range(ystart, yend + 1)
-                        )  # TODO Usually ystart, yend+1, reset when secondary comparison works
+                        # TODO Usually ystart, yend+1, reset when secondary comparison works
+                        yspan = set(range(ystart, yend + 1))
                         # Token span in iEC annotation
                         xspan = set(range(xstart, xend + 1))
                         yorig: Set[str]
