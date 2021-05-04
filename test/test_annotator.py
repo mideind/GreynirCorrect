@@ -307,10 +307,12 @@ def test_corrected_meanings(rc: reynir_correct.GreynirCorrect) -> None:
     Þeir hafa líka þennan Beach Boys-hljóm og virkilega fallegar raddanir,"
     sagði Jardine, en platan hans nefnist A Postcard fram California.
     """
+    # Note: "A Postcard" is tokenized as one entity token and should not
+    # be reported as an error or annotation
     check_sentence(
         rc,
         s,
-        [(4, 4, "U001/w"), (11, 11, "N001"), (13, 13, "U001/w"), (20, 20, "U001/w")],
+        [(4, 4, "U001/w"), (11, 11, "N001"), (13, 13, "U001/w")],
     )
 
 
