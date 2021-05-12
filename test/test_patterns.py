@@ -94,8 +94,8 @@ def test_verb_að(rc):
     check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AÐ")])
 #    s = "Ég hef ekki áhyggjur að honum."
 #    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
-    s = "Ég hef áhyggjur að því að honum líði illa."
-    check_sentence(rc, s, [(1, 8, "P_WRONG_PREP_AÐ")])
+#    s = "Ég hef áhyggjur að því að honum líði illa."
+#    check_sentence(rc, s, [(1, 8, "P_WRONG_PREP_AÐ")])
     #s = "Ég lagði ekki mikið að mörkum."
     #check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])  # !!! TODO: No annotation
     #s = "Ég hafði lagt mikið að mörkum."

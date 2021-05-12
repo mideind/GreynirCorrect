@@ -1596,7 +1596,7 @@ def test_impersonal_verbs(verbose=False):
         "hlakkaði til að losna við mig."
     )
     # TODO greinist, en spanið gæti verið réttara.
-    check_sentence(s, [(0, 2, "P_WRONG_CASE_þgf_nf")])
+    check_sentence(s, [(0, 10, "P_WRONG_CASE_þgf_nf")])
     s = "Tröllskessan dagaði uppi."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_nf_þf")])
     s = "Báturinn rak á land."
