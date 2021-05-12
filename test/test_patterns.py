@@ -114,8 +114,8 @@ def test_verb_að(rc):
 #    check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
 #    s = "Hún á heilan helling að börnum."
 #    check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AÐ")])
-    s = "Hún hefur ekki haft gagn að þessu."
-    check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
+#    s = "Hún hefur ekki haft gagn að þessu."
+#    check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Þetta hafði ekki komið að sjálfu sér."
     check_sentence(rc, s, [(4, 6, "P_aðaf")])
 #    s = "Fréttir bárust seint af slysinu."
