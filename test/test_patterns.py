@@ -106,12 +106,12 @@ def test_verb_að(rc):
     check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AÐ")])
 #    s = "Ég lét gott að mér leiða."
 #    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])  # Only works if sentence is parsed correctly
-    s = "Hún á heiðurinn að þessu."
-    check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AÐ")])
-    s = "Hún fékk heiðurinn að þessu."
-    check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
-    s = "Hún hlaut heiðurinn að þessu."
-    check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
+#    s = "Hún á heiðurinn að þessu."
+#    check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AÐ")])
+#    s = "Hún fékk heiðurinn að þessu."
+#    check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
+#    s = "Hún hlaut heiðurinn að þessu."
+#    check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
 #    s = "Hún á heilan helling að börnum."
 #    check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AÐ")])
     s = "Hún hefur ekki haft gagn að þessu."
