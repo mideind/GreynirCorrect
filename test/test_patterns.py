@@ -134,8 +134,6 @@ def test_verb_að(rc):
 #    check_sentence(rc, s, [(2, 5, "P_WRONG_PREP_AÐ")])
     s = "Það er til mjög lítið að mjólk."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
-    s = "Ekki er mikið til að mjólk."
-    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
     s = "Ég hef ekki unnið verkefni að þessu tagi."
     check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
     s = "Verkefni að þessum toga eru erfið."
