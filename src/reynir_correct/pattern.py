@@ -2059,4 +2059,3 @@ class PatternMatcher:
                 for match in tree.all_matches(pattern, context):
                     # Call the annotation function for this match
                     func(self, match)
-
