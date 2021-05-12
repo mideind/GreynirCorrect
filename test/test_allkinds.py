@@ -660,7 +660,7 @@ def test_wrong_abbreviations(verbose=False):
 
 def test_capitalization(verbose=False):
     g = rc.tokenize(
-        "Einn Aríi, Búddisti, Inúíti, Gyðingur, sjálfstæðismaður, "
+        "Einn Aríi, Búddisti, Eskimói, Gyðingur, sjálfstæðismaður, "
         "Múslími og Sjíti gengu inn á bar í evrópu."
     )
     g = list(g)
@@ -669,7 +669,7 @@ def test_capitalization(verbose=False):
     s = normalize(g)
     assert "aríi" in s
     assert "búddisti" in s
-    assert "inúíti" in s
+    assert "eskimói" in s
     # assert "gyðingur" in s
     assert "Sjálfstæðismaður" in s
     assert "múslími" in s
@@ -677,7 +677,7 @@ def test_capitalization(verbose=False):
     assert "Evrópu" in s
     assert g[2].error_code == "Z001"  # aríi
     assert g[4].error_code == "Z001"  # búddisti
-    assert g[6].error_code == "Z001"  # inúíti
+    assert g[6].error_code == "Z001"  # eskimói
     # assert g[8].error_code == "Z001"  # gyðingur
     assert g[10].error_code == "Z002"  # Sjálfstæðismaður
     assert g[12].error_code == "Z001"  # múslími
