@@ -127,7 +127,7 @@ def test_verb_að(rc):
 #    s = "Hún er ólétt að sínu þriðja barni."
 #    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
     s = "Hann hefur ekki heyrt að lausa starfinu."
-    check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Ég hef aldrei haft gaman að henni."
     check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
     s = "Þau voru sérstaklega valin að stjórninni."
