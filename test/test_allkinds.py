@@ -1325,7 +1325,7 @@ def test_NP_agreement(verbose=False):
     # fallið er tékkað virðist vera.
     # check_sentence(s, [(3, 5, "P_NT_X")])
     s = "Hann hélt utan um dóttir sína."
-    check_sentence(s, [(3, 4, "P_NT_FsMeðFallstjórn")])
+    check_sentence(s, [(2, 4, "P_NT_FsMeðFallstjórn")])
     s = "Barnið var með kaldar fingur en heitar fætur."
     # TODO villurnar greinast ekki, vantar líklega reglur.
     # check_sentence(s, [(4, 6, "P_NT_KynInnanNafnliðar"), (6, 8, "P_NT_Fall")])
@@ -1587,8 +1587,8 @@ def test_impersonal_verbs(verbose=False):
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])
     s = "Mér klæjar undan áburðinum."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])
-    s = "Hann sagði að konan hefði misminnt að potturinn væri með loki."
-    check_sentence(s, [(3, 3, "P_WRONG_CASE_nf_þf")])
+    #s = "Hann sagði að konan hefði misminnt að potturinn væri með loki."
+    #check_sentence(s, [(3, 3, "P_WRONG_CASE_nf_þf")])
     s = "Bréfberinn spurði hvort Páli vantaði fleiri frímerki."
     check_sentence(s, [(3, 3, "P_WRONG_CASE_þgf_þf")])
     s = (
