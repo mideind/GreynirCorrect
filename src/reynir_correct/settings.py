@@ -41,14 +41,14 @@
 
 """
 
-from typing import Dict, Set, List, Tuple, Optional, Union, cast
+from typing import Dict, Set, List, Tuple
 import os
 import threading
 
 from collections import defaultdict
 
 from reynir.basics import ConfigError, LineReader
-from reynir.bindb import BIN_Db
+from reynir.bindb import GreynirBin
 from reynir.bintokenizer import StateDict
 
 
@@ -56,11 +56,6 @@ ErrorFormTuple = Tuple[str, str, int, str, str]
 
 # A set of all strings that should be interpreted as True
 TRUE = frozenset(("true", "True", "1", "yes", "Yes"))
-
-
-# Lazily initialized module-wide instance of BIN_Db for word lookups
-# during parsing of config files
-db: Optional[BIN_Db] = None
 
 
 class AllowedMultiples:
@@ -188,11 +183,9 @@ class TabooWords:
             raise ConfigError(
                 "Multiple definition of '{0}' in taboo_words section".format(word)
             )
-        global db
-        if db is None:
-            db = BIN_Db()
+        db = GreynirBin.get_db()
         a = word.split("_")
-        _, m = db.lookup_word(a[0])
+        _, m = db.lookup_g(a[0])
         if not m or (len(a) >= 2 and all(mm.ordfl != a[1] for mm in m)):
             raise ConfigError(
                 "The taboo word '{0}' is not found in BÍN".format(word)
@@ -265,15 +258,13 @@ class CapitalizationErrors:
             prefix, suffix = "", word
             # Split_on_hyphen is True for e.g. 'norður-kórea' and 'nýja-sjáland'
             split_on_hyphen = "-" in word
-        global db
-        if db is None:
-            db = BIN_Db()
+        db = GreynirBin().get_db()
         # The suffix may not be in BÍN except as a compound, and in that
         # case we want its hyphenated lemma
         suffix_rev = CapitalizationErrors.reverse_capitalization(
             suffix, split_on_hyphen=split_on_hyphen
         )
-        _, m = db.lookup_word(suffix_rev)
+        _, m = db.lookup_g(suffix_rev)
         if not m:
             raise ConfigError(
                 "No BÍN meaning for '{0}' (from error word '{1}') in capitalization_errors section".format(
@@ -369,8 +360,6 @@ class CIDErrorForms:
         """ Check whether the word form is in the error forms dictionary,
             either in its original casing or in a lower case form """
         d = CIDErrorForms.DICT
-        if word.islower():  # TODO isn't this if-clause unnecessary?
-            return word in d
         return word in d or word.lower() in d
 
     @staticmethod
@@ -500,15 +489,9 @@ class Settings:
     @staticmethod
     def _handle_settings(s: str) -> None:
         """ Handle config parameters in the settings section """
-        a = s.lower().split("=", maxsplit=1)
+        a: List[str] = s.lower().split("=", maxsplit=1)
         par = a[0].strip().lower()
-        val: Union[None, bool, str] = a[1].strip()
-        if cast(str, val).lower() == "none":
-            val = None
-        elif cast(str, val).lower() == "true":
-            val = True
-        elif cast(str, val).lower() == "false":
-            val = False
+        val = a[1].strip()
         try:
             if par == "debug":
                 Settings.DEBUG = val in TRUE
@@ -744,8 +727,6 @@ class Settings:
             if Settings.loaded:
                 return
 
-            global db
-
             CONFIG_HANDLERS = {
                 "settings": Settings._handle_settings,
                 "allowed_multiples": Settings._handle_allowed_multiples,
@@ -800,7 +781,3 @@ class Settings:
                 raise e
 
             Settings.loaded = True
-            global db
-            if db is not None:
-                db.close()
-                db = None

@@ -1,3 +1,4 @@
+# type: ignore
 """
 
     test_annotator.py
@@ -119,7 +120,9 @@ def check_sentence(
         else:
             assert len(sent.annotations) == len(annotations)
             for a, (start, end, code) in zip(sent.annotations, annotations):
-                assert a.start == start
+                assert a.start == start, (
+                    f"Mismatch between ({a.start}, {a.end}, {a.code}) and ({start}, {end}, {code})"
+                )
                 assert a.end == end
                 assert a.code == code
 
@@ -258,7 +261,7 @@ def test_foreign_sentences(rc):
     check_sentence(
         rc,
         "Praise the Lord.",
-        [(0, 2, "E004")],  # Note: the tokenizer amalgams 'Praise the' into one token
+        [(0, 1, "E004")],  # Note: the tokenizer amalgams 'Praise the Lord' into one token
         is_foreign=True,
     )
     check_sentence(
@@ -277,7 +280,7 @@ def test_number(rc):
 
 def test_correct_sentences(rc):
     check_sentence(rc, "Pál langaði að horfa á sjónvarpið.", [])
-    check_sentence(rc, "Mig dreymdi mús sem var að elta kött.", [])
+    check_sentence(rc, "Mig dreymdi mús sem elti kött.", [])
     check_sentence(
         rc,
         "Ég held að músin hafi kviðið fyrir að hitta köttinn.",
@@ -298,6 +301,11 @@ def test_corrected_meanings(rc: reynir_correct.GreynirCorrect) -> None:
     Þannig fundust stundum engin bréfaskipti á milli lífsförunauta í annars ríkulegum bréfasöfnum.
     """
     check_sentence(rc, s, [])
+    s = """
+    Þeir hafa líka þennan Beach Boys-hljóm og virkilega fallegar raddanir,"
+    sagði Jardine, en platan hans nefnist A Postcard fram California.
+    """
+    check_sentence(rc, s, [(4, 4, "U001/w"), (11, 11, "N001"), (13, 13, "U001/w")])
 
 
 if __name__ == "__main__":
