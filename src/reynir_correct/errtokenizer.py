@@ -334,14 +334,17 @@ class CorrectToken(Tok):
         """ Associate an Error class instance with this token """
         self._err = err
 
-    def copy_error(
+    def copy(
         self,
         other: Union[Sequence["CorrectToken"], "CorrectToken"],
         coalesce: bool = False,
     ) -> bool:
-        """ Copy the error field from another CorrectToken instance """
+        """ Copy the error field and origin informatipon
+            from another CorrectToken instance """
         if isinstance(other, CorrectToken):
             self._err = other._err
+            self.original = other.original
+            self.origin_spans = other.origin_spans
             if coalesce and other.error_span > 1:
                 # The original token had an associated error
                 # spanning more than one token; now we're creating
@@ -354,7 +357,7 @@ class CorrectToken(Tok):
             # We have a list of CorrectToken instances to copy from:
             # find the first error in the list, if any, and copy it
             for t in other:
-                if self.copy_error(t, coalesce=True):
+                if self.copy(t, coalesce=True):
                     break
         return self._err is not None
 
@@ -1301,7 +1304,7 @@ NOT_FORMERS = frozenset(("allra", "alhliða", "fjölnota", "margnota", "ótal"))
 # Tradition says these word parts should rather be used
 # Using them results in a context-dependent error
 # Attn.: Make sure these errors are available as a prefix
-WRONG_FORMERS = {
+WRONG_FORMERS: Mapping[str, str] = {
     "akstur": "aksturs",
     "athugana": "athugunar",
     "ferminga": "fermingar",
@@ -1320,7 +1323,7 @@ WRONG_FORMERS = {
 
 # Using these word parts results in a context-independent error
 # Attn.: Make sure these errors are available as a prefix
-WRONG_FORMERS_CI = {
+WRONG_FORMERS_CI: Mapping[str, str] = {
     "akríl": "akrýl",
     "dísel": "dísil",
     "eyrnar": "eyrna",
@@ -1385,18 +1388,19 @@ def fix_compound_words(
             continue
 
         # Compound word
-        cw = token.meanings[0].stofn.split("-")
+        cw: List[str] = token.meanings[0].stofn.split("-")
         # Special case for the prefix "ótal" which the compounder
         # splits into ó-tal
         if len(cw) >= 3 and cw[0] == "ó" and cw[1] == "tal":
             cw = ["ótal"] + cw[2:]
 
         # TODO STILLING - hér er ósamhengisháð leiðrétting!
-        if cw[0] in NOT_FORMERS:
+        cw0: str = cw[0]
+        if cw0 in NOT_FORMERS:
             # Prefix is invalid as such; should be split
             # into two words
-            prefix = emulate_case(cw[0], template=token.txt)
-            suffix = token.txt[len(cw[0]) :]
+            prefix = emulate_case(cw0, template=token.txt)
+            suffix = token.txt[len(cw0) :]
             _, m = db.lookup_g(prefix, at_sentence_start)
             t1 = token_ctor.Word(prefix, m, token=token)
             t1.set_error(
@@ -1414,12 +1418,12 @@ def fix_compound_words(
             token = token_ctor.Word(suffix, m, token=token)
 
         # TODO STILLING - hér er ósamhengisháð leiðrétting!
-        elif cw[0] in Morphemes.FREE_DICT:
+        elif cw0 in Morphemes.FREE_DICT:
             # Check which PoS, attachment depends on that
             at_sentence_start = False
-            suffix = token.txt[len(cw[0]) :]
-            prefix = emulate_case(cw[0], template=token.txt)
-            freepos = Morphemes.FREE_DICT.get(cw[0])
+            suffix = token.txt[len(cw0) :]
+            prefix = emulate_case(cw0, template=token.txt)
+            freepos = Morphemes.FREE_DICT.get(cw0)
             assert freepos is not None
             _, meanings2 = db.lookup_g(suffix, at_sentence_start)
             poses = set(m.ordfl for m in meanings2 if m.ordfl in freepos)
@@ -1471,9 +1475,9 @@ def fix_compound_words(
         # TODO STILLING - fyrra alltaf leiðrétt, en seinna bara ábending?
 
         # TODO STILLING - Athuga hvort hér ætti að hafa ólík villuskilaboð fyrir WRONG_FORMERS og WRONG_FORMERS_CI?
-        elif cw[0] in WRONG_FORMERS_CI:
-            correct_former = WRONG_FORMERS_CI[cw[0]]
-            corrected = correct_former + token.txt[len(cw[0]) :]
+        elif cw0 in WRONG_FORMERS_CI:
+            correct_former = WRONG_FORMERS_CI[cw0]
+            corrected = correct_former + token.txt[len(cw0) :]
             corrected = emulate_case(corrected, template=token.txt)
             _, m = db.lookup_g(corrected, at_sentence_start)
             t1 = token_ctor.Word(corrected, m, token=token)
@@ -1489,11 +1493,11 @@ def fix_compound_words(
             )
             token = t1
 
-        elif not only_ci and cw[0] in WRONG_FORMERS:
+        elif not only_ci and cw0 in WRONG_FORMERS:
             # Splice a correct front onto the word
             # ('feyknaglaður' -> 'feiknaglaður')
-            correct_former = WRONG_FORMERS[cw[0]]
-            corrected = correct_former + token.txt[len(cw[0]) :]
+            correct_former = WRONG_FORMERS[cw0]
+            corrected = correct_former + token.txt[len(cw0) :]
             corrected = emulate_case(corrected, template=token.txt)
             _, m = db.lookup_g(corrected, at_sentence_start)
             t1 = token_ctor.Word(corrected, m, token=token)
@@ -2235,7 +2239,7 @@ class Correct_TOK(TOK):
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
-            ct.copy_error(token)
+            ct.copy(token)
             ct.copy_capitalization(token)
         return ct
 
@@ -2254,7 +2258,7 @@ class Correct_TOK(TOK):
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
-            ct.copy_error(token, coalesce=True)
+            ct.copy(token, coalesce=True)
         return ct
 
     @staticmethod
@@ -2273,7 +2277,7 @@ class Correct_TOK(TOK):
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
-            ct.copy_error(token, coalesce=True)
+            ct.copy(token, coalesce=True)
         return ct
 
     @staticmethod
@@ -2289,7 +2293,7 @@ class Correct_TOK(TOK):
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
-            ct.copy_error(token)
+            ct.copy(token)
         return ct
 
     @staticmethod
@@ -2303,7 +2307,7 @@ class Correct_TOK(TOK):
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
-            ct.copy_error(token)
+            ct.copy(token)
         return ct
 
     @staticmethod
@@ -2317,7 +2321,7 @@ class Correct_TOK(TOK):
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
-            ct.copy_error(token)
+            ct.copy(token)
         return ct
 
     @staticmethod
@@ -2331,7 +2335,7 @@ class Correct_TOK(TOK):
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
-            ct.copy_error(token)
+            ct.copy(token)
         return ct
 
 
@@ -2342,7 +2346,7 @@ class CorrectionPipeline(DefaultPipeline):
 
     # Use the Correct_TOK class to construct tokens, instead of
     # TOK (tokenizer.py) or Bin_TOK (bintokenizer.py)
-    _token_ctor: TokenConstructor = cast(TokenConstructor, Correct_TOK)
+    _token_ctor = cast(TokenConstructor, Correct_TOK)
 
     def __init__(self, text_or_gen: StringIterable, **options: Any) -> None:
         super().__init__(text_or_gen, **options)
