@@ -35,10 +35,9 @@
 
 """
 
-from typing import List, Tuple, Set, Optional, Iterable, Callable
+from typing import DefaultDict, List, Tuple, Set, Optional, Iterable, Callable
 from typing import TYPE_CHECKING
 
-import os
 import math
 import re
 import time
@@ -47,7 +46,7 @@ from collections import defaultdict
 from functools import lru_cache
 
 from reynir import tokenize, correct_spaces, TOK
-from reynir.bindb import BIN_Db
+from reynir.bindb import GreynirBin, ResultTuple
 from reynir.bintokenizer import StringIterable
 from icegrams import Ngrams, MAX_ORDER
 
@@ -123,8 +122,12 @@ def levenshtein_distance(s1: str, s2: str) -> int:
         s2, s1 = s1, s2
         len_2, len_1 = len_1, len_2
 
-    d0 = [i for i in range(len_2 + 1)]
-    d1 = [j for j in range(len_2 + 1)]
+    d0: List[int] = [i for i in range(len_2 + 1)]
+    d1: List[int] = [j for j in range(len_2 + 1)]
+
+    cost: int
+    x_cost: int
+    y_cost: int
 
     for i in range(len_1):
         d1[0] = i + 1
@@ -362,7 +365,7 @@ class Corrector:
         ("anna", ["ana"]),
     ]
 
-    _SUBSTITUTE = defaultdict(set)
+    _SUBSTITUTE: DefaultDict[str, Set[str]] = defaultdict(set)
 
     for _key, _subs in _SUBSTITUTE_LIST:
         _SUBSTITUTE[_key].update(_subs)
@@ -390,7 +393,7 @@ class Corrector:
     # Singleton Ngrams dictionary
     _NGRAMS: Optional[Ngrams] = None
 
-    def __init__(self, db: BIN_Db, dictionary: Optional[Ngrams] = None) -> None:
+    def __init__(self, db: GreynirBin, dictionary: Optional[Ngrams] = None) -> None:
         # Word database
         self._db = db
         # N-gram frequency dictionary
@@ -407,7 +410,7 @@ class Corrector:
         self.freq = self.ngrams.adj_freq
 
     @property
-    def db(self) -> BIN_Db:
+    def db(self) -> GreynirBin:
         """ Return the associated word database """
         return self._db
 
@@ -417,20 +420,20 @@ class Corrector:
         *,
         at_sentence_start: bool = False,
         auto_uppercase: bool = False
-    ):
+    ) -> ResultTuple:
         """ Look up the given word in the associated word database """
-        return self._db.lookup_word(word, at_sentence_start, auto_uppercase)
+        return self._db.lookup_g(word, at_sentence_start, auto_uppercase)
 
     def subs(self, word: str) -> Iterable[str]:
         """ Return all combinations of potential substitutions into the word. """
         # The following yields a list of tuples, for instance
         # [('gl', 'gl'), ('er', 'r'), ('aug', 'g')] for the word "gleraugu"
-        fragments = re.findall(self._SUBSTITUTE_REGEX, word)
+        fragments: List[Tuple[str, str]] = re.findall(self._SUBSTITUTE_REGEX, word)
         end = 0
         # num_combs is the total number of potential combinations
         num_combs = 1
         # combs is a list of possibilities for each combination slot
-        combs = []
+        combs: List[List[str]] = []
         # Enumerate through the combination slots
         for frag, sub in fragments:
             end += len(frag)
@@ -516,15 +519,14 @@ class Corrector:
             result |= {a + c + b for (a, b) in pairs for c in alphabet}
             return result
 
-        # pylint: disable=unused-variable
-        def edits2(pairs: Iterable[Tuple[str, str]]) -> Set[str]:
-            """ Return all strings that are two edits away from this word. """
-
-            def sub_edits1(word: str) -> Set[str]:
-                pairs = _splits(word)
-                return edits1(pairs)
-
-            return {e2 for e1 in edits1(pairs) for e2 in sub_edits1(e1)}
+        # def edits2(pairs: Iterable[Tuple[str, str]]) -> Set[str]:
+        #     """ Return all strings that are two edits away from this word. """
+        # 
+        #     def sub_edits1(word: str) -> Set[str]:
+        #         pairs = _splits(word)
+        #         return edits1(pairs)
+        # 
+        #     return {e2 for e1 in edits1(pairs) for e2 in sub_edits1(e1)}
 
         def gen_candidates(
             original_word: str, word: str
@@ -728,7 +730,7 @@ class Corrector:
 
 def test() -> None:
 
-    with BIN_Db.get_db() as db:
+    with GreynirBin.get_db() as db:
         c = Corrector(db)
 
         txts = [

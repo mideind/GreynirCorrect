@@ -1,3 +1,4 @@
+# type: ignore
 """
 
     test_annotator.py
@@ -65,7 +66,7 @@ import reynir_correct
 
 @pytest.fixture(scope="module")
 def rc():
-    """ Provide a module-scoped GreynirCorrect instance as a test fixture """
+    """Provide a module-scoped GreynirCorrect instance as a test fixture"""
     r = reynir_correct.GreynirCorrect()
     yield r
     # Do teardown here
@@ -88,8 +89,8 @@ def check_sentence(
     is_foreign: bool = False,
     ignore_warnings: bool = False,
 ) -> None:
-    """ Check whether a given single sentence gets the
-        specified annotations when checked """
+    """Check whether a given single sentence gets the
+    specified annotations when checked"""
 
     def check_sent(sent: reynir_correct.AnnotatedSentence) -> None:
         assert sent is not None
@@ -119,7 +120,9 @@ def check_sentence(
         else:
             assert len(sent.annotations) == len(annotations)
             for a, (start, end, code) in zip(sent.annotations, annotations):
-                assert a.start == start
+                assert (
+                    a.start == start
+                ), f"Mismatch between ({a.start}, {a.end}, {a.code}) and ({start}, {end}, {code})"
                 assert a.end == end
                 assert a.code == code
 
@@ -145,8 +148,8 @@ def test_multiword_phrases(rc):
 
 
 def test_error_finder(rc):
-    """ Test errors that are found by traversing the detailed
-        parse tree in checker.py (ErrorFinder class) """
+    """Test errors that are found by traversing the detailed
+    parse tree in checker.py (ErrorFinder class)"""
     s = "Einn af drengjunum fóru í sund."
     check_sentence(rc, s, [(3, 3, "P_NT_EinnAf")])
     s = "Fjöldi þingmanna greiddu atkvæði gegn tillögunni."
@@ -258,7 +261,9 @@ def test_foreign_sentences(rc):
     check_sentence(
         rc,
         "Praise the Lord.",
-        [(0, 2, "E004")],  # Note: the tokenizer amalgams 'Praise the' into one token
+        [
+            (0, 1, "E004")
+        ],  # Note: the tokenizer amalgams 'Praise the Lord' into one token
         is_foreign=True,
     )
     check_sentence(
@@ -302,7 +307,13 @@ def test_corrected_meanings(rc: reynir_correct.GreynirCorrect) -> None:
     Þeir hafa líka þennan Beach Boys-hljóm og virkilega fallegar raddanir,"
     sagði Jardine, en platan hans nefnist A Postcard fram California.
     """
-    check_sentence(rc, s, [(4, 4, "U001/w"), (11, 11, "N001"), (13, 13, "U001/w")])
+    # Note: "A Postcard" is tokenized as one entity token and should not
+    # be reported as an error or annotation
+    check_sentence(
+        rc,
+        s,
+        [(4, 4, "U001/w"), (11, 11, "N001"), (13, 13, "U001/w")],
+    )
 
 
 if __name__ == "__main__":

@@ -56,7 +56,7 @@ if sys.version_info < (3, 6):
     sys.exit(1)
 
 
-def read(*names, **kwargs):
+def read(*names: str, **kwargs: str):
     try:
         return io.open(
             join(dirname(__file__), *names),
@@ -65,11 +65,13 @@ def read(*names, **kwargs):
     except (IOError, OSError):
         return ""
 
+# Load version string from file
+__version__ = "[missing]"
+exec(open(join("src", "reynir_correct", "version.py")).read())
 
 setup(
     name="reynir-correct",
-    # Remember to update version in src/reynir_correct/__init__.py as well
-    version="1.2.0",
+    version=__version__,
     license="MIT",
     description="A spelling and grammar corrector for Icelandic",
     long_description="{0}\n{1}".format(
@@ -113,7 +115,7 @@ setup(
     ],
     keywords=["nlp", "parser", "icelandic"],
     setup_requires=[],
-    install_requires=["reynir>=2.10.1", "icegrams>=1.1.0", "typing_extensions"],
+    install_requires=["reynir>=3.0.1", "icegrams>=1.1.0", "typing_extensions"],
     # Set up a 'correct' command ('correct.exe' on Windows),
     # which calls main() in src/reynir-correct/main.py
     entry_points={

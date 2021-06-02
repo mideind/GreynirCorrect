@@ -70,7 +70,7 @@ else:
 _DEV_PATH = "iceErrorCorpus/data/**/*.xml"
 
 # Default glob path of the test corpus TEI XML files to be processed
-_TEST_PATH = "iceErrorCorpus/testCorpus/**/*.xml"
+# _TEST_PATH = "iceErrorCorpus/testCorpus/**/*.xml"
 
 IECCATS: DefaultDict[str, List[str]] = defaultdict(list)
 GCCATS: DefaultDict[str, List[str]] = defaultdict(list)
@@ -137,7 +137,7 @@ def get_examples(fpath: str) -> None:
         # Iterate through the sentences in the file
         for sent in root.findall("ns:text/ns:body/ns:p/ns:s", ns):
             tokens: List[Tuple[str, str]] = []
-            errors = []
+            errors: List[DefaultDict[str, Union[int, bool, str]]] = []
             # A dictionary of errors by their index (idx field)
             # Error corpora annotations for sentences marked as unparsable
             # Enumerate through the tokens in the sentence
@@ -212,7 +212,7 @@ def get_examples(fpath: str) -> None:
             s: Optional[AnnotatedSentence] = None
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 assert isinstance(pg[0][0], AnnotatedSentence)
-                s = cast(AnnotatedSentence, pg[0][0])
+                s = pg[0][0]
             if s is None:
                 continue
             for ann in cast(Iterable[Annotation], s.annotations):
