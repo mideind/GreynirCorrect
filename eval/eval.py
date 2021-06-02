@@ -209,7 +209,7 @@ OUT_OF_SCOPE = {
     "have",
     "ice4fw",  # íslenskt orð notað í stað erlends      Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
     "ind4def",  # óákveðið fyrir ákveðið    grammar gítartakta > gítartaktana
-    #"ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
+    "ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
     "indef-pro",  # óákveðið fornafn    grammar enginn > ekki neinn
     "interr-pro",
     "it4nonit",  # skáletrað fyrir óskáletrað       Studdi Isma'il > Studdi Isma'il
@@ -258,6 +258,7 @@ OUT_OF_SCOPE = {
     "reflexive4pro",  # afturbeygt fornafn í stað persónufornafns   grammar gegnum líkama sinn > gegnum líkama hans
     "simple4cont",  # nútíð í stað vera að + nafnh. grammar ók > var að aka
     "square4bracket",  # hornklofi fyrir sviga  punctuation [börnin] > (börnin)
+    "sub4ind",
     "style",  # stíll   style   urðu ekkert frægir > urðu ekki frægir
     "syntax-other",
     "tense4perfect",
@@ -370,7 +371,11 @@ SIMCATEGORIES = {
         "ind4def",
         "def4ind",
         "ind4sub",
+        "ind4sub-conj",
+        "ind4sub-verb",
         "sub4ind",
+        "sub4ind-conj",
+        "sub4ind-verb",
         "verb-inflection",
         "nominal-inflection",
         "numeral-inflection",
@@ -586,7 +591,11 @@ SUPERCATEGORIES = {
         "ind4def",
         "def4ind",
         "ind4sub",
+        "ind4sub-conj",
+        "ind4sub-verb",
         "sub4ind",
+        "sub4ind-conj",
+        "sub4ind-verb",
         "verb-inflection",
         "nominal-inflection",
         "numeral-inflection",

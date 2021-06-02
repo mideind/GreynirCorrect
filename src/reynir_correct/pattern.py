@@ -46,6 +46,8 @@ from functools import partial
 import os
 import json
 
+from islenska import Bin
+
 from reynir import Sentence, NounPhrase
 from reynir.simpletree import SimpleTree
 from reynir.verbframe import VerbErrors
@@ -60,6 +62,7 @@ PatternTuple = Tuple[
     Union[str, FrozenSet[str]], str, AnnotationFunction, Optional[ContextDict]
 ]
 
+BIN = Bin()
 
 class IcelandicPlaces:
 
@@ -1045,7 +1048,121 @@ class PatternMatcher:
                 #suggest=suggest,
             )
         )
-            
+
+    def mood_sub_ack(self, match: SimpleTree) -> None:
+        so = match.first_match("VP > so_fh")
+        assert so is not None
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants.append("vh")
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
+        detail = "Í viðurkenningarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggestion}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_ACK",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+    
+    def mood_sub_rel(self, match: SimpleTree) -> None:
+        so = match.first_match("VP > so_fh")
+        assert so is not None
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants.append("vh")
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
+        detail = "Í tilvísunarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggestion}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_REL",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def mood_sub_temp(self, match: SimpleTree) -> None:
+        so = match.first_match("VP > so_fh")
+        assert so is not None
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants.append("vh")
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        text = f"Hér á mögulega að nota viðtengingarhátt sagnarinnar '{so.lemma}'"
+        detail = "Í tíðarsetningum er viðtengingarháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_TEMP",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def mood_ind_cond(self, match: SimpleTree) -> None:
+        so = match.first_match("VP > so_vh")
+        assert so is not None
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "vh" in f ] )
+        variants.append("fh")
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
+        detail = "Í skilyrðissetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_COND",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def mood_ind_purp(self, match: SimpleTree) -> None:
+        so = match.first_match("VP > so_vh")
+        assert so is not None
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "vh" in f ] )
+        variants.append("fh")
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
+        detail = "Í tilgangssetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_PURP",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    @classmethod
+    def add_pattern(cls, p: PatternTuple) -> None:
+        """ Validates and adds a pattern to the class global pattern list """
+        _, pattern, _, ctx = p
+        if "%" in pattern:
+            assert ctx is not None, "Missing context for pattern with %macro"
+        else:
+            assert ctx is None, "Unnecessary context given for pattern with no %macro"
+        cls.PATTERNS.append(p)
 
     @classmethod
     def create_patterns(cls) -> None:
@@ -1593,34 +1710,59 @@ class PatternMatcher:
             )
         )
 
-        # Check use of indicative mood in concessive subclauses instead of the subjunctive
-        p.append(
+        # Check mood in subclauses
+
+        # concessive clause - viðurkenningarsetning
+        cls.add_pattern(
             (
-                None,  #"þótt", "þó" # Trigger lemma for this pattern
-                "CP-ADV-ACK >> so",
-                lambda self, match: self.wrong_mood_concessive(match),
-                None,
-            )
-        )
-        p.append(
-            (
-                None, # Trigger lemma for this pattern
-                "CP-ADV-TEMP >> so",        # TODO check mood and tense of parent clause; "so_vh_nt"
-                lambda self, match: self.wrong_mood_temporal(match),
+                frozenset(("þrátt fyrir", "þrátt", "þó", "þótt")), # Trigger lemmas for this pattern
+                "CP-ADV-ACK >> {VP > so_fh}",
+                lambda self, match: self.mood_sub_ack(match),
                 None,
             )
         )
 
-        p.append(
+        # Relative clause - tilvísunarsetning
+        cls.add_pattern(
             (
-                "sem", # Trigger lemma for this pattern
-                "CP-REL >> so",        # TODO check mood and tense of parent clause; "so_vh_nt"
-                lambda self, match: self.wrong_mood_relative(match),
+                frozenset(("sem", "er")), # Trigger lemmas for this pattern
+                "CP-REL >> {VP > so_fh}",
+                lambda self, match: self.mood_sub_rel(match),
                 None,
             )
         )
 
-        def uncertain_verbs(verbs: Set[str], tree: SimpleTree) -> bool:
+        # Temporal clause - tíðarsetning
+        cls.add_pattern(
+            (
+                frozenset(("áður en", "eftir að", "þangað til", "þegar")), # Trigger lemmas for this pattern
+                "CP-ADV-TMP >> {VP > so_fh}",
+                lambda self, match: self.mood_sub_temp(match),
+                None,
+            )
+        )
+
+        # Conditional clause - skilyrðissetning
+        cls.add_pattern(
+            (
+                frozenset(("ef", "svo")), # Trigger lemmas for this pattern
+                "CP-ADV-COND >> {VP > so_vh}",
+                lambda self, match: self.mood_ind_cond(match),
+                None,
+            )
+        )
+
+        # Conditional clause - skilyrðissetning
+        cls.add_pattern(
+            (
+                frozenset(("til", "svo")), # Trigger lemmas for this pattern
+                "CP-ADV-PURP >> {VP > so_vh}",
+                lambda self, match: self.mood_ind_purp(match),
+                None,
+            )
+        )
+
+        def dir4loc(verbs: Set[str], tree: SimpleTree) -> bool:
             """ Context matching function for the %noun macro in combination
                 with 'að' """
             lemma = tree.own_lemma
@@ -1629,47 +1771,221 @@ class PatternMatcher:
                 return False
             return lemma in verbs
 
-        UNCERTAIN_VERBS: Set[str] = {
-            "telja",
-            "halda",
-            "álíta",
-        }
-        # The macro %verb is resolved by calling the function uncertain_verbs()
+        VERBS: FrozenSet[str] = frozenset(("safna", "kaupa", "læsa", "geyma"))
+        # The macro %verb is resolved by calling the function dir4loc()
         # with the potentially matching tree node as an argument.
-        cls.ctx_uncertain_verbs = {"verb": partial(uncertain_verbs, UNCERTAIN_VERBS)}
-        p.append(
+        cls.ctx_dir_loc = {"verb": partial(dir4loc, VERBS)}
+        cls.add_pattern(
             (
-                "að",  # Trigger lemma for this pattern
-                "VP >> {VP >> {%verb} NP > {CP-THT >> {so_fh}}}",
-                lambda self, match: self.wrong_uncertain_verbs(match, cls.ctx_uncertain_verbs),
-                cls.ctx_uncertain_verbs,
+                "út",  # Trigger lemma for this pattern
+                "VP > { VP > { %verb } NP > { PP > { ADVP > { 'út' } P > { 'í' } NP > { 'búð' } } } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { %verb } ADVP > { 'saman' } PP > { ADVP > { 'inn' } P > { 'í' } NP } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { %verb } NP > { PP > { ADVP > { 'inn' } } } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { %verb } ADVP > { 'inn' } }",
+                lambda self, match: self.dir_loc(match),
+                cls.ctx_dir_loc,
             )
         )
 
-        def confident_verbs(verbs: Set[str], tree: SimpleTree) -> bool:
-            """ Context matching function for the %noun macro in combination
-                with 'að' """
-            lemma = tree.own_lemma
-            if not lemma:
-                # The passed-in tree node is probably not a terminal
-                return False
-            return lemma in verbs
-
-        CONFIDENT_VERBS: Set[str] = {
-            "sannreyna",
-            "vita",
-            "sýna",
-            "þýða",
-        }
-        # The macro %verb is resolved by calling the function confident_verbs()
-        # with the potentially matching tree node as an argument.
-        cls.ctx_confident_verbs = {"verb": partial(confident_verbs, CONFIDENT_VERBS)}
-        p.append(
+        cls.add_pattern(
             (
-                "að",  # Trigger lemma for this pattern
-                "VP >> {VP >> {%verb} NP > {CP-THT >> {so_vh}}}",
-                lambda self, match: self.wrong_confident_verbs(match, cls.ctx_confident_verbs),
-                cls.ctx_confident_verbs,
+                "út",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > [ .* ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "út",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > [ .* VP > { 'hafa' } .* ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "út",  # Trigger lemma for this pattern
+                "NP > [ ( no_nf|pfn_nf ) PP > [ ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] ] ]",
+                # "( PP|VP|IP ) > [ .* ^(bera|koma|fara|gefa|brjóta|dreifa) ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "út",  # Trigger lemma for this pattern
+                "( IP|NP|VP ) > { IP >> [ .* ADVP > { 'út' } ] PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] }",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "út",  # Trigger lemma for this pattern
+                "VP > [ .* VP > { VP > [ 'vera' ] IP >> { ADVP > [ 'út' ] } } .* PP > [ P > [ 'á' ] NP > { ( no_þgf|pfn_þgf ) } ] .* ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "út",  # Trigger lemma for this pattern
+                "VP > [ VP > [ 'gera' ] NP > [ .* PP > { ADVP > { 'út' } P > [ 'í' ] NP } ] ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "útá",  # Trigger lemma for this pattern
+                "PP > { P > { 'útá' } NP > { ( no_þgf|pfn_þgf ) } }",
+                lambda self, match: self.dir_loc_comp(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "útí",  # Trigger lemma for this pattern
+                "PP > { P > { 'útí' } NP > { ( no_þgf|pfn_þgf ) } }",
+                lambda self, match: self.dir_loc_comp(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > [ .* ADVP > { 'inn' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } .* ]",
+                #    "( PP|VP|IP ) > [ .* ADVP > { 'inn' } .* PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } .* ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "( IP|NP|VP ) > { IP >> [ .* ADVP > { 'inn' } ] PP > [ P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) ] }",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "NP > { IP >> { VP > { 'vera' } ADVP > { 'inn' } } PP > [ P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) ] }",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { 'verða' } ADVP > { 'inn' } PP > [ P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) ] }",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { 'geyma' } ADVP > { 'inn' } PP }",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inná",  # Trigger lemma for this pattern
+                "PP > { P > { 'inná' } NP > { ( no_þgf|pfn_þgf ) } }",
+                lambda self, match: self.dir_loc_comp(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inní",  # Trigger lemma for this pattern
+                "VP > { VP > [ .* ] NP > { PP > { P > { 'inní' } NP > { ( no_þgf|pfn_þgf ) } } } }",
+                # "PP > { P > { 'inní' } NP > { ( no_þgf|pfn_þgf ) } }",
+                lambda self, match: self.dir_loc_comp(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > [ VP > { ( 'verða'|'vera' ) } .* ADVP > { 'inn' } PP > { P > { 'á' } } ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > [ VP > { 'vera' } .* ADVP > { 'inn' } PP > { P > { 'í' } } ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "upp",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > [ VP > { ^(byggja) } ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "upp",  # Trigger lemma for this pattern
+                "( PP|VP|IP ) > [ VP > { ('standa'|'hafa') } ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        # Catches "Það liggur í augum upp."
+        cls.add_pattern(
+            (
+                "auga",  # Trigger lemma for this pattern
+                "VP > [ VP > [ 'liggja' ] PP > [ P > { ( 'í'|'á' ) } NP > { 'auga' } ] ADVP > [ 'upp' ] ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "teningur",  # Trigger lemma for this pattern
+                "PP > [ .* ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { 'teningur' } } ]",
+                lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+        cls.add_pattern(
+            (
+                "upp",  # Trigger lemma for this pattern
+                "( IP|NP|VP ) > [ IP >> { ADVP > { 'upp' } } PP > [ P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) ] ]",
+                lambda self, match: self.dir_loc(match),
+                None,
             )
         )
 
