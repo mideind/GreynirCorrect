@@ -1749,7 +1749,7 @@ def lookup_unknown_words(
                 context=tuple(context[-3:-1]),
                 at_sentence_start=at_sentence_start,
             )
-            if corrected_txt != token.txt:
+            if corrected_txt != token.txt and len(corrected_txt) > 1 and len(token.txt) > 1:
                 # We have a candidate correction: take a closer look at it
                 _, m = db.lookup_g(corrected_txt, at_sentence_start=at_sentence_start)
                 if (token.txt[0].lower() == "ó" and corrected_txt == token.txt[1:]) or (

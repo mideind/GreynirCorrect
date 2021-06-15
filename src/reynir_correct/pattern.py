@@ -904,106 +904,6 @@ class PatternMatcher:
             )
         )
 
-    def wrong_mood_concessive(self, match: SimpleTree) -> None:
-        """ Indicative mood is used instead of subjunctive 
-            in concessive subclauses """
-        vp = match.first_match("VP > { so }")
-        assert vp is not None
-        verb = next(ch for ch in vp.children if ch.tcat == "so")
-        assert "fh" in verb.all_variants
-        start, end = min(verb.span), max(verb.span)
-
-        text = "Sögnin {0} skal vera í viðtengingarhætti í viðurkenningarsetningum".format(verb.text)
-        detail = text
-        tidy_text = match.tidy_text
-        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_concessive_indicative",
-                text=text,
-                detail=detail,
-                original="", 
-                #suggest=suggest,
-            )
-        )
-
-    def wrong_mood_temporal(self, match: SimpleTree) -> None:
-        """ Subjunctive mood used instead of subjunctive in temporal subclauses """
-        vp = match.first_match("VP > { so }")
-        assert vp is not None
-        verb = next(ch for ch in vp.children if ch.tcat == "so")
-        assert "vh" in verb.all_variants
-        start, end = min(verb.span), max(verb.span)
-
-        text = "Sögnin {0} skal vera í framsöguhætti".format(verb.text)
-        detail = text
-        tidy_text = match.tidy_text
-        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_temporal_subjunctive",
-                text=text,
-                detail=detail,
-                original="", 
-                #suggest=suggest,
-            )
-        )
-
-    def wrong_mood_relative(self, match: SimpleTree) -> None:
-        """ Subjunctive mood used instead of subjunctive in temporal subclauses """
-        vp = match.first_match("VP > { so }")
-        assert vp is not None
-        verb = next(ch for ch in vp.children if ch.tcat == "so")
-        assert "vh" in verb.all_variants
-        start, end = min(verb.span), max(verb.span)
-
-        text = "Sögnin {0} skal vera í framsöguhætti".format(verb.text)
-        detail = text
-        tidy_text = match.tidy_text
-        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_relative_subjunctive",
-                text=text,
-                detail=detail,
-                original="", 
-                #suggest=suggest,
-            )
-        )
-
-
-    def wrong_uncertain_verbs(self, match: SimpleTree, context: ContextDict) -> None:
-        """ Indicative mood used instead of subjunctive with verbs denoting uncertainty """
-        vp = match.first_match("CP-THT >> VP")
-        vp = vp.first_match("VP > { so }")
-        assert vp is not None
-
-        verb = next(ch for ch in vp.children if ch.tcat == "so")
-        #assert "fh" in verb.all_variants # TODO uncomment when can check earlier, in original match case
-        start, end = min(verb.span), max(verb.span)
-
-        text = "Sögnin {0} skal vera í viðtengingarhætti".format(verb.text)
-        detail = text
-        tidy_text = match.tidy_text
-        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_uncertainty_indicative",
-                text=text,
-                detail=detail,
-                original="", 
-                #suggest=suggest,
-            )
-        )
-
     def dir_loc(self, match: SimpleTree) -> None:
         adv = match.first_match("( 'inn'|'út'|'upp' )")
         assert adv is not None
@@ -1014,6 +914,8 @@ class PatternMatcher:
             pp = match.first_match(
                 "PP > { P > { ( 'í'|'á'|'um' ) } " "NP > { ( no_þf|pfn_þf ) } }"
             )
+        if pp is None:
+            return
         assert pp is not None
         start, end = min(adv.span[0], pp.span[0]), max(adv.span[1], pp.span[1])
         if adv.span < pp.span:
@@ -1067,30 +969,6 @@ class PatternMatcher:
             )
         )
 
-    def wrong_confident_verbs(self, match: SimpleTree, context: ContextDict) -> None:
-        """ Subjunctive mood used instead of indicative with verbs denoting confidence in statement """
-        vp = match.first_match("CP-THT >> VP")
-        vp = vp.first_match("VP > { so }")
-        assert vp is not None
-        verb = next(ch for ch in vp.children if ch.tcat == "so")
-        #assert "vh" in verb.all_variants # TODO uncomment when can check in original match case
-        start, end = min(verb.span), max(verb.span)
-
-        text = "Sögnin {0} skal vera í framsöguhætti".format(verb.text)
-        detail = text
-        tidy_text = match.tidy_text
-        #suggest = tidy_text.replace(verb1, verb2, 1) # TODO get correct word form from BÍN
-
-        self._ann.append(
-            Annotation(
-                code="P_confident_subjunctive",
-                text=text,
-                detail=detail,
-                original="", 
-                #suggest=suggest,
-            )
-        )
-
     def dir_loc_ut_um(self, match: SimpleTree) -> None:
         advp = match.first_match("ADVP > { ( 'út'|'útum' ) }")
         if advp is None:
@@ -1124,32 +1002,11 @@ class PatternMatcher:
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
-                original=p.tidy_text,
+                original=pp.tidy_text,
                 suggest=suggest,
             )
         )
 
-    def mood_sub_ack(self, match: SimpleTree) -> None:
-        so = match.first_match("VP > so_fh")
-        assert so is not None
-        start, end = so.span
-        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
-        variants.append("vh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
-        text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
-        detail = "Í viðurkenningarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggestion}'"
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_MOOD_ACK",
-                text=text,
-                detail=detail,
-                original=so.tidy_text,
-                suggest=suggest,
-            )
-        )
-    
 
     def dir_loc_standa(self, match: SimpleTree) -> None:
         advp = match.first_match("ADVP > { 'upp' }")
@@ -1165,37 +1022,6 @@ class PatternMatcher:
             Annotation(
                 start=start,
                 end=end,
-                code="P_DIR_LOC",
-                text=text,
-                detail=detail,
-                original=advp.tidy_text,
-                suggest=suggest,
-            )
-        )
-    
-    def mood_sub_rel(self, match: SimpleTree) -> None:
-        so = match.first_match("VP > so_fh")
-        assert so is not None
-        start, end = so.span
-        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
-        variants.append("vh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
-        text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
-        detail = "Í tilvísunarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggestion}'"
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_MOOD_REL",
-                text=text,
-                detail=detail,
-                original=so.tidy_text,
-            )
-        )
-
-
-
-
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
@@ -1226,26 +1052,6 @@ class PatternMatcher:
             )
         )
 
-    def mood_sub_temp(self, match: SimpleTree) -> None:
-        so = match.first_match("VP > so_fh")
-        assert so is not None
-        start, end = so.span
-        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
-        variants.append("vh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
-        text = f"Hér á mögulega að nota viðtengingarhátt sagnarinnar '{so.lemma}'"
-        detail = "Í tíðarsetningum er viðtengingarháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_MOOD_TEMP",
-                text=text,
-                detail=detail,
-                original=so.tidy_text,
-            )
-        )
-
     def dir_loc_niður(self, match: SimpleTree) -> None:
         advp = match.first_match("ADVP > { 'niður' }")
         assert advp is not None
@@ -1269,26 +1075,6 @@ class PatternMatcher:
             )
         )
 
-    def mood_ind_cond(self, match: SimpleTree) -> None:
-        so = match.first_match("VP > so_vh")
-        assert so is not None
-        start, end = so.span
-        variants = list( [ f for f in so.all_variants if not "vh" in f ] )
-        variants.append("fh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
-        text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
-        detail = "Í skilyrðissetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
-
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_MOOD_COND",
-                text=text,
-                detail=detail,
-                original=so.tidy_text,
-            )
-        )
     def dir_loc_búð(self, match: SimpleTree) -> None:
         advp = match.first_match("ADVP > { 'út' }")
         assert advp is not None
@@ -1311,28 +1097,6 @@ class PatternMatcher:
             )
         )
 
-    def mood_ind_purp(self, match: SimpleTree) -> None:
-        so = match.first_match("VP > so_vh")
-        assert so is not None
-        start, end = so.span
-        variants = list( [ f for f in so.all_variants if not "vh" in f ] )
-        variants.append("fh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
-        text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
-        detail = "Í tilgangssetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_MOOD_PURP",
-                text=text,
-                detail=detail,
-                original=so.tidy_text,
-                suggest=suggest,
-            )
-        )
-
-
     def dir_loc_læsa(self, match: SimpleTree) -> None:
         advp = match.first_match("ADVP > { 'inn' }")
         assert advp is not None
@@ -1354,6 +1118,113 @@ class PatternMatcher:
                 suggest=suggest,
             )
         )
+
+    
+    def mood_sub_ack(self, match: SimpleTree) -> None:
+        """ Indicative mood is used instead of subjunctive 
+            in concessive subclauses """
+        so = match.first_match("VP > so_fh")
+        assert so is not None
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants.append("vh")
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
+        detail = "Í viðurkenningarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggestion}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_ACK",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+    
+    def mood_sub_rel(self, match: SimpleTree) -> None:
+        so = match.first_match("VP > so_fh")
+        assert so is not None
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants.append("vh")
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
+        detail = "Í tilvísunarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggestion}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_REL",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+            )
+        )
+
+    def mood_sub_temp(self, match: SimpleTree) -> None:
+        so = match.first_match("VP > so_vh")
+        assert so is not None
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants.append("vh")
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
+        detail = "Í tíðarsetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_TEMP",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+            )
+        )
+
+    def mood_ind_cond(self, match: SimpleTree) -> None:
+        so = match.first_match("VP > so_vh")
+        assert so is not None
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "vh" in f ] )
+        variants.append("fh")
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
+        detail = "Í skilyrðissetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
+
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_COND",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+            )
+        )
+    
+    def mood_ind_purp(self, match: SimpleTree) -> None:
+        so = match.first_match("VP > so_vh")
+        assert so is not None
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "vh" in f ] )
+        variants.append("fh")
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
+        detail = "Í tilgangssetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_PURP",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
 
     @classmethod
     def add_pattern(cls, p: PatternTuple) -> None:
@@ -1571,14 +1442,14 @@ class PatternMatcher:
             )
 
             # Catch "Hún á (ekki) heiðurinn að þessu.", "Hún hafði (ekki) átt heiðurinn að þessu."
-#            cls.add_pattern(
-#                (
-#                    "heiður",  # Trigger lemma for this pattern
-#                    "VP >> { VP > { 'eiga' } NP > { 'heiður' } } PP > { 'að' }",
-#                    cls.wrong_preposition_heiður_að,
-#                    None,
-#                )
-#            )
+            #cls.add_pattern(
+            #    (
+            #        "heiður",  # Trigger lemma for this pattern
+            #        "VP >> { VP > { 'eiga' } NP > { 'heiður' } } PP > { 'að' }",
+            #        cls.wrong_preposition_heiður_að,
+            #        None,
+            #    )
+            #)
 
             # Catch "Hún fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu."
             cls.add_pattern(
@@ -1589,14 +1460,14 @@ class PatternMatcher:
                     None,
                 )
             )
-        #    cls.add_pattern(
-        #        (
-        #            "heiður",  # Trigger lemma for this pattern
-        #            "VP > { VP >> { VP > { NP >> { 'eiga' } NP > { 'heiður' } } } PP > { 'að' } }",
-        #            cls.wrong_preposition_heiður_að,
-        #            None,
-        #        )
-        #    )
+            #cls.add_pattern(
+            #    (
+            #        "heiður",  # Trigger lemma for this pattern
+            #        "VP > { VP >> { VP > { NP >> { 'eiga' } NP > { 'heiður' } } } PP > { 'að' } }",
+            #        cls.wrong_preposition_heiður_að,
+            #        None,
+            #    )
+            #)
 
             # Catch "Hún á (ekki) mikið/fullt/helling/gommu... að börnum."
             cls.add_pattern(
@@ -1947,7 +1818,7 @@ class PatternMatcher:
             )
         )
 
-
+        # Check errors in dir4loc
         def dir4loc(verbs: Set[str], tree: SimpleTree) -> bool:
             """ Context matching function for the %noun macro in combination
                 with 'að' """
