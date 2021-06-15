@@ -886,10 +886,16 @@ class PatternMatcher:
     def vera_að(self, match: SimpleTree) -> None:
         """ 'vera að' in front of verb is unneccessary """
         # TODO don't match verbs that allow 'vera að'
-        start, end = match.span
-        text = "Mælt er með að sleppa 'vera að' og beygja frekar sögnina."
+        so = match.first_match("VP >> 'vera'").first_match("so")
+        variants = list( [ f for f in so.all_variants if not f.isdigit()])
+        nhm = match.first_match("TO > nhm").first_match("nhm")
+        start, _ = so.span
+        realso = match.first_match("IP-INF >> VP").first_match("so_nh")
+        _, end = realso.span
+        suggest = BIN.lookup_variants(realso.lemma, realso.cat, variants)[0].bmynd
+        text = f"Mælt er með að sleppa '{so.tidy_text} að' og beygja frekar sögnina '{realso.lemma}' svo hún verði '{suggest}'."
         detail = (
-            "Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
+            f"Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
             "svokallað dvalarhorf ('Ég er ekki að skilja þetta')."
         )
         # tidy_text = match.tidy_text
@@ -1123,14 +1129,15 @@ class PatternMatcher:
     def mood_sub_ack(self, match: SimpleTree) -> None:
         """ Indicative mood is used instead of subjunctive 
             in concessive subclauses """
-        so = match.first_match("VP > so_fh")
+        vp = match.first_match("VP > so_fh")
+        so = vp.first_match("so")
         assert so is not None
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "fh" in f ] )
         variants.append("vh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)[0].bmynd
         text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
-        detail = "Í viðurkenningarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggestion}'"
+        detail = f"Í viðurkenningarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggest}'"
         self._ann.append(
             Annotation(
                 start=start,
@@ -1144,14 +1151,15 @@ class PatternMatcher:
         )
     
     def mood_sub_rel(self, match: SimpleTree) -> None:
-        so = match.first_match("VP > so_fh")
+        vp = match.first_match("VP > so_vh")
+        so = vp.first_match("so")
         assert so is not None
         start, end = so.span
-        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
-        variants.append("vh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
-        text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
-        detail = "Í tilvísunarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggestion}'"
+        variants = list( [ f for f in so.all_variants if not "vh" in f] )
+        variants.append("fh")
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)[0].bmynd
+        text = f"Hér skal notaður framsöguháttur sagnarinnar '{so.lemma}', svo sögnina '{so.tidy_text}' skal skrifa '{suggest}'"
+        detail = f"Í tilvísunarsetningum er aðeins framsöguháttur tækur."
         self._ann.append(
             Annotation(
                 start=start,
@@ -1164,14 +1172,15 @@ class PatternMatcher:
         )
 
     def mood_sub_temp(self, match: SimpleTree) -> None:
-        so = match.first_match("VP > so_vh")
+        vp = match.first_match("VP > so_vh")
+        so = vp.first_match("so")        
         assert so is not None
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "fh" in f ] )
         variants.append("vh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)[0].bmynd
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
-        detail = "Í tíðarsetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
+        detail = f"Í tíðarsetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
         self._ann.append(
             Annotation(
                 start=start,
@@ -1184,14 +1193,15 @@ class PatternMatcher:
         )
 
     def mood_ind_cond(self, match: SimpleTree) -> None:
-        so = match.first_match("VP > so_vh")
+        vp = match.first_match("VP > so_vh")
+        so = vp.first_match("so")
         assert so is not None
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "vh" in f ] )
         variants.append("fh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)[0].bmynd
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
-        detail = "Í skilyrðissetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
+        detail = f"Í skilyrðissetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
 
         self._ann.append(
             Annotation(
@@ -1205,14 +1215,15 @@ class PatternMatcher:
         )
     
     def mood_ind_purp(self, match: SimpleTree) -> None:
-        so = match.first_match("VP > so_vh")
+        vp = match.first_match("VP > so_vh")
+        so = vp.first_match("so")
         assert so is not None
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "vh" in f ] )
         variants.append("fh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)
+        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)[0].bmynd
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
-        detail = "Í tilgangssetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggestion}'"
+        detail = f"Í tilgangssetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
         self._ann.append(
             Annotation(
                 start=start,
@@ -1225,6 +1236,30 @@ class PatternMatcher:
             )
         )
 
+    def doubledefinite(self, match: SimpleTree) -> None:
+        no = match.first_match("no")
+        fn = match.first_match("fn")
+        fnlemma = fn.lemma
+        #if fnlemma not in ["sá", "þessi"]:
+        #    return
+        start, end = match.span
+        suggest = no.lemma
+        for x in BIN.lookup_variants(no.lemma, no.cat, no.all_variants):
+            if not "gr" in x.all_variants:
+                suggest = x.bmynd
+        text = f"Hér ætti annaðhvort að sleppa '{fnlemma}' eða breyta '{no.tidy_text}' í '{suggest}'"
+        detail = f"Hér er tiltekin tvöföld ákveðni, sem er ekki leyfilegt."
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_DOUBLE_DEFINITE",
+                text=text,
+                detail=detail,
+                original=match.tidy_text,
+                suggest=suggest,
+            )
+        )
 
     @classmethod
     def add_pattern(cls, p: PatternTuple) -> None:
@@ -1777,17 +1812,15 @@ class PatternMatcher:
                 None,
             )
         )
-
         # Relative clause - tilvísunarsetning
         cls.add_pattern(
             (
                 frozenset(("sem", "er")), # Trigger lemmas for this pattern
-                "CP-REL >> {VP > so_fh}",
+                "CP-REL >> {VP > so_vh}",
                 lambda self, match: self.mood_sub_rel(match),
                 None,
             )
         )
-
         # Temporal clause - tíðarsetning
         cls.add_pattern(
             (
@@ -1797,7 +1830,6 @@ class PatternMatcher:
                 None,
             )
         )
-
         # Conditional clause - skilyrðissetning
         cls.add_pattern(
             (
@@ -1807,13 +1839,21 @@ class PatternMatcher:
                 None,
             )
         )
-
         # Conditional clause - skilyrðissetning
         cls.add_pattern(
             (
                 frozenset(("til", "svo")), # Trigger lemmas for this pattern
                 "CP-ADV-PURP >> {VP > so_vh}",
                 lambda self, match: self.mood_ind_purp(match),
+                None,
+            )
+        )
+        # Article errors; demonstrative pronouns and nouns with an article
+        cls.add_pattern(
+            (
+                frozenset(("sá", "þessi", "segja")), # Trigger lemmas for this pattern
+                "NP > [fn no_gr]",
+                lambda self, match: self.doubledefinite(match),
                 None,
             )
         )
