@@ -1685,14 +1685,23 @@ class PatternMatcher:
                 cls.ctx_dir_loc,
             )
         )
-        cls.add_pattern(
-            (
-                "inn",  # Trigger lemma for this pattern
-                "VP > { VP > { %verb } ADVP > { 'inn' } }",
-                lambda self, match: self.dir_loc(match),
-                cls.ctx_dir_loc,
-            )
-        )
+#        cls.add_pattern(
+#            (
+#                "inn",  # Trigger lemma for this pattern
+#                "IP > { IP-INF > { VP > { VP > { %verb } ADVP > { 'inn' } } } PP > { P > { ('á'|'í') } NP } }",
+#                #"VP > { VP > { %verb } ADVP > { 'inn' } }",
+#                lambda self, match: self.dir_loc(match),
+#                cls.ctx_dir_loc,
+#            )
+#        )
+#        cls.add_pattern(
+#            (
+#                "inn",  # Trigger lemma for this pattern
+#                "VP > { VP > { %verb } ADVP > { 'inn' } }",
+#                lambda self, match: self.dir_loc(match),
+#                cls.ctx_dir_loc,
+#            )
+#        )
 
         cls.add_pattern(
             (
