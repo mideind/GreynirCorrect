@@ -64,6 +64,10 @@ PatternTuple = Tuple[
 
 BIN = Bin()
 
+# Variants not needed for lookup
+SKIPVARS = ["OP", "SUBJ"]
+
+
 class IcelandicPlaces:
 
     """ Wraps a dictionary of Icelandic place names with their
@@ -172,12 +176,25 @@ class PatternMatcher:
                 self.create_patterns()
 
     def get_wordform(self, lemma, cat, variants):
+        """ Get correct wordform from BinPackage, 
+        given a set of variants """
+
         # Get rid of argument variants in verbs:
-        variants = list( [ x for x in variants if not x.isdigit() ])
-        wordforms = BIN.lookup_variants(lemma, cat, variants)
+        variants = list( [ x for x in variants if not x.isdigit()])
+        realvars = []
+        for x in variants:
+            if x.isdigit:
+                continue
+            if x in SKIPVARS:
+                continue
+            else:
+                realvars.append(x)
+
+        wordforms = BIN.lookup_variants(lemma, cat, realvars)
         if not wordforms:
             return ""
         else:
+            # Can be many possible word forms, want the first one in most cases
             return wordforms[0].bmynd
 
     def wrong_preposition_af(self, match: SimpleTree) -> None:
