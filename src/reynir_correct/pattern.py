@@ -171,6 +171,15 @@ class PatternMatcher:
                 # First instance: create the class-wide pattern list
                 self.create_patterns()
 
+    def get_wordform(self, lemma, cat, variants):
+        # Get rid of argument variants in verbs:
+        variants = list( [ x for x in variants if not x.isdigit() ])
+        wordforms = BIN.lookup_variants(lemma, cat, variants)
+        if not wordforms:
+            return ""
+        else:
+            return wordforms[0].bmynd
+
     def wrong_preposition_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verb phrase
@@ -886,13 +895,15 @@ class PatternMatcher:
     def vera_að(self, match: SimpleTree) -> None:
         """ 'vera að' in front of verb is unneccessary """
         # TODO don't match verbs that allow 'vera að'
+        # TODO exclude sentences where the subject is not a noun (and later, where not alive)
         so = match.first_match("VP >> 'vera'").first_match("so")
-        variants = list( [ f for f in so.all_variants if not f.isdigit()])
         nhm = match.first_match("TO > nhm").first_match("nhm")
         start, _ = so.span
         realso = match.first_match("IP-INF >> VP").first_match("so_nh")
         _, end = realso.span
-        suggest = BIN.lookup_variants(realso.lemma, realso.cat, variants)[0].bmynd
+        suggest = self.get_wordform(realso.lemma, realso.cat, so.all_variants)
+        if not suggest:
+            return
         text = f"Mælt er með að sleppa '{so.tidy_text} að' og beygja frekar sögnina '{realso.lemma}' svo hún verði '{suggest}'."
         detail = (
             f"Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
@@ -1135,7 +1146,9 @@ class PatternMatcher:
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "fh" in f ] )
         variants.append("vh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)[0].bmynd
+        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if not suggest:
+            return
         text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
         detail = f"Í viðurkenningarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggest}'"
         self._ann.append(
@@ -1157,7 +1170,9 @@ class PatternMatcher:
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "vh" in f] )
         variants.append("fh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)[0].bmynd
+        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if not suggest:
+            return
         text = f"Hér skal notaður framsöguháttur sagnarinnar '{so.lemma}', svo sögnina '{so.tidy_text}' skal skrifa '{suggest}'"
         detail = f"Í tilvísunarsetningum er aðeins framsöguháttur tækur."
         self._ann.append(
@@ -1178,7 +1193,9 @@ class PatternMatcher:
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "fh" in f ] )
         variants.append("vh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)[0].bmynd
+        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if not suggest:
+            return
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
         detail = f"Í tíðarsetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
         self._ann.append(
@@ -1199,7 +1216,9 @@ class PatternMatcher:
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "vh" in f ] )
         variants.append("fh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)[0].bmynd
+        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if not suggest:
+            return
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
         detail = f"Í skilyrðissetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
 
@@ -1221,7 +1240,9 @@ class PatternMatcher:
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "vh" in f ] )
         variants.append("fh")
-        suggest = BIN.lookup_variants(so.lemma, so.cat, variants)[0].bmynd
+        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if not suggest:
+            return
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
         detail = f"Í tilgangssetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
         self._ann.append(
