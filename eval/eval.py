@@ -1396,26 +1396,26 @@ class Stats:
             )
 
             # Most common false negative error types
-            total = sum(self._false_negatives.values())
-            if total > 0:
-                bprint(f"\nMost common false negative error types")
-                bprint(f"--------------------------------------\n")
-                for index, (xtype, cnt) in enumerate(
-                    heapq.nlargest(
-                        20, self._false_negatives.items(), key=lambda x: x[1]
-                    )
-                ):
-                    bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
+            #total = sum(self._false_negatives.values())
+            #if total > 0:
+            #    bprint(f"\nMost common false negative error types")
+            #    bprint(f"--------------------------------------\n")
+            #    for index, (xtype, cnt) in enumerate(
+            #        heapq.nlargest(
+            #            20, self._false_negatives.items(), key=lambda x: x[1]
+            #        )
+            #    ):
+            #        bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
 
             # Most common error types in unparsable sentences
-            tot = sum(self._tp_unparsables.values())
-            if tot > 0:
-                bprint(f"\nMost common error types for unparsable sentences")
-                bprint(f"------------------------------------------------\n")
-                for index, (xtype, cnt) in enumerate(
-                    heapq.nlargest(20, self._tp_unparsables.items(), key=lambda x: x[1])
-                ):
-                    bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
+            #tot = sum(self._tp_unparsables.values())
+            #if tot > 0:
+            #    bprint(f"\nMost common error types for unparsable sentences")
+            #    bprint(f"------------------------------------------------\n")
+            #    for index, (xtype, cnt) in enumerate(
+            #        heapq.nlargest(20, self._tp_unparsables.items(), key=lambda x: x[1])
+            #    ):
+            #        bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
 
         def output_token_scores() -> None:
             """ Calculate and write token scores to stdout """
@@ -1637,15 +1637,15 @@ class Stats:
                     bprint(f"Micro F0.5-score: N/A")
                     bprint(f"Error correction recall: N/A")
 
-        output_duration()
-        output_sentence_scores()
-        output_token_scores()
+        #output_duration()
+        #output_sentence_scores()
+        #output_token_scores()
         output_error_cat_scores()
 
         bprint(f"\n\nResults for iEC-categories:")
         output_supercategory_scores(SUPERCATEGORIES)
-        bprint(f"\n\nResults for SÍM-categories:")
-        output_supercategory_scores(SIMCATEGORIES)
+        #bprint(f"\n\nResults for SÍM-categories:")
+        #output_supercategory_scores(SIMCATEGORIES)
 
         # Print the accumulated output before exiting
         for s in buffer:
