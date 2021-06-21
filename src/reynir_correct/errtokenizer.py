@@ -296,11 +296,32 @@ class CorrectToken(Tok):
         return cls(TOK.WORD, txt, val)
 
     def __repr__(self) -> str:
-        return "<CorrectToken(kind: {0}, txt: '{1}', val: {2})>".format(
-            TOK.descr[self.kind], self.txt, self.val
+        return "<CorrectToken(kind: {0}, txt: '{1}', val: {2}, span: {3})>".format(
+            TOK.descr[self.kind], self.txt, self.val, self.origin_spans
         )
 
     __str__ = __repr__
+
+
+    def concatenate(self, other: "CorrectToken", *, separator: str = "", metadata_from_other: bool = False) -> "CorrectToken":
+        new_kind = self.kind if not metadata_from_other else other.kind
+        new_val = self.val if not metadata_from_other else other.val
+        self_txt = self.txt or ""
+        other_txt = other.txt or ""
+        new_txt = self_txt + separator + other_txt
+        self_original = self.original or ""
+        other_original = other.original or ""
+        new_original = self_original + other_original
+        new_cap = self._cap
+        new_err = self._err
+
+        self_origin_spans = self.origin_spans or []
+        other_origin_spans = other.origin_spans or []
+        separator_origin_spans: List[int] = ([len(self_original)] * len(separator) if len(other_origin_spans) > 0 else [])
+        new_origin_spans = (self_origin_spans + separator_origin_spans + [i + len(self_original) for i in other_origin_spans])
+        new_ent = CorrectToken(new_kind, new_txt, new_val, new_original, new_origin_spans)
+        new_ent.set_error(self._err)
+        return new_ent
 
     def set_capitalization(self, cap: str) -> None:
         """ Set the capitalization state for this token """
