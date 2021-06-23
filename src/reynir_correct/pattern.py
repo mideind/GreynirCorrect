@@ -73,7 +73,7 @@ class IcelandicPlaces:
         # "fjörður": "á",  # Skip this since 'í *firði' is also common
         "eyri": "á",
         "vogur": "í",
-        "brekka": "í",
+        "brekka": "í",  #Ath. algeng ending á bæjarheitum sem taka með sér 'á'
         "staðir": "á",
         # "höfn": "á",  # Skip this since 'í *höfn' is also common
         "eyjar": "í",
