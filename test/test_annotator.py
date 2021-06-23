@@ -183,7 +183,7 @@ def test_error_finder(rc):
     s = "Friðgeir taldi víst að Sigga yrði að vera heima."
     check_sentence(rc, s, [])
     s = "Ég er ekki meiri fáviti heldur en þú."
-    check_sentence(rc, s, [(5, 5, "P_NT_Heldur/w")])
+    check_sentence(rc, s, [(4, 4, "T001/w"), (5, 5, "P_NT_Heldur/w")])
 
 
 def test_ordinals(rc):
