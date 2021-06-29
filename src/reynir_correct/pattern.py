@@ -215,7 +215,7 @@ class PatternMatcher:
         variants = list( [ x for x in variants if not x.isdigit()])
         realvars = []
         for x in variants:
-            if x.isdigit:
+            if x.isdigit():
                 continue
             if x in SKIPVARS:
                 continue
