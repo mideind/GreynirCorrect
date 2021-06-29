@@ -307,16 +307,14 @@ class CorrectToken(Tok):
         new_kind = self.kind if not metadata_from_other else other.kind
         new_val = self.val if not metadata_from_other else other.val
         self_txt = self.txt or ""
-        other_txt = other.txt or ""
+        other_txt = other.txt if other else ""
         new_txt = self_txt + separator + other_txt
         self_original = self.original or ""
-        other_original = other.original or ""
+        other_original = other.original if other else ""
         new_original = self_original + other_original
-        new_cap = self._cap
-        new_err = self._err
 
         self_origin_spans = self.origin_spans or []
-        other_origin_spans = other.origin_spans or []
+        other_origin_spans = other.origin_spans if other else []
         separator_origin_spans: List[int] = ([len(self_original)] * len(separator) if len(other_origin_spans) > 0 else [])
         new_origin_spans = (self_origin_spans + separator_origin_spans + [i + len(self_original) for i in other_origin_spans])
         new_ent = CorrectToken(new_kind, new_txt, new_val, new_original, new_origin_spans)
@@ -358,6 +356,7 @@ class CorrectToken(Tok):
     def copy(
         self,
         other: Union[Sequence["CorrectToken"], "CorrectToken"],
+        e: int = [],
         coalesce: bool = False,
     ) -> bool:
         """ Copy the error field and origin informatipon
@@ -365,7 +364,10 @@ class CorrectToken(Tok):
         if isinstance(other, CorrectToken):
             self._err = other._err
             self.original = other.original
-            self.origin_spans = other.origin_spans
+            if e:
+                self.origin_spans = other.origin_spans + e
+            else:
+                self.origin_spans = other.origin_spans
             if coalesce and other.error_span > 1:
                 # The original token had an associated error
                 # spanning more than one token; now we're creating
