@@ -65,7 +65,7 @@ PatternTuple = Tuple[
 BIN = Bin()
 
 # Variants not needed for lookup
-SKIPVARS = ["OP", "SUBJ"]
+SKIPVARS = ["OP", "SUBJ", "op", "subj"]
 
 
 class IcelandicPlaces:
@@ -156,9 +156,15 @@ class PatternMatcher:
     ctx_verb_02: ContextDict = cast(ContextDict, None)
     ctx_noun_að: ContextDict = cast(ContextDict, None)
     ctx_place_names: ContextDict = cast(ContextDict, None)
-    ctx_uncertain_verbs: ContextDict = cast(ContextDict, None)
-    ctx_confident_verbs: ContextDict = cast(ContextDict, None)
     ctx_dir_loc: ContextDict = cast(ContextDict, None)
+    ctx_mood_que: ContextDict = cast(ContextDict, None)
+    ctx_mood_spe: ContextDict = cast(ContextDict, None)
+    ctx_mood_unsuretht: ContextDict = cast(ContextDict, None)
+    ctx_mood_emotes: ContextDict = cast(ContextDict, None)
+    ctx_mood_emotenp: ContextDict = cast(ContextDict, None)
+    ctx_mood_unsureque: ContextDict = cast(ContextDict, None)
+    ctx_mood_mood_suretht: ContextDict = cast(ContextDict, None)
+    ctx_mood_mood_surenp: ContextDict = cast(ContextDict, None)
 
     def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
@@ -175,22 +181,26 @@ class PatternMatcher:
                 # First instance: create the class-wide pattern list
                 self.create_patterns()
 
-    def get_wordform(self, lemma, cat, variants):
+    def get_wordform(self, w, cat, variants, lemma=None):
         """ Get correct wordform from BinPackage, 
-        given a set of variants """
-
-        # Get rid of argument variants in verbs:
-        variants = list( [ x for x in variants if not x.isdigit()])
+        given a word form and a set of the variants that need to change. """
+        nouncats = frozenset(("kvk", "kk", "hk"))
+        cases = frozenset(("nf", "þf", "þgf", "ef"))
+        if cat in nouncats:
+            variants = list( [ x for x in variants if not x.isdigit() and x not in SKIPVARS and x not in nouncats])
+        else:
+            variants = list( [ x for x in variants if not x.isdigit() and x not in SKIPVARS])
         realvars = []
         for x in variants:
-            if x.isdigit:
+            if x.isdigit() or x in SKIPVARS:
                 continue
-            if x in SKIPVARS:
+            if cat in nouncats and x in nouncats:
                 continue
-            else:
-                realvars.append(x)
+            if "so" in cat and x in cases:
+                continue
+            realvars.append(x)
 
-        wordforms = BIN.lookup_variants(lemma, cat, realvars)
+        wordforms = BIN.lookup_variants(w, cat, realvars, lemma=lemma)
         if not wordforms:
             return ""
         else:
@@ -918,7 +928,7 @@ class PatternMatcher:
         start, _ = so.span
         realso = match.first_match("IP-INF >> VP").first_match("so_nh")
         _, end = realso.span
-        suggest = self.get_wordform(realso.lemma, realso.cat, so.all_variants)
+        suggest = self.get_wordform(realso.tidy_text, realso.cat, so.all_variants, lemma=realso.lemma)
         if not suggest:
             return
         text = f"Mælt er með að sleppa '{so.tidy_text} að' og beygja frekar sögnina '{realso.lemma}' svo hún verði '{suggest}'."
@@ -1153,7 +1163,6 @@ class PatternMatcher:
             )
         )
 
-    
     def mood_sub_ack(self, match: SimpleTree) -> None:
         """ Indicative mood is used instead of subjunctive 
             in concessive subclauses """
@@ -1163,7 +1172,7 @@ class PatternMatcher:
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "fh" in f ] )
         variants.append("vh")
-        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        suggest = self.get_wordform(so.tidy_text, so.cat, variants, so.lemma)
         if not suggest:
             return
         text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
@@ -1187,7 +1196,7 @@ class PatternMatcher:
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "vh" in f] )
         variants.append("fh")
-        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        suggest = self.get_wordform(so.tidy_text, so.cat, variants, lemma=so.lemma)
         if not suggest:
             return
         text = f"Hér skal notaður framsöguháttur sagnarinnar '{so.lemma}', svo sögnina '{so.tidy_text}' skal skrifa '{suggest}'"
@@ -1210,7 +1219,7 @@ class PatternMatcher:
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "fh" in f ] )
         variants.append("vh")
-        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        suggest = self.get_wordform(so.tidy_text, so.cat, variants, so.lemma)
         if not suggest:
             return
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
@@ -1233,7 +1242,7 @@ class PatternMatcher:
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "vh" in f ] )
         variants.append("fh")
-        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        suggest = self.get_wordform(so.tidy_text, so.cat, variants, so.lemma)
         if not suggest:
             return
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
@@ -1257,7 +1266,7 @@ class PatternMatcher:
         start, end = so.span
         variants = list( [ f for f in so.all_variants if not "vh" in f ] )
         variants.append("fh")
-        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        suggest = self.get_wordform(so.tidy_text, so.cat, variants, so.lemma)
         if not suggest:
             return
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
@@ -1274,6 +1283,146 @@ class PatternMatcher:
             )
         )
 
+    def mood_ind_cause_strict(self, match: SimpleTree) -> None:
+        vp = match.first_match("VP > so_vh")
+        so = vp.first_match("so")
+        assert so is not None
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "vh" in f ] )
+        variants.append("fh")
+        suggest = self.get_wordform(so.tidy_text, so.cat, variants, so.lemma)
+        if not suggest:
+            return
+        text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
+        detail = f"Í orsakarsetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_CAUSE/s",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def mood_sub_que_strict(self, match: SimpleTree) -> None:
+        so = match.first_match("CP-QUE").first_match("so_fh")
+        if not so.is_terminal:
+            return
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants.append("vh")
+        suggest = self.get_wordform(so.tidy_text, so.cat, variants, so.lemma)
+        if not suggest:
+            return
+        text = f"Hér á að nota viðtengingarhátt sagnarinnar '{so.lemma}'"
+        detail = f"Í spurnarsetningum er viðtengingarháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_QUE/s",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+            )
+        )
+
+    def mood_sub_spe(self, match: SimpleTree) -> None:
+        so = match.first_match("CP-THT").first_match("so_fh")
+        if not so.is_terminal:          # Can't do "if not so" for terminals
+            return
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants.append("vh")
+        suggest = self.get_wordform(so.tidy_text, so.cat, variants, so.lemma)
+        if not suggest:
+            return
+        text = f"Hér á að nota viðtengingarhátt sagnarinnar '{so.lemma}'"
+        detail = f"Í skýringarsetningum með sögnum sem tákna óbeina ræðu eða tilvitnun í þriðja aðila er viðtengingarháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_SPE/s",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+            )
+        )
+    
+    def mood_sub_tht_strict(self, match: SimpleTree) -> None:
+        cp = match.first_match("CP-THT")
+        so = match.first_match("CP-THT").first_match("so_fh")
+        if not so.is_terminal:          # Can't do "if not so" for terminals
+            return
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants.append("vh")
+        suggest = self.get_wordform(so.tidy_text, so.cat, variants, so.lemma)
+        if not suggest:
+            return
+        text = f"Hér á að nota viðtengingarhátt sagnarinnar '{so.lemma}'"
+        detail = f"Í skýringarsetningum með umsögnum sem tákna óvissu, ósk eða möguleika er viðtengingarháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_THT_SPE/s",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+            )
+        )
+
+    def mood_sub_emotes_strict(self, match: SimpleTree) -> None:
+        so = match.first_match("CP-THT").first_match("so_fh")
+        if not so.is_terminal:          # Can't do "if not so" for terminals
+            return
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants.append("vh")
+        suggest = self.get_wordform(so.tidy_text, so.cat, variants, so.lemma)
+        if not suggest:
+            return
+        text = f"Hér á að nota viðtengingarhátt sagnarinnar '{so.lemma}'"
+        detail = f"Í skýringarsetningum með umsögnum sem vísa til tilfinninga er viðtengingarháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_SUB_THT/s",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+            )
+        )
+
+    def mood_ind_tht_strict(self, match: SimpleTree) -> None:
+        so = match.first_match("CP-THT").first_match("so_vh")
+        if not so.is_terminal:          # Can't do "if not so" for terminals
+            return
+        start, end = so.span
+        variants = list( [ f for f in so.all_variants if not "vh" in f ] )
+        variants.append("fh")
+        suggest = self.get_wordform(so.tidy_text, so.cat, variants, so.lemma)
+        if not suggest:
+            return
+        text = f"Hér á að nota framsöguhátt sagnarinnar '{so.lemma}'"
+        detail = f"Í skýringarsetningum með umsögnum sem láta í ljós fullvissu er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_IND_THT/s",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+            )
+        )
+
     def doubledefinite(self, match: SimpleTree) -> None:
         no = match.first_match("no")
         fn = match.first_match("fn")
@@ -1282,9 +1431,8 @@ class PatternMatcher:
         #    return
         start, end = match.span
         suggest = no.lemma
-        for x in BIN.lookup_variants(no.lemma, no.cat, no.all_variants):
-            if not "gr" in x.all_variants:
-                suggest = x.bmynd
+        variants = list( [ f for f in no.all_variants if not "gr" in f ])
+        suggest = self.get_wordform(no.tidy_text, no.cat, variants, no.lemma)
         text = f"Hér ætti annaðhvort að sleppa '{fnlemma}' eða breyta '{no.tidy_text}' í '{suggest}'"
         detail = f"Hér er tiltekin tvöföld ákveðni, sem er ekki leyfilegt."
         self._ann.append(
@@ -1872,12 +2020,12 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 frozenset(("ef", "svo")), # Trigger lemmas for this pattern
-                "CP-ADV-COND >> {VP > so_vh}",
+                "CP-ADV-COND >> {VP > so_vh_nt}",
                 lambda self, match: self.mood_ind_cond(match),
                 None,
             )
         )
-        # Conditional clause - skilyrðissetning
+        # Purpose clause - tilgangssetning
         cls.add_pattern(
             (
                 frozenset(("til", "svo")), # Trigger lemmas for this pattern
@@ -1886,6 +2034,186 @@ class PatternMatcher:
                 None,
             )
         )
+
+        # Causative clause - orsakarsetning
+        cls.add_pattern(
+            (
+                frozenset(("þar", "vegna")), # Trigger lemmas for this pattern
+                "CP-ADV-CAUSE >> {VP > so_vh}",
+                lambda self, match: self.mood_ind_cause_strict(match),
+                None,
+            ),
+        )
+
+        def moodverbs(verbs: Set[str], tree: SimpleTree) -> bool:
+            lemma = tree.own_lemma
+            if not lemma:
+                return False
+            return lemma in verbs
+
+        # Interrogative clause - spurnarsetning
+        QUE: FrozenSet[str] = frozenset(("spyrja", "tékka", "athuga"))
+        # The macro %verb is resolved by calling the function moodverbs()
+        # with the potentially matching tree node as an argument.
+        cls.ctx_mood_que = {"verb": partial(moodverbs, QUE)}
+        cls.add_pattern(
+            (
+                QUE,
+                "VP > {VP > { %verb } CP-QUE >> { so_fh } }",
+                lambda self, match: self.mood_sub_que_strict(match),
+                cls.ctx_mood_que,
+            )
+        )
+
+        UNSUREQUE: FrozenSet[str] = frozenset(("spyrja", "tékka", "athuga"))
+        cls.ctx_mood_unsureque = {"verb": partial(moodverbs, UNSUREQUE)}
+        cls.add_pattern(
+            (
+                UNSUREQUE,
+                "VP > { %verb } CP-THT >> { so_fh }",
+                lambda self, match: self.mood_sub_tht_strict(match),
+                cls.ctx_mood_unsureque,
+            )
+        )
+        # Explanatory clause - skýringarsetning
+        
+        # Indirect speech - óbein ræða
+        SPE: FrozenSet[str] = frozenset((
+            "benda",    # benda
+            "fullvissa",
+            "fullyrða",
+            "herma",
+            "heyra",
+            "hugsa",
+            "lýsa",
+            "nefna",
+            "ræða",     # ræða, ræða um
+            "segja",    # segja, segja frá
+            "sjá",
+            "staðhæfa",
+            "tala",
+            "tilkynna",
+            "átta",     # átta sig á
+            "víkja"     # víkja að
+        ))
+        cls.ctx_mood_spe = {"verb": partial(moodverbs, SPE)}
+        cls.add_pattern(
+            (
+                SPE,
+                "VP > {VP > { %verb } CP-THT >> { so_fh } }",
+                lambda self, match: self.mood_sub_spe(match),
+                cls.ctx_mood_spe
+            )
+        )
+        # that-clauses with verbs denoting uncertainty
+        UNSURETHT: FrozenSet[str] = frozenset((
+            "tékka",
+            "athuga",
+            "efa",
+            "giska",
+            "gruna",
+            "halda",
+            "kanna",
+            "rannsaka",
+            "skoða",
+            "telja",
+            "velta",    # velta fyrir sér
+            "vona",
+        ))
+        cls.ctx_mood_unsuretht = {"verb", partial(moodverbs, UNSURETHT)}
+        cls.add_pattern(
+            (
+                UNSURETHT,
+                "VP > {VP > { %verb } CP-THT >> { so_fh } }",
+                lambda self, match: self.mood_sub_tht_strict(match),
+                cls.ctx_mood_unsuretht,
+            )
+        )
+
+        # Mood with emotion verbs - tilfinningasagnir
+        EMOTEVERBS: FrozenSet[str] = frozenset((
+            "líða",
+            "njóta"
+            "undra",
+            "undrast",
+            "elska",
+        ))
+        cls.ctx_mood_emotes = {"verb", partial(moodverbs, EMOTEVERBS)}
+        cls.add_pattern(
+            (
+                EMOTEVERBS,
+                "VP > {VP > { %verb } CP-THT >> { so_fh } }",
+                lambda self, match: self.mood_sub_emotes_strict(match),
+                cls.ctx_mood_emotes,
+            )
+        )
+        # Mood with NPs denoting emotion
+        EMOTENP: FrozenSet[str] = frozenset((
+            "afbragð",
+            "gaman",
+            "skrýtinn",
+            "skrítinn",
+            "virðingarverður",
+            "ánægður",
+            "óásættanlegur",
+            "þakklátur",
+        ))
+        cls.ctx_mood_emotenp = {"np": partial(moodverbs, EMOTENP)}
+        cls.add_pattern(
+            (
+                EMOTENP,
+                "VP > { VP > {'vera'} NP > { %np } CP-THT >> { so_fh }}",
+
+                lambda self, match: self.mood_sub_emotes_strict(match),
+                cls.ctx_mood_emotenp,
+            ),
+        )
+        # Mood with verbs denoting certainty
+        SURETHT: FrozenSet[str] = frozenset((
+            "staðreyna",
+            "sýna",
+            "kynna",
+            "læra",
+            "upplýsa",
+            "vita",
+            "þýða",
+        ))
+        cls.ctx_mood_suretht = {"verb": partial(moodverbs, SURETHT)}
+        cls.add_pattern(
+            (
+                SURETHT,
+                "VP > {VP > { %verb } CP-THT >> { so_vh } }",
+                lambda self, match: self.mood_ind_tht_strict(match),
+                cls.ctx_mood_suretht
+            )
+        )
+        # Mood with NPs denoting certainty
+        SURENP: FrozenSet[str] = frozenset((
+            "augljós",
+            "ljós",
+            "mikið",
+            "algengur",
+            "hefð",
+            "þekktur",
+        ))
+        cls.ctx_mood_surenp = {"np": partial(moodverbs, SURENP)}
+        cls.add_pattern(
+            (
+                SURENP,
+                "VP > { VP > {'vera'} NP > { %np } CP-THT >> { so_vh }}",
+                lambda self, match: self.mood_ind_tht_strict(match),
+                cls.ctx_mood_surenp,
+            )
+        )
+        cls.add_pattern(
+            (
+                SURENP,
+                "IP > { NP > { %np } VP > { VP > {'vera'} CP-THT >> { so_vh }} }",
+                lambda self, match: self.mood_ind_tht_strict(match),
+                cls.ctx_mood_surenp,
+            )
+        )
+
         # Article errors; demonstrative pronouns and nouns with an article
         cls.add_pattern(
             (
@@ -1942,7 +2270,6 @@ class PatternMatcher:
                 cls.ctx_dir_loc,
             )
         )
-
         cls.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
