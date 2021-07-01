@@ -2308,10 +2308,12 @@ class Correct_TOK(TOK):
         t: Union[Tok, str],
         m: Optional[PersonNameList] = None,
         token: Optional[CorrectToken] = None,
+        span: Optional[List] = None,
     ) -> CorrectToken:
         """ Override the TOK.Person constructor to create a CorrectToken instance """
         assert isinstance(t, str)
         ct = CorrectToken(TOK.PERSON, t, m)
+        ct.origin_spans = span
         if token is not None:
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
@@ -2321,11 +2323,12 @@ class Correct_TOK(TOK):
 
     @staticmethod
     def Entity(
-        t: Union[Tok, str], token: Optional[CorrectToken] = None
+        t: Union[Tok, str], token: Optional[CorrectToken] = None, span: Optional[List] = None,
     ) -> CorrectToken:
         """ Override the TOK.Entity constructor to create a CorrectToken instance """
         assert isinstance(t, str)
         ct = CorrectToken(TOK.ENTITY, t, None)
+        ct.origin_spans = span
         if token is not None:
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
