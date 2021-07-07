@@ -256,6 +256,7 @@ OUT_OF_SCOPE = {
     "reflexive4pro",  # afturbeygt fornafn í stað persónufornafns   grammar gegnum líkama sinn > gegnum líkama hans
     "simple4cont",  # nútíð í stað vera að + nafnh. grammar ók > var að aka
     "square4bracket",  # hornklofi fyrir sviga  punctuation [börnin] > (börnin)
+    "sub4ind",
     "style",  # stíll   style   urðu ekkert frægir > urðu ekki frægir
     "syntax-other",
     "tense4perfect",
@@ -368,7 +369,11 @@ SIMCATEGORIES = {
         "ind4def",
         "def4ind",
         "ind4sub",
+        "ind4sub-conj",
+        "ind4sub-verb",
         "sub4ind",
+        "sub4ind-conj",
+        "sub4ind-verb",
         "verb-inflection",
         "nominal-inflection",
         "numeral-inflection",
@@ -584,7 +589,11 @@ SUPERCATEGORIES = {
         "ind4def",
         "def4ind",
         "ind4sub",
+        "ind4sub-conj",
+        "ind4sub-verb",
         "sub4ind",
+        "sub4ind-conj",
+        "sub4ind-verb",
         "verb-inflection",
         "nominal-inflection",
         "numeral-inflection",
@@ -878,6 +887,11 @@ GCtoIEC = {
     "P_WRONG_PREP_AF": ["af4að"],
     "P_WRONG_VERB_USE": ["collocation"],
     "P_DIR_LOC": ["dir4loc"],
+    "P_MOOD_ACK": ["ind4sub-conj"],
+    "P_MOOD_REL": ["ind4sub-conj"],
+    "P_MOOD_TEMP": ["sub4ind-conj"],
+    "P_MOOD_COND": ["sub4ind-conj"],
+    "P_MOOD_PURP": ["sub4ind-conj"],
     "X_number4word": ["number4word"],
     "N001": ["wrong-quot"],
     "N002": ["extra-punctuation"],
@@ -1382,26 +1396,26 @@ class Stats:
             )
 
             # Most common false negative error types
-            total = sum(self._false_negatives.values())
-            if total > 0:
-                bprint(f"\nMost common false negative error types")
-                bprint(f"--------------------------------------\n")
-                for index, (xtype, cnt) in enumerate(
-                    heapq.nlargest(
-                        20, self._false_negatives.items(), key=lambda x: x[1]
-                    )
-                ):
-                    bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
+            #total = sum(self._false_negatives.values())
+            #if total > 0:
+            #    bprint(f"\nMost common false negative error types")
+            #    bprint(f"--------------------------------------\n")
+            #    for index, (xtype, cnt) in enumerate(
+            #        heapq.nlargest(
+            #            20, self._false_negatives.items(), key=lambda x: x[1]
+            #        )
+            #    ):
+            #        bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
 
             # Most common error types in unparsable sentences
-            tot = sum(self._tp_unparsables.values())
-            if tot > 0:
-                bprint(f"\nMost common error types for unparsable sentences")
-                bprint(f"------------------------------------------------\n")
-                for index, (xtype, cnt) in enumerate(
-                    heapq.nlargest(20, self._tp_unparsables.items(), key=lambda x: x[1])
-                ):
-                    bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
+            #tot = sum(self._tp_unparsables.values())
+            #if tot > 0:
+            #    bprint(f"\nMost common error types for unparsable sentences")
+            #    bprint(f"------------------------------------------------\n")
+            #    for index, (xtype, cnt) in enumerate(
+            #        heapq.nlargest(20, self._tp_unparsables.items(), key=lambda x: x[1])
+            #    ):
+            #        bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
 
         def output_token_scores() -> None:
             """ Calculate and write token scores to stdout """
@@ -1623,15 +1637,15 @@ class Stats:
                     bprint(f"Micro F0.5-score: N/A")
                     bprint(f"Error correction recall: N/A")
 
-        output_duration()
-        output_sentence_scores()
-        output_token_scores()
+        #output_duration()
+        #output_sentence_scores()
+        #output_token_scores()
         output_error_cat_scores()
 
         bprint(f"\n\nResults for iEC-categories:")
         output_supercategory_scores(SUPERCATEGORIES)
-        bprint(f"\n\nResults for SÍM-categories:")
-        output_supercategory_scores(SIMCATEGORIES)
+        #bprint(f"\n\nResults for SÍM-categories:")
+        #output_supercategory_scores(SIMCATEGORIES)
 
         # Print the accumulated output before exiting
         for s in buffer:

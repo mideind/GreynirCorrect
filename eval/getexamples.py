@@ -41,6 +41,14 @@
     $ cd GreynirCorrect/eval
     $ ln -s ../../iceErrorCorpus/ .
 
+    To run the program:
+
+    $ python getexamples.py
+
+    To only get examples from iceErrorCorpus (not GreynirCorrect):
+
+    $ python getexamples.py -r
+
 """
 
 from collections import defaultdict
