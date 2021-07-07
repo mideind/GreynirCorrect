@@ -1634,5 +1634,10 @@ def test_corrected_sentences(verbose=False):
     pass
 
 
+def test_compounds():
+    s = "Ég hitti fjármála-og efnahagsráðherra."
+    check_sentence(s, [])
+
+
 if __name__ == "__main__":
     pass

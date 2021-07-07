@@ -911,19 +911,15 @@ class PatternMatcher:
         # TODO don't match verbs that allow 'vera að'
         # TODO exclude sentences where the subject is not a noun (and later, where not alive)
         so = match.first_match("VP >> 'vera'")
-        if so is None:
-            return
+        if so is None: return
         so = so.first_match("so")
-        if so is None:
-            return
+        if so is None: return
         # nhm = match.first_match("TO > nhm").first_match("nhm")
         start, _ = so.span
         realso = match.first_match("IP-INF >> VP")
-        if realso is None:
-            return
+        if realso is None: return
         realso = realso.first_match("so_nh")
-        if realso is None:
-            return
+        if realso is None: return
         _, end = realso.span
         suggest = self.get_wordform(realso.lemma, realso.cat, so.all_variants)
         if not suggest:
@@ -946,7 +942,7 @@ class PatternMatcher:
 
     def dir_loc(self, match: SimpleTree) -> None:
         adv = match.first_match("( 'inn'|'út'|'upp' )")
-        assert adv is not None
+        if adv is None: return
         pp = match.first_match(
             "PP > { P > { ( 'í'|'á'|'um' ) } " "NP > { ( no_þgf|pfn_þgf ) } }"
         )
@@ -954,9 +950,7 @@ class PatternMatcher:
             pp = match.first_match(
                 "PP > { P > { ( 'í'|'á'|'um' ) } " "NP > { ( no_þf|pfn_þf ) } }"
             )
-        if pp is None:
-            return
-        assert pp is not None
+        if pp is None: return
         start, end = min(adv.span[0], pp.span[0]), max(adv.span[1], pp.span[1])
         if adv.span < pp.span:
             if pp.tidy_text.startswith(adv.tidy_text):
@@ -989,8 +983,7 @@ class PatternMatcher:
 
     def dir_loc_comp(self, match: SimpleTree) -> None:
         p = match.first_match("P > ( 'inná'|'inní'|'útá'|'útí'|'uppá'|'uppí' ) ")
-        if p is None:
-            return
+        if p is None: return
         start, end = match.span
         match_text = match.tidy_text
         tidy_text = p.tidy_text
@@ -1019,8 +1012,8 @@ class PatternMatcher:
         pp = match.first_match("PP > { 'um' }")
         if pp is None:
             pp = match.first_match("NP > { 'um' }")
-        assert advp is not None
-        assert pp is not None
+        if advp is None: return
+        if pp is None: return
         start, end = min(advp.span[0], pp.span[0]), max(advp.span[1], pp.span[1])
         if advp.tidy_text == "útum":
             correction = "úti um"
@@ -1053,7 +1046,7 @@ class PatternMatcher:
 
     def dir_loc_standa(self, match: SimpleTree) -> None:
         advp = match.first_match("ADVP > { 'upp' }")
-        assert advp is not None
+        if advp is None: return
         start, end = match.span
         correction = advp.tidy_text + "i"
         text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
