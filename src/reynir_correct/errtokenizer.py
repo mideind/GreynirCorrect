@@ -914,7 +914,13 @@ def parse_errors(
                             m = []
                         else:
                             m = list(map(BIN_Tuple._make, am))
+<<<<<<< HEAD
                         token = CorrectToken.word(corrected, m, original=token.original)
+=======
+                        orig = token.original
+                        token = CorrectToken.word(corrected, m)
+                        token.original = orig
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                         token.set_error(
                             AbbreviationError(
                                 "002",
@@ -952,8 +958,15 @@ def parse_errors(
                     yield token
                 else:
                     # Step to next token
+<<<<<<< HEAD
                     original = (token.original or "") + (next_token.original or "")
                     next_token = CorrectToken.word(token.txt, original=original)
+=======
+                    compspan = token.original
+                    compspan += next_token.original
+                    next_token = CorrectToken.word(token.txt)
+                    next_token.original = compspan
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                     next_token.set_error(
                         CompoundError(
                             "001",
@@ -998,10 +1011,17 @@ def parse_errors(
                 and token.txt.endswith(("-og", "-eða"))
                 and token.txt[0] != "-"
             ):
+<<<<<<< HEAD
                 # Coalesced word, such as 'fjármála-og'  # TODO Doesn't work here
                 first, second = token.txt.rsplit("-", maxsplit=1)
 
                 new_token = CorrectToken.word(first, original=token.original)
+=======
+                # Coalesced word, such as 'fjármála-og'
+                first, second = token.txt.rsplit("-", maxsplit=1)
+
+                new_token = CorrectToken.word(first)
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                 new_token.set_error(
                     CompoundError(
                         "002",
@@ -1011,6 +1031,7 @@ def parse_errors(
                         span=2,
                     )
                 )
+                new_token.original = token.original
                 yield new_token
                 token = CorrectToken.word("-" + second, original="")
                 yield token
@@ -1019,7 +1040,6 @@ def parse_errors(
                 continue
 
             # Splitting wrongly compounded words
-            # TODO STILLING - hér er ósamhengisháð leiðrétting!
             if token.txt and token.txt.lower() in WrongCompounds.DICT:
                 correct_phrase = list(WrongCompounds.DICT[token.txt.lower()])
                 # Make the split phrase emulate the case of
@@ -1045,19 +1065,22 @@ def parse_errors(
                                 span=len(correct_phrase),
                             )
                         )
+<<<<<<< HEAD
                         # Assign the entire original token text to the
                         # first corrected token
                         new_token.original = token.original
                     else:
                         new_token.original = ""
+=======
+                        new_token.original = token.original[:len(phrase_part)+1]
+                    else:
+                        new_token.original = phrase_part
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                     yield new_token
                 token = next_token
                 at_sentence_start = False
                 continue
 
-            # TODO STILLING - hér er samhengisháð leiðrétting
-            # TODO STILLING - ath. þó að e-ð af orðhlutunum í Morphemes.BOUND_DICT geta ekki staðið sjálfstæð
-            # TODO STILLING - þá þarf að merkja þá orðhluta sem villu ef ósh. leiðrétting er valin.
             # Unite wrongly split compounds, or at least suggest uniting them
             if token.txt and (
                 token.txt.lower() in SplitCompounds.DICT
@@ -1122,10 +1145,17 @@ def parse_errors(
                     continue
                 if any(m.stofn.replace("-", "") in next_stems for m in meanings):
                     first_txt = token.txt
+<<<<<<< HEAD
                     original = (token.original or "") + (next_token.original or "")
                     token = CorrectToken.word(
                         token.txt + next_token.txt, original=original
                     )
+=======
+                    compspan = token.original
+                    compspan += next_token.original
+                    token = CorrectToken.word(token.txt + next_token.txt)
+                    token.original = compspan
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                     token.set_error(
                         CompoundError(
                             "003",
@@ -1157,10 +1187,16 @@ def parse_errors(
                 if not notposes:
                     # No other PoS available, most likely a compound error
                     first_txt = token.txt
+<<<<<<< HEAD
                     original = (token.original or "") + (next_token.original or "")
                     token = CorrectToken.word(
                         token.txt + next_token.txt, original=original
                     )
+=======
+                    compspan = token.original
+                    compspan += next_token.original
+                    token = CorrectToken.word(token.txt + next_token.txt)
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                     token.set_error(
                         CompoundError(
                             "003",
@@ -1171,12 +1207,14 @@ def parse_errors(
                             suggest="{}{}".format(first_txt, next_token.txt),
                         )
                     )
+<<<<<<< HEAD
+=======
+                    token.original = compspan
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                     yield token
                     token = get()
                     at_sentence_start = False
                     continue
-                # TODO STILLING - Hér er bara uppástunga, skiptir ekki máli f. ósh. málrýni.
-                # Erum búin að koma í veg fyrir að komast hingað ofar
                 if poses:
                     transposes = list(set(POS[c] for c in poses))
                     if len(transposes) == 1:
@@ -1300,6 +1338,7 @@ class MultiwordErrorStream(MatchingStream):
                 # !!! TODO: handle all-uppercase
                 replacement_word = replacement_word.capitalize()
             ct = token_ctor.Word(replacement_word, m)
+<<<<<<< HEAD
             if i >= len_tq:
                 # Replacement phrase is longer than original phrase
                 ct.original = ""
@@ -1310,6 +1349,9 @@ class MultiwordErrorStream(MatchingStream):
             else:
                 # Copy original text from corresponding phrase token
                 ct.original = tq[i].original
+=======
+            ct.original = tq[i].original
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
             if i == 0:
                 ct.set_error(
                     PhraseError(
@@ -1418,11 +1460,13 @@ def fix_compound_words(
                     span=2,  # TODO: Should this be 1?
                 )
             )
+            t1.original = token.original
             yield t1
             at_sentence_start = False
             suffix = "og"
             _, m = db.lookup_g(suffix, at_sentence_start)
             token = token_ctor.Word(suffix, m, token=token)
+            token.original = ""
 
         if token.kind == TOK.PUNCTUATION or token.kind == TOK.ORDINAL:
             yield token
@@ -1446,7 +1490,6 @@ def fix_compound_words(
         if len(cw) >= 3 and cw[0] == "ó" and cw[1] == "tal":
             cw = ["ótal"] + cw[2:]
 
-        # TODO STILLING - hér er ósamhengisháð leiðrétting!
         cw0: str = cw[0]
         if cw0 in NOT_FORMERS:
             # Prefix is invalid as such; should be split
@@ -1464,13 +1507,16 @@ def fix_compound_words(
                     span=2,
                 )
             )
+<<<<<<< HEAD
+=======
+            t1.original = token.original
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
             yield t1
             at_sentence_start = False
             _, m = db.lookup_g(suffix, at_sentence_start)
             token = token_ctor.Word(suffix, m, token=token)
             token.original = ""
 
-        # TODO STILLING - hér er ósamhengisháð leiðrétting!
         elif cw0 in Morphemes.FREE_DICT:
             # Check which PoS, attachment depends on that
             at_sentence_start = False
@@ -1497,11 +1543,14 @@ def fix_compound_words(
                         span=2,
                     )
                 )
+<<<<<<< HEAD
+=======
+                t1.original = token.original
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                 yield t1
                 token = token_ctor.Word(suffix, meanings2, token=token)
                 token.original = ""
             else:
-                # TODO STILLING - hér er bara uppástunga.
                 # Other possibilities but want to mark as a possible error
                 # Often just weird forms in BÍN left
                 if not only_ci:
@@ -1522,13 +1571,6 @@ def fix_compound_words(
                         )
                     )
 
-        # TODO STILLING - hér er ósamhengisháð leiðrétting, en það er spurning hvort allt hér teljist endilega villa.
-        # TODO STILLING - viljum ekki endilega leiðrétta "byggingaregla", þó að venjan leyfi hitt frekar.
-        # TODO STILLING - Þarf að fara í gegnum WRONG_FORMERS, mætti skipta upp í
-        # TODO STILLING - ALWAYS_WRONG_FORMERS og MOSTLY_WRONG_FORMERS eða eitthvað þannig?
-        # TODO STILLING - fyrra alltaf leiðrétt, en seinna bara ábending?
-
-        # TODO STILLING - Athuga hvort hér ætti að hafa ólík villuskilaboð fyrir WRONG_FORMERS og WRONG_FORMERS_CI?
         elif cw0 in WRONG_FORMERS_CI:
             correct_former = WRONG_FORMERS_CI[cw0]
             corrected = correct_former + token.txt[len(cw0) :]
@@ -1566,7 +1608,6 @@ def fix_compound_words(
                 )
             )
             token = t1
-        # TODO Bæta inn leiðréttingu út frá seinni orðhlutum?
         yield token
         at_sentence_start = False
 
@@ -1901,9 +1942,6 @@ def fix_capitalization(
 
     stems = CapitalizationErrors.SET_REV
     wrong_stems = CapitalizationErrors.SET
-
-    # TODO STILLING - hér er blanda. Orð sem eiga alltaf að vera hástafa en birtast lágstafa eru ósh.,
-    # TODO STILLING - orð sem eiga alltaf að vera lágstafa nema í byrjun setningar eru sh. leiðrétting.
 
     # This variable must be defined before is_wrong() because
     # the function closes over it
@@ -2295,7 +2333,11 @@ class Correct_TOK(Bin_TOK):
     def Word(
         t: Union[Tok, str],
         m: Optional[BIN_TupleList] = None,
+<<<<<<< HEAD
         token: Union[None, Tok, Sequence[Tok]] = None,
+=======
+        token: Optional[CorrectToken] = None,
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
     ) -> CorrectToken:
         """ Override the TOK.Word constructor to create a CorrectToken instance """
         assert isinstance(t, str)
@@ -2304,7 +2346,11 @@ class Correct_TOK(Bin_TOK):
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
+<<<<<<< HEAD
             ct.copy(token)
+=======
+            ct.copy(other=token)
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
             ct.copy_capitalization(token)
         return ct
 
@@ -2349,7 +2395,11 @@ class Correct_TOK(Bin_TOK):
     def Person(
         t: Union[Tok, str],
         m: Optional[PersonNameList] = None,
+<<<<<<< HEAD
         token: Optional[Tok] = None,
+=======
+        token: Optional[CorrectToken] = None,
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
     ) -> CorrectToken:
         """ Override the TOK.Person constructor to create a CorrectToken instance """
         assert isinstance(t, str)
@@ -2362,7 +2412,13 @@ class Correct_TOK(Bin_TOK):
         return ct
 
     @staticmethod
+<<<<<<< HEAD
     def Entity(t: Union[Tok, str], token: Optional[Tok] = None) -> CorrectToken:
+=======
+    def Entity(
+        t: Union[Tok, str], token: Optional[CorrectToken] = None,
+    ) -> CorrectToken:
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
         """ Override the TOK.Entity constructor to create a CorrectToken instance """
         assert isinstance(t, str)
         ct = CorrectToken(TOK.ENTITY, t, None)
@@ -2374,6 +2430,45 @@ class Correct_TOK(Bin_TOK):
         return ct
 
     @staticmethod
+<<<<<<< HEAD
+=======
+    def Number(
+        t: Union[Tok, str],
+        n: float,
+        cases: Optional[List[str]] = None,
+        genders: Optional[List[str]] = None,
+        token: Optional[CorrectToken] = None,
+    ) -> Tok:
+        # The cases parameter is a list of possible cases for this number
+        # (if it was originally stated in words)
+        assert isinstance(t, str)
+        ct = CorrectToken(TOK.NUMBER, t, None)
+        ct.val = (n, cases, genders)
+        if token is not None:
+            ct.copy(token)
+        return ct
+
+    @staticmethod
+    def Amount(
+        t: Union[Tok, str],
+        iso: str,
+        n: float,
+        cases: Optional[List[str]] = None,
+        genders: Optional[List[str]] = None,
+        token: Optional[CorrectToken] = None,
+    ) -> Tok:
+        # The cases parameter is a list of possible cases for this amount
+        # (if it was originally stated in words)
+        assert isinstance(t, str)
+        ct = CorrectToken(TOK.AMOUNT, t, None)
+        ct.val = (n, iso, cases, genders)
+        if token is not None:
+            ct.copy(token)
+        return ct
+
+
+    @staticmethod
+>>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
     def Dateabs(
         t: Union[Tok, str], y: int, m: int, d: int, token: Optional[Tok] = None
     ) -> CorrectToken:
