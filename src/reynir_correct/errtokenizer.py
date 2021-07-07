@@ -914,13 +914,7 @@ def parse_errors(
                             m = []
                         else:
                             m = list(map(BIN_Tuple._make, am))
-<<<<<<< HEAD
                         token = CorrectToken.word(corrected, m, original=token.original)
-=======
-                        orig = token.original
-                        token = CorrectToken.word(corrected, m)
-                        token.original = orig
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                         token.set_error(
                             AbbreviationError(
                                 "002",
@@ -958,15 +952,8 @@ def parse_errors(
                     yield token
                 else:
                     # Step to next token
-<<<<<<< HEAD
                     original = (token.original or "") + (next_token.original or "")
                     next_token = CorrectToken.word(token.txt, original=original)
-=======
-                    compspan = token.original
-                    compspan += next_token.original
-                    next_token = CorrectToken.word(token.txt)
-                    next_token.original = compspan
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                     next_token.set_error(
                         CompoundError(
                             "001",
@@ -1011,17 +998,10 @@ def parse_errors(
                 and token.txt.endswith(("-og", "-eða"))
                 and token.txt[0] != "-"
             ):
-<<<<<<< HEAD
                 # Coalesced word, such as 'fjármála-og'  # TODO Doesn't work here
                 first, second = token.txt.rsplit("-", maxsplit=1)
 
                 new_token = CorrectToken.word(first, original=token.original)
-=======
-                # Coalesced word, such as 'fjármála-og'
-                first, second = token.txt.rsplit("-", maxsplit=1)
-
-                new_token = CorrectToken.word(first)
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                 new_token.set_error(
                     CompoundError(
                         "002",
@@ -1065,17 +1045,11 @@ def parse_errors(
                                 span=len(correct_phrase),
                             )
                         )
-<<<<<<< HEAD
                         # Assign the entire original token text to the
                         # first corrected token
                         new_token.original = token.original
                     else:
                         new_token.original = ""
-=======
-                        new_token.original = token.original[:len(phrase_part)+1]
-                    else:
-                        new_token.original = phrase_part
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                     yield new_token
                 token = next_token
                 at_sentence_start = False
@@ -1145,17 +1119,10 @@ def parse_errors(
                     continue
                 if any(m.stofn.replace("-", "") in next_stems for m in meanings):
                     first_txt = token.txt
-<<<<<<< HEAD
                     original = (token.original or "") + (next_token.original or "")
                     token = CorrectToken.word(
                         token.txt + next_token.txt, original=original
                     )
-=======
-                    compspan = token.original
-                    compspan += next_token.original
-                    token = CorrectToken.word(token.txt + next_token.txt)
-                    token.original = compspan
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                     token.set_error(
                         CompoundError(
                             "003",
@@ -1187,16 +1154,10 @@ def parse_errors(
                 if not notposes:
                     # No other PoS available, most likely a compound error
                     first_txt = token.txt
-<<<<<<< HEAD
                     original = (token.original or "") + (next_token.original or "")
                     token = CorrectToken.word(
                         token.txt + next_token.txt, original=original
                     )
-=======
-                    compspan = token.original
-                    compspan += next_token.original
-                    token = CorrectToken.word(token.txt + next_token.txt)
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                     token.set_error(
                         CompoundError(
                             "003",
@@ -1207,10 +1168,6 @@ def parse_errors(
                             suggest="{}{}".format(first_txt, next_token.txt),
                         )
                     )
-<<<<<<< HEAD
-=======
-                    token.original = compspan
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                     yield token
                     token = get()
                     at_sentence_start = False
@@ -1338,7 +1295,6 @@ class MultiwordErrorStream(MatchingStream):
                 # !!! TODO: handle all-uppercase
                 replacement_word = replacement_word.capitalize()
             ct = token_ctor.Word(replacement_word, m)
-<<<<<<< HEAD
             if i >= len_tq:
                 # Replacement phrase is longer than original phrase
                 ct.original = ""
@@ -1349,9 +1305,6 @@ class MultiwordErrorStream(MatchingStream):
             else:
                 # Copy original text from corresponding phrase token
                 ct.original = tq[i].original
-=======
-            ct.original = tq[i].original
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
             if i == 0:
                 ct.set_error(
                     PhraseError(
@@ -1507,10 +1460,6 @@ def fix_compound_words(
                     span=2,
                 )
             )
-<<<<<<< HEAD
-=======
-            t1.original = token.original
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
             yield t1
             at_sentence_start = False
             _, m = db.lookup_g(suffix, at_sentence_start)
@@ -1543,10 +1492,6 @@ def fix_compound_words(
                         span=2,
                     )
                 )
-<<<<<<< HEAD
-=======
-                t1.original = token.original
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
                 yield t1
                 token = token_ctor.Word(suffix, meanings2, token=token)
                 token.original = ""
@@ -2333,11 +2278,7 @@ class Correct_TOK(Bin_TOK):
     def Word(
         t: Union[Tok, str],
         m: Optional[BIN_TupleList] = None,
-<<<<<<< HEAD
         token: Union[None, Tok, Sequence[Tok]] = None,
-=======
-        token: Optional[CorrectToken] = None,
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
     ) -> CorrectToken:
         """ Override the TOK.Word constructor to create a CorrectToken instance """
         assert isinstance(t, str)
@@ -2346,11 +2287,7 @@ class Correct_TOK(Bin_TOK):
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
             # an associated error: make sure that it is preserved
-<<<<<<< HEAD
             ct.copy(token)
-=======
-            ct.copy(other=token)
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
             ct.copy_capitalization(token)
         return ct
 
@@ -2395,11 +2332,7 @@ class Correct_TOK(Bin_TOK):
     def Person(
         t: Union[Tok, str],
         m: Optional[PersonNameList] = None,
-<<<<<<< HEAD
         token: Optional[Tok] = None,
-=======
-        token: Optional[CorrectToken] = None,
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
     ) -> CorrectToken:
         """ Override the TOK.Person constructor to create a CorrectToken instance """
         assert isinstance(t, str)
@@ -2412,13 +2345,7 @@ class Correct_TOK(Bin_TOK):
         return ct
 
     @staticmethod
-<<<<<<< HEAD
     def Entity(t: Union[Tok, str], token: Optional[Tok] = None) -> CorrectToken:
-=======
-    def Entity(
-        t: Union[Tok, str], token: Optional[CorrectToken] = None,
-    ) -> CorrectToken:
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
         """ Override the TOK.Entity constructor to create a CorrectToken instance """
         assert isinstance(t, str)
         ct = CorrectToken(TOK.ENTITY, t, None)
@@ -2430,45 +2357,6 @@ class Correct_TOK(Bin_TOK):
         return ct
 
     @staticmethod
-<<<<<<< HEAD
-=======
-    def Number(
-        t: Union[Tok, str],
-        n: float,
-        cases: Optional[List[str]] = None,
-        genders: Optional[List[str]] = None,
-        token: Optional[CorrectToken] = None,
-    ) -> Tok:
-        # The cases parameter is a list of possible cases for this number
-        # (if it was originally stated in words)
-        assert isinstance(t, str)
-        ct = CorrectToken(TOK.NUMBER, t, None)
-        ct.val = (n, cases, genders)
-        if token is not None:
-            ct.copy(token)
-        return ct
-
-    @staticmethod
-    def Amount(
-        t: Union[Tok, str],
-        iso: str,
-        n: float,
-        cases: Optional[List[str]] = None,
-        genders: Optional[List[str]] = None,
-        token: Optional[CorrectToken] = None,
-    ) -> Tok:
-        # The cases parameter is a list of possible cases for this amount
-        # (if it was originally stated in words)
-        assert isinstance(t, str)
-        ct = CorrectToken(TOK.AMOUNT, t, None)
-        ct.val = (n, iso, cases, genders)
-        if token is not None:
-            ct.copy(token)
-        return ct
-
-
-    @staticmethod
->>>>>>> d8e3b98fd1e5f1e09cf293b07c13a3e985b78802
     def Dateabs(
         t: Union[Tok, str], y: int, m: int, d: int, token: Optional[Tok] = None
     ) -> CorrectToken:
