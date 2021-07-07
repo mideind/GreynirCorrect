@@ -48,6 +48,7 @@
 """
 
 from typing import Any, cast, Iterable, Iterator, List, Tuple, Dict, Type, Optional
+from typing_extensions import TypedDict
 
 from threading import Lock
 
@@ -58,10 +59,8 @@ from reynir import (
     Tok,
     TokenList,
     Sentence,
-    _Sentence,
-    _Paragraph,
+    Paragraph,
     ProgressFunc,
-    ParseResult,
     ICELANDIC_RATIO,
 )
 from reynir.reynir import Job
@@ -77,6 +76,16 @@ from .annotation import Annotation
 from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
 from .errfinder import ErrorFinder, ErrorDetectionToken
 from .pattern import PatternMatcher
+
+
+# Checking/correction result
+class CheckResult(TypedDict):
+    paragraphs: List[List["Sentence"]]
+    num_sentences: int
+    num_parsed: int
+    num_tokens: int
+    ambiguity: float
+    parse_time: float
 
 
 class ErrorDetectingGrammar(BIN_Grammar):
@@ -183,7 +192,7 @@ class GreynirCorrect(Greynir):
         assert GreynirCorrect._reducer is not None
         return GreynirCorrect._reducer
 
-    def annotate(self, sent: _Sentence) -> List[Annotation]:
+    def annotate(self, sent: Sentence) -> List[Annotation]:
         """ Returns a list of annotations for a sentence object, containing
             spelling and grammar annotations of that sentence """
         ann: List[Annotation] = []
@@ -305,7 +314,7 @@ class GreynirCorrect(Greynir):
         ann.sort(key=lambda a: (a.start, -a.end))
         return ann
 
-    def create_sentence(self, job: Job, s: TokenList) -> _Sentence:
+    def create_sentence(self, job: Job, s: TokenList) -> Sentence:
         """ Create a fresh sentence object and annotate it
             before returning it to the client """
         sent = AnnotatedSentence(job, s)
@@ -314,14 +323,14 @@ class GreynirCorrect(Greynir):
         return sent
 
 
-def check_single(sentence_text: str) -> Optional[_Sentence]:
+def check_single(sentence_text: str) -> Optional[Sentence]:
     """ Check and annotate a single sentence, given in plain text """
     # Returns None if no sentence was parsed
     rc = GreynirCorrect()
     return rc.parse_single(sentence_text)
 
 
-def check(text: str, *, split_paragraphs: bool = False) -> Iterable[_Paragraph]:
+def check(text: str, *, split_paragraphs: bool = False) -> Iterable[Paragraph]:
     """ Return a generator of checked paragraphs of text,
         each being a generator of checked sentences with
         annotations """
@@ -337,7 +346,7 @@ def check_with_custom_parser(
     split_paragraphs: bool = False,
     parser_class: Type[GreynirCorrect] = GreynirCorrect,
     progress_func: ProgressFunc = None
-) -> ParseResult:
+) -> CheckResult:
     """ Return a dict containing parsed paragraphs as well as statistics,
         using the given correction/parser class. This is a low-level
         function; normally check_with_stats() should be used. """
@@ -351,7 +360,7 @@ def check_with_custom_parser(
     # Enumerating through the job's paragraphs and sentences causes them
     # to be parsed and their statistics collected
     paragraphs = [[sent for sent in pg] for pg in job.paragraphs()]
-    return ParseResult(
+    return CheckResult(
         paragraphs=paragraphs,
         num_sentences=job.num_sentences,
         num_parsed=job.num_parsed,
@@ -361,6 +370,6 @@ def check_with_custom_parser(
     )
 
 
-def check_with_stats(text: str, *, split_paragraphs: bool = False) -> ParseResult:
+def check_with_stats(text: str, *, split_paragraphs: bool = False) -> CheckResult:
     """ Return a dict containing parsed paragraphs as well as statistics """
     return check_with_custom_parser(text, split_paragraphs=split_paragraphs)
