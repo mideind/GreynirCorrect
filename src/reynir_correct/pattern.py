@@ -39,7 +39,7 @@
 
 """
 
-from typing import List, Mapping, Tuple, Set, FrozenSet, Callable, Dict, Optional, Union, cast
+from typing import Iterable, List, Mapping, Tuple, Set, FrozenSet, Callable, Dict, Optional, Union, cast
 
 from threading import Lock
 from functools import partial
@@ -175,27 +175,24 @@ class PatternMatcher:
                 # First instance: create the class-wide pattern list
                 self.create_patterns()
 
-    def get_wordform(self, lemma, cat, variants):
+    def get_wordform(self, lemma: str, cat: str, variants: Iterable[str]):
         """ Get correct wordform from BinPackage, 
         given a set of variants """
 
         # Get rid of argument variants in verbs:
-        variants = list( [ x for x in variants if not x.isdigit()])
-        realvars = []
+        realvars: List[str] = []
         for x in variants:
             if x.isdigit:
                 continue
             if x in SKIPVARS:
                 continue
-            else:
-                realvars.append(x)
+            realvars.append(x)
 
-        wordforms = BIN.lookup_variants(lemma, cat, realvars)
+        wordforms = BIN.lookup_variants(lemma, cat, tuple(realvars))
         if not wordforms:
             return ""
-        else:
-            # Can be many possible word forms, want the first one in most cases
-            return wordforms[0].bmynd
+        # Can be many possible word forms, want the first one in most cases
+        return wordforms[0].bmynd
 
     def wrong_preposition_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
@@ -913,10 +910,20 @@ class PatternMatcher:
         """ 'vera að' in front of verb is unneccessary """
         # TODO don't match verbs that allow 'vera að'
         # TODO exclude sentences where the subject is not a noun (and later, where not alive)
-        so = match.first_match("VP >> 'vera'").first_match("so")
-        nhm = match.first_match("TO > nhm").first_match("nhm")
+        so = match.first_match("VP >> 'vera'")
+        if so is None:
+            return
+        so = so.first_match("so")
+        if so is None:
+            return
+        # nhm = match.first_match("TO > nhm").first_match("nhm")
         start, _ = so.span
-        realso = match.first_match("IP-INF >> VP").first_match("so_nh")
+        realso = match.first_match("IP-INF >> VP")
+        if realso is None:
+            return
+        realso = realso.first_match("so_nh")
+        if realso is None:
+            return
         _, end = realso.span
         suggest = self.get_wordform(realso.lemma, realso.cat, so.all_variants)
         if not suggest:
@@ -926,7 +933,6 @@ class PatternMatcher:
             f"Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
             "svokallað dvalarhorf ('Ég er ekki að skilja þetta')."
         )
-        # tidy_text = match.tidy_text
         self._ann.append(
             Annotation(
                 start=start,
@@ -983,23 +989,26 @@ class PatternMatcher:
 
     def dir_loc_comp(self, match: SimpleTree) -> None:
         p = match.first_match("P > ( 'inná'|'inní'|'útá'|'útí'|'uppá'|'uppí' ) ")
-        assert p is not None
+        if p is None:
+            return
         start, end = match.span
-        correction = p.tidy_text[:-1] + "i" + " " + p.tidy_text[-1]
-        text = f"Hér á líklega að vera '{correction}' í stað '{p.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            match.tidy_text, correction, p.tidy_text
+        match_text = match.tidy_text
+        tidy_text = p.tidy_text
+        correction = tidy_text[:-1] + "i" + " " + tidy_text[-1]
+        text = f"Hér á líklega að vera '{correction}' í stað '{tidy_text}'"
+        detail = "Í samhenginu '{0}' er rétt að nota '{1}' í stað '{2}'.".format(
+            match_text, correction, tidy_text
         )
-        suggest = ""
+        suggest = match_text.replace(tidy_text, correction)
         self._ann.append(
             Annotation(
                 start=start,
                 end=end,
-                code="P_uncertainty_indicative",
+                code="P_DIR_LOC",
                 text=text,
                 detail=detail,
-                original="", 
-                #suggest=suggest,
+                original=match_text,
+                suggest=suggest
             )
         )
 
@@ -1158,10 +1167,13 @@ class PatternMatcher:
         """ Indicative mood is used instead of subjunctive 
             in concessive subclauses """
         vp = match.first_match("VP > so_fh")
+        if vp is None:
+            return
         so = vp.first_match("so")
-        assert so is not None
+        if so is None:
+            return
         start, end = so.span
-        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants = [f for f in so.all_variants if f != "fh"]
         variants.append("vh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
         if not suggest:
@@ -1182,10 +1194,11 @@ class PatternMatcher:
     
     def mood_sub_rel(self, match: SimpleTree) -> None:
         vp = match.first_match("VP > so_vh")
+        if vp is None: return
         so = vp.first_match("so")
-        assert so is not None
+        if so is None: return
         start, end = so.span
-        variants = list( [ f for f in so.all_variants if not "vh" in f] )
+        variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
         if not suggest:
@@ -1205,10 +1218,11 @@ class PatternMatcher:
 
     def mood_sub_temp(self, match: SimpleTree) -> None:
         vp = match.first_match("VP > so_vh")
+        if vp is None: return
         so = vp.first_match("so")        
-        assert so is not None
+        if so is None: return
         start, end = so.span
-        variants = list( [ f for f in so.all_variants if not "fh" in f ] )
+        variants = [f for f in so.all_variants if f != "fh"]
         variants.append("vh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
         if not suggest:
@@ -1228,10 +1242,11 @@ class PatternMatcher:
 
     def mood_ind_cond(self, match: SimpleTree) -> None:
         vp = match.first_match("VP > so_vh")
+        if vp is None: return
         so = vp.first_match("so")
-        assert so is not None
+        if so is None: return
         start, end = so.span
-        variants = list( [ f for f in so.all_variants if not "vh" in f ] )
+        variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
         if not suggest:
@@ -1252,10 +1267,11 @@ class PatternMatcher:
     
     def mood_ind_purp(self, match: SimpleTree) -> None:
         vp = match.first_match("VP > so_vh")
+        if vp is None: return
         so = vp.first_match("so")
-        assert so is not None
+        if so is None: return
         start, end = so.span
-        variants = list( [ f for f in so.all_variants if not "vh" in f ] )
+        variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
         if not suggest:
@@ -1276,15 +1292,21 @@ class PatternMatcher:
 
     def doubledefinite(self, match: SimpleTree) -> None:
         no = match.first_match("no")
+        if no is None: return
         fn = match.first_match("fn")
+        if fn is None: return
         fnlemma = fn.lemma
         #if fnlemma not in ["sá", "þessi"]:
         #    return
         start, end = match.span
         suggest = no.lemma
-        for x in BIN.lookup_variants(no.lemma, no.cat, no.all_variants):
-            if not "gr" in x.all_variants:
-                suggest = x.bmynd
+        variants = set(no.all_variants)
+        variants.discard("gr")
+        variants.add("nogr")
+        v = BIN.lookup_variants(no.lemma, no.cat, tuple(variants))
+        if not v:
+            return
+        suggest = v[0].bmynd
         text = f"Hér ætti annaðhvort að sleppa '{fnlemma}' eða breyta '{no.tidy_text}' í '{suggest}'"
         detail = f"Hér er tiltekin tvöföld ákveðni, sem er ekki leyfilegt."
         self._ann.append(

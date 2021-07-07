@@ -351,7 +351,7 @@ def check_with_custom_parser(
     # Enumerating through the job's paragraphs and sentences causes them
     # to be parsed and their statistics collected
     paragraphs = [[sent for sent in pg] for pg in job.paragraphs()]
-    return dict(
+    return ParseResult(
         paragraphs=paragraphs,
         num_sentences=job.num_sentences,
         num_parsed=job.num_parsed,

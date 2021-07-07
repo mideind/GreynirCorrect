@@ -53,7 +53,7 @@ from typing_extensions import Protocol
 
 import re
 
-from reynir import correct_spaces, Tok, TOK, _Sentence
+from reynir import correct_spaces, Tok, TOK, Sentence
 from reynir.fastparser import ParseForestNavigator, Node
 from reynir.binparser import BIN_Terminal, BIN_Token
 from reynir.settings import VerbSubjects
@@ -228,7 +228,7 @@ class ErrorFinder(ParseForestNavigator):
         ),
     }
 
-    def __init__(self, ann: List[Annotation], sent: _Sentence) -> None:
+    def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         super().__init__(visit_all=True)
         # Annotation list
         self._ann = ann

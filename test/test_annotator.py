@@ -141,6 +141,11 @@ def check_sentence(
             assert isinstance(sent, reynir_correct.AnnotatedSentence)
             check_sent(sent)
 
+    # Test presevation of original token text
+    tlist = list(reynir_correct.tokenize(s))
+    len_tokens = sum(len(t.original or "") for t in tlist)
+    assert len_tokens == len(s)
+
 
 def test_multiword_phrases(rc):
     s = "Einn af drengjunum fór í sund af gefnu tilefni."
@@ -302,7 +307,7 @@ def test_corrected_meanings(rc: reynir_correct.GreynirCorrect) -> None:
     s = """
     Þannig fundust stundum engin bréfaskipti á milli lífsförunauta í annars ríkulegum bréfasöfnum.
     """
-    check_sentence(rc, s, [])
+    check_sentence(rc, s.rstrip(), [])
     s = """
     Þeir hafa líka þennan Beach Boys-hljóm og virkilega fallegar raddanir,"
     sagði Jardine, en platan hans nefnist A Postcard fram California.
@@ -311,7 +316,7 @@ def test_corrected_meanings(rc: reynir_correct.GreynirCorrect) -> None:
     # be reported as an error or annotation
     check_sentence(
         rc,
-        s,
+        s.rstrip(),
         [(4, 4, "U001/w"), (11, 11, "N001"), (13, 13, "U001/w")],
     )
 
