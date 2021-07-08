@@ -193,7 +193,7 @@ def test_dir_loc(rc):
 #    s = "Út í heimi er þetta öðruvísi."
 #    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
     s = "Börnin safnast saman inn í búð."
-    check_sentence(rc, s, [(1, 5, "P_DIR_LOC")])
+    check_sentence(rc, s, [(3, 5, "P_DIR_LOC")])
     s = "Ég keypti þetta út í búð."
     check_sentence(rc, s, [(3, 5, "P_DIR_LOC")])
     s = "Illgresið er út um allt."

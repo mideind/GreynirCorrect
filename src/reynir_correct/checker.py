@@ -312,6 +312,17 @@ class GreynirCorrect(Greynir):
         # Sort the annotations by their start token index,
         # and then by decreasing span length
         ann.sort(key=lambda a: (a.start, -a.end))
+        # Eliminate duplicates, i.e. identical annotation
+        # codes for identical spans
+        i = 1
+        while i < len(ann):
+            a, prev = ann[i], ann[i-1]
+            if a.code == prev.code and a.start == prev.start and a.end == prev.end:
+                # Identical annotation: remove it from the list
+                del ann[i]
+            else:
+                # Check the next pair
+                i += 1
         return ann
 
     def create_sentence(self, job: Job, s: TokenList) -> Sentence:
