@@ -174,8 +174,8 @@ def test_dir_loc(rc):
 #    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
 #    s = "Útí heimi er þetta öðruvísi."
 #    check_sentence(rc, s, [(0, 1, "P_DIR_LOC")])
-#    s = "Börnin voru inn á vellinum allan daginn."
-#    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
+    s = "Börnin voru inn á vellinum allan daginn."
+    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
     s = "Börnin voru inná vellinum allan daginn."
     check_sentence(rc, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
 #    s = "Hann var oft upp á hestinum."
@@ -192,12 +192,12 @@ def test_dir_loc(rc):
 #    check_sentence(rc, s, [(1, 3, "P_DIR_LOC")])
 #    s = "Út í heimi er þetta öðruvísi."
 #    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
-#    s = "Börnin safnast saman inn í búð."
-#    check_sentence(rc, s, [(1, 5, "P_DIR_LOC")])
+    s = "Börnin safnast saman inn í búð."
+    check_sentence(rc, s, [(1, 5, "P_DIR_LOC")])
     s = "Ég keypti þetta út í búð."
     check_sentence(rc, s, [(3, 5, "P_DIR_LOC")])
-#    s = "Illgresið er út um allt."
-#    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
+    s = "Illgresið er út um allt."
+    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
 #    s = "Hann læsti sig inn í gær."
 #    check_sentence(rc, s, [(1, 4, "P_DIR_LOC")])
 #    s = "Hún gaf það upp í fréttum."

@@ -65,7 +65,7 @@ PatternTuple = Tuple[
 BIN = Bin()
 
 # Variants not needed for lookup
-SKIPVARS = ["OP", "SUBJ"]
+SKIPVARS = frozenset(["op", "subj"])
 
 
 class IcelandicPlaces:
@@ -180,14 +180,7 @@ class PatternMatcher:
         given a set of variants """
 
         # Get rid of argument variants in verbs:
-        realvars: List[str] = []
-        for x in variants:
-            if x.isdigit:
-                continue
-            if x in SKIPVARS:
-                continue
-            realvars.append(x)
-
+        realvars = [v for v in variants if not v.isdigit() and v not in SKIPVARS]
         wordforms = BIN.lookup_variants(lemma, cat, tuple(realvars))
         if not wordforms:
             return ""
@@ -944,12 +937,8 @@ class PatternMatcher:
         adv = match.first_match("( 'inn'|'út'|'upp' )")
         if adv is None: return
         pp = match.first_match(
-            "PP > { P > { ( 'í'|'á'|'um' ) } " "NP > { ( no_þgf|pfn_þgf ) } }"
+            "PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_þgf|no_þf|pfn_þgf|pfn_þf ) } }"
         )
-        if pp is None:
-            pp = match.first_match(
-                "PP > { P > { ( 'í'|'á'|'um' ) } " "NP > { ( no_þf|pfn_þf ) } }"
-            )
         if pp is None: return
         start, end = min(adv.span[0], pp.span[0]), max(adv.span[1], pp.span[1])
         if adv.span < pp.span:
@@ -2097,14 +2086,15 @@ class PatternMatcher:
                 None,
             )
         )
-        cls.add_pattern(
-            (
-                "upp",  # Trigger lemma for this pattern
-                "( PP|VP|IP ) > [ VP > { ^(byggja) } ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } ]",
-                lambda self, match: self.dir_loc(match),
-                None,
-            )
-        )
+        # FIXME: The syntax ^(byggja) is not allowed
+        #cls.add_pattern(
+        #    (
+        #        "upp",  # Trigger lemma for this pattern
+        #        "( PP|VP|IP ) > [ VP > { ^(byggja) } ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } ]",
+        #        lambda self, match: self.dir_loc(match),
+        #        None,
+        #    )
+        #)
         cls.add_pattern(
             (
                 "upp",  # Trigger lemma for this pattern
@@ -2179,14 +2169,15 @@ class PatternMatcher:
                 None,
             )
         )
-        cls.add_pattern(
-            (
-                "niður",  # Trigger lemma for this pattern
-                "VP > [ VP > { 'vera' } .* [^(færa)] PP > { ADVP > { 'niður' } P > { 'í' } NP } ]",
-                lambda self, match: self.dir_loc_niður(match),
-                None,
-            )
-        )
+        # FIXME: The syntax ^(færa) is not allowed
+        #cls.add_pattern(
+        #    (
+        #        "niður",  # Trigger lemma for this pattern
+        #        "VP > [ VP > { 'vera' } .* [^(færa)] PP > { ADVP > { 'niður' } P > { 'í' } NP } ]",
+        #        lambda self, match: self.dir_loc_niður(match),
+        #        None,
+        #    )
+        #)
         cls.add_pattern(
             (
                 "verða",  # Trigger lemma for this pattern
