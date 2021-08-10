@@ -555,18 +555,26 @@ class ErrorFinder(ParseForestNavigator):
         # verb_phrase = self._node_text(children[1])
         number = "eintölu" if "et" in variants else "fleirtölu"
         # Find the verb
-        vp: SimpleTree = self._simple_tree(ch1).first_match("VP >> so")
-        so: SimpleTree = vp.first_match("so")
+        ch1node = cast(Node, ch1)
+        vptree: Optional[SimpleTree] = self._simple_tree(ch1node)
+        so: Optional[SimpleTree]  = None
+        if vptree:
+            vp: Optional[SimpleTree] = vptree.first_match("VP >> so")
+            if vp:
+                so = vp.first_match("so")
         # Annotate the verb phrase
         assert ch1 is not None
-        vpstart, _ = self._node_span(ch1)
-        sostart, soend = so.span
+        start, end = self._node_span(ch1)
+        if so:
+            sostart, soend = so.span
+            end = start + soend
+            start = start+sostart
         return dict(
             text="Sögnin á sennilega að vera í {1} eins og frumlagið '{0}'".format(
                 subject, number
             ),
-            start=vpstart+sostart,
-            end=vpstart+soend,
+            start=start,
+            end=end,
         )
 
     def VillaFsMeðFallstjórn(
