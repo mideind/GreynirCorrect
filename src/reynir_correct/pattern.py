@@ -181,9 +181,9 @@ class PatternMatcher:
         cases = ["nf", "þf", "þgf", "ef"]
         if cat == "so":
             # Get rid of argument variants in verbs:
-            realvars: Iterable[str] = [v for v in variants if not v.isdigit() and v not in SKIPVARS]
+            realvars = [v for v in variants if not v.isdigit() and v not in SKIPVARS]
             if not "lh" in realvars:
-                realvars: Iterable[str] = [v for v in realvars if v not in cases]
+                realvars = [v for v in realvars if v not in cases]
         else:
             realvars: Iterable[str] = variants
         wordforms = BIN.lookup_variants(lemma, cat, tuple(realvars))
