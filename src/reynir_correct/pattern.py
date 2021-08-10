@@ -181,17 +181,16 @@ class PatternMatcher:
         cases = ["nf", "þf", "þgf", "ef"]
         if cat == "so":
             # Get rid of argument variants in verbs:
-            realvars = [v for v in variants if not v.isdigit() and v not in SKIPVARS]
+            realvars: Iterable[str]  = [v for v in variants if not v.isdigit() and v not in SKIPVARS]
             if not "lh" in realvars:
                 realvars = [v for v in realvars if v not in cases]
         else:
-            realvars: Iterable[str] = variants
+            realvars= variants
         wordforms = BIN.lookup_variants(lemma, cat, tuple(realvars))
         if not wordforms:
             return ""
         # Can be many possible word forms, want the first one in most cases
         return wordforms[0].bmynd
-
 
     def wrong_subtree(self, match: SimpleTree, so: SimpleTree) -> bool:
         iptree = match.first_match("IP")
@@ -203,7 +202,6 @@ class PatternMatcher:
                 if self.is_subtree(so, x):
                     return True
         return False
-
 
     def is_subtree(self, first: SimpleTree, other: SimpleTree) -> bool:
         """ Returns True if first tree is a subtree of the second one """
