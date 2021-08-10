@@ -565,7 +565,7 @@ class ErrorFinder(ParseForestNavigator):
         # Annotate the verb phrase
         assert ch1 is not None
         start, end = self._node_span(ch1)
-        if so:
+        if so is not None:
             sostart, soend = so.span
             end = start + soend
             start = start+sostart
