@@ -555,8 +555,8 @@ class ErrorFinder(ParseForestNavigator):
         # verb_phrase = self._node_text(children[1])
         number = "eintölu" if "et" in variants else "fleirtölu"
         # Find the verb
-        vp = self._simple_tree(ch1).first_match("VP >> so")
-        so = vp.first_match("so")
+        vp: SimpleTree = self._simple_tree(ch1).first_match("VP >> so")
+        so: SimpleTree = vp.first_match("so")
         # Annotate the verb phrase
         assert ch1 is not None
         vpstart, _ = self._node_span(ch1)

@@ -924,10 +924,10 @@ class PatternMatcher:
         if not subj:
             return
         for x in subj.children:
-            if x.is_terminal and x._head.get("k") not in ["PUNCTUATION"]:
-                if x._head.get("k") in allowed:
+            if x.is_terminal and x.kind not in ["PUNCTUATION"]:
+                if x.kind in allowed:
                     works = True
-                if x._head.get("c") and "pfn" in x._head.get("c"):
+                if x.cat and "pfn" in x.cat:
                     if "p1" in x.all_variants or "p2" in x.all_variants:
                         works = True
         if not works:
@@ -1182,10 +1182,11 @@ class PatternMatcher:
         if "þt" in so.all_variants:
             return
         # Check if so is in a different subclause
-        for x in match.first_match("IP").descendants:
-            if not x.is_terminal and "IP" in x._head.get("i"):
-                if self.is_subtree(so, x):
-                    return
+        if match.first_match("IP"):
+            for x in match.first_match("IP").descendants:
+                if not x.is_terminal and x.tag == "IP":
+                    if self.is_subtree(so, x):
+                        return
         variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
@@ -1216,10 +1217,11 @@ class PatternMatcher:
         # Check if so is in a different subclause
         if "þt" in so.all_variants:
             return
-        for x in match.first_match("IP").descendants:
-            if not x.is_terminal and "IP" in x._head.get("i"):
-                if self.is_subtree(so, x):
-                    return
+        if match.first_match("IP"):
+            for x in match.first_match("IP").descendants:
+                if not x.is_terminal and x.tag == "IP":
+                    if self.is_subtree(so, x):
+                        return
         variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
@@ -1250,10 +1252,11 @@ class PatternMatcher:
         # Check if so is in a different subclause
         if "þt" in so.all_variants:
             return
-        for x in match.first_match("IP").descendants:
-            if not x.is_terminal and "IP" in x._head.get("i"):
-                if self.is_subtree(so, x):
-                    return
+        if match.first_match("IP"):
+            for x in match.first_match("IP").descendants:
+                if not x.is_terminal and x.tag == "IP":
+                    if self.is_subtree(so, x):
+                        return
         variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
@@ -1285,10 +1288,11 @@ class PatternMatcher:
         # Check if so is in a different subclause
         if "þt" in so.all_variants:
             return
-        for x in match.first_match("IP").descendants:
-            if not x.is_terminal and "IP" in x._head.get("i"):
-                if self.is_subtree(so, x):
-                    return
+        if match.first_match("IP"):
+            for x in match.first_match("IP").descendants:
+                if not x.is_terminal and x.tag == "IP":
+                    if self.is_subtree(so, x):
+                        return
         variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
@@ -1321,10 +1325,11 @@ class PatternMatcher:
             return
         start, end = so.span
         # Check if so is in a different subclause
-        for x in match.first_match("IP").descendants:
-            if not x.is_terminal and "IP" in x._head.get("i"):
-                if self.is_subtree(so, x):
-                    return
+        if match.first_match("IP"):
+            for x in match.first_match("IP").descendants:
+                if not x.is_terminal and x.tag == "IP":
+                    if self.is_subtree(so, x):
+                        return
         variants = [f for f in so.all_variants if f != "fh"]
         variants.append("vh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
