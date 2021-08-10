@@ -181,16 +181,29 @@ class PatternMatcher:
         cases = ["nf", "þf", "þgf", "ef"]
         if cat == "so":
             # Get rid of argument variants in verbs:
-            realvars = [v for v in variants if not v.isdigit() and v not in SKIPVARS]
+            realvars: Iterable[str] = [v for v in variants if not v.isdigit() and v not in SKIPVARS]
             if not "lh" in realvars:
-                realvars = [v for v in realvars if v not in cases]
+                realvars: Iterable[str] = [v for v in realvars if v not in cases]
         else:
-            realvars = variants
+            realvars: Iterable[str] = variants
         wordforms = BIN.lookup_variants(lemma, cat, tuple(realvars))
         if not wordforms:
             return ""
         # Can be many possible word forms, want the first one in most cases
         return wordforms[0].bmynd
+
+
+    def wrong_subtree(self, match: SimpleTree, so: SimpleTree) -> bool:
+        iptree = match.first_match("IP")
+        if not iptree:
+            return False
+    
+        for x in iptree.descendants:
+            if not x.is_terminal and x.tag == "IP":
+                if self.is_subtree(so, x):
+                    return True
+        return False
+
 
     def is_subtree(self, first: SimpleTree, other: SimpleTree) -> bool:
         """ Returns True if first tree is a subtree of the second one """
@@ -1182,11 +1195,8 @@ class PatternMatcher:
         if "þt" in so.all_variants:
             return
         # Check if so is in a different subclause
-        if match.first_match("IP"):
-            for x in match.first_match("IP").descendants:
-                if not x.is_terminal and x.tag == "IP":
-                    if self.is_subtree(so, x):
-                        return
+        if self.wrong_subtree(match, so):
+            return
         variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
@@ -1217,11 +1227,8 @@ class PatternMatcher:
         # Check if so is in a different subclause
         if "þt" in so.all_variants:
             return
-        if match.first_match("IP"):
-            for x in match.first_match("IP").descendants:
-                if not x.is_terminal and x.tag == "IP":
-                    if self.is_subtree(so, x):
-                        return
+        if self.wrong_subtree(match, so):
+            return
         variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
@@ -1252,11 +1259,8 @@ class PatternMatcher:
         # Check if so is in a different subclause
         if "þt" in so.all_variants:
             return
-        if match.first_match("IP"):
-            for x in match.first_match("IP").descendants:
-                if not x.is_terminal and x.tag == "IP":
-                    if self.is_subtree(so, x):
-                        return
+        if self.wrong_subtree(match, so):
+            return
         variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
@@ -1288,11 +1292,8 @@ class PatternMatcher:
         # Check if so is in a different subclause
         if "þt" in so.all_variants:
             return
-        if match.first_match("IP"):
-            for x in match.first_match("IP").descendants:
-                if not x.is_terminal and x.tag == "IP":
-                    if self.is_subtree(so, x):
-                        return
+        if self.wrong_subtree(match, so):
+            return
         variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
@@ -1325,11 +1326,8 @@ class PatternMatcher:
             return
         start, end = so.span
         # Check if so is in a different subclause
-        if match.first_match("IP"):
-            for x in match.first_match("IP").descendants:
-                if not x.is_terminal and x.tag == "IP":
-                    if self.is_subtree(so, x):
-                        return
+        if self.wrong_subtree(match, so):
+            return
         variants = [f for f in so.all_variants if f != "fh"]
         variants.append("vh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
