@@ -860,6 +860,7 @@ def test_acronyms(verbose=False):
     assert g[9].error_code == "Z001"    #póstmódernismi
     assert g[11].error_code == "Z001"   #maríutásur
 
+
 def test_inflectional_errors(verbose=False):
     # beygingarvillur
     # sama og test_error_forms í test_tokenizer.py
@@ -1361,8 +1362,8 @@ def test_number_agreement(verbose=False):
     # Tala
     s = "Fleiri en einn slasaðist í árekstrinum."
     check_sentence(
-        s, [(3, 5, "P_NT_ÍTölu")]
-    )  # TODO virkar en ég skil ekki lengdina, af hverju er 'í' haft með? Hvað er ÍTölu að gera?
+        s, [(3, 3, "P_NT_ÍTölu")]
+    )
     s = "Hann er einn þeirra sem slasaðist í árekstrinum."
     # check_sentence(s, [(5, 6, "P_NT_Þeirra")])        # TODO engin villa finnst.
     s = "Minnihluti starfsmanna samþykktu samninginn."
@@ -1459,9 +1460,13 @@ def test_vera(verbose=False):
     s = "Ég var að fara í sund þegar ég fékk símtalið."
     check_sentence(s, [(1, 3, "P_VeraAð")])
     s = "Hún er að skrifa vel."
+    #check_sentence(s, [(1, 3, "P_VeraAð")]) # Greinist ekki lengur sem villa, undanskil 3.p. pfn. því geta verið ómannleg.
+    s = "Kristín er að skrifa vel."
     check_sentence(s, [(1, 3, "P_VeraAð")])
-    s = "Það gekk mikið á þegar hún var ekki að sofa."
-    check_sentence(s, [(6, 9, "P_VeraAð")])
+
+    s = "Það gekk mikið á þegar Jack Valentine var ekki að sofa."
+    #check_sentence(s, [(7, 10, "P_VeraAð")])   # TODO 'Jack Valentine' is an entity, like Ikea. Should it be allowed to fire an error rule?
+
 
 def test_nhm(verbose=False):
     # s = "Ég ætla fara í búð."
@@ -1550,7 +1555,7 @@ def test_foreign_sentences(verbose=False):
         "Brooks Koepka lék hringinn á þremur undir pari og er því "
         "líkt og Thomas og Schauffele á tíu höggum undir pari."
     )
-    check_sentence(s, [(14, 14, "U001/w")])
+    #check_sentence(s, [(14, 14, "U001/w")])        # Changed so capitalized unknown words are not marked as errors
     s = (
         "If you asked people to try to picture hunting for truffles, the "
         "expensive subterranean fungi, many would no doubt imagine men "

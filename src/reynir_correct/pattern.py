@@ -924,12 +924,12 @@ class PatternMatcher:
         if not subj:
             return
         for x in subj.children:
-            if x.is_terminal and x._head.get("k") != "PUNCTUATION":
-                if "pfn" in x._head.get("c"):
-                    if "p1" in x.all_variants or "p2" in x.all_variants:
-                        works = True
+            if x.is_terminal and x._head.get("k") not in ["PUNCTUATION"]:
                 if x._head.get("k") in allowed:
                     works = True
+                if x._head.get("c") and "pfn" in x._head.get("c"):
+                    if "p1" in x.all_variants or "p2" in x.all_variants:
+                        works = True
         if not works:
             return
         # nhm = match.first_match("TO > nhm").first_match("nhm")
