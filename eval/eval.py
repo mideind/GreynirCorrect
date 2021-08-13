@@ -359,6 +359,7 @@ SIMCATEGORIES = {
     ],
     "grammar": [
         "agreement",
+        "agreement-conj",
         "agreement-concord",
         "agreement-pred",
         "agreement-pro",
@@ -579,6 +580,7 @@ SUPERCATEGORIES = {
     "collocation": ["collocation", "collocation-idiom", "though",],
     "grammar": [
         "agreement",
+        "agreement-conj",
         "agreement-concord",
         "agreement-pred",
         "agreement-pro",
