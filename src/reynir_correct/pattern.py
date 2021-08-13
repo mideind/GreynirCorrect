@@ -159,6 +159,7 @@ class PatternMatcher:
     ctx_uncertain_verbs: ContextDict = cast(ContextDict, None)
     ctx_confident_verbs: ContextDict = cast(ContextDict, None)
     ctx_dir_loc: ContextDict = cast(ContextDict, None)
+    ctx_agreement_conj: ContextDict = cast(ContextDict, None)
 
     def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
@@ -1303,6 +1304,30 @@ class PatternMatcher:
             )
         )
 
+    def agreement_conj(self, match: SimpleTree) -> None:
+        vp = match.first_match("VP > so_ft")
+        if vp is None: return
+        so = vp.first_match("so")
+        if so is None: return
+        start, end = so.span
+        sbj = match.first_match("NP-SUBJ")
+        variants = [f for f in so.all_variants if f != "vh"]
+        variants.append("fh")
+        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if not suggest:
+            return
+        text = f"Hér á sögnin '{so.lemma}' að samræmast frumlaginu '{sbj.lemma}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_NT",
+                text=text,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
     @classmethod
     def add_pattern(cls, p: PatternTuple) -> None:
         """ Validates and adds a pattern to the class global pattern list """
@@ -2284,6 +2309,48 @@ class PatternMatcher:
                 "VP > { VP > { 'vera' } PP >> { PP > { ADVP > { 'upp' } P > { 'á' } NP > { 'Skagi' } } } }",
                 lambda self, match: self.dir_loc(match),
                 None,
+            )
+        )
+
+    ##    # Check errors in dir4loc
+    #    def agreement_conj(verbs: Set[str], tree: SimpleTree) -> bool:
+    #        """ Context matching function for the %noun macro in combination
+    #            with 'að' """
+    #        lemma = tree.own_lemma
+    #        if not lemma:
+    #            # The passed-in tree node is probably not a terminal
+    #            return False
+    #        return lemma in verbs
+
+    #    VERBS: FrozenSet[str] = frozenset(("safna", "kaupa", "læsa", "geyma"))
+    #    # The macro %verb is resolved by calling the function dir4loc()
+    #    # with the potentially matching tree node as an argument.
+    #    cls.ctx_dir_loc = {"verb": partial(dir4loc, VERBS)}
+    #    cls.add_pattern(
+    #        (
+    #            "út",  # Trigger lemma for this pattern
+    #            "VP > { VP > { %verb } NP > { PP > { ADVP > { 'út' } P > { 'í' } NP > { 'búð' } } } }",
+    #            lambda self, match: self.dir_loc(match),
+    #            cls.ctx_dir_loc,
+    #        )
+    #    )
+
+        cls.add_pattern(
+            (
+                frozenset(("og", "en", "heldur")),  # Trigger lemma for this pattern 
+                "S0 > { S-MAIN > { IP > { NP-SUBJ > { no_et_nf } } } S-MAIN >> [ VP > { so_ft } .* ] }",
+                lambda self, match: self.agreement_conj(match),
+                cls.ctx_agreement_conj,
+            )
+        )
+
+        ## Virkar ekki
+        cls.add_pattern(
+            (
+                frozenset(("og", "en", "heldur")),  # Trigger lemma for this pattern 
+                "S0 > { S-MAIN > { IP > { NP-SUBJ > { no_ft_nf } } } S-MAIN >> [ VP > { so_et } .* ] }",
+                lambda self, match: self.agreement_conj(match),
+                cls.ctx_agreement_conj,
             )
         )
 
