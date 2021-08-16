@@ -726,10 +726,8 @@ class Settings:
 
         with Settings._lock:
 
-            if Settings.loaded:
+            if Settings.loaded or UniqueErrors.DICT or AllowedMultiples.SET:
                 return
-
-            UniqueErrors.DICT = dict()
 
             CONFIG_HANDLERS = {
                 "settings": Settings._handle_settings,
