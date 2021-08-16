@@ -1310,7 +1310,7 @@ class PatternMatcher:
         so = vp.first_match("so")
         if so is None: return
         start, end = so.span
-        sbj = match.first_match("NP-SUBJ")
+        sbj = match.first_match("NP-SUBJ > (no|pfn)")
         variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
