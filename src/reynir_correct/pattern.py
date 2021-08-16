@@ -1618,7 +1618,7 @@ class PatternMatcher:
             # Catch "Það markar ekki upphaf af því."
             cls.add_pattern(
                 (
-                    "upphafinn",  # Trigger lemma for this pattern
+                    "(upphafinn|upphaf)",  # Trigger lemma for this pattern
                     "VP > { VP > { 'marka' } NP > { 'upphafinn' } PP > { 'af' } }",
                     cls.wrong_preposition_marka_af,
                     None,
@@ -1636,7 +1636,7 @@ class PatternMatcher:
             # Catch "Það hefur ekki markað upphafið af því."
             cls.add_pattern(
                 (
-                    "upphefja",  # Trigger lemma for this pattern
+                    "(upphefja|upphaf)",  # Trigger lemma for this pattern
                     "VP > { VP > { NP > { 'markaður' } VP > { 'upphefja' } } PP > { 'af' } }",
                     cls.wrong_preposition_marka_af,
                     None,
@@ -1646,8 +1646,8 @@ class PatternMatcher:
             # Catch "Jón leggur hann (ekki) af velli."
             cls.add_pattern(
                 (
-                    "leggja",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { 'leggja' } } PP > { P > { 'af' } NP > { ( 'völlur'|'vell' ) } } }",
+                    "völlur",  # Trigger lemma for this pattern
+                    "VP > { VP > { VP > { 'leggja' } } PP > { P > { 'af' } NP > { 'völlur' } } }",
                     cls.wrong_preposition_leggja_af,
                     None,
                 )
@@ -1797,8 +1797,8 @@ class PatternMatcher:
             # Catch "Ég hafði ekki lagt mikið að mörkum."
             cls.add_pattern(
                 (
-                    "mörk",  # Trigger lemma for this pattern
-                    "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { 'mörk' } } }",
+                    "(mörk|mark)",  # Trigger lemma for this pattern
+                    "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { ('mörk'|'mark') } } }",
                     cls.wrong_preposition_að_mörkum,
                     None,
                 )
