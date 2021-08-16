@@ -50,6 +50,7 @@
 from typing import Any, cast, Iterable, Iterator, List, Tuple, Dict, Type, Optional
 
 from threading import Lock
+from typing_extensions import TypedDict
 
 from reynir import (
     Greynir,
@@ -61,7 +62,6 @@ from reynir import (
     _Sentence,
     _Paragraph,
     ProgressFunc,
-    ParseResult,
     ICELANDIC_RATIO,
 )
 from reynir.reynir import Job
@@ -77,6 +77,16 @@ from .annotation import Annotation
 from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
 from .errfinder import ErrorFinder, ErrorDetectionToken
 from .pattern import PatternMatcher
+
+
+# The type of a grammar check result
+class CheckResult(TypedDict):
+    paragraphs: List[List["_Sentence"]]
+    num_sentences: int
+    num_parsed: int
+    num_tokens: int
+    ambiguity: float
+    parse_time: float
 
 
 class ErrorDetectingGrammar(BIN_Grammar):
@@ -337,7 +347,7 @@ def check_with_custom_parser(
     split_paragraphs: bool = False,
     parser_class: Type[GreynirCorrect] = GreynirCorrect,
     progress_func: ProgressFunc = None
-) -> ParseResult:
+) -> CheckResult:
     """ Return a dict containing parsed paragraphs as well as statistics,
         using the given correction/parser class. This is a low-level
         function; normally check_with_stats() should be used. """
@@ -351,7 +361,7 @@ def check_with_custom_parser(
     # Enumerating through the job's paragraphs and sentences causes them
     # to be parsed and their statistics collected
     paragraphs = [[sent for sent in pg] for pg in job.paragraphs()]
-    return dict(
+    return CheckResult(
         paragraphs=paragraphs,
         num_sentences=job.num_sentences,
         num_parsed=job.num_parsed,
@@ -361,6 +371,6 @@ def check_with_custom_parser(
     )
 
 
-def check_with_stats(text: str, *, split_paragraphs: bool = False) -> ParseResult:
+def check_with_stats(text: str, *, split_paragraphs: bool = False) -> CheckResult:
     """ Return a dict containing parsed paragraphs as well as statistics """
     return check_with_custom_parser(text, split_paragraphs=split_paragraphs)

@@ -285,9 +285,9 @@ class CorrectToken(Tok):
         return ct
 
     @classmethod
-    def from_token(cls, token: Tok) -> "CorrectToken":
+    def from_token(cls, t: Tok) -> "CorrectToken":
         """ Wrap a raw token in a CorrectToken """
-        return cls(token.kind, token.txt, token.val)
+        return cls(t.kind, t.txt, t.val)
 
     @classmethod
     def word(cls, txt: str, val: Optional[BIN_TupleList] = None) -> "CorrectToken":
@@ -2268,6 +2268,24 @@ class Correct_TOK(TOK):
         """ Override the TOK.Amount constructor to create a CorrectToken instance """
         assert isinstance(t, str)
         ct = CorrectToken(TOK.AMOUNT, t, (n, iso, cases, genders))
+        if token is not None:
+            # This token is being constructed in reference to a previously
+            # generated token, or a list of tokens, which might have had
+            # an associated error: make sure that it is preserved
+            ct.copy_error(token, coalesce=True)
+        return ct
+
+    @staticmethod
+    def Currency(
+        t: Union[Tok, str],
+        iso: str,
+        cases: Optional[List[str]] = None,
+        genders: Optional[List[str]] = None,
+        token: Optional[CorrectToken] = None,
+    ) -> CorrectToken:
+        """ Override the TOK.Currency constructor to create a CorrectToken instance """
+        assert isinstance(t, str)
+        ct = CorrectToken(TOK.CURRENCY, t, (iso, cases, genders))
         if token is not None:
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had

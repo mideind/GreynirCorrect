@@ -1407,7 +1407,7 @@ def test_NP_agreement(verbose=False):
     # fallið er tékkað virðist vera.
     # check_sentence(s, [(3, 5, "P_NT_X")])
     s = "Hann hélt utan um dóttir sína."
-    check_sentence(s, [(3, 4, "P_NT_FsMeðFallstjórn")])
+    check_sentence(s, [(2, 4, "P_NT_FsMeðFallstjórn")])
     s = "Barnið var með kaldar fingur en heitar fætur."
     # TODO villurnar greinast ekki, vantar líklega reglur.
     # check_sentence(s, [(4, 6, "P_NT_KynInnanNafnliðar"), (6, 8, "P_NT_Fall")])
@@ -1534,7 +1534,7 @@ def test_vera(verbose=False):
     s = "Ég er ekki að skilja þetta."
     check_sentence(s, [(1, 5, "P_VeraAð")])
     s = "Ég var að fara í sund þegar ég fékk símtalið."
-    check_sentence(s, [(1, 5, "P_VeraAð")])
+    check_sentence(s, [(1, 9, "P_VeraAð")])
     s = "Hún er að skrifa vel."
     check_sentence(s, [(1, 4, "P_VeraAð")])
     s = "Það gekk mikið á þegar hún var ekki að sofa."
@@ -1572,7 +1572,7 @@ def test_verb_arguments(verbose=False):
     s = "Kirkjuna bar við himinn þegar við komum þar um morguninn."
     # TODO Verbs.conf ætti að dekka þetta -- útfæra goggunarröð?
     check_sentence(
-        s, [(2, 9, "P_NT_FsMeðFallstjórn")]
+        s, [(2, 3, "P_NT_FsMeðFallstjórn")]
     )
 
 
@@ -1676,7 +1676,7 @@ def test_impersonal_verbs(verbose=False):
         "hlakkaði til að losna við mig."
     )
     # TODO greinist, en spanið gæti verið réttara.
-    check_sentence(s, [(0, 2, "P_WRONG_CASE_þgf_nf")])
+    check_sentence(s, [(0, 10, "P_WRONG_CASE_þgf_nf")])
     s = "Tröllskessan dagaði uppi."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_nf_þf")])
     s = "Báturinn rak á land."
