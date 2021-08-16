@@ -105,7 +105,7 @@ class SplitCompounds:
 class UniqueErrors:
 
     # Dictionary structure: dict { wrong_word : (tuple of right words) }
-    DICT: Dict[str, Tuple[str, ...]] = {}
+    DICT: Dict[str, Tuple[str, ...]] = dict()
 
     @staticmethod
     def add(word: str, corr: Tuple[str, ...]) -> None:
@@ -728,6 +728,8 @@ class Settings:
 
             if Settings.loaded:
                 return
+
+            UniqueErrors.DICT = dict()
 
             CONFIG_HANDLERS = {
                 "settings": Settings._handle_settings,
