@@ -295,7 +295,7 @@ class CorrectToken(Tok):
     @classmethod
     def from_token(cls, t: Tok) -> "CorrectToken":
         """ Wrap a raw token in a CorrectToken """
-        return cls(t.kind, t.txt, t.val)
+        return cls(t.kind, t.txt, t.val, t.original, t.origin_spans)
 
     @classmethod
     def word(
@@ -363,7 +363,7 @@ class CorrectToken(Tok):
         """ Associate an Error class instance with this token """
         self._err = err
 
-    def copy(self, other: Union[Tok, Sequence[Tok]], coalesce: bool = False,) -> bool:
+    def copy(self, other: Union[Tok, Sequence[Tok]], coalesce: bool = False) -> bool:
         """ Copy the error field and origin informatipon
             from another CorrectToken instance """
         if isinstance(other, CorrectToken):
