@@ -293,6 +293,11 @@ class CorrectToken(Tok):
         return ct
 
     @classmethod
+    def from_token(cls, t: Tok) -> "CorrectToken":
+        """ Wrap a raw token in a CorrectToken """
+        return cls(t.kind, t.txt, t.val, t.original, t.origin_spans)
+
+    @classmethod
     def word(
         cls,
         txt: str,
@@ -358,7 +363,7 @@ class CorrectToken(Tok):
         """ Associate an Error class instance with this token """
         self._err = err
 
-    def copy(self, other: Union[Tok, Sequence[Tok]], coalesce: bool = False,) -> bool:
+    def copy(self, other: Union[Tok, Sequence[Tok]], coalesce: bool = False) -> bool:
         """ Copy the error field and origin informatipon
             from another CorrectToken instance """
         if isinstance(other, CorrectToken):
@@ -1983,7 +1988,7 @@ def fix_capitalization(
         # !!! if token.error is not None
         if token.kind in {TOK.WORD, TOK.PERSON, TOK.ENTITY}:
             if is_wrong(token):
-                if token.txt.islower():
+                if token.txt.islower() or "-" in token.txt and token.txt.split("-")[0].islower():
                     # Token is lowercase but should be capitalized
                     original_txt = token.txt
                     # !!! TODO: Maybe the following should be just token.txt.capitalize()
@@ -2321,6 +2326,24 @@ class Correct_TOK(Bin_TOK):
         """ Override the TOK.Amount constructor to create a CorrectToken instance """
         assert isinstance(t, str)
         ct = CorrectToken(TOK.AMOUNT, t, (n, iso, cases, genders))
+        if token is not None:
+            # This token is being constructed in reference to a previously
+            # generated token, or a list of tokens, which might have had
+            # an associated error: make sure that it is preserved
+            ct.copy(token, coalesce=True)
+        return ct
+
+    @staticmethod
+    def Currency(
+        t: Union[Tok, str],
+        iso: str,
+        cases: Optional[List[str]] = None,
+        genders: Optional[List[str]] = None,
+        token: Optional[CorrectToken] = None,
+    ) -> CorrectToken:
+        """ Override the TOK.Currency constructor to create a CorrectToken instance """
+        assert isinstance(t, str)
+        ct = CorrectToken(TOK.CURRENCY, t, (iso, cases, genders))
         if token is not None:
             # This token is being constructed in reference to a previously
             # generated token, or a list of tokens, which might have had
