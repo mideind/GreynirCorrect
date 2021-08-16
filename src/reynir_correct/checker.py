@@ -48,6 +48,7 @@
 """
 
 from typing import Any, cast, Iterable, Iterator, List, Tuple, Dict, Type, Optional
+from typing_extensions import TypedDict
 
 from threading import Lock
 from typing_extensions import TypedDict
@@ -59,8 +60,7 @@ from reynir import (
     Tok,
     TokenList,
     Sentence,
-    _Sentence,
-    _Paragraph,
+    Paragraph,
     ProgressFunc,
     ICELANDIC_RATIO,
 )
@@ -81,7 +81,7 @@ from .pattern import PatternMatcher
 
 # The type of a grammar check result
 class CheckResult(TypedDict):
-    paragraphs: List[List["_Sentence"]]
+    paragraphs: List[List["Sentence"]]
     num_sentences: int
     num_parsed: int
     num_tokens: int
@@ -193,7 +193,7 @@ class GreynirCorrect(Greynir):
         assert GreynirCorrect._reducer is not None
         return GreynirCorrect._reducer
 
-    def annotate(self, sent: _Sentence) -> List[Annotation]:
+    def annotate(self, sent: Sentence) -> List[Annotation]:
         """ Returns a list of annotations for a sentence object, containing
             spelling and grammar annotations of that sentence """
         ann: List[Annotation] = []
@@ -313,9 +313,20 @@ class GreynirCorrect(Greynir):
         # Sort the annotations by their start token index,
         # and then by decreasing span length
         ann.sort(key=lambda a: (a.start, -a.end))
+        # Eliminate duplicates, i.e. identical annotation
+        # codes for identical spans
+        i = 1
+        while i < len(ann):
+            a, prev = ann[i], ann[i-1]
+            if a.code == prev.code and a.start == prev.start and a.end == prev.end:
+                # Identical annotation: remove it from the list
+                del ann[i]
+            else:
+                # Check the next pair
+                i += 1
         return ann
 
-    def create_sentence(self, job: Job, s: TokenList) -> _Sentence:
+    def create_sentence(self, job: Job, s: TokenList) -> Sentence:
         """ Create a fresh sentence object and annotate it
             before returning it to the client """
         sent = AnnotatedSentence(job, s)
@@ -324,14 +335,14 @@ class GreynirCorrect(Greynir):
         return sent
 
 
-def check_single(sentence_text: str) -> Optional[_Sentence]:
+def check_single(sentence_text: str) -> Optional[Sentence]:
     """ Check and annotate a single sentence, given in plain text """
     # Returns None if no sentence was parsed
     rc = GreynirCorrect()
     return rc.parse_single(sentence_text)
 
 
-def check(text: str, *, split_paragraphs: bool = False) -> Iterable[_Paragraph]:
+def check(text: str, *, split_paragraphs: bool = False) -> Iterable[Paragraph]:
     """ Return a generator of checked paragraphs of text,
         each being a generator of checked sentences with
         annotations """
