@@ -382,6 +382,8 @@ class CorrectToken(Tok):
         else:
             # We have a list of tokens to copy from:
             # find the first error in the list, if any, and copy it
+            assert isinstance(other, list) or isinstance(other, tuple)
+            other = cast(Sequence[Tok], other)
             for t in other:
                 if self.copy(t, coalesce=True):
                     break

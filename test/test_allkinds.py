@@ -1716,9 +1716,8 @@ def test_corrected_sentences(verbose=False):
 
 
 def test_compounds():
-    #s = "Ég hitti fjármála-og efnahagsráðherra."
-    #check_sentence(s, [])
-    pass
+    s = "Ég hitti fjármála-og efnahagsráðherra."
+    check_sentence(s, [])
 
 
 if __name__ == "__main__":
