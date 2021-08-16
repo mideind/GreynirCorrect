@@ -71,6 +71,14 @@ coverage.xml
 # Measurement results
 eval*.out
 test*.out
+eval/results/
+
+# Extra test files
+test/extras/
+test/spantest.py
+
+# Error analysis
+eval/examples_iEC/
 
 # Symlink to iceErrorCorpus for evaluation
 eval/iceErrorCorpus

@@ -265,6 +265,8 @@ class CapitalizationErrors:
             suffix, split_on_hyphen=split_on_hyphen
         )
         _, m = db.lookup_g(suffix_rev)
+        # Only consider lemmas
+        m = [mm for mm in m if mm.stofn == mm.ordmynd]
         if not m:
             raise ConfigError(
                 "No BÍN meaning for '{0}' (from error word '{1}') in capitalization_errors section".format(
@@ -360,8 +362,6 @@ class CIDErrorForms:
         """ Check whether the word form is in the error forms dictionary,
             either in its original casing or in a lower case form """
         d = CIDErrorForms.DICT
-        if word.islower():  # TODO isn't this if-clause unnecessary?
-            return word in d
         return word in d or word.lower() in d
 
     @staticmethod
