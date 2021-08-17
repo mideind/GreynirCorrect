@@ -1310,7 +1310,9 @@ class PatternMatcher:
         so = vp.first_match("so")
         if so is None: return
         start, end = so.span
-        sbj = match.first_match("NP-SUBJ > (no|pfn)")
+        sbj = match.first_match("NP-SUBJ")
+        if len(sbj) > 1:    #TODO: more accurate subject selection
+            sbj = sbj[0]
         variants = [f for f in so.all_variants if f != "vh"]
         variants.append("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
@@ -2313,7 +2315,7 @@ class PatternMatcher:
         )
 
     ##    # Check errors in dir4loc
-    #    def agreement_conj(verbs: Set[str], tree: SimpleTree) -> bool:
+    #    def dir4loc(verbs: Set[str], tree: SimpleTree) -> bool:
     #        """ Context matching function for the %noun macro in combination
     #            with 'að' """
     #        lemma = tree.own_lemma
@@ -2338,7 +2340,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 frozenset(("og", "en", "heldur")),  # Trigger lemma for this pattern 
-                "S0 > { S-MAIN > { IP > { NP-SUBJ > { no_et_nf } } } S-MAIN >> [ VP > { so_ft } .* ] }",
+                "S0 > { S-MAIN > { IP > { NP-SUBJ > { no_et_nf } } } C S-MAIN >> [ VP > { so_ft } .* ] }",
                 lambda self, match: self.agreement_conj(match),
                 cls.ctx_agreement_conj,
             )
@@ -2348,11 +2350,32 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 frozenset(("og", "en", "heldur")),  # Trigger lemma for this pattern 
-                "S0 > { S-MAIN > { IP > { NP-SUBJ > { no_ft_nf } } } S-MAIN >> [ VP > { so_et } .* ] }",
+                "S0 > { S-MAIN > { IP > { NP-SUBJ > { no_ft_nf } } } S-MAIN >> [ VP > { VP-AUX > { so_et_p3 } } .* ] }",
                 lambda self, match: self.agreement_conj(match),
                 cls.ctx_agreement_conj,
             )
         )
+
+        ## Virkar ekki
+        cls.add_pattern(
+            (
+                "heldur",  # Trigger lemma for this pattern 
+                "S0 > { S-MAIN }",
+                #"S0 > { S-MAIN > { IP > { NP-SUBJ > [ no_et_nf C no_et_nf ] } } C S-MAIN >> [ VP > { so_et } .* ] }",
+                lambda self, match: self.agreement_conj(match),
+                cls.ctx_agreement_conj,
+            )
+        )
+        
+        ## Virkar ekki
+        #cls.add_pattern(
+        #    (
+        #        frozenset(("og", "en", "heldur")),  # Trigger lemma for this pattern 
+        #        "S0 > { S-MAIN > { IP > { NP-SUBJ > { no_ft_nf } } } C S-MAIN >> [ VP > { so_et } .* ] }",
+        #        lambda self, match: self.agreement_conj(match),
+        #        cls.ctx_agreement_conj,
+        #    )
+        #)
 
     def run(self) -> None:
         """ Apply the patterns to the sentence """
