@@ -160,6 +160,7 @@ class PatternMatcher:
     ctx_confident_verbs: ContextDict = cast(ContextDict, None)
     ctx_dir_loc: ContextDict = cast(ContextDict, None)
     ctx_agreement_conj: ContextDict = cast(ContextDict, None)
+    ctx_agreement_subpost: ContextDict = cast(ContextDict, None)
 
     def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
@@ -1305,12 +1306,13 @@ class PatternMatcher:
         )
 
     def agreement_conj(self, match: SimpleTree) -> None:
-        vp = match.first_match("VP > so_ft")
+        vp = match.first_match("VP > (so_ft|so_et)")
         if vp is None: return
         so = vp.first_match("so")
         if so is None: return
         start, end = so.span
         sbj = match.first_match("NP-SUBJ")
+        if sbj is None: return
         if len(sbj) > 1:    #TODO: more accurate subject selection
             sbj = sbj[0]
         variants = [f for f in so.all_variants if f != "vh"]
@@ -1319,6 +1321,33 @@ class PatternMatcher:
         if not suggest:
             return
         text = f"Hér á sögnin '{so.lemma}' að samræmast frumlaginu '{sbj.lemma}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_NT",
+                text=text,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def agreement_subpost_sing(self, match: SimpleTree) -> None:
+        vp = match.first_match("VP > (so_ft)")
+        if vp is None: return
+        so = vp.first_match("so")
+        if so is None: return
+        start, end = so.span
+        sbj = match.first_match("NP-SUBJ > { (no_nf_et|fn_nf_et) }")
+        if sbj is None: return
+        if len(sbj) > 1:    #TODO: more accurate subject selection
+            sbj = sbj[0]
+        variants = [f for f in so.all_variants if f != "vh"]
+        variants.append("fh")
+        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if not suggest:
+            return
+        text = f"Hér á sögnin '{so.lemma}' að samræmast eintölufrumlaginu '{sbj.lemma}'"
         self._ann.append(
             Annotation(
                 start=start,
@@ -2376,6 +2405,25 @@ class PatternMatcher:
         #        cls.ctx_agreement_conj,
         #    )
         #)
+
+        ## Virkar ekki
+        #cls.add_pattern(
+        #    (
+        #        "mögulega",  # Trigger lemma for this pattern 
+        #        "VP > { VP > { so_et_p3 } NP-SUBJ > { (fn_et_nf|no_et_nf) } }",
+        #        lambda self, match: self.agreement_subpost(match),
+        #        cls.ctx_agreement_subpost,
+        #    )
+        #)
+
+    #    cls.add_pattern(
+    #        (
+    #            "kolasvæði",  # Trigger lemma for this pattern 
+    #            "IP > { NP-SUBJ > { fn_nf_et } VP > { VP > { so_ft } } }",
+    #            lambda self, match: self.agreement_subpost_sing(match),
+    #            cls.ctx_agreement_subpost,
+    #        )
+    #    )
 
     def run(self) -> None:
         """ Apply the patterns to the sentence """
