@@ -52,6 +52,7 @@ from reynir import Sentence, NounPhrase
 from reynir.simpletree import SimpleTree
 from reynir.verbframe import VerbErrors
 from reynir.matcher import ContextDict
+from reynir.bintokenizer import ALL_CASES
 
 from .annotation import Annotation
 
@@ -178,14 +179,14 @@ class PatternMatcher:
     def get_wordform(self, lemma: str, cat: str, variants: Iterable[str]):
         """ Get correct wordform from BinPackage, 
         given a set of variants """
-        cases = ["nf", "þf", "þgf", "ef"]
+        realvars: Iterable[str]
         if cat == "so":
             # Get rid of argument variants in verbs:
-            realvars: Iterable[str]  = [v for v in variants if not v.isdigit() and v not in SKIPVARS]
+            realvars = frozenset([v for v in variants if not v.isdigit() and v not in SKIPVARS])
             if not "lh" in realvars:
-                realvars = [v for v in realvars if v not in cases]
+                realvars = frozenset([v for v in realvars if v not in ALL_CASES])
         else:
-            realvars= variants
+            realvars= frozenset(variants)
         wordforms = BIN.lookup_variants(lemma, cat, tuple(realvars))
         if not wordforms:
             return ""
@@ -193,6 +194,7 @@ class PatternMatcher:
         return wordforms[0].bmynd
 
     def wrong_subtree(self, match: SimpleTree, so: SimpleTree) -> bool:
+        """ Returns True if the verb is under a sub-IP """
         iptree = match.first_match("IP")
         if not iptree:
             return False
@@ -207,7 +209,7 @@ class PatternMatcher:
         """ Returns True if first tree is a subtree of the second one """
         a, b = first.span
         c, d = other.span
-        return set(range(a, b+1)).issubset(set(range(c, d+1)))
+        return (c >= a) and (d <= b)
 
     def wrong_preposition_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
@@ -929,17 +931,17 @@ class PatternMatcher:
         so = so.first_match("so")
         if so is None: return
         subj = match.first_match("NP-SUBJ")
-        works = False
-        # TODO For now, only correct if the subject is a 1st or 2nd person pronoun or person name
-        allowed = ["PERSON"]
         if not subj:
             return
+        works = False
+        # TODO For now, only correct if the subject is a 1st or 2nd person pronoun or person name
+        allowed: FrozenSet[str] = frozenset(["PERSON"])
         for x in subj.children:
-            if x.is_terminal and x.kind not in ["PUNCTUATION"]:
+            if x.is_terminal and x.kind != "PUNCTUATION":
                 if x.kind in allowed:
                     works = True
-                if x.cat and "pfn" in x.cat:
-                    if "p1" in x.all_variants or "p2" in x.all_variants:
+                if x.cat and x.cat == "pfn":
+                    if {"p1", "p2"} & frozenset(x.all_variants):
                         works = True
         if not works:
             return
@@ -1068,7 +1070,6 @@ class PatternMatcher:
             )
         )
 
-
     def dir_loc_standa(self, match: SimpleTree) -> None:
         advp = match.first_match("ADVP > { 'upp' }")
         if advp is None: return
@@ -1180,9 +1181,9 @@ class PatternMatcher:
             )
         )
 
-
     def mood_sub_rel(self, match: SimpleTree) -> None:
-        
+        """ Subjunctive mood is used instead of indicative 
+            in relative subclauses """
         vp = match.first_match("VP > so_vh")
         if vp is None: 
             return
@@ -1217,6 +1218,8 @@ class PatternMatcher:
         )
 
     def mood_sub_temp(self, match: SimpleTree) -> None:
+        """ Subjunctive mood is used instead of indicative 
+            in temporal subclauses """
         vp = match.first_match("VP > so_vh")
         if vp is None: return
         so = vp.first_match("so")        
@@ -1249,6 +1252,8 @@ class PatternMatcher:
         )
 
     def mood_sub_cond(self, match: SimpleTree) -> None:
+        """ Subjunctive mood is used instead of indicative 
+            in conditional subclauses """
         vp = match.first_match("VP > so_vh")
         if vp is None: return
         so = vp.first_match("so")
@@ -1282,6 +1287,8 @@ class PatternMatcher:
         )
     
     def mood_sub_purp(self, match: SimpleTree) -> None:
+        """ Subjunctive mood is used instead of indicative 
+            in purpose subclauses """
         vp = match.first_match("VP > so_vh")
         if vp is None: return
         so = vp.first_match("so")
@@ -1348,6 +1355,7 @@ class PatternMatcher:
         )
 
     def doubledefinite(self, match: SimpleTree) -> None:
+        """ A definite noun appears with a definite pronoun """
         no = match.first_match("no")
         if no is None: return
         fn = match.first_match("fn")

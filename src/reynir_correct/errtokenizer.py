@@ -1855,7 +1855,6 @@ def lookup_unknown_words(
                         txt="Óþekkt orð: '{0}'".format(token.txt),
                         original=token.txt,
                         suggest="",
-                        is_warning=token.txt[0].isupper() or bool(parenthesis_stack),
                     )
                 )
 
