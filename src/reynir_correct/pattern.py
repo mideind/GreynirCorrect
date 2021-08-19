@@ -182,11 +182,11 @@ class PatternMatcher:
         realvars: Iterable[str]
         if cat == "so":
             # Get rid of argument variants in verbs:
-            realvars = frozenset([v for v in variants if not v.isdigit() and v not in SKIPVARS])
+            realvars = [v for v in variants if not v.isdigit() and v not in SKIPVARS]
             if not "lh" in realvars:
-                realvars = frozenset([v for v in realvars if v not in ALL_CASES])
+                realvars = [v for v in realvars if v not in ALL_CASES]
         else:
-            realvars= frozenset(variants)
+            realvars = frozenset(variants)
         wordforms = BIN.lookup_variants(lemma, cat, tuple(realvars))
         if not wordforms:
             return ""
@@ -195,8 +195,9 @@ class PatternMatcher:
 
     def wrong_subtree(self, match: SimpleTree, so: SimpleTree) -> bool:
         """ Returns True if the verb is under a sub-IP """
+        # TODO Change >> in matching logic so it doesn't enter IP subtrees
         iptree = match.first_match("IP")
-        if not iptree:
+        if iptree is None:
             return False
     
         for x in iptree.descendants:
@@ -931,7 +932,7 @@ class PatternMatcher:
         so = so.first_match("so")
         if so is None: return
         subj = match.first_match("NP-SUBJ")
-        if not subj:
+        if subj is None:
             return
         works = False
         # TODO For now, only correct if the subject is a 1st or 2nd person pronoun or person name
@@ -1188,7 +1189,7 @@ class PatternMatcher:
         if vp is None: 
             return
         so = vp.first_match("so")
-        if so is None: 
+        if so is None:  
             return
         start, end = so.span
         if "þt" in so.all_variants:

@@ -247,15 +247,10 @@ class GreynirCorrect(Greynir):
                     assert original_terminal is not None
                     terminal = grammar.terminals[original_terminal]
                     assert isinstance(terminal, VariantHandler)
-                    try:
-                        if t.suggestion_does_not_match(terminal, bin_token):
-                            # If this token is annotated with a spelling suggestion,
-                            # do not add it unless it works grammatically
-                            annotate = False
-                    except AttributeError:
-                        # 1,8 milljarður kóna - wrap_tokens seems to fail
+                    if t.suggestion_does_not_match(terminal, bin_token):
+                        # If this token is annotated with a spelling suggestion,
+                        # do not add it unless it works grammatically
                         annotate = False
-                        #print("Meaning type doesn't match BinToken: {}, type {}".format(bin_token, type(bin_token.t2[0])))
                 if annotate:
                     a = Annotation(
                         start=ix,
