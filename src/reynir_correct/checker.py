@@ -253,7 +253,8 @@ class GreynirCorrect(Greynir):
                             annotate = False
                     except AttributeError:
                         # 1,8 milljarður kóna - wrap_tokens seems to fail
-                        print("Meaning type doesn't match BinToken: {}, type {}".format(bin_token, type(bin_token.t2[0])))
+                        annotate = False
+                        #print("Meaning type doesn't match BinToken: {}, type {}".format(bin_token, type(bin_token.t2[0])))
                 if annotate:
                     a = Annotation(
                         start=ix,
