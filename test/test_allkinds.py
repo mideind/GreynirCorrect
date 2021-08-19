@@ -477,9 +477,9 @@ def test_context_dependent_spelling_errors(verbose=False):
     assert "allt hvað fætur" in s
     assert "toga að ástæðulausu" in s
     # TODO fæ villukóðana á fyrsta orðið í fasta frasanum en ætti að fá á villuorðið sjálft.
-    assert g[1].error_code == "P_yi"  # sína
-    assert g[6].error_code == "P_khv"  # hvað
-    assert g[10].error_code == "P_aðaf"  # að
+    assert g[1].error_code == "P_yyii"  # sína
+    assert g[6].error_code == "P_kvhv"  # hvað
+    assert g[10].error_code == "P_afað"  # að
 
     # Context dependent spelling errors - P_xxx
     g = rc.tokenize("Kvað sem á bjátar lifir en í glæðunum.")
@@ -490,8 +490,8 @@ def test_context_dependent_spelling_errors(verbose=False):
     assert "Hvað sem" in s
     assert "lifir enn í" in s
     # TODO villan kemur í fyrsta orðið í fasta frasanum en ætti að fá á villuorðið sjálft.
-    assert g[1].error_code == "P_khv"  # Hvað
-    assert g[5].error_code == "P_n"  # enn
+    assert g[1].error_code == "P_kvhv"  # Hvað
+    assert g[5].error_code == "P_nn"  # enn
 
 
 def test_homophones(verbose=False):

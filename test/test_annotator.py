@@ -149,7 +149,7 @@ def check_sentence(
 
 def test_multiword_phrases(rc):
     s = "Einn af drengjunum fór í sund af gefnu tilefni."
-    check_sentence(rc, s, [(6, 8, "P_aðaf")])
+    check_sentence(rc, s, [(6, 8, "P_afað")])
 
 
 def test_error_finder(rc):
