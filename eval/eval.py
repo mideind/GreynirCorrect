@@ -105,7 +105,6 @@ from collections import defaultdict
 from datetime import datetime
 import glob
 import random
-import heapq
 import argparse
 import xml.etree.ElementTree as ET
 import multiprocessing

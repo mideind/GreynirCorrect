@@ -51,6 +51,7 @@ from typing import Any, cast, Iterable, Iterator, List, Tuple, Dict, Type, Optio
 from typing_extensions import TypedDict
 
 from threading import Lock
+from typing_extensions import TypedDict
 
 from reynir import (
     Greynir,
@@ -78,7 +79,7 @@ from .errfinder import ErrorFinder, ErrorDetectionToken
 from .pattern import PatternMatcher
 
 
-# Checking/correction result
+# The type of a grammar check result
 class CheckResult(TypedDict):
     paragraphs: List[List["Sentence"]]
     num_sentences: int
