@@ -161,6 +161,7 @@ class PatternMatcher:
     ctx_dir_loc: ContextDict = cast(ContextDict, None)
     ctx_agreement_conj: ContextDict = cast(ContextDict, None)
     ctx_agreement_subpost: ContextDict = cast(ContextDict, None)
+    ctx_agreement_concord: ContextDict = cast(ContextDict, None)
 
     def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
@@ -1359,6 +1360,29 @@ class PatternMatcher:
             )
         )
 
+    def agreement_concord(self, match: SimpleTree) -> None:
+        np = match.first_match("NP")
+        #if vp is None: return
+        assert np is not None
+        fn = np.first_match("fn")
+        assert fn is not None
+        no = np.first_match("no")
+        start, end = np.span
+        suggest = self.get_wordform(fn.lemma, fn.cat, no.lemma, no.cat)
+        if not suggest:
+            return
+        text = f"Hér á fornafnið '{fn.lemma}' að samræmast nafnorðinu '{no.lemma}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_NT",
+                text=text,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
     @classmethod
     def add_pattern(cls, p: PatternTuple) -> None:
         """ Validates and adds a pattern to the class global pattern list """
@@ -2375,26 +2399,54 @@ class PatternMatcher:
             )
         )
 
-        ## Virkar ekki
         cls.add_pattern(
             (
-                frozenset(("og", "en", "heldur")),  # Trigger lemma for this pattern 
-                "S0 > { S-MAIN > { IP > { NP-SUBJ > { no_ft_nf } } } S-MAIN >> [ VP > { VP-AUX > { so_et_p3 } } .* ] }",
+                "þessi",  # Trigger lemma for this pattern 
+                "NP-POSS > { NP-POSS > { fn_et_ef_kk } no_ft_ef_kk }",
                 lambda self, match: self.agreement_conj(match),
                 cls.ctx_agreement_conj,
             )
         )
 
         ## Virkar ekki
-        cls.add_pattern(
-            (
-                "heldur",  # Trigger lemma for this pattern 
-                "S0 > { S-MAIN }",
+    #    cls.add_pattern(
+    #        (
+    #            "og",  # Trigger lemma for this pattern 
+    #            "IP > { NP-SUBJ > { 'ég' C > {'og'} } VP >> { so_p3 } }",
+    #            lambda self, match: self.agreement_conj(match),
+    #            cls.ctx_agreement_conj,
+    #        )
+    #    )
+
+    #    cls.add_pattern(
+    #        (
+    #            frozenset(("og", "en", "heldur")),  # Trigger lemma for this pattern 
+    #            "IP > { NP-SUBJ > { 'og' } VP > { VP > { so_et } } }",
+    #            lambda self, match: self.agreement_conj(match),
+    #            cls.ctx_agreement_conj,
+    #        )
+    #    )
+
+        ## Virkar ekki
+    #    cls.add_pattern(
+    #        (
+    #            frozenset(("og", "en", "heldur")),  # Trigger lemma for this pattern 
+    #            "S0 > { S-MAIN > { IP > { NP-SUBJ > { no_ft_nf } } } S-MAIN >> [ VP > { VP-AUX > { so_et_p3 } } .* ] }",
+    #            lambda self, match: self.agreement_conj(match),
+    #            cls.ctx_agreement_conj,
+    #        )
+    #    )
+
+        ## Virkar ekki
+    #    cls.add_pattern(
+    #        (
+    #            "heldur",  # Trigger lemma for this pattern 
+    #            "S0 > { S-MAIN }",
                 #"S0 > { S-MAIN > { IP > { NP-SUBJ > [ no_et_nf C no_et_nf ] } } C S-MAIN >> [ VP > { so_et } .* ] }",
-                lambda self, match: self.agreement_conj(match),
-                cls.ctx_agreement_conj,
-            )
-        )
+    #            lambda self, match: self.agreement_conj(match),
+    #            cls.ctx_agreement_conj,
+    #        )
+    #    )
         
         ## Virkar ekki
         #cls.add_pattern(
