@@ -105,7 +105,7 @@ from collections import defaultdict
 from datetime import datetime
 import glob
 import random
-import heapq
+# import heapq
 import argparse
 import xml.etree.ElementTree as ET
 import multiprocessing
@@ -1122,7 +1122,7 @@ class Stats:
             cast(int, d["count"]) for d in self._sentences.values()
         )
 
-        def output_duration() -> None:
+        def output_duration() -> None:  # type: ignore
             """ Calculate the duration of the processing """
             dur = int((datetime.utcnow() - self._starttime).total_seconds())
             h = dur // 3600
@@ -1334,7 +1334,7 @@ class Stats:
                     catdict["span_rec"] = "N/A"
             return catdict
 
-        def output_sentence_scores() -> None:
+        def output_sentence_scores() -> None:  # type: ignore
             """ Calculate and write sentence scores to stdout """
 
             # Total number of true negatives found
@@ -1417,7 +1417,7 @@ class Stats:
             #    ):
             #        bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
 
-        def output_token_scores() -> None:
+        def output_token_scores() -> None:  # type: ignore
             """ Calculate and write token scores to stdout """
 
             bprint(f"\n\nResults for error detection within sentences")
