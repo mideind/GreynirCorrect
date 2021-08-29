@@ -192,6 +192,7 @@ class PatternMatcher:
     def get_wordform(self, lemma: str, cat: str, variants: Iterable[str]) -> str:
         """ Get correct wordform from BinPackage, 
             given a set of variants """
+        realvars: Union[Set[str], Iterable[str]]
         if cat == "so":
             # Get rid of irrelevant variants for verbs
             realvars = set(variants) - SKIPVARS
