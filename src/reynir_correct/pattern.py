@@ -64,6 +64,7 @@ from reynir import Sentence, NounPhrase
 from reynir.simpletree import SimpleTree
 from reynir.verbframe import VerbErrors
 from reynir.matcher import ContextDict
+from reynir.bintokenizer import ALL_CASES
 
 from .annotation import Annotation
 
@@ -205,8 +206,10 @@ class PatternMatcher:
         return wordforms[0].bmynd
 
     def wrong_subtree(self, match: SimpleTree, so: SimpleTree) -> bool:
+        """ Returns True if the verb is under a sub-IP """
+        # TODO Change >> in matching logic so it doesn't enter IP subtrees
         iptree = match.first_match("IP")
-        if not iptree:
+        if iptree is None:
             return False
         for x in iptree.descendants:
             if not x.is_terminal and x.tag == "IP":
@@ -218,7 +221,7 @@ class PatternMatcher:
         """ Returns True if first tree is a subtree of the second one """
         a, b = first.span
         c, d = other.span
-        return set(range(a, b + 1)).issubset(set(range(c, d + 1)))
+        return (c >= a) and (d <= b)
 
     def wrong_preposition_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
@@ -942,17 +945,17 @@ class PatternMatcher:
         if so is None:
             return
         subj = match.first_match("NP-SUBJ")
+        if subj is None:
+            return
         works = False
         # TODO For now, only correct if the subject is a 1st or 2nd person pronoun or person name
-        allowed = ["PERSON"]
-        if not subj:
-            return
+        allowed: FrozenSet[str] = frozenset(["PERSON"])
         for x in subj.children:
-            if x.is_terminal and x.kind not in ["PUNCTUATION"]:
+            if x.is_terminal and x.kind != "PUNCTUATION":
                 if x.kind in allowed:
                     works = True
-                if x.cat and "pfn" in x.cat:
-                    if "p1" in x.all_variants or "p2" in x.all_variants:
+                if x.cat and x.cat == "pfn":
+                    if {"p1", "p2"} & frozenset(x.all_variants):
                         works = True
         if not works:
             return
@@ -1201,6 +1204,8 @@ class PatternMatcher:
         )
 
     def mood_sub_rel(self, match: SimpleTree) -> None:
+        """ Subjunctive mood is used instead of indicative 
+            in relative subclauses """
         vp = match.first_match("VP > so_vh")
         if vp is None:
             return
@@ -1235,6 +1240,8 @@ class PatternMatcher:
         )
 
     def mood_sub_temp(self, match: SimpleTree) -> None:
+        """ Subjunctive mood is used instead of indicative 
+            in temporal subclauses """
         vp = match.first_match("VP > so_vh")
         if vp is None:
             return
@@ -1269,6 +1276,8 @@ class PatternMatcher:
         )
 
     def mood_sub_cond(self, match: SimpleTree) -> None:
+        """ Subjunctive mood is used instead of indicative 
+            in conditional subclauses """
         vp = match.first_match("VP > so_vh")
         if vp is None:
             return
@@ -1304,6 +1313,8 @@ class PatternMatcher:
         )
 
     def mood_sub_purp(self, match: SimpleTree) -> None:
+        """ Subjunctive mood is used instead of indicative 
+            in purpose subclauses """
         vp = match.first_match("VP > so_vh")
         if vp is None:
             return
@@ -1372,6 +1383,7 @@ class PatternMatcher:
         )
 
     def doubledefinite(self, match: SimpleTree) -> None:
+        """ A definite noun appears with a definite pronoun """
         no = match.first_match("no")
         if no is None:
             return
@@ -1718,7 +1730,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "frétt",  # Trigger lemma for this pattern
-                    "( IP|VP ) > { NP > { 'frétt' } VP > { PP > { 'að' } } }",
+                    "( IP|VP ) > { NP > { 'frétt' } VP > { PP > { P > { 'að' } } } }",
                     cls.wrong_preposition_frettir_að,
                     None,
                 )
@@ -1727,7 +1739,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "frétt",  # Trigger lemma for this pattern
-                    "NP > { 'frétt' PP > { 'að' } }",
+                    "NP > { 'frétt' PP > { P > { 'að' } } }",
                     cls.wrong_preposition_frettir_að,
                     None,
                 )

@@ -105,7 +105,6 @@ from collections import defaultdict
 from datetime import datetime
 import glob
 import random
-# import heapq
 import argparse
 import xml.etree.ElementTree as ET
 import multiprocessing
@@ -207,7 +206,7 @@ OUT_OF_SCOPE = {
     "have",
     "ice4fw",  # íslenskt orð notað í stað erlends      Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
     "ind4def",  # óákveðið fyrir ákveðið    grammar gítartakta > gítartaktana
-    # "ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
+    "ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
     "indef-pro",  # óákveðið fornafn    grammar enginn > ekki neinn
     "interr-pro",
     "it4nonit",  # skáletrað fyrir óskáletrað       Studdi Isma'il > Studdi Isma'il
@@ -825,18 +824,21 @@ GCtoIEC = {
     "Z003": ["upper4lower-common"],
     "Z004": ["upper4lower-common"],
     "Z005": ["upper4lower-common"],
+    "Z005/w": ["upper4lower-common"],
     "Z006": ["lower4upper-acro"],
-    # "E001" : ["XXX"],
-    # "E002" : ["XXX"],
-    # "E003" : ["XXX"],
+    "E001" : ["No responding iEC category"],
+    "E002" : ["No responding iEC category"],
+    "E003" : ["No responding iEC category"],
     "E004": ["fw"],
     "C001": ["repeat-word"],
     "C002": ["merged-words"],
     "C003": ["split-compound", "split-word", "split-words"],
     "C004": ["repeat-word"],
+    "C004/w": ["repeat-word"],
     "C005": ["split-compound", "split-word", "split-words"],
+    "C005/w": ["split-compound", "split-word", "split-words"],
     "C006": ["compound-nonword"],
-    "P_NT_Að_w": ["extra-conjunction"],
+    "P_NT_Að/w": ["extra-conjunction"],
     "P_NT_AnnaðHvort": ["conjunction"],
     "P_NT_Annaðhvort": ["conjunction"],
     "P_NT_Annara": ["pro-inflection"],
@@ -849,23 +851,28 @@ GCtoIEC = {
     "P_NT_FjöldiHluti": ["agreement"],
     "P_NT_FráÞvíAð": ["missing-conjunction"],
     "P_NT_FsMeðFallstjórn": ["case-prep"],
-    "P_NT_Heldur_w": ["conjunction"],
+    "P_NT_Heldur/w": ["conjunction"],
     "P_NT_ÍTölu": ["plural4singular", "singular4plural"],
-    "P_NT_Komma_w": ["extra-comma"],
+    "P_NT_Komma/w": ["extra-comma"],
     "P_NT_Né": ["conjunction"],
-    "P_NT_Sem_w": ["extra-conjunction"],
-    "P_NT_Síðan_w": ["extra-word"],
-    "P_NT_Síðastliðinn": ["split-compound"],
+    "P_NT_Sem/w": ["extra-conjunction"],
+    "P_NT_Síðan/w": ["extra-word"],
+    "P_NT_SíðastLiðinn": ["split-compound"],
     "P_NT_SvigaInnihaldNl": ["case-verb", "case-prep", "case-adj"],
     "P_NT_TvípunkturFs": ["extra-colon"],
     "P_NT_VantarKommu": ["missing-comma"],
     "P_NT_VístAð": ["conjunction"],
+    "P_VeraAð": ["cont4simple"],
     "P_NT_ÞóAð": ["conjunction"],
     "P_redundant_word": ["extra-word"],
     "P_wrong_person": ["verb-inflection"],
     "P_wrong_phrase": ["wording"],
     "P_wrong_word": ["wording"],
     "P_wrong_case": ["case-noun"],
+    "P_wrong_gender": ["agreement-concord"],
+    "P_wrong_number": ["agreement-concord"],
+    "P_wrong_form": ["agreement-concord"],
+    "P_transposition": ["swapped-letters"],
     "P_WRONG_CASE_nf_þf": ["case-verb"],
     "P_WRONG_CASE_nf_þgf": ["case-verb"],
     "P_WRONG_CASE_nf_ef": ["case-verb"],
@@ -881,8 +888,16 @@ GCtoIEC = {
     "P_WRONG_NOUN_WITH_VERB": ["collocation"],
     "P_WRONG_OP_FORM": ["verb-inflection"],
     "P_WRONG_PLACE_PP": ["wrong-prep"],
-    "P_yi": ["i4y"],
     "P_aðaf": ["að4af"],
+    "P_afað": ["af4að"],
+    "P_kvhv": ["kv4hv"],
+    "P_hvkv": ["hv4kv"],
+    "P_nn": ["n4nn"],
+    "P_n": ["nn4n"],
+    "P_yi": ["y4i"],
+    "P_iy": ["i4y"],
+    "P_yyii": ["ý4í"],
+    "P_iiyy": ["í4ý"],
     "P_WRONG_PREP_AÐ": ["að4af"],
     "P_WRONG_PREP_AF": ["af4að"],
     "P_WRONG_VERB_USE": ["collocation"],
@@ -901,10 +916,10 @@ GCtoIEC = {
     "S003": ["nonword"],
     "S004": ["nonword"],
     "T001": ["taboo-word"],
-    "T001_w": ["taboo-word"],
+    "T001/w": ["taboo-word"],
     "U001": ["fw"],
-    "U001_w": ["fw"],
-    "W001_w": ["nonword"],
+    "U001/w": ["fw"],
+    "W001/w": ["nonword"],
 }
 
 GCSKIPCODES = frozenset(("E001", "C005", "Z002", "W001"))
@@ -1983,6 +1998,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 # we're going to get an error for
                                 # a wrong annotation type anyway, as ytype != xtype.
                                 ytype = GCtoIEC[ytok.code][0]
+                        else:
+                            print("Error tag {} is not supported".format(ytok.code))
 
                         if ANALYSIS:
                             analysisblob.append(
