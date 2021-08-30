@@ -208,7 +208,7 @@ class PatternMatcher:
 
     def wrong_subtree(self, match: SimpleTree, so: SimpleTree) -> bool:
         """ Returns True if the verb is under a sub-IP """
-        # TODO Change >> in matching logic so it doesn't enter IP subtrees
+        # TODO Change >>> in matching logic so it doesn't enter IP subtrees
         iptree = match.first_match("IP")
         if iptree is None:
             return False
