@@ -149,7 +149,7 @@ def check_sentence(
 
 def test_multiword_phrases(rc):
     s = "Einn af drengjunum fór í sund af gefnu tilefni."
-    check_sentence(rc, s, [(6, 8, "P_aðaf")])
+    check_sentence(rc, s, [(6, 8, "P_afað")])
 
 
 def test_error_finder(rc):
@@ -188,7 +188,7 @@ def test_error_finder(rc):
     s = "Friðgeir taldi víst að Sigga yrði að vera heima."
     check_sentence(rc, s, [])
     s = "Ég er ekki meiri fáviti heldur en þú."
-    check_sentence(rc, s, [(5, 5, "P_NT_Heldur/w")])
+    check_sentence(rc, s, [(4, 4, "T001/w"), (5, 5, "P_NT_Heldur/w")])
 
 
 def test_ordinals(rc):
@@ -280,9 +280,9 @@ def test_foreign_sentences(rc):
 
 
 def test_number(rc):
-    check_sentence(rc, "Vinnuvika sjómanna eru 7 heilir dagar.", [(2, 5, "P_NT_ÍTölu")])
-    check_sentence(rc, "Hjón borðar matinn sinn.", [(1, 3, "P_NT_ÍTölu")])
-    check_sentence(rc, "Ég borðum matinn minn.", [(1, 3, "P_NT_ÍTölu")])
+    check_sentence(rc, "Vinnuvika sjómanna eru 7 heilir dagar.", [(2, 2, "P_NT_ÍTölu")])
+    check_sentence(rc, "Hjón borðar matinn sinn.", [(1, 1, "P_NT_ÍTölu")])
+    check_sentence(rc, "Ég borðum matinn minn.", [(1, 1, "P_NT_ÍTölu")])
 
 
 def test_correct_sentences(rc):
@@ -317,7 +317,7 @@ def test_corrected_meanings(rc: reynir_correct.GreynirCorrect) -> None:
     check_sentence(
         rc,
         s.rstrip(),
-        [(4, 4, "U001/w"), (11, 11, "N001"), (13, 13, "U001/w")],
+        [(11, 11, "N001")],
     )
 
 

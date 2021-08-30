@@ -133,14 +133,14 @@ ORDINALS = {
 class ErrorDetectionToken(BIN_Token):
 
     """ A subclass of BIN_Token that adds error detection behavior
-        to the base class """
+    to the base class """
 
     _VERB_ERROR_SUBJECTS = VerbSubjects.VERBS_ERRORS
 
     def __init__(self, t: Tok, original_index: int) -> None:
         """ original_index is the index of this token in
-            the original token list, as submitted to the parser,
-            including not-understood tokens such as quotation marks """
+        the original token list, as submitted to the parser,
+        including not-understood tokens such as quotation marks """
         super().__init__(t, original_index)
         # Store the capitalization state, carried over from CorrectToken instances.
         # The state is one of (None, "sentence_start", "after_ordinal", "in_sentence").
@@ -166,7 +166,7 @@ class ErrorDetectionToken(BIN_Token):
     @classmethod
     def verb_is_strictly_impersonal(cls, verb: str, form: str) -> bool:
         """ Return True if the given verb should not be allowed to match
-            with a normal (non _op) verb terminal """
+        with a normal (non _op) verb terminal """
         if "OP" in form and not VerbSubjects.is_strictly_impersonal(verb):
             # We have a normal terminal, but an impersonal verb form. However,
             # that verb is not marked with an error correction from nominative
@@ -182,7 +182,7 @@ class ErrorDetectionToken(BIN_Token):
 
     @classmethod
     def verb_cannot_be_impersonal(cls, verb: str, form: str) -> bool:
-        """ Return True if this verb cannot match an so_xxx_op terminal. """
+        """ Return True if this verb cannot match an so_xxx_op terminal """
         # We have a relaxed condition here because we want to catch
         # verbs being used impersonally that shouldn't be. So we don't
         # check for "OP" (impersonal) in the form, but we're not so relaxed
@@ -200,8 +200,8 @@ class ErrorDetectionToken(BIN_Token):
     @classmethod
     def verb_subject_matches(cls, verb: str, subj: str) -> bool:
         """ Returns True if the given subject type/case is allowed
-            for this verb or if it is an erroneous subject
-            which we can flag """
+        for this verb or if it is an erroneous subject
+        which we can flag """
         return subj in cls._VERB_SUBJECTS.get(
             verb, set()
         ) or subj in cls._VERB_ERROR_SUBJECTS.get(verb, dict())
@@ -210,8 +210,8 @@ class ErrorDetectionToken(BIN_Token):
 class ErrorFinder(ParseForestNavigator):
 
     """ Utility class to find nonterminals in parse trees that are
-        tagged as errors in the grammar, and terminals matching
-        verb forms marked as errors """
+    tagged as errors in the grammar, and terminals matching
+    verb forms marked as errors """
 
     _CAST_FUNCTIONS: Dict[str, CastFunction] = {
         "nf": cast(CastFunction, SimpleTree.nominative_np),
@@ -246,18 +246,18 @@ class ErrorFinder(ParseForestNavigator):
     @staticmethod
     def _node_span(node: Node) -> Tuple[int, int]:
         """ Return the start and end indices of the tokens
-            spanned by the given node """
+        spanned by the given node """
         first_token, last_token = node.token_span
         return (first_token.index, last_token.index)
 
     def cast_to_case(self, case: str, tree: SimpleTree) -> str:
         """ Return the contents of a noun phrase node
-            inflected in the given case """
+        inflected in the given case """
         return self._CAST_FUNCTIONS[case].fget(tree)
 
     def _simple_tree(self, node: Node) -> Optional[SimpleTree]:
         """ Return a SimpleTree instance spanning the deep tree
-            of which node is the root """
+        of which node is the root """
         if node is None:
             return None
         first, last = self._node_span(node)
@@ -269,9 +269,9 @@ class ErrorFinder(ParseForestNavigator):
 
         def text(t: Tok) -> str:
             """ If the token t is a word token, return a lower case
-                version of its text, unless we have a reason to keep
-                the original case, i.e. if it is a lemma that is upper case
-                in BÍN """
+            version of its text, unless we have a reason to keep
+            the original case, i.e. if it is a lemma that is upper case
+            in BÍN """
             if t.kind != TOK.WORD:
                 # Not a word token: keep the original text
                 return t.txt
@@ -397,7 +397,7 @@ class ErrorFinder(ParseForestNavigator):
         return dict(
             text=f"Á líklega að vera '{correct}'",
             detail=f"Fornafnið '{lemma}' er ritað '{correct}' "
-                "í þágufalli, eintölu, kvenkyni.",
+            "í þágufalli, eintölu, kvenkyni.",
             original=txt,
             suggest=correct,
         )
@@ -409,7 +409,7 @@ class ErrorFinder(ParseForestNavigator):
         return dict(
             text=f"Á líklega að vera '{correct}'",
             detail=f"Fornafnið '{lemma}' er ritað '{correct}' "
-                "í eignarfalli, eintölu, kvenkyni.",
+            "í eignarfalli, eintölu, kvenkyni.",
             original=txt,
             suggest=correct,
         )
@@ -418,7 +418,7 @@ class ErrorFinder(ParseForestNavigator):
         self, txt: str, variants: str, node: Node, detail: str
     ) -> AnnotationReturn:
         """ Annotate a mismatch between singular and plural
-            in subject vs. verb """
+        in subject vs. verb """
         tnode = self._terminal_nodes[node.start]
         # Find the enclosing inflected phrase
         p = tnode.enclosing_tag("IP")
@@ -554,11 +554,23 @@ class ErrorFinder(ParseForestNavigator):
         subject = self._node_text(ch0)
         # verb_phrase = self._node_text(children[1])
         number = "eintölu" if "et" in variants else "fleirtölu"
+        # Find the verb
+        ch1node = cast(Node, ch1)
+        vptree: Optional[SimpleTree] = self._simple_tree(ch1node)
+        so: Optional[SimpleTree] = None
+        if vptree:
+            vp: Optional[SimpleTree] = vptree.first_match("VP >> so")
+            if vp:
+                so = vp.first_match("so")
         # Annotate the verb phrase
         assert ch1 is not None
         start, end = self._node_span(ch1)
+        if so is not None:
+            sostart, soend = so.span
+            end = start + soend
+            start = start + sostart
         return dict(
-            text="Sögn á sennilega að vera í {1} eins og frumlagið '{0}'".format(
+            text="Sögnin á sennilega að vera í {1} eins og frumlagið '{0}'".format(
                 subject, number
             ),
             start=start,
@@ -589,7 +601,8 @@ class ErrorFinder(ParseForestNavigator):
                 text="Á sennilega að vera '{0}'".format(correct_np),
                 detail=(
                     "Forsetningin '{0}' stýrir {1}falli.".format(
-                        preposition.lower(), CASE_NAMES[variants],
+                        preposition.lower(),
+                        CASE_NAMES[variants],
                     )
                 ),
                 original=preposition,
@@ -604,7 +617,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def SvigaInnihaldNl(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
         """ Explanatory noun phrase in a different case than the noun phrase
-            that it explains """
+        that it explains """
         np = self._simple_tree(node)
         assert np is not None
         return "Gæti átt að vera '{0}'".format(self.cast_to_case(variants, np))
@@ -670,7 +683,7 @@ class ErrorFinder(ParseForestNavigator):
     @staticmethod
     def find_verb_subject(tnode: SimpleTree) -> Optional[SimpleTree]:
         """ Starting with a verb terminal node, attempt to find
-            the verb's subject noun phrase """
+        the verb's subject noun phrase """
         subj = None
         # First, check within the enclosing verb phrase
         # (the subject may be embedded within it, as in
@@ -740,9 +753,11 @@ class ErrorFinder(ParseForestNavigator):
         tnode = self._terminal_nodes[node.start]
         verb = tnode.lemma
 
-        def annotate_wrong_subject_case(subj_case_abbr: str, correct_case_abbr: str) -> None:
+        def annotate_wrong_subject_case(
+            subj_case_abbr: str, correct_case_abbr: str
+        ) -> None:
             """ Create an annotation that describes a verb having a subject
-                in the wrong case """
+            in the wrong case """
             wrong_case = CASE_NAMES[subj_case_abbr]
             # Retrieve the correct case
             correct_case = CASE_NAMES[correct_case_abbr]
@@ -952,4 +967,3 @@ class ErrorFinder(ParseForestNavigator):
             )
         )
         return None
-

@@ -382,6 +382,8 @@ class CorrectToken(Tok):
         else:
             # We have a list of tokens to copy from:
             # find the first error in the list, if any, and copy it
+            assert isinstance(other, list) or isinstance(other, tuple)
+            other = cast(Sequence[Tok], other)
             for t in other:
                 if self.copy(t, coalesce=True):
                     break
@@ -936,7 +938,6 @@ def parse_errors(
                         continue
 
             # Word duplication (note that word case must also match)
-            # TODO STILLING - hér er bara samhengisháð leiðrétting
             if (
                 not only_ci
                 and token.txt
@@ -944,7 +945,6 @@ def parse_errors(
                 and token.txt == next_token.txt
                 and token.kind == TOK.WORD
             ):
-                # TODO STILLING - hér er bara uppástunga, skiptir ekki máli fyrir ósh. málrýni
                 if token.txt.lower() in AllowedMultiples.SET:
                     next_token.set_error(
                         CompoundError(
@@ -976,7 +976,6 @@ def parse_errors(
             # Word duplication with different cases
             # Only provide a suggestion
             # No need to check AllowedMultiples
-            # TODO STILLING - hér er samhengisháð leiðrétting
             if (
                 not only_ci
                 and token.txt
@@ -1719,7 +1718,6 @@ def lookup_unknown_words(
         # BÍN annotations via the compounder
         # Examples: 'kvenær' -> 'hvenær', 'starfssemi' -> 'starfsemi'
         # !!! TODO: Handle upper/lowercase
-        # TODO STILLING - hér er ósamhengisháð leiðrétting!
         if token.txt in UniqueErrors.DICT:
             # Note: corrected is a tuple
             corrected = UniqueErrors.DICT[token.txt]
@@ -1751,7 +1749,6 @@ def lookup_unknown_words(
         # !!! TODO: case (for instance, 'á' as a nominative of 'ær').
         # !!! TODO: We are not handling those here.
         # !!! TODO: Handle upper/lowercase
-        # TODO STILLING - hér er ósamhengisháð leiðrétting!
         if not token.val and CIDErrorForms.contains(token.txt):
             corr_txt = CIDErrorForms.get_correct_form(token.txt)
             rtok = replace_word(2, token, corr_txt, corr_txt)
@@ -1766,8 +1763,6 @@ def lookup_unknown_words(
             pass
 
         # Check rare (or nonexistent) words and see if we have a potential correction
-        # TODO STILLING - hér er samhengisháð leiðrétting af því að við notum þrenndir!
-        # TODO STILLING - og líka því skoðum líka sjaldgæf orð.
         elif not token.val or corrector.is_rare(token.txt):
             # Yes, this is a rare word that needs further attention
             if only_ci and token.txt[0].islower():
@@ -1827,7 +1822,6 @@ def lookup_unknown_words(
                 ):
                     # Only allow single-letter corrections of a->á and i->í
                     pass
-                # TODO STILLING - þetta er bara uppástunga
                 elif not apply_suggestions and only_suggest(token, m):
                     # We have a candidate correction but the original word does
                     # exist in BÍN, so we're not super confident: yield a suggestion
@@ -1856,21 +1850,20 @@ def lookup_unknown_words(
                     continue
 
         # Check for completely unknown and uncorrectable words
-        # TODO STILLING - hér er ósamhengisháð leiðrétting!
         if not token.val:
             # No annotation and not able to correct:
             # mark the token as an unknown word
             # (but only as a warning if it is an uppercase word or
             # if we're within parentheses)
-            token.set_error(
-                UnknownWordError(
-                    code="001",
-                    txt="Óþekkt orð: '{0}'".format(token.txt),
-                    original=token.txt,
-                    suggest="",
-                    is_warning=token.txt[0].isupper() or bool(parenthesis_stack),
+            if token.txt[0].islower():
+                token.set_error(
+                    UnknownWordError(
+                        code="001",
+                        txt="Óþekkt orð: '{0}'".format(token.txt),
+                        original=token.txt,
+                        suggest="",
+                    )
                 )
-            )
 
         if token.error is True:
             # Erase the boolean error continuation marker:
@@ -2224,7 +2217,6 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
     tdict = TabooWords.DICT
 
     for token in token_stream:
-        # TODO STILLING - hér er ósamhengisháð leiðrétting EN er bara uppástunga.
         # Check taboo words
         if token.has_meanings:
             # !!! TODO: This could be made more efficient if all
