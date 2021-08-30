@@ -1803,7 +1803,7 @@ def lookup_unknown_words(
                 _, m = db.lookup_g(corrected_txt, at_sentence_start=at_sentence_start)
                 if (token.txt[0].lower() == "ó" and corrected_txt == token.txt[1:]) or (
                         corrected_txt[0].lower() == "ó" and token.txt == corrected_txt[1:]
-                    ):
+                ):
                     # The correction simply removed or added "ó" at the start of the
                     # word: probably not a good idea
                     pass
