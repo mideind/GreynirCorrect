@@ -39,7 +39,19 @@
 
 """
 
-from typing import Iterable, List, Mapping, Tuple, Set, FrozenSet, Callable, Dict, Optional, Union, cast
+from typing import (
+    Iterable,
+    List,
+    Mapping,
+    Tuple,
+    Set,
+    FrozenSet,
+    Callable,
+    Dict,
+    Optional,
+    Union,
+    cast,
+)
 
 from threading import Lock
 from functools import partial
@@ -52,6 +64,7 @@ from reynir import Sentence, NounPhrase
 from reynir.simpletree import SimpleTree
 from reynir.verbframe import VerbErrors
 from reynir.matcher import ContextDict
+from reynir.bintokenizer import ALL_CASES
 
 from .annotation import Annotation
 
@@ -65,7 +78,8 @@ PatternTuple = Tuple[
 BIN = Bin()
 
 # Variants not needed for lookup
-SKIPVARS = frozenset(["op", "subj"])
+SKIPVARS = frozenset(("op", "subj", "0", "1", "2"))
+CASES = frozenset(("nf", "þf", "þgf", "ef"))
 
 
 class IcelandicPlaces:
@@ -175,17 +189,40 @@ class PatternMatcher:
                 # First instance: create the class-wide pattern list
                 self.create_patterns()
 
-    def get_wordform(self, lemma: str, cat: str, variants: Iterable[str]):
+    def get_wordform(self, lemma: str, cat: str, variants: Iterable[str]) -> str:
         """ Get correct wordform from BinPackage, 
-        given a set of variants """
-
-        # Get rid of argument variants in verbs:
-        realvars = [v for v in variants if not v.isdigit() and v not in SKIPVARS]
-        wordforms = BIN.lookup_variants(lemma, cat, tuple(realvars))
+            given a set of variants """
+        realvars: Union[Set[str], Iterable[str]]
+        if cat == "so":
+            # Get rid of irrelevant variants for verbs
+            realvars = set(variants) - SKIPVARS
+            if "lh" not in realvars:
+                realvars -= CASES
+        else:
+            realvars = variants
+        wordforms = BIN.lookup_variants(lemma, cat, tuple(realvars), lemma=lemma)
         if not wordforms:
             return ""
-        # Can be many possible word forms, want the first one in most cases
+        # Can be many possible word forms; we want the first one in most cases
         return wordforms[0].bmynd
+
+    def wrong_subtree(self, match: SimpleTree, so: SimpleTree) -> bool:
+        """ Returns True if the verb is under a sub-IP """
+        # TODO Change >>> in matching logic so it doesn't enter IP subtrees
+        iptree = match.first_match("IP")
+        if iptree is None:
+            return False
+        for x in iptree.descendants:
+            if not x.is_terminal and x.tag == "IP":
+                if self.is_subtree(so, x):
+                    return True
+        return False
+
+    def is_subtree(self, first: SimpleTree, other: SimpleTree) -> bool:
+        """ Returns True if first tree is a subtree of the second one """
+        a, b = first.span
+        c, d = other.span
+        return (c >= a) and (d <= b)
 
     def wrong_preposition_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
@@ -902,17 +939,35 @@ class PatternMatcher:
     def vera_að(self, match: SimpleTree) -> None:
         """ 'vera að' in front of verb is unneccessary """
         # TODO don't match verbs that allow 'vera að'
-        # TODO exclude sentences where the subject is not a noun (and later, where not alive)
         so = match.first_match("VP >> 'vera'")
-        if so is None: return
+        if so is None:
+            return
         so = so.first_match("so")
-        if so is None: return
+        if so is None:
+            return
+        subj = match.first_match("NP-SUBJ")
+        if subj is None:
+            return
+        works = False
+        # TODO For now, only correct if the subject is a 1st or 2nd person pronoun or person name
+        allowed: FrozenSet[str] = frozenset(["PERSON"])
+        for x in subj.children:
+            if x.is_terminal and x.kind != "PUNCTUATION":
+                if x.kind in allowed:
+                    works = True
+                if x.cat and x.cat == "pfn":
+                    if {"p1", "p2"} & frozenset(x.all_variants):
+                        works = True
+        if not works:
+            return
         # nhm = match.first_match("TO > nhm").first_match("nhm")
         start, _ = so.span
         realso = match.first_match("IP-INF >> VP")
-        if realso is None: return
+        if realso is None:
+            return
         realso = realso.first_match("so_nh")
-        if realso is None: return
+        if realso is None:
+            return
         _, end = realso.span
         suggest = self.get_wordform(realso.lemma, realso.cat, so.all_variants)
         if not suggest:
@@ -935,11 +990,13 @@ class PatternMatcher:
 
     def dir_loc(self, match: SimpleTree) -> None:
         adv = match.first_match("( 'inn'|'út'|'upp' )")
-        if adv is None: return
+        if adv is None:
+            return
         pp = match.first_match(
             "PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_þgf|no_þf|pfn_þgf|pfn_þf ) } }"
         )
-        if pp is None: return
+        if pp is None:
+            return
         start, end = min(adv.span[0], pp.span[0]), max(adv.span[1], pp.span[1])
         if adv.span < pp.span:
             if pp.tidy_text.startswith(adv.tidy_text):
@@ -961,7 +1018,7 @@ class PatternMatcher:
         self._ann.append(
             Annotation(
                 start=start,
-                end=end,    
+                end=end,
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
@@ -972,7 +1029,8 @@ class PatternMatcher:
 
     def dir_loc_comp(self, match: SimpleTree) -> None:
         p = match.first_match("P > ( 'inná'|'inní'|'útá'|'útí'|'uppá'|'uppí' ) ")
-        if p is None: return
+        if p is None:
+            return
         start, end = match.span
         match_text = match.tidy_text
         tidy_text = p.tidy_text
@@ -990,7 +1048,7 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original=match_text,
-                suggest=suggest
+                suggest=suggest,
             )
         )
 
@@ -1001,8 +1059,10 @@ class PatternMatcher:
         pp = match.first_match("PP > { 'um' }")
         if pp is None:
             pp = match.first_match("NP > { 'um' }")
-        if advp is None: return
-        if pp is None: return
+        if advp is None:
+            return
+        if pp is None:
+            return
         start, end = min(advp.span[0], pp.span[0]), max(advp.span[1], pp.span[1])
         if advp.tidy_text == "útum":
             correction = "úti um"
@@ -1032,10 +1092,10 @@ class PatternMatcher:
             )
         )
 
-
     def dir_loc_standa(self, match: SimpleTree) -> None:
         advp = match.first_match("ADVP > { 'upp' }")
-        if advp is None: return
+        if advp is None:
+            return
         start, end = match.span
         correction = advp.tidy_text + "i"
         text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
@@ -1144,45 +1204,26 @@ class PatternMatcher:
             )
         )
 
-    
-    def mood_sub_ack(self, match: SimpleTree) -> None:
-        """ Indicative mood is used instead of subjunctive 
-            in concessive subclauses """
-        vp = match.first_match("VP > so_fh")
+    def mood_sub_rel(self, match: SimpleTree) -> None:
+        """ Subjunctive mood is used instead of indicative 
+            in relative subclauses """
+        vp = match.first_match("VP > so_vh")
         if vp is None:
             return
         so = vp.first_match("so")
         if so is None:
             return
         start, end = so.span
-        variants = [f for f in so.all_variants if f != "fh"]
-        variants.append("vh")
-        suggest = self.get_wordform(so.lemma, so.cat, variants)
-        if not suggest:
+        if "þt" in so.all_variants:
             return
-        text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
-        detail = f"Í viðurkenningarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggest}'"
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_MOOD_ACK",
-                text=text,
-                detail=detail,
-                original=so.tidy_text,
-                suggest=suggest,
-            )
-        )
-    
-    def mood_sub_rel(self, match: SimpleTree) -> None:
-        vp = match.first_match("VP > so_vh")
-        if vp is None: return
-        so = vp.first_match("so")
-        if so is None: return
-        start, end = so.span
-        variants = [f for f in so.all_variants if f != "vh"]
-        variants.append("fh")
+        # Check if so is in a different subclause
+        if self.wrong_subtree(match, so):
+            return
+        variants = set(so.all_variants) - {"vh"}
+        variants.add("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if suggest == so.tidy_text:
+            return
         if not suggest:
             return
         text = f"Hér skal notaður framsöguháttur sagnarinnar '{so.lemma}', svo sögnina '{so.tidy_text}' skal skrifa '{suggest}'"
@@ -1195,18 +1236,30 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original=so.tidy_text,
+                suggest=suggest,
             )
         )
 
     def mood_sub_temp(self, match: SimpleTree) -> None:
+        """ Subjunctive mood is used instead of indicative 
+            in temporal subclauses """
         vp = match.first_match("VP > so_vh")
-        if vp is None: return
-        so = vp.first_match("so")        
-        if so is None: return
+        if vp is None:
+            return
+        so = vp.first_match("so")
+        if so is None:
+            return
         start, end = so.span
-        variants = [f for f in so.all_variants if f != "fh"]
-        variants.append("vh")
+        # Check if so is in a different subclause
+        if "þt" in so.all_variants:
+            return
+        if self.wrong_subtree(match, so):
+            return
+        variants = set(so.all_variants) - {"vh"}
+        variants.add("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if suggest == so.tidy_text:
+            return
         if not suggest:
             return
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
@@ -1215,22 +1268,34 @@ class PatternMatcher:
             Annotation(
                 start=start,
                 end=end,
-                code="P_MOOD_TEMP",
+                code="P_MOOD_TEMP/w",
                 text=text,
                 detail=detail,
                 original=so.tidy_text,
+                suggest=suggest,
             )
         )
 
-    def mood_ind_cond(self, match: SimpleTree) -> None:
+    def mood_sub_cond(self, match: SimpleTree) -> None:
+        """ Subjunctive mood is used instead of indicative 
+            in conditional subclauses """
         vp = match.first_match("VP > so_vh")
-        if vp is None: return
+        if vp is None:
+            return
         so = vp.first_match("so")
-        if so is None: return
+        if so is None:
+            return
         start, end = so.span
-        variants = [f for f in so.all_variants if f != "vh"]
-        variants.append("fh")
+        # Check if so is in a different subclause
+        if "þt" in so.all_variants:
+            return
+        if self.wrong_subtree(match, so):
+            return
+        variants = set(so.all_variants) - {"vh"}
+        variants.add("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if suggest == so.tidy_text:
+            return
         if not suggest:
             return
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
@@ -1244,18 +1309,30 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original=so.tidy_text,
+                suggest=suggest,
             )
         )
-    
-    def mood_ind_purp(self, match: SimpleTree) -> None:
+
+    def mood_sub_purp(self, match: SimpleTree) -> None:
+        """ Subjunctive mood is used instead of indicative 
+            in purpose subclauses """
         vp = match.first_match("VP > so_vh")
-        if vp is None: return
+        if vp is None:
+            return
         so = vp.first_match("so")
-        if so is None: return
+        if so is None:
+            return
         start, end = so.span
-        variants = [f for f in so.all_variants if f != "vh"]
-        variants.append("fh")
+        # Check if so is in a different subclause
+        if "þt" in so.all_variants:
+            return
+        if self.wrong_subtree(match, so):
+            return
+        variants = set(so.all_variants) - {"vh"}
+        variants.add("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if suggest == so.tidy_text:
+            return
         if not suggest:
             return
         text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
@@ -1272,13 +1349,50 @@ class PatternMatcher:
             )
         )
 
+    def mood_ind_ack(self, match: SimpleTree) -> None:
+        """ Indicative mood is used instead of subjunctive 
+            in concessive subclauses """
+        vp = match.first_match("VP > so_fh")
+        if vp is None:
+            return
+        so = vp.first_match("so")
+        if so is None:
+            return
+        start, end = so.span
+        # Check if so is in a different subclause
+        if self.wrong_subtree(match, so):
+            return
+        variants = set(so.all_variants) - {"fh"}
+        variants.add("vh")
+        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if suggest == so.tidy_text:
+            return
+        if not suggest:
+            return
+        text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
+        detail = f"Í viðurkenningarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggest}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_MOOD_ACK",
+                text=text,
+                detail=detail,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
     def doubledefinite(self, match: SimpleTree) -> None:
+        """ A definite noun appears with a definite pronoun """
         no = match.first_match("no")
-        if no is None: return
+        if no is None:
+            return
         fn = match.first_match("fn")
-        if fn is None: return
+        if fn is None:
+            return
         fnlemma = fn.lemma
-        #if fnlemma not in ["sá", "þessi"]:
+        # if fnlemma not in ["sá", "þessi"]:
         #    return
         start, end = match.span
         suggest = no.lemma
@@ -1519,14 +1633,14 @@ class PatternMatcher:
             )
 
             # Catch "Hún á (ekki) heiðurinn að þessu.", "Hún hafði (ekki) átt heiðurinn að þessu."
-            #cls.add_pattern(
+            # cls.add_pattern(
             #    (
             #        "heiður",  # Trigger lemma for this pattern
             #        "VP >> { VP > { 'eiga' } NP > { 'heiður' } } PP > { 'að' }",
             #        cls.wrong_preposition_heiður_að,
             #        None,
             #    )
-            #)
+            # )
 
             # Catch "Hún fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu."
             cls.add_pattern(
@@ -1537,14 +1651,14 @@ class PatternMatcher:
                     None,
                 )
             )
-            #cls.add_pattern(
+            # cls.add_pattern(
             #    (
             #        "heiður",  # Trigger lemma for this pattern
             #        "VP > { VP >> { VP > { NP >> { 'eiga' } NP > { 'heiður' } } } PP > { 'að' } }",
             #        cls.wrong_preposition_heiður_að,
             #        None,
             #    )
-            #)
+            # )
 
             # Catch "Hún á (ekki) mikið/fullt/helling/gommu... að börnum."
             cls.add_pattern(
@@ -1719,7 +1833,7 @@ class PatternMatcher:
             )
 
         # Verbs used wrongly with particular nouns
-        def wrong_noun(nouns: Set[str], tree: SimpleTree) -> bool:
+        def wrong_noun(nouns: FrozenSet[str], tree: SimpleTree) -> bool:
             """ Context matching function for the %noun macro in combinations
                 of verbs and their noun objects """
             lemma = tree.own_lemma
@@ -1727,7 +1841,7 @@ class PatternMatcher:
                 # The passed-in tree node is probably not a terminal
                 return False
             try:
-                case = (set(tree.variants) & {"nf", "þf", "þgf", "ef"}).pop()
+                case = (set(tree.variants) & CASES).pop()
             except KeyError:
                 return False
             return (lemma + "_" + case) in nouns
@@ -1837,7 +1951,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "vera",  # Trigger lemma for this pattern
-                "VP > [VP > { @'vera' } (ADVP|NP-SUBJ)? IP-INF > {TO > nhm}]",
+                "IP > {VP > [VP > { @'vera' } (ADVP|NP-SUBJ)? IP-INF > {TO > nhm}]}",
                 lambda self, match: self.vera_að(match),
                 None,
             )
@@ -1848,16 +1962,18 @@ class PatternMatcher:
         # concessive clause - viðurkenningarsetning
         cls.add_pattern(
             (
-                frozenset(("þrátt fyrir", "þrátt", "þó", "þótt")), # Trigger lemmas for this pattern
+                frozenset(
+                    ("þrátt fyrir", "þrátt", "þó", "þótt")
+                ),  # Trigger lemmas for this pattern
                 "CP-ADV-ACK >> {VP > so_fh}",
-                lambda self, match: self.mood_sub_ack(match),
+                lambda self, match: self.mood_ind_ack(match),
                 None,
             )
         )
         # Relative clause - tilvísunarsetning
         cls.add_pattern(
             (
-                frozenset(("sem", "er")), # Trigger lemmas for this pattern
+                frozenset(("sem", "er")),  # Trigger lemmas for this pattern
                 "CP-REL >> {VP > so_vh}",
                 lambda self, match: self.mood_sub_rel(match),
                 None,
@@ -1866,7 +1982,9 @@ class PatternMatcher:
         # Temporal clause - tíðarsetning
         cls.add_pattern(
             (
-                frozenset(("áður en", "eftir að", "þangað til", "þegar")), # Trigger lemmas for this pattern
+                frozenset(
+                    ("áður en", "eftir að", "þangað til", "þegar")
+                ),  # Trigger lemmas for this pattern
                 "CP-ADV-TMP >> {VP > so_fh}",
                 lambda self, match: self.mood_sub_temp(match),
                 None,
@@ -1875,25 +1993,25 @@ class PatternMatcher:
         # Conditional clause - skilyrðissetning
         cls.add_pattern(
             (
-                frozenset(("ef", "svo")), # Trigger lemmas for this pattern
+                frozenset(("ef", "svo")),  # Trigger lemmas for this pattern
                 "CP-ADV-COND >> {VP > so_vh}",
-                lambda self, match: self.mood_ind_cond(match),
+                lambda self, match: self.mood_sub_cond(match),
                 None,
             )
         )
         # Conditional clause - skilyrðissetning
         cls.add_pattern(
             (
-                frozenset(("til", "svo")), # Trigger lemmas for this pattern
+                frozenset(("til", "svo")),  # Trigger lemmas for this pattern
                 "CP-ADV-PURP >> {VP > so_vh}",
-                lambda self, match: self.mood_ind_purp(match),
+                lambda self, match: self.mood_sub_purp(match),
                 None,
             )
         )
         # Article errors; demonstrative pronouns and nouns with an article
         cls.add_pattern(
             (
-                frozenset(("sá", "þessi", "segja")), # Trigger lemmas for this pattern
+                frozenset(("sá", "þessi", "segja")),  # Trigger lemmas for this pattern
                 "NP > [fn no_gr]",
                 lambda self, match: self.doubledefinite(match),
                 None,
@@ -2047,7 +2165,7 @@ class PatternMatcher:
         )
         cls.add_pattern(
             (
-                "inn",  # Trigger lemma for this pattern
+                "geyma",  # Trigger lemma for this pattern
                 "VP > { VP > { 'geyma' } ADVP > { 'inn' } PP }",
                 lambda self, match: self.dir_loc(match),
                 None,
@@ -2087,14 +2205,14 @@ class PatternMatcher:
             )
         )
         # FIXME: The syntax ^(byggja) is not allowed
-        #cls.add_pattern(
+        # cls.add_pattern(
         #    (
         #        "upp",  # Trigger lemma for this pattern
         #        "( PP|VP|IP ) > [ VP > { ^(byggja) } ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } ]",
         #        lambda self, match: self.dir_loc(match),
         #        None,
         #    )
-        #)
+        # )
         cls.add_pattern(
             (
                 "upp",  # Trigger lemma for this pattern
@@ -2170,14 +2288,14 @@ class PatternMatcher:
             )
         )
         # FIXME: The syntax ^(færa) is not allowed
-        #cls.add_pattern(
+        # cls.add_pattern(
         #    (
         #        "niður",  # Trigger lemma for this pattern
         #        "VP > [ VP > { 'vera' } .* [^(færa)] PP > { ADVP > { 'niður' } P > { 'í' } NP } ]",
         #        lambda self, match: self.dir_loc_niður(match),
         #        None,
         #    )
-        #)
+        # )
         cls.add_pattern(
             (
                 "verða",  # Trigger lemma for this pattern
@@ -2197,7 +2315,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
-                "VP > { VP > [ 'vera' .* ] NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } }",
+                "VP > { VP > [ 'vera' ] NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } }",
                 lambda self, match: self.dir_loc_búð(match),
                 None,
             )
@@ -2206,9 +2324,7 @@ class PatternMatcher:
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP > [ 'vera' ] NP > [ .* PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } ] }",
-                lambda self, match: self.dir_loc_ut_um(
-                    match
-                ),
+                lambda self, match: self.dir_loc_ut_um(match),
                 None,
             )
         )
@@ -2216,9 +2332,7 @@ class PatternMatcher:
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP PP >> { NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } } }",
-                lambda self, match: self.dir_loc_ut_um(
-                    match
-                ),
+                lambda self, match: self.dir_loc_ut_um(match),
                 None,
             )
         )
@@ -2301,7 +2415,8 @@ class PatternMatcher:
         lemmas = set(lemma.replace("-", "") for lemma in self._sent.lemmas)
 
         def lemma_match(trigger: Union[str, FrozenSet[str]]) -> bool:
-            """ Returns True if any of the given trigger lemmas occur in the sentence """
+            """ Returns True if any of the given trigger lemmas
+                occur in the sentence """
             if not trigger:
                 return True
             if isinstance(trigger, str):
