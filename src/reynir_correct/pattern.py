@@ -205,18 +205,6 @@ class PatternMatcher:
         # Can be many possible word forms; we want the first one in most cases
         return wordforms[0].bmynd
 
-    def wrong_subtree(self, match: SimpleTree, so: SimpleTree) -> bool:
-        """ Returns True if the verb is under a sub-IP """
-        # TODO Change >>> in matching logic so it doesn't enter IP subtrees
-        iptree = match.first_match("IP")
-        if iptree is None:
-            return False
-        for x in iptree.descendants:
-            if not x.is_terminal and x.tag == "IP":
-                if self.is_subtree(so, x):
-                    return True
-        return False
-
     def is_subtree(self, first: SimpleTree, other: SimpleTree) -> bool:
         """ Returns True if first tree is a subtree of the second one """
         a, b = first.span
@@ -1216,8 +1204,6 @@ class PatternMatcher:
         # Check if so is in a different subclause
         if "þt" in so.all_variants:
             return
-        if self.wrong_subtree(match, so):
-            return
         variants = set(so.all_variants) - {"vh"}
         variants.add("fh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
@@ -1252,8 +1238,6 @@ class PatternMatcher:
         start, end = so.span
         # Check if so is in a different subclause
         if "þt" in so.all_variants:
-            return
-        if self.wrong_subtree(match, so):
             return
         variants = set(so.all_variants) - {"vh"}
         variants.add("fh")
@@ -1304,8 +1288,6 @@ class PatternMatcher:
             return
         start, end = so.span
         # Check if so is in a different subclause
-        if self.wrong_subtree(match, so):
-            return
         variants = set(so.all_variants) - {"fh"}
         variants.add("vh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
