@@ -1923,7 +1923,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "upphaf",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { 'marka' } NP-SUBJ > { .* 'upphaf' } } PP > { 'af' } }",
+                    "VP > { VP > { VP > { 'marka' } NP-SUBJ > { 'upphaf' } } PP > { 'af' } }",
                     cls.wrong_preposition_marka_af,
                     None,
                 )
