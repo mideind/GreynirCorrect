@@ -79,7 +79,6 @@ BIN = Bin()
 
 # Variants not needed for lookup
 SKIPVARS = frozenset(("op", "subj", "0", "1", "2"))
-CASES = frozenset(("nf", "þf", "þgf", "ef"))
 
 
 class IcelandicPlaces:
@@ -197,7 +196,7 @@ class PatternMatcher:
             # Get rid of irrelevant variants for verbs
             realvars = set(variants) - SKIPVARS
             if "lh" not in realvars:
-                realvars -= CASES
+                realvars -= ALL_CASES
         else:
             realvars = variants
         wordforms = BIN.lookup_variants(lemma, cat, tuple(realvars), lemma=lemma)
@@ -1841,7 +1840,7 @@ class PatternMatcher:
                 # The passed-in tree node is probably not a terminal
                 return False
             try:
-                case = (set(tree.variants) & CASES).pop()
+                case = (set(tree.variants) & ALL_CASES).pop()
             except KeyError:
                 return False
             return (lemma + "_" + case) in nouns
