@@ -1203,42 +1203,6 @@ class PatternMatcher:
             )
         )
 
-    def mood_sub_rel(self, match: SimpleTree) -> None:
-        """ Subjunctive mood is used instead of indicative 
-            in relative subclauses """
-        vp = match.first_match("VP > so_vh")
-        if vp is None:
-            return
-        so = vp.first_match("so")
-        if so is None:
-            return
-        start, end = so.span
-        if "þt" in so.all_variants:
-            return
-        # Check if so is in a different subclause
-        if self.wrong_subtree(match, so):
-            return
-        variants = set(so.all_variants) - {"vh"}
-        variants.add("fh")
-        suggest = self.get_wordform(so.lemma, so.cat, variants)
-        if suggest == so.tidy_text:
-            return
-        if not suggest:
-            return
-        text = f"Hér skal notaður framsöguháttur sagnarinnar '{so.lemma}', svo sögnina '{so.tidy_text}' skal skrifa '{suggest}'"
-        detail = f"Í tilvísunarsetningum er aðeins framsöguháttur tækur."
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_MOOD_REL",
-                text=text,
-                detail=detail,
-                original=so.tidy_text,
-                suggest=suggest,
-            )
-        )
-
     def mood_sub_temp(self, match: SimpleTree) -> None:
         """ Subjunctive mood is used instead of indicative 
             in temporal subclauses """
@@ -1275,9 +1239,10 @@ class PatternMatcher:
             )
         )
 
-    def mood_sub_cond(self, match: SimpleTree) -> None:
+    def mood_sub(self, kind: str, match: SimpleTree) -> None:
         """ Subjunctive mood is used instead of indicative 
-            in conditional subclauses """
+            in conditional ("COND"), purpose ("PURP") or relative ("REL")
+            subclauses """
         vp = match.first_match("VP > so_vh")
         if vp is None:
             return
@@ -1297,50 +1262,30 @@ class PatternMatcher:
             return
         if not suggest:
             return
-        text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
-        detail = f"Í skilyrðissetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
-
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_MOOD_COND",
-                text=text,
-                detail=detail,
-                original=so.tidy_text,
-                suggest=suggest,
-            )
+        text = (
+            f"Hér á líklega að nota framsöguhátt sagnarinnar '{so.tidy_text}', "
+            f"þ.e. '{suggest}'."
         )
+        detail = ""
+        sent_kind = ""
+        if kind == "COND":
+            sent_kind = "skilyrðissetningum"
+        elif kind == "PURP":
+            sent_kind = "tilgangssetningum"
+        elif kind == "REL":
+            detail = f"Í tilvísunarsetningum er aðeins framsöguháttur sagna tækur."
+        else:
+            assert False
+        if not detail:
+            detail = (
+                f"Í {sent_kind} er yfirleitt notaður framsöguháttur sagna."
+            )
 
-    def mood_sub_purp(self, match: SimpleTree) -> None:
-        """ Subjunctive mood is used instead of indicative 
-            in purpose subclauses """
-        vp = match.first_match("VP > so_vh")
-        if vp is None:
-            return
-        so = vp.first_match("so")
-        if so is None:
-            return
-        start, end = so.span
-        # Check if so is in a different subclause
-        if "þt" in so.all_variants:
-            return
-        if self.wrong_subtree(match, so):
-            return
-        variants = set(so.all_variants) - {"vh"}
-        variants.add("fh")
-        suggest = self.get_wordform(so.lemma, so.cat, variants)
-        if suggest == so.tidy_text:
-            return
-        if not suggest:
-            return
-        text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
-        detail = f"Í tilgangssetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
         self._ann.append(
             Annotation(
                 start=start,
                 end=end,
-                code="P_MOOD_PURP",
+                code="P_MOOD_" + kind,
                 text=text,
                 detail=detail,
                 original=so.tidy_text,
@@ -1974,7 +1919,7 @@ class PatternMatcher:
             (
                 frozenset(("sem", "er")),  # Trigger lemmas for this pattern
                 "CP-REL >> {VP > so_vh}",
-                lambda self, match: self.mood_sub_rel(match),
+                lambda self, match: self.mood_sub("REL", match),
                 None,
             )
         )
@@ -1994,7 +1939,7 @@ class PatternMatcher:
             (
                 frozenset(("ef", "svo")),  # Trigger lemmas for this pattern
                 "CP-ADV-COND >> {VP > so_vh}",
-                lambda self, match: self.mood_sub_cond(match),
+                lambda self, match: self.mood_sub("COND", match),
                 None,
             )
         )
@@ -2003,7 +1948,7 @@ class PatternMatcher:
             (
                 frozenset(("til", "svo")),  # Trigger lemmas for this pattern
                 "CP-ADV-PURP >> {VP > so_vh}",
-                lambda self, match: self.mood_sub_purp(match),
+                lambda self, match: self.mood_sub("PURP", match),
                 None,
             )
         )
@@ -2011,7 +1956,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 frozenset(("sá", "þessi", "segja")),  # Trigger lemmas for this pattern
-                "NP > [fn no_gr]",
+                "NP > [.* fn .* no_gr]",
                 lambda self, match: self.doubledefinite(match),
                 None,
             )
