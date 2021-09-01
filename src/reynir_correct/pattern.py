@@ -205,12 +205,6 @@ class PatternMatcher:
         # Can be many possible word forms; we want the first one in most cases
         return wordforms[0].bmynd
 
-    def is_subtree(self, first: SimpleTree, other: SimpleTree) -> bool:
-        """ Returns True if first tree is a subtree of the second one """
-        a, b = first.span
-        c, d = other.span
-        return (c >= a) and (d <= b)
-
     def wrong_preposition_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verb phrase
@@ -959,7 +953,10 @@ class PatternMatcher:
         suggest = self.get_wordform(realso.lemma, realso.cat, so.all_variants)
         if not suggest:
             return
-        text = f"Mælt er með að sleppa '{so.tidy_text} að' og beygja frekar sögnina '{realso.lemma}' svo hún verði '{suggest}'."
+        text = (
+            f"Mælt er með að sleppa '{so.tidy_text} að' og beygja frekar sögnina "
+            f"'{realso.lemma}' svo hún verði '{suggest}'."
+        )
         detail = (
             f"Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
             "svokallað dvalarhorf ('Ég er ekki að skilja þetta')."
@@ -1191,44 +1188,10 @@ class PatternMatcher:
             )
         )
 
-    def mood_sub_temp(self, match: SimpleTree) -> None:
-        """ Subjunctive mood is used instead of indicative 
-            in temporal subclauses """
-        vp = match.first_match("VP > so_vh")
-        if vp is None:
-            return
-        so = vp.first_match("so")
-        if so is None:
-            return
-        start, end = so.span
-        # Check if so is in a different subclause
-        if "þt" in so.all_variants:
-            return
-        variants = set(so.all_variants) - {"vh"}
-        variants.add("fh")
-        suggest = self.get_wordform(so.lemma, so.cat, variants)
-        if suggest == so.tidy_text:
-            return
-        if not suggest:
-            return
-        text = f"Hér á mögulega að nota framsöguhátt sagnarinnar '{so.lemma}'"
-        detail = f"Í tíðarsetningum er framsöguháttur yfirleitt notaður, svo sögnina '{so.tidy_text}' gæti átt að skrifa '{suggest}'"
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_MOOD_TEMP/w",
-                text=text,
-                detail=detail,
-                original=so.tidy_text,
-                suggest=suggest,
-            )
-        )
-
     def mood_sub(self, kind: str, match: SimpleTree) -> None:
-        """ Subjunctive mood is used instead of indicative 
-            in conditional ("COND"), purpose ("PURP") or relative ("REL")
-            subclauses """
+        """ Subjunctive mood, present tense, is used instead of indicative 
+            in conditional ("COND"), purpose ("PURP"), relative ("REL")
+            or temporal ("TEMP/w") subclauses """
         vp = match.first_match("VP > so_vh")
         if vp is None:
             return
@@ -1253,9 +1216,11 @@ class PatternMatcher:
         detail = ""
         sent_kind = ""
         if kind == "COND":
-            sent_kind = "skilyrðissetningum"
+            sent_kind = "skilyrðissetningum á borð við 'Z' í 'X gerir Y ef Z'"
         elif kind == "PURP":
-            sent_kind = "tilgangssetningum"
+            sent_kind = "tilgangssetningum á borð við 'Z' í 'X gerir Y til þess að Z'"
+        elif kind == "TEMP/w":
+            sent_kind = "tíðarsetningum á borð við 'Z' í 'X gerði Y áður en Z'"
         elif kind == "REL":
             detail = f"Í tilvísunarsetningum er aðeins framsöguháttur sagna tækur."
         else:
@@ -1277,9 +1242,9 @@ class PatternMatcher:
             )
         )
 
-    def mood_ind_ack(self, match: SimpleTree) -> None:
+    def mood_ind(self, kind: str, match: SimpleTree) -> None:
         """ Indicative mood is used instead of subjunctive 
-            in concessive subclauses """
+            in concessive or purpose subclauses """
         vp = match.first_match("VP > so_fh")
         if vp is None:
             return
@@ -1295,13 +1260,29 @@ class PatternMatcher:
             return
         if not suggest:
             return
-        text = f"Hér skal notaður viðtengingarháttur sagnarinnar '{so.lemma}'"
-        detail = f"Í viðurkenningarsetningum er aðeins viðtengingarháttur tækur, svo sögnina '{so.tidy_text}' skal skrifa '{suggest}'"
+        text = (
+            f"Hér er réttara að nota viðtengingarhátt "
+            f"sagnarinnar '{so.lemma}', þ.e. '{suggest}'."
+        )
+        if kind == "ACK":
+            detail = (
+                "Í viðurkenningarsetningum á borð við 'Z' í dæminu "
+                "'X gerði Y þrátt fyrir að Z' á sögnin að vera í "
+                "viðtengingarhætti fremur en framsöguhætti."
+            )
+        elif kind == "PURP":
+            detail = (
+                "Í tilgangssetningum á borð við 'Z' í dæminu "
+                "'X gerði Y til þess að Z' á sögnin að vera í "
+                "viðtengingarhætti fremur en framsöguhætti."
+            )
+        else:
+            assert False
         self._ann.append(
             Annotation(
                 start=start,
                 end=end,
-                code="P_MOOD_ACK",
+                code="P_MOOD_" + kind,
                 text=text,
                 detail=detail,
                 original=so.tidy_text,
@@ -1310,27 +1291,32 @@ class PatternMatcher:
         )
 
     def doubledefinite(self, match: SimpleTree) -> None:
-        """ A definite noun appears with a definite pronoun """
+        """ A definite noun appears with a definite pronoun,
+            e.g. 'þessi maðurinn' """
         no = match.first_match("no")
         if no is None:
             return
         fn = match.first_match("fn")
         if fn is None:
             return
-        fnlemma = fn.lemma
-        # if fnlemma not in ["sá", "þessi"]:
-        #    return
         start, end = match.span
         suggest = no.lemma
         variants = set(no.all_variants)
         variants.discard("gr")
+        variants.discard(no.cat)  # all_variants for no_ terminals includes the gender
         variants.add("nogr")
         v = BIN.lookup_variants(no.lemma, no.cat, tuple(variants))
         if not v:
             return
         suggest = v[0].bmynd
-        text = f"Hér ætti annaðhvort að sleppa '{fnlemma}' eða breyta '{no.tidy_text}' í '{suggest}'"
-        detail = f"Hér er tiltekin tvöföld ákveðni, sem er ekki leyfilegt."
+        text = (
+            f"Hér ætti annaðhvort að sleppa '{fn.tidy_text}' eða "
+            f"breyta '{no.tidy_text}' í '{suggest}'."
+        )
+        detail = (
+            "Hér er notuð tvöföld ákveðni, þ.e. ábendingarfornafn á undan "
+            "nafnorði með greini. Það er ekki í samræmi við viðtekinn málstaðal."
+        )
         self._ann.append(
             Annotation(
                 start=start,
@@ -1885,14 +1871,14 @@ class PatternMatcher:
 
         # Check mood in subclauses
 
-        # concessive clause - viðurkenningarsetning
+        # Concessive clause - viðurkenningarsetning
         cls.add_pattern(
             (
                 frozenset(
                     ("þrátt fyrir", "þrátt", "þó", "þótt")
                 ),  # Trigger lemmas for this pattern
-                "CP-ADV-ACK >> {VP > so_fh}",
-                lambda self, match: self.mood_ind_ack(match),
+                "CP-ADV-ACK > { IP >> {VP > so_fh} }",
+                lambda self, match: self.mood_ind("ACK", match),
                 None,
             )
         )
@@ -1900,7 +1886,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 frozenset(("sem", "er")),  # Trigger lemmas for this pattern
-                "CP-REL >> {VP > so_vh}",
+                "CP-REL > { IP >> {VP > so_vh} }",
                 lambda self, match: self.mood_sub("REL", match),
                 None,
             )
@@ -1909,10 +1895,10 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 frozenset(
-                    ("áður en", "eftir að", "þangað til", "þegar")
+                    ("áður", "eftir", "þangað", "þegar")
                 ),  # Trigger lemmas for this pattern
-                "CP-ADV-TMP >> {VP > so_fh}",
-                lambda self, match: self.mood_sub_temp(match),
+                "CP-ADV-TEMP > { IP >> {VP > so_vh} }",
+                lambda self, match: self.mood_sub("TEMP/w", match),
                 None,
             )
         )
@@ -1920,17 +1906,17 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 frozenset(("ef", "svo")),  # Trigger lemmas for this pattern
-                "CP-ADV-COND >> {VP > so_vh}",
+                "CP-ADV-COND > { IP >> {VP > so_vh} }",
                 lambda self, match: self.mood_sub("COND", match),
                 None,
             )
         )
-        # Conditional clause - skilyrðissetning
+        # Purpose clause - tilgangssetning
         cls.add_pattern(
             (
                 frozenset(("til", "svo")),  # Trigger lemmas for this pattern
-                "CP-ADV-PURP >> {VP > so_vh}",
-                lambda self, match: self.mood_sub("PURP", match),
+                "CP-ADV-PURP > { IP >> {VP > so_fh} }",
+                lambda self, match: self.mood_ind("PURP", match),
                 None,
             )
         )
