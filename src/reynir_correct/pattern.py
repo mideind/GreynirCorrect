@@ -72,7 +72,7 @@ from .annotation import Annotation
 # The types involved in pattern processing
 AnnotationFunction = Callable[["PatternMatcher", SimpleTree], None]
 PatternTuple = Tuple[
-    Union[str, FrozenSet[str]], str, AnnotationFunction, Optional[ContextDict]
+    Union[str, Set[str], FrozenSet[str]], str, AnnotationFunction, Optional[ContextDict]
 ]
 
 BIN = Bin()
@@ -327,11 +327,13 @@ class PatternMatcher:
         if vp is None:
             start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         else:
-            start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
+            start, end = (
+                min(vp.span[0], np.span[0], pp.span[0]),
+                max(vp.span[1], np.span[1], pp.span[1]),
+            )
         text = "'gera grín af' á sennilega að vera 'gera grín að'"
         detail = (
-            "Í samhenginu 'gera grín að e-u' er notuð "
-            "forsetningin 'að', ekki 'af'."
+            "Í samhenginu 'gera grín að e-u' er notuð " "forsetningin 'að', ekki 'af'."
         )
         if match.tidy_text.count(" af ") == 1:
             # Only one way to substitute af -> að: do it
@@ -364,7 +366,10 @@ class PatternMatcher:
         assert np is not None
         assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
-        start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
+        start, end = (
+            min(vp.span[0], np.span[0], pp.span[0]),
+            max(vp.span[1], np.span[1], pp.span[1]),
+        )
         text = "'leiða {0} af' á sennilega að vera 'leiða {0} að'".format(np.tidy_text)
         detail = (
             "Í samhenginu 'leiða {0} af e-u' er notuð "
@@ -405,7 +410,10 @@ class PatternMatcher:
         assert np is not None
         assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
-        start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
+        start, end = (
+            min(vp.span[0], np.span[0], pp.span[0]),
+            max(vp.span[1], np.span[1], pp.span[1]),
+        )
         text = "'marka upphaf af' á sennilega að vera 'marka upphaf að'"
         detail = (
             "Í samhenginu 'marka upphaf að e-u' er notuð "
@@ -445,7 +453,10 @@ class PatternMatcher:
         assert pp is not None
         assert np is not None
         # Calculate the start and end token indices, spanning both phrases
-        start, end = min(vp.span[0], pp.span[0], np.span[0]), max(vp.span[1], pp.span[1], np.span[1])
+        start, end = (
+            min(vp.span[0], pp.span[0], np.span[0]),
+            max(vp.span[1], pp.span[1], np.span[1]),
+        )
         text = "'leggja af velli' á sennilega að vera 'leggja að velli'"
         detail = (
             "Í samhenginu 'leggja einhvern að velli' er notuð "
@@ -522,7 +533,10 @@ class PatternMatcher:
         assert np is not None
         assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
-        start, end = min(vp.span[0], np.span[0], pp.span[0]), max(vp.span[1], np.span[1], pp.span[1])
+        start, end = (
+            min(vp.span[0], np.span[0], pp.span[0]),
+            max(vp.span[1], np.span[1], pp.span[1]),
+        )
         text = "'uppvís af' á sennilega að vera 'uppvís að'"
         detail = (
             "Í samhenginu 'verða uppvís að einhverju' er notuð "
@@ -536,7 +550,7 @@ class PatternMatcher:
             suggest = ""
         self._ann.append(
             Annotation(
-                start=start,     
+                start=start,
                 end=end,
                 code="P_WRONG_PREP_AF",
                 text=text,
@@ -564,7 +578,10 @@ class PatternMatcher:
         assert pp is not None
         assert np is not None
         # Calculate the start and end token indices, spanning both phrases
-        start, end = min(vp.span[0], pp.span[0], np.span[0]), max(pp.span[1], pp.span[1], np.span[1])
+        start, end = (
+            min(vp.span[0], pp.span[0], np.span[0]),
+            max(pp.span[1], pp.span[1], np.span[1]),
+        )
         text = "'af ósk' á sennilega að vera 'að ósk'"
         detail = (
             "Í samhenginu 'að verða að ósk' er notuð " "forsetningin 'að', ekki 'af'."
@@ -613,7 +630,7 @@ class PatternMatcher:
                 suggest=suggest,
             )
         )
-    
+
     def wrong_preposition_hluti_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Calculate the start and end token indices, spanning both phrases
@@ -1015,6 +1032,7 @@ class PatternMatcher:
                 suggest=suggest,
             )
         )
+
     def wrong_preposition_valinn_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending nominal phrase
@@ -1188,7 +1206,7 @@ class PatternMatcher:
             suggest = ""
         self._ann.append(
             Annotation(
-                start=start,     
+                start=start,
                 end=end,
                 code="P_WRONG_PREP_AF",
                 text=text,
@@ -1507,9 +1525,7 @@ class PatternMatcher:
         else:
             assert False
         if not detail:
-            detail = (
-                f"Í {sent_kind} er yfirleitt notaður framsöguháttur sagna."
-            )
+            detail = f"Í {sent_kind} er yfirleitt notaður framsöguháttur sagna."
 
         self._ann.append(
             Annotation(
@@ -1683,18 +1699,17 @@ class PatternMatcher:
             # Catch sentences such as 'Jón leitaði af kettinum'
             cls.add_pattern(
                 (
-                    "af",  # Trigger lemma for this pattern
+                    verbs_af,  # Trigger lemma for this pattern
                     'VP > { VP >> { %verb } PP >> { P > { "af" } } }',
                     cls.wrong_preposition_af,
                     cls.ctx_af,
                 )
             )
-
             # Catch sentences such as 'Vissulega er hægt að brosa af þessu',
             # 'Friðgeir var leitandi af kettinum í allan dag'
             cls.add_pattern(
                 (
-                    "af",  # Trigger lemma for this pattern
+                    verbs_af,  # Trigger lemma for this pattern
                     '. > { (NP-PRD | IP-INF) > { VP > { %verb } } PP >> { P > { "af" } } }',
                     cls.wrong_preposition_af,
                     cls.ctx_af,
@@ -1722,6 +1737,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "leita",  # Trigger lemma for this pattern
+                    # TODO: Why use %verb when 'leita' is the only trigger lemma?
                     "VP > { PP >> { %verb } PP > 'af' }",
                     cls.wrong_preposition_af,
                     cls.ctx_af,
@@ -1785,7 +1801,7 @@ class PatternMatcher:
                     None,
                 )
             )
-
+            # TODO: Missing comment
             cls.add_pattern(
                 (
                     "grín",  # Trigger lemma for this pattern
@@ -1794,7 +1810,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Hann leiðir ekki líkur af því."
             cls.add_pattern(
                 (
@@ -1825,7 +1840,9 @@ class PatternMatcher:
             # Catch "Það markar ekki upphaf af því."
             cls.add_pattern(
                 (
-                    frozenset(("upphafinn", "upphaf")),  # Trigger lemma for this pattern
+                    frozenset(
+                        ("upphafinn", "upphaf")
+                    ),  # Trigger lemma for this pattern
                     "VP > { VP > { 'marka' } NP > { 'upphafinn' } PP > { 'af' } }",
                     cls.wrong_preposition_marka_af,
                     None,
@@ -1843,17 +1860,18 @@ class PatternMatcher:
             # Catch "Það hefur ekki markað upphafið af því."
             cls.add_pattern(
                 (
-                    frozenset(("upphefja", "upphaf")),  # Trigger lemma for this pattern
+                    "upphefja",  # Trigger lemma for this pattern
                     "VP > { VP > { NP > { 'markaður' } VP > { 'upphefja' } } PP > { 'af' } }",
                     cls.wrong_preposition_marka_af,
                     None,
                 )
             )
-
             # Catch "Jón leggur hann (ekki) af velli."
             cls.add_pattern(
                 (
-                    frozenset(("völlur", "vell", "velli")),  # Trigger lemma for this pattern
+                    frozenset(
+                        ("völlur", "vell", "velli")
+                    ),  # Trigger lemmas for this pattern
                     "VP > { VP > { VP > { 'leggja' } } PP > { P > { 'af' } NP > { ('völlur'|'vell'|'velli') } } }",
                     cls.wrong_preposition_leggja_af,
                     None,
@@ -1862,13 +1880,14 @@ class PatternMatcher:
             # Catch "Jón hefur lagt hann af velli."
             cls.add_pattern(
                 (
-                    "leggja",  # Trigger lemma for this pattern
+                    frozenset(
+                        ("völlur", "vell", "velli")
+                    ),  # Trigger lemmas for this pattern
                     "VP > { VP > { VP > { VP > { 'leggja' } } } PP > { P > 'af' NP > ( 'völlur'|'vell'|'velli' ) } }",
                     cls.wrong_preposition_leggja_af,
                     None,
                 )
             )
-
             # Catch "Jón kann það (ekki) utan af."
             cls.add_pattern(
                 (
@@ -1896,7 +1915,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Ég varð (ekki) uppvís af athæfinu."
             cls.add_pattern(
                 (
@@ -1916,7 +1934,6 @@ class PatternMatcher:
                 )
             )
 
-
         if verbs_að:
             # Create matching patterns with a context that catches the að/af verbs.
             cls.ctx_að = {
@@ -1928,7 +1945,7 @@ class PatternMatcher:
             # Catch sentences such as 'Jón heillaðist að kettinum'
             cls.add_pattern(
                 (
-                    "að",  # Trigger lemma for this pattern
+                    verbs_að,  # Trigger lemmas for this pattern
                     'VP > { VP >> { %verb } PP >> { P > { "að" } } }',
                     cls.wrong_preposition_að,
                     cls.ctx_að,
@@ -1937,13 +1954,12 @@ class PatternMatcher:
             # Catch sentences such as 'Vissulega er hægt að heillast að þessu'
             cls.add_pattern(
                 (
-                    "að",  # Trigger lemma for this pattern
+                    verbs_að,  # Trigger lemma for this pattern
                     '(NP-PRD | IP-INF) > { VP > { %verb } } PP >> { P > { "að" } }',
                     cls.wrong_preposition_að,
                     cls.ctx_að,
                 )
             )
-
             # Catch "Þetta er fallegasta kona sem ég hef orðið heillaður að"
             cls.add_pattern(
                 (
@@ -1962,7 +1978,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Ég er ekki hluti að heildinni."
             cls.add_pattern(
                 (
@@ -1990,7 +2005,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Ég hef (ekki) ekki áhyggjur að honum.", "Ég hef áhyggjur að því að honum líði illa."
             cls.add_pattern(
                 (
@@ -2000,25 +2014,24 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Ég hafði ekki lagt mikið að mörkum."
             cls.add_pattern(
                 (
-                    frozenset(("mörk", "mark")),  # Trigger lemma for this pattern
+                    frozenset(("mörk", "mark")),  # Trigger lemmas for this pattern
                     "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { ('mörk'|'mark') } } }",
                     cls.wrong_preposition_að_mörkum,
                     None,
                 )
             )
+            # TODO: Missing comment
             cls.add_pattern(
                 (
-                    "mörk",  # Trigger lemma for this pattern
-                    "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { 'mörk' } } }",
+                    frozenset(("mörk", "mark")),  # Trigger lemmas for this pattern
+                    "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { \"mörkum\" } } }",
                     cls.wrong_preposition_að_mörkum,
                     None,
                 )
             )
-
             # Catch "Ég lét (ekki) gott að mér leiða."
             cls.add_pattern(
                 (
@@ -2028,7 +2041,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Hún á (ekki) heiðurinn að þessu.", "Hún hafði (ekki) átt heiðurinn að þessu."
             # cls.add_pattern(
             #    (
@@ -2038,7 +2050,6 @@ class PatternMatcher:
             #        None,
             #    )
             # )
-
             # Catch "Hún fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu."
             cls.add_pattern(
                 (
@@ -2056,7 +2067,6 @@ class PatternMatcher:
             #        None,
             #    )
             # )
-
             # Catch "Hún á (ekki) mikið/fullt/helling/gommu... að börnum."
             cls.add_pattern(
                 (
@@ -2066,7 +2076,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Hún á (ekki) lítið að börnum."
             cls.add_pattern(
                 (
@@ -2076,7 +2085,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Það er (ekki) til mikið að þessu."
             cls.add_pattern(
                 (
@@ -2104,7 +2112,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Hún hefur (ekki) gagn að þessu.", "Hún hefur (ekki) haft gagn að þessu."
             cls.add_pattern(
                 (
@@ -2123,7 +2130,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Fréttir bárust (ekki) að slysinu."
             cls.add_pattern(
                 (
@@ -2142,7 +2148,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Þetta ræðst (ekki) að eftirspurn.", "Þetta hefur (ekki) ráðist að eftirspurn."
             # Too open, also catches "Hann réðst að konunni."
             #  cls.add_pattern(
@@ -2153,7 +2158,6 @@ class PatternMatcher:
             #          None,
             #      )
             #  )
-
             # Catch "Hætta stafar (ekki) að þessu.", "Hætta hefur (ekki) stafað að þessu."
             cls.add_pattern(
                 (
@@ -2163,7 +2167,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Hún er (ekki) ólétt að sínu þriðja barni.", "Hún hefur (ekki) verið ólétt að sínu þriðja barni."
             cls.add_pattern(
                 (
@@ -2173,7 +2176,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Hún heyrði að lausa starfinu.", "Hún hefur (ekki) heyrt að lausa starfinu."
             cls.add_pattern(
                 (
@@ -2183,6 +2185,7 @@ class PatternMatcher:
                     None,
                 )
             )
+            # TODO: Missing comment
             cls.add_pattern(
                 (
                     "heyra",  # Trigger lemma for this pattern
@@ -2191,7 +2194,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Ég hef (ekki) gaman að henni.", "Ég hef aldrei haft gaman að henni."
             cls.add_pattern(
                 (
@@ -2201,7 +2203,6 @@ class PatternMatcher:
                     None,
                 )
             )
-
             # Catch "Ég var valinn að henni.", "Ég hafði (ekki) verið valinn að henni."
             cls.add_pattern(
                 (
@@ -2220,6 +2221,7 @@ class PatternMatcher:
                     None,
                 )
             )
+            # TODO: Missing comment
             cls.add_pattern(
                 (
                     "valinn",  # Trigger lemma for this pattern
@@ -2296,22 +2298,18 @@ class PatternMatcher:
                 return False
             return (lemma + "_" + case) in nouns
 
-        NOUNS_AF: FrozenSet[str] = frozenset((
-            "beiðni_þgf",
-            "siður_þgf",
-            "tilefni_þgf",
-            "fyrirmynd_þgf"
-        ))
+        NOUNS_AF: FrozenSet[str] = frozenset(
+            ("beiðni_þgf", "siður_þgf", "tilefni_þgf", "fyrirmynd_þgf")
+        )
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
         cls.ctx_noun_af = {"noun": partial(wrong_noun_af, NOUNS_AF)}
+        af_lemmas = set(n.split("_")[0] for n in NOUNS_AF)
         cls.add_pattern(
             (
-                "af",  # Trigger lemma for this pattern
+                af_lemmas,  # Trigger lemmas for this pattern
                 "PP > { P > { 'af' } NP > { %noun } }",
-                lambda self, match: self.wrong_af_use(
-                    match, cls.ctx_noun_af
-                ),
+                lambda self, match: self.wrong_af_use(match, cls.ctx_noun_af),
                 cls.ctx_noun_af,
             )
         )
@@ -2333,42 +2331,36 @@ class PatternMatcher:
             "lykill_þf",
             "uppskrift_nf",
             "uppskrift_þf",
-           # "grín_þf"
+            # "grín_þf"
         }
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
         cls.ctx_noun_af_obj = {"noun": partial(wrong_noun_af, NOUNS_AF_OBJ)}
+        af_lemmas = set(n.split("_")[0] for n in NOUNS_AF_OBJ)
         cls.add_pattern(
             (
-                "af",  # Trigger lemma for this pattern
+                af_lemmas,  # Trigger lemmas for this pattern
                 "NP > { %noun PP > { P > { 'af' } } }",
-                lambda self, match: self.wrong_af_use(
-                    match, cls.ctx_noun_af_obj
-                ),
+                lambda self, match: self.wrong_af_use(match, cls.ctx_noun_af_obj),
                 cls.ctx_noun_af_obj,
             )
         )
         cls.add_pattern(
             (
-                "af",  # Trigger lemma for this pattern
+                af_lemmas,  # Trigger lemmas for this pattern
                 "VP > { VP >> { %noun } PP > { P > { 'af' } } }",
-                lambda self, match: self.wrong_af_use(
-                    match, cls.ctx_noun_af_obj
-                ),
+                lambda self, match: self.wrong_af_use(match, cls.ctx_noun_af_obj),
                 cls.ctx_noun_af_obj,
             )
         )
         cls.add_pattern(
             (
-                "af",  # Trigger lemma for this pattern
+                af_lemmas,  # Trigger lemmas for this pattern
                 "VP > { PP > { NP > %noun } PP > { 'af' } }",
-                lambda self, match: self.wrong_af_use(
-                    match, cls.ctx_noun_af_obj
-                ),
+                lambda self, match: self.wrong_af_use(match, cls.ctx_noun_af_obj),
                 cls.ctx_noun_af_obj,
             )
         )
-
 
         def wrong_noun_að(nouns: Set[str], tree: SimpleTree) -> bool:
             """ Context matching function for the %noun macro in combination
@@ -2393,9 +2385,10 @@ class PatternMatcher:
         # The macro %noun is resolved by calling the function wrong_noun_að()
         # with the potentially matching tree node as an argument.
         cls.ctx_noun_að = {"noun": partial(wrong_noun_að, NOUNS_AÐ)}
+        að_lemmas = set(n.split("_")[0] for n in NOUNS_AÐ)
         cls.add_pattern(
             (
-                "að",  # Trigger lemma for this pattern
+                að_lemmas,  # Trigger lemma for this pattern
                 "PP > { P > { 'að' } NP > { %noun } }",
                 lambda self, match: self.wrong_að_use(match, cls.ctx_noun_að),
                 cls.ctx_noun_að,
@@ -2419,7 +2412,6 @@ class PatternMatcher:
                 cls.ctx_place_names,
             )
         )
-
         # Check use of 'bjóða e-m birginn' instead of 'bjóða e-m byrginn'
         # !!! TODO: This is a provisional placeholder for similar cases
         cls.add_pattern(
@@ -2430,7 +2422,6 @@ class PatternMatcher:
                 None,
             )
         )
-
         # Check use of "vera að" instead of a simple verb
         cls.add_pattern(
             (
@@ -2881,14 +2872,15 @@ class PatternMatcher:
         if tree is None:
             # No tree: nothing to do
             return
-        # Make a set of the lemmas in the sentence
-        # (Note: these are ordinary lemmas, not middle voice lemmas, so be careful
-        # not to use middle voice lemmas as trigger words)
-        if not self._sent.lemmas:
+        # Make a set of the lemmas in the sentence.
+        # Note that we collect the middle voice lemmas, such as 'dást' for the
+        # verb 'dá'. This means that trigger lemmas should also be middle voice lemmas.
+        lemmas_mm = self._sent.lemmas_mm
+        if not lemmas_mm:
             return
-        lemmas = set(lemma.replace("-", "") for lemma in self._sent.lemmas)
+        lemmas = set(lemma.replace("-", "") for lemma in lemmas_mm)
 
-        def lemma_match(trigger: Union[str, FrozenSet[str]]) -> bool:
+        def lemma_match(trigger: Union[str, FrozenSet[str], Set[str]]) -> bool:
             """ Returns True if any of the given trigger lemmas
                 occur in the sentence """
             if not trigger:
