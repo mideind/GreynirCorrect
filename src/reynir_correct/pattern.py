@@ -209,6 +209,7 @@ class PatternMatcher:
 
     def wrong_preposition_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
+        print(match)
         # Find the offending verb phrase
         vp = match.first_match("VP > { %verb }", self.ctx_af)
         if vp is None:
@@ -273,6 +274,41 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original="að",
+                suggest=suggest,
+            )
+        )
+
+    def wrong_preposition_spyrja_af(self, match: SimpleTree) -> None:
+        """ Handle a match of a suspect preposition pattern """
+        # Find the offending verbal phrase
+        vp = match.first_match("VP > { 'spyrja' }")
+        # Find the attached prepositional/adverbial phrase
+        pp = match.first_match('P > { "af" }')
+        if pp is None:
+            pp = match.first_match('ADVP > { "af" }')
+        assert vp is not None
+        assert pp is not None
+        # Calculate the start and end token indices, spanning both phrases
+        start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
+        text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
+        detail = (
+            "Í samhenginu 'að spyrja að e-u' er notuð "
+            "forsetningin 'að', ekki 'af'."
+        )
+        if match.tidy_text.count(" af ") == 1:
+            # Only one way to substitute af -> að: do it
+            suggest = match.tidy_text.replace(" af ", " að ")
+        else:
+            # !!! TODO: More intelligent substitution to create a suggestion
+            suggest = ""
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_WRONG_PREP_AF",
+                text=text,
+                detail=detail,
+                original="af",
                 suggest=suggest,
             )
         )
@@ -448,14 +484,14 @@ class PatternMatcher:
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
         # Find the offending nominal phrase
-        np = match.first_match("NP >> { ( 'völlur'|'vell'|'velli' ) }")
+        np = match.first_match("NP >> { \"velli\" }")
         assert vp is not None
         assert pp is not None
         assert np is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], pp.span[0], np.span[0]),
-            max(vp.span[1], pp.span[1], np.span[1]),
+            max(vp.span[-1], pp.span[-1], np.span[-1]),
         )
         text = "'leggja af velli' á sennilega að vera 'leggja að velli'"
         detail = (
@@ -607,8 +643,12 @@ class PatternMatcher:
     def wrong_preposition_ahyggja_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Calculate the start and end token indices, spanning both phrases
-        start, end = match.span
-        text = "'hafa áhyggjur að' á sennilega að vera 'hafa áhyggjur af'"
+        np = match.first_match("NP > { 'áhyggja' }")
+        pp = match.first_match("PP > { \"að\" }")
+        assert np is not None
+        assert pp is not None
+        start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
+        text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
         detail = (
             "Í samhenginu 'hafa áhyggjur af e-u' er notuð "
             "forsetningin 'af', ekki 'að'."
@@ -721,7 +761,7 @@ class PatternMatcher:
         assert np is not None
         assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
-        start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
+        start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
         text = "'heiðurinn að' á sennilega að vera 'heiðurinn af'"
         detail = (
             "Í samhenginu 'eiga heiðurinn af' er notuð " "forsetningin 'af', ekki 'að'."
@@ -1036,15 +1076,15 @@ class PatternMatcher:
     def wrong_preposition_valinn_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending nominal phrase
-        np = match.first_match("NP > { 'velja' }")
-        if np is None:
-            np = match.first_match("NP > { 'valinn' }")
-        assert np is not None
+        vp = match.first_match("VP > { 'velja' }")
+        if vp is None:
+            vp = match.first_match("NP > { 'valinn' }")
+        assert vp is not None
         start, end = match.span
-        if " að " in np.tidy_text:
-            text = "'{0}' á sennilega að vera '{0}'".format(np.tidy_text)
+        if " að " in vp.tidy_text:
+            text = "'{0}' á sennilega að vera '{1}'".format(vp.tidy_text, vp.tidy_text.replace(" að ", " af "))
         else:
-            text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
+            text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
         detail = (
             "Orðasambandið 'að vera valin/n af e-m' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
@@ -1716,114 +1756,65 @@ class PatternMatcher:
                 )
             )
             # Catch "Það sem Jón spurði ekki af...", "Jón spyr (ekki) af því."
+        #    cls.add_pattern(
+        #        (
+        #            "spyrja",  # Trigger lemma for this pattern
+        #            "IP > { VP >> { 'spyrja' } ADVP > { 'af' } }",
+        #            cls.wrong_preposition_af,
+        #            cls.ctx_af,
+        #        )
+        #    )
             cls.add_pattern(
                 (
                     "spyrja",  # Trigger lemma for this pattern
-                    "IP > { VP >> { 'spyrja' } ADVP > { 'af' } }",
-                    cls.wrong_preposition_af,
+                    "VP > { VP > { 'spyrja' } ADVP > { \"af\" } }",
+                    cls.wrong_preposition_spyrja_af,
                     None,
                 )
             )
             # Catch "Jón spyr af því."
-            cls.add_pattern(
-                (
-                    "spyrja",  # Trigger lemma for this pattern
-                    "IP > { VP >> { 'spyrja' } PP > { 'af' } }",
-                    cls.wrong_preposition_af,
-                    None,
-                )
-            )
+        #    cls.add_pattern(
+        #        (
+        #            "spyrja",  # Trigger lemma for this pattern
+        #            "IP > { VP >> { 'spyrja' } PP > { 'af' } }",
+        #            cls.wrong_preposition_af,
+        #            None,
+        #        )
+        #    )
             # Catch "...vegna þess að dýr leita af öðrum smærri dýrum."
             cls.add_pattern(
                 (
                     "leita",  # Trigger lemma for this pattern
-                    # TODO: Why use %verb when 'leita' is the only trigger lemma?
-                    "VP > { PP >> { %verb } PP > 'af' }",
+                    "VP > { PP >> { 'leita' } PP > 'af' }",
                     cls.wrong_preposition_af,
-                    cls.ctx_af,
+                    None,
                 )
             )
 
-            # Catch "Þetta er mesta vitleysa sem ég hef orðið vitni af"
+            # Catch "Þetta er mesta vitleysa sem ég hef orðið vitni af", "Hún varð vitni af því þegar kúturinn sprakk"
             cls.add_pattern(
                 (
                     "vitni",  # Trigger lemma for this pattern
-                    "VP > { VP >> [ .* ('verða' | 'vera') .* \"vitni\" ] "
-                    'ADVP > "af" }',
+                    "VP > { VP > { ('verða'|'vera') } NP > { \"vitni\" } ADVP > \"af\" }",
                     cls.wrong_preposition_vitni_af,
                     None,
                 )
             )
-            # Catch "Hún varð vitni af því þegar kúturinn sprakk"
-            cls.add_pattern(
-                (
-                    "vitni",  # Trigger lemma for this pattern
-                    "VP > { VP > [ .* ('verða' | 'vera') .* "
-                    'NP-PRD > { "vitni" PP > { P > { "af" } } } ] } ',
-                    cls.wrong_preposition_vitni_af,
-                    None,
-                )
-            )
-            # Catch ""
-            cls.add_pattern(
-                (
-                    "vitni",  # Trigger lemma for this pattern
-                    "VP > { VP > 'verða' NP-PRD > { 'vitni' PP > { P > { 'af' } } } }",
-                    cls.wrong_preposition_vitni_af,
-                    None,
-                )
-            )
-            # Catch "Hún gerði grín af því."
+            # Catch "Hún gerði grín af því.", "Þetta er mesta vitleysa sem ég hef gert grín af.", "...og gerir grín af sjálfum sér."
             cls.add_pattern(
                 (
                     "grín",  # Trigger lemma for this pattern
-                    "VP > { VP > [ .* 'gera' .* "
-                    'NP-OBJ > "grín" ] ( PP | ADVP ) > ( { P > { "af" } } | { "af" } ) } ',
+                    #"IP",
+                    "VP > { NP > { 'grín' } ( PP|ADVP ) > { \"af\" } }",
                     cls.wrong_preposition_grin_af,
                     None,
                 )
             )
-            # Catch "Þetta er mesta vitleysa sem ég hef gert grín af."
-            cls.add_pattern(
-                (
-                    "grín",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { VP > { 'gera' } NP-OBJ > { 'grín' } } } ADVP > { 'af' } }",
-                    cls.wrong_preposition_grin_af,
-                    None,
-                )
-            )
-            # Catch "...og gerir grín af sjálfum sér."
-            cls.add_pattern(
-                (
-                    "grín",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > 'gera' NP-OBJ } PP > { 'af' } }",
-                    cls.wrong_preposition_grin_af,
-                    None,
-                )
-            )
-            # TODO: Missing comment
-            cls.add_pattern(
-                (
-                    "grín",  # Trigger lemma for this pattern
-                    "VP > { PP > { NP > { 'grín' } } PP > { 'af' } }",
-                    cls.wrong_preposition_grin_af,
-                    None,
-                )
-            )
-            # Catch "Hann leiðir ekki líkur af því."
+            # Catch "Hann leiðir (ekki) líkur af því.", "Hann hefur aldrei leitt líkur af því."
             cls.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'leiða' } NP-PRD > { ('líkur' | 'rök' | 'rak') } PP > { P > { 'af' } } } ",
-                    cls.wrong_preposition_leida_af,
-                    None,
-                )
-            )
-            # Catch "Hann leiðir líkur af því.", "Hann leiðir rök af því.", "Hann hefur aldrei leitt líkur af því."
-            cls.add_pattern(
-                (
-                    "leiða",  # Trigger lemma for this pattern
-                    "VP > { VP >> { VP > { 'leiða' } NP > { ('líkur' | 'rök' | 'rak') } } PP > { 'af' } } ",
+                    "VP > { VP > { 'leiða' } NP > { ('líkur' | 'rök' | 'rak') } PP > { \"af\" } }",
                     cls.wrong_preposition_leida_af,
                     None,
                 )
@@ -1843,7 +1834,7 @@ class PatternMatcher:
                     frozenset(
                         ("upphafinn", "upphaf")
                     ),  # Trigger lemma for this pattern
-                    "VP > { VP > { 'marka' } NP > { 'upphafinn' } PP > { 'af' } }",
+                    "VP > { VP > { 'marka' } NP > { ('upphafinn'|'upphaf') } PP > { 'af' } }",
                     cls.wrong_preposition_marka_af,
                     None,
                 )
@@ -1857,33 +1848,30 @@ class PatternMatcher:
                     None,
                 )
             )
+        #    cls.add_pattern(
+        #        (
+        #            "upphefja",  # Trigger lemma for this pattern
+        #            "IP",
+        #            cls.wrong_preposition_marka_af,
+        #            None,
+        #        )
+        #    )
             # Catch "Það hefur ekki markað upphafið af því."
             cls.add_pattern(
                 (
                     "upphefja",  # Trigger lemma for this pattern
-                    "VP > { VP > { NP > { 'markaður' } VP > { 'upphefja' } } PP > { 'af' } }",
+                    "VP > { NP > { 'markaður' } VP > { 'upphefja' } PP > { 'af' } }",
                     cls.wrong_preposition_marka_af,
                     None,
                 )
             )
-            # Catch "Jón leggur hann (ekki) af velli."
+            # Catch "Jón leggur hann (ekki) af velli.", "Jón hefur (ekki) lagt hann af velli."
             cls.add_pattern(
                 (
                     frozenset(
                         ("völlur", "vell", "velli")
                     ),  # Trigger lemmas for this pattern
-                    "VP > { VP > { VP > { 'leggja' } } PP > { P > { 'af' } NP > { ('völlur'|'vell'|'velli') } } }",
-                    cls.wrong_preposition_leggja_af,
-                    None,
-                )
-            )
-            # Catch "Jón hefur lagt hann af velli."
-            cls.add_pattern(
-                (
-                    frozenset(
-                        ("völlur", "vell", "velli")
-                    ),  # Trigger lemmas for this pattern
-                    "VP > { VP > { VP > { VP > { 'leggja' } } } PP > { P > 'af' NP > ( 'völlur'|'vell'|'velli' ) } }",
+                    "VP > { VP > { 'leggja' } PP > { P > { \"af\" } NP > { \"velli\" } } }",
                     cls.wrong_preposition_leggja_af,
                     None,
                 )
@@ -1978,20 +1966,12 @@ class PatternMatcher:
                     None,
                 )
             )
-            # Catch "Ég er ekki hluti að heildinni."
+            # Catch "Ég er (ekki) hluti að heildinni.", "Við höfum öll verið hluti að heildinni."
             cls.add_pattern(
                 (
                     "hluti",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'vera' NP-PRD > { 'hluti' } } PP > { 'að' } }",
-                    cls.wrong_preposition_hluti_að,
-                    None,
-                )
-            )
-            # Catch "Við höfum öll verið hluti að heildinni."
-            cls.add_pattern(
-                (
-                    "hluti",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { 'vera' 'hluti' } } PP > { 'að' } }",
+                    "VP > { NP > { 'hluti' } PP > { \"að\" } }",
+                    #"VP > { VP > { 'vera' NP-PRD > { 'hluti' } } PP > { 'að' } }",
                     cls.wrong_preposition_hluti_að,
                     None,
                 )
@@ -2000,16 +1980,26 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "hluti",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'vera' } NP > { 'hluti' PP > { 'að' } } }",
+                    "NP > { 'hluti' PP > { \"að\" } }",
                     cls.wrong_preposition_hluti_að,
                     None,
                 )
             )
-            # Catch "Ég hef (ekki) ekki áhyggjur að honum.", "Ég hef áhyggjur að því að honum líði illa."
+            # Catch "Þeir sögðu að ég hefði verið hluti að heildinni."  # Two patterns to catch the same sentence due to variable parsing
+            cls.add_pattern(
+                (
+                    "hluti",  # Trigger lemma for this pattern
+                    "VP > { CP >> { 'hluti' } PP > { \"að\" } }",
+                    cls.wrong_preposition_hluti_að,
+                    None,
+                )
+            )
+            # Catch "Ég hef (ekki) áhyggjur að honum.", "Ég hef áhyggjur að því að honum líði illa."
             cls.add_pattern(
                 (
                     "áhyggja",  # Trigger lemma for this pattern
-                    "VP > { VP >> { 'áhyggja' } PP > { 'að' } }",
+                    "VP > { NP > { 'áhyggja' } PP > { \"að\" } }",
+                    #"VP > { VP >> { 'áhyggja' } PP > { 'að' } }",
                     cls.wrong_preposition_ahyggja_að,
                     None,
                 )
@@ -2018,38 +2008,39 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     frozenset(("mörk", "mark")),  # Trigger lemmas for this pattern
-                    "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { ('mörk'|'mark') } } }",
-                    cls.wrong_preposition_að_mörkum,
-                    None,
-                )
-            )
-            # TODO: Missing comment
-            cls.add_pattern(
-                (
-                    frozenset(("mörk", "mark")),  # Trigger lemmas for this pattern
                     "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { \"mörkum\" } } }",
                     cls.wrong_preposition_að_mörkum,
                     None,
                 )
             )
-            # Catch "Ég lét (ekki) gott að mér leiða."
+            # Catch "Ég lét gott að mér leiða."
             cls.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'láta' } VP > { PP > { 'að' } VP > { 'leiða' } } }",
+                    "VP > { VP > { 'láta' } PP > { \"að\" } VP > { 'leiða' } }",
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
             )
-            # Catch "Hún á (ekki) heiðurinn að þessu.", "Hún hafði (ekki) átt heiðurinn að þessu."
-            # cls.add_pattern(
-            #    (
-            #        "heiður",  # Trigger lemma for this pattern
-            #        "VP >> { VP > { 'eiga' } NP > { 'heiður' } } PP > { 'að' }",
-            #        cls.wrong_preposition_heiður_að,
-            #        None,
-            #    )
-            # )
+            # Catch "Ég lét gott að mér leiða."   # Two patterns to catch the same sentence due to variable parsing
+            cls.add_pattern(
+                (
+                    "leiður",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'láta' } PP > { P > { \"að\" } 'leiður' } }",
+                    #"IP > { VP > { VP > 'láta' PP > { \"að\" } VP > 'leiða' } }",
+                    cls.wrong_preposition_að_leiða,
+                    None,
+                )
+            )
+            # Catch "Ég lét ekki gott að mér leiða."
+            cls.add_pattern(
+                (
+                    "leiða",  # Trigger lemma for this pattern
+                    "VP > { 'láta' PP > { \"að\" } VP > { 'leiða' } }",
+                    cls.wrong_preposition_að_leiða,
+                    None,
+                )
+            )
             # Catch "Hún fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu."
             cls.add_pattern(
                 (
@@ -2059,19 +2050,29 @@ class PatternMatcher:
                     None,
                 )
             )
-            # cls.add_pattern(
-            #    (
-            #        "heiður",  # Trigger lemma for this pattern
-            #        "VP > { VP >> { VP > { NP >> { 'eiga' } NP > { 'heiður' } } } PP > { 'að' } }",
-            #        cls.wrong_preposition_heiður_að,
-            #        None,
-            #    )
-            # )
+            # Catch "Hún fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu."  # Two patterns to catch the same sentence due to variable parsing
+            cls.add_pattern(
+                (
+                    "heiður",  # Trigger lemma for this pattern
+                    "VP > { VP > { ( 'fá'|'hljóta' ) } NP > { 'heiður' } PP > { 'að' } }",
+                    cls.wrong_preposition_heiður_að,
+                    None,
+                )
+            )
             # Catch "Hún á (ekki) mikið/fullt/helling/gommu... að börnum."
             cls.add_pattern(
                 (
                     "eiga",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'eiga' NP } PP > { 'að' } }",
+                    "VP > { VP > { 'eiga' NP } PP > { P > { 'að' } NP } }",
+                    cls.wrong_preposition_eiga_að,
+                    None,
+                )
+            )
+            # Catch "Hún á (ekki) heilan helling að börnum."
+            cls.add_pattern(
+                (
+                    "eiga",  # Trigger lemma for this pattern
+                    "VP > { VP > { 'eiga' } NP PP > { P > { 'að' } NP } }",
                     cls.wrong_preposition_eiga_að,
                     None,
                 )
@@ -2080,7 +2081,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "eiga",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'eiga' } ADVP > { 'lítið' } PP > { 'að' } }",
+                    "VP > { VP > { 'eiga' } ADVP > { 'lítið' } PP > { P > { 'að' } NP } }",
                     cls.wrong_preposition_eiga_að,
                     None,
                 )
@@ -2116,7 +2117,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "gagn",  # Trigger lemma for this pattern
-                    "VP > { VP >> { NP > { 'gagn' } } PP > { 'að' } }",
+                    "VP > { NP > { 'gagn' } PP > { \"að\" } }",
                     cls.wrong_preposition_gagn_að,
                     None,
                 )
@@ -2127,6 +2128,14 @@ class PatternMatcher:
                     "gagn",  # Trigger lemma for this pattern
                     "S > { NP > { 'gagn' } IP > { VP > { VP > { 'hafa' } PP > { 'að' } } } }",
                     cls.wrong_preposition_gagn_að,
+                    None,
+                )
+            )
+            cls.add_pattern(
+                (
+                    "frétt",  # Trigger lemma for this pattern
+                    "IP",
+                    cls.wrong_preposition_frettir_að,
                     None,
                 )
             )
@@ -2148,16 +2157,6 @@ class PatternMatcher:
                     None,
                 )
             )
-            # Catch "Þetta ræðst (ekki) að eftirspurn.", "Þetta hefur (ekki) ráðist að eftirspurn."
-            # Too open, also catches "Hann réðst að konunni."
-            #  cls.add_pattern(
-            #      (
-            #          "ráða",  # Trigger lemma for this pattern
-            #          "VP > { VP >> { 'ráða' } PP > { 'að' } }",
-            #          cls.wrong_preposition_raðast_að,
-            #          None,
-            #      )
-            #  )
             # Catch "Hætta stafar (ekki) að þessu.", "Hætta hefur (ekki) stafað að þessu."
             cls.add_pattern(
                 (
@@ -2171,7 +2170,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "óléttur",  # Trigger lemma for this pattern
-                    "VP > { VP > { NP > { 'óléttur' } } PP > { 'að' } }",
+                    "VP > { NP > { 'óléttur' } PP > { 'að' } }",
                     cls.wrong_preposition_ólétt_að,
                     None,
                 )
@@ -2185,20 +2184,11 @@ class PatternMatcher:
                     None,
                 )
             )
-            # TODO: Missing comment
-            cls.add_pattern(
-                (
-                    "heyra",  # Trigger lemma for this pattern
-                    "VP > { PP >> { 'heyra' } PP > { 'að' } }",
-                    cls.wrong_preposition_heyra_að,
-                    None,
-                )
-            )
             # Catch "Ég hef (ekki) gaman að henni.", "Ég hef aldrei haft gaman að henni."
             cls.add_pattern(
                 (
                     "gaman",  # Trigger lemma for this pattern
-                    "VP > { VP >> { VP > { 'hafa' } NP > { 'gaman' } } PP > { 'að' } }",
+                    "VP > { VP > { 'hafa' } NP > { 'gaman' } PP > { 'að' } }",
                     cls.wrong_preposition_hafa_gaman_að,
                     None,
                 )
@@ -2207,25 +2197,17 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "velja",  # Trigger lemma for this pattern
-                    "NP > { NP > { 'velja' } PP > { 'að' } }",
+                    "VP > { VP > { 'velja' } PP > { 'að' } }",
+                    #"NP-PRD > { NP-PRD > { 'velja' } PP > { 'að' } }",
                     cls.wrong_preposition_valinn_að,
                     None,
                 )
             )
-            # Catch "Ég var ekki valinn að henni."
+            # Catch "Ég var ekki valinn að henni.", "Þau voru sérstaklega valin að stjórninni."
             cls.add_pattern(
                 (
                     "valinn",  # Trigger lemma for this pattern
-                    "NP > { NP > { 'valinn' } PP > { 'að' } }",
-                    cls.wrong_preposition_valinn_að,
-                    None,
-                )
-            )
-            # TODO: Missing comment
-            cls.add_pattern(
-                (
-                    "valinn",  # Trigger lemma for this pattern
-                    "VP > { VP >> { 'valinn' } PP > { 'að' } }",
+                    "VP > { NP > { 'valinn' } PP > { 'að' } }",
                     cls.wrong_preposition_valinn_að,
                     None,
                 )
