@@ -218,18 +218,15 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         assert vp is not None
         assert pp is not None
+        pp_af = pp.first_match('"af"')
+        assert pp_af is not None
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
         detail = (
             "Sögnin '{0}' tekur yfirleitt með sér "
             "forsetninguna 'að', ekki 'af'.".format(vp.tidy_text)
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -237,7 +234,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -253,18 +250,15 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         assert vp is not None
         assert pp is not None
+        pp_að = pp.first_match('"að"')
+        assert pp_að is not None
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
         detail = (
             "Sögnin '{0}' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'.".format(vp.tidy_text)
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_að, "af")
         self._ann.append(
             Annotation(
                 start=start,
@@ -272,7 +266,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -282,11 +276,11 @@ class PatternMatcher:
         # Find the offending verbal phrase
         vp = match.first_match("VP > { 'spyrja' }")
         # Find the attached prepositional/adverbial phrase
-        pp = match.first_match('P > { "af" }')
-        if pp is None:
-            pp = match.first_match('ADVP > { "af" }')
+        pp_af = pp.first_match('"af"')
+        if pp_af is None:
+            pp_af = match.first_match('ADVP > { "af" }')
         assert vp is not None
-        assert pp is not None
+        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
@@ -294,12 +288,7 @@ class PatternMatcher:
             "Í samhenginu 'að spyrja að e-u' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -307,7 +296,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -322,6 +311,8 @@ class PatternMatcher:
             pp = match.first_match('ADVP > { "af" }')
         assert np is not None
         assert pp is not None
+        pp_af = pp.first_match('"af"')
+        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "'verða vitni af' á sennilega að vera 'verða vitni að'"
@@ -329,12 +320,7 @@ class PatternMatcher:
             "Í samhenginu 'verða vitni að e-u' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -342,7 +328,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -358,6 +344,8 @@ class PatternMatcher:
             pp = match.first_match('ADVP > { "af" }')
         assert np is not None
         assert pp is not None
+        pp_af = pp.first_match('"af"')
+        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         if vp is None:
             start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
@@ -370,12 +358,7 @@ class PatternMatcher:
         detail = (
             "Í samhenginu 'gera grín að e-u' er notuð " "forsetningin 'að', ekki 'af'."
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -383,7 +366,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -400,6 +383,8 @@ class PatternMatcher:
         assert vp is not None
         assert np is not None
         assert pp is not None
+        pp_af = pp.first_match('"af"')
+        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -410,12 +395,7 @@ class PatternMatcher:
             "Í samhenginu 'leiða {0} af e-u' er notuð "
             "forsetningin 'að', ekki 'af'.".format(np.tidy_text)
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -423,7 +403,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -444,6 +424,8 @@ class PatternMatcher:
         assert vp is not None
         assert np is not None
         assert pp is not None
+        pp_af = pp.first_match('"af"')
+        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -454,12 +436,7 @@ class PatternMatcher:
             "Í samhenginu 'marka upphaf að e-u' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -467,7 +444,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -487,6 +464,8 @@ class PatternMatcher:
         assert vp is not None
         assert pp is not None
         assert np is not None
+        pp_af = pp.first_match('"af"')
+        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], pp.span[0], np.span[0]),
@@ -497,12 +476,7 @@ class PatternMatcher:
             "Í samhenginu 'leggja einhvern að velli' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -510,7 +484,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -525,6 +499,8 @@ class PatternMatcher:
         pp = match.first_match('ADVP > { "af" }')
         assert advp is not None
         assert pp is not None
+        pp_af = pp.first_match('"af"')
+        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(advp.span[0], pp.span[0]), max(advp.span[1], pp.span[1])
         text = "'utan af' á sennilega að vera 'utan að'"
@@ -532,12 +508,7 @@ class PatternMatcher:
             "Í samhenginu 'kunna eitthvað utan að' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -545,7 +516,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -563,6 +534,8 @@ class PatternMatcher:
         assert vp is not None
         assert np is not None
         assert pp is not None
+        pp_af = pp.first_match('"af"')
+        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -573,12 +546,7 @@ class PatternMatcher:
             "Í samhenginu 'verða uppvís að einhverju' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -586,7 +554,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -608,6 +576,8 @@ class PatternMatcher:
         assert vp is not None
         assert pp is not None
         assert np is not None
+        pp_af = pp.first_match('"af"')
+        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], pp.span[0], np.span[0]),
@@ -617,12 +587,7 @@ class PatternMatcher:
         detail = (
             "Í samhenginu 'að verða að ósk' er notuð " "forsetningin 'að', ekki 'af'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -630,7 +595,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -661,7 +626,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -685,7 +650,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -695,19 +660,16 @@ class PatternMatcher:
         # Find the offending prepositional phrase
         pp = match.first_match('PP > { "að" "mörkum" }')
         assert pp is not None
+        pp_að = pp.first_match('"að"')
+        assert pp_að is not None
         # Calculate the start and end token indices, spanning both phrases
-        start, end = pp.span[0], pp.span[1]
-        text = "'að mörkum' á sennilega að vera 'af mörkum'"
+        start, end = pp.span
+        suggest = pp.substituted_text(pp_að, "af")
+        text = f"'{pp.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
             "Í samhenginu 'leggja e-ð af mörkum' er notuð "
             "forsetningin 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -715,7 +677,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=pp.tidy_text,
                 suggest=suggest,
             )
         )
@@ -724,17 +686,16 @@ class PatternMatcher:
         """ Handle a match of a suspect preposition pattern """
         # Calculate the start and end token indices, spanning both phrases
         start, end = match.span
-        text = "'að leiða' á sennilega að vera 'af leiða'"
+        pp = match.first_match("P > { 'að' }")
+        assert pp is not None
+        pp_að = pp.first_match('"að"')
+        assert pp_að is not None
+        suggest = match.substituted_text(pp_að, "af")
+        text = f"'{match.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
             "Í samhenginu 'láta gott af sér leiða' er notuð "
             "forsetningin 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -742,7 +703,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -755,18 +716,16 @@ class PatternMatcher:
         pp = match.first_match("P > { 'að' }")
         assert np is not None
         assert pp is not None
+        pp_að = pp.first_match('"að"')
+        assert pp_að is not None
         # Calculate the start and end token indices, spanning both phrases
-        start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
-        text = "'heiðurinn að' á sennilega að vera 'heiðurinn af'"
+        start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
+        suggest = match.substituted_text(pp_að, "af")
+        text = f"'{match.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
-            "Í samhenginu 'eiga heiðurinn af' er notuð " "forsetningin 'af', ekki 'að'."
+            "Í samhenginu 'eiga heiðurinn af' er notuð "
+            "forsetningin 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -774,7 +733,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -794,22 +753,19 @@ class PatternMatcher:
         assert vp is not None
         assert np is not None
         assert pp is not None
+        pp_að = pp.first_match('"að"')
+        assert pp_að is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
             max(vp.span[1], np.span[1], pp.span[1]),
         )
-        text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
+        suggest = match.substituted_text(pp_að, "af")
+        text = f"'{match.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
-            "Orðasambandið 'að eiga {0}' tekur yfirleitt með sér "
-            "forsetninguna 'af', ekki 'að'.".format(np.tidy_text)
+            f"Orðasambandið '{match.tidy_text}' tekur yfirleitt með sér "
+            f"forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -817,7 +773,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -827,8 +783,8 @@ class PatternMatcher:
         start, end = match.span
         text = "'til að' á sennilega að vera 'til af'"
         detail = (
-            "Orðasambandið 'að vera til af' tekur yfirleitt með sér "
-            "forsetninguna 'af', ekki 'að'."
+            "Orðasambandið 'vera mikið/lítið til af e-u' innifelur "
+            "yfirleitt forsetninguna 'af', ekki 'að'."
         )
         if match.tidy_text.count(" að ") == 1:
             # Only one way to substitute að -> af: do it
@@ -843,7 +799,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -869,7 +825,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -899,7 +855,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -933,7 +889,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -966,7 +922,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -1004,7 +960,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -1037,7 +993,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -1063,7 +1019,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -1097,7 +1053,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -1110,18 +1066,16 @@ class PatternMatcher:
         pp = match.first_match("P > { 'að' }")
         assert np is not None
         assert pp is not None
+        pp_að = pp.first_match('"að"')
+        assert pp_að is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
+        suggest = match.substituted_text(pp_að, "af")
         text = "Hér á líklega að vera forsetningin 'af' í stað 'að'."
-        detail = "Í samhenginu '{0}' er rétt að nota forsetninguna 'af' í stað 'að'.".format(
-            match.tidy_text
+        detail = (
+            f"Í samhenginu '{match.tidy_text}' er rétt að nota "
+            f"forsetninguna 'af' í stað 'að'."
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -1129,7 +1083,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AÐ",
                 text=text,
                 detail=detail,
-                original="að",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -1146,7 +1100,7 @@ class PatternMatcher:
             # Correct: return
             return
         start, end = match.span
-        suggest = match.tidy_text.replace(preposition, correct_preposition, 1)
+        suggest = match.substituted_text(match.P, correct_preposition)
         text = "Rétt er að rita '{0}'".format(suggest)
         detail = (
             "Ýmist eru notaðar forsetningarnar 'í' eða 'á' með nöfnum "
@@ -1161,7 +1115,7 @@ class PatternMatcher:
                 code="P_WRONG_PLACE_PP",
                 text=text,
                 detail=detail,
-                original=preposition,
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -1227,18 +1181,15 @@ class PatternMatcher:
         pp = match.first_match("P > { 'af' }")
         assert np is not None
         assert pp is not None
+        pp_af = pp.first_match('"af"')
+        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "Hér á líklega að vera forsetningin 'að' í stað 'af'."
         detail = "Í samhenginu '{0}' er rétt að nota forsetninguna 'að' í stað 'af'.".format(
             match.tidy_text
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -1246,7 +1197,7 @@ class PatternMatcher:
                 code="P_WRONG_PREP_AF",
                 text=text,
                 detail=detail,
-                original="af",
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -1332,7 +1283,6 @@ class PatternMatcher:
         detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
             narrow_match, correction, adv.tidy_text
         )
-        suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -1341,7 +1291,7 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original=adv.tidy_text,
-                suggest=suggest,
+                suggest=correction,
             )
         )
 
@@ -1397,7 +1347,6 @@ class PatternMatcher:
         detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
             context, correction, advp.tidy_text
         )
-        suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -1405,8 +1354,8 @@ class PatternMatcher:
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
-                original=pp.tidy_text,
-                suggest=suggest,
+                original=advp.tidy_text,
+                suggest=correction,
             )
         )
 
@@ -1420,7 +1369,6 @@ class PatternMatcher:
         detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
             match.tidy_text, correction, advp.tidy_text
         )
-        suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -1429,7 +1377,7 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original=advp.tidy_text,
-                suggest=suggest,
+                suggest=correction,
             )
         )
 
@@ -1442,7 +1390,6 @@ class PatternMatcher:
         detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
             match.tidy_text, correction, advp.tidy_text
         )
-        suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -1451,7 +1398,7 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original=advp.tidy_text,
-                suggest=suggest,
+                suggest=correction,
             )
         )
 
@@ -1464,8 +1411,6 @@ class PatternMatcher:
         detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
             match.tidy_text, correction, advp.tidy_text
         )
-        suggest = ""
-
         self._ann.append(
             Annotation(
                 start=start,
@@ -1474,7 +1419,7 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original=advp.tidy_text,
-                suggest=suggest,
+                suggest=correction,
             )
         )
 
@@ -1487,7 +1432,6 @@ class PatternMatcher:
         detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
             match.tidy_text, correction, advp.tidy_text
         )
-        suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -1496,7 +1440,7 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original=advp.tidy_text,
-                suggest=suggest,
+                suggest=correction,
             )
         )
 
@@ -1509,7 +1453,6 @@ class PatternMatcher:
         detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
             match.tidy_text, correction, advp.tidy_text
         )
-        suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -1518,7 +1461,7 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original=advp.tidy_text,
-                suggest=suggest,
+                suggest=correction,
             )
         )
 
@@ -1561,7 +1504,6 @@ class PatternMatcher:
             assert False
         if not detail:
             detail = f"Í {sent_kind} er yfirleitt notaður framsöguháttur sagna."
-
         self._ann.append(
             Annotation(
                 start=start,
@@ -1630,6 +1572,9 @@ class PatternMatcher:
             return
         fn = match.first_match("fn")
         if fn is None:
+            return
+        fn_lemma = fn.lemma
+        if fn_lemma not in {"sá", "þessi"}:
             return
         start, end = match.span
         suggest = no.lemma
@@ -1994,7 +1939,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     frozenset(("mörk", "mark")),  # Trigger lemmas for this pattern
-                    "VP > { VP >> { 'leggja' } PP > { P > 'að' NP > { \"mörkum\" } } }",
+                    "VP > { VP >> { 'leggja' } PP > { \"að\" \"mörkum\" } }",
                     cls.wrong_preposition_að_mörkum,
                     None,
                 )
@@ -2008,39 +1953,54 @@ class PatternMatcher:
                     None,
                 )
             )
-            # Catch "Ég lét gott að mér leiða."   # Two patterns to catch the same sentence due to variable parsing
+            # Catch "Ég reyni að leggja eitthvað að mörkum"
             cls.add_pattern(
                 (
-                    "leiður",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'láta' } PP > { P > { \"að\" } 'leiður' } }",
-                    #"IP > { VP > { VP > 'láta' PP > { \"að\" } VP > 'leiða' } }",
-                    cls.wrong_preposition_að_leiða,
+                    frozenset(("mörk", "mark")),  # Trigger lemmas for this pattern
+                    "VP > { VP > { 'leggja' } NP-OBJ > { PP > { \"að\" \"mörkum\" } } }",
+                    cls.wrong_preposition_að_mörkum,
                     None,
                 )
             )
-            # Catch "Ég lét ekki gott að mér leiða."
+            # Catch "Ég lét (ekki) gott að mér leiða."
             cls.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
-                    "VP > { 'láta' PP > { \"að\" } VP > { 'leiða' } }",
+                    "VP > [ .* 'láta' .* IP > [ .* NP > [ .* \"gott\" .* (\"að mér\" | \"að þér\" | \"að sér\") ] VP > { \"leiða\" } ] ]",
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
             )
-            # Catch "Hún fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu."
+            cls.add_pattern(
+                (
+                    frozenset(("leiða", "leiður")),  # Trigger lemma for this pattern (probably a wrong parse)
+                    "VP > [ .* 'láta' .* NP-OBJ > [ .* \"gott\" .* (\"að mér leiða\" | \"að sér leiða\" | \"að þér leiða\") ] ]",
+                    cls.wrong_preposition_að_leiða,
+                    None,
+                )
+            )
+            cls.add_pattern(
+                (
+                    frozenset(("leiða", "leiður")),  # Trigger lemma for this pattern (probably a wrong parse)
+                    "VP > { IP-INF > { \"að\" \"láta\" } NP-PRD > { \"gott\" } PP > [ \"að\" ( \"mér\" | \"þér\" | \"sér\" ) \"leiða\" ] }",
+                    cls.wrong_preposition_að_leiða,
+                    None,
+                )
+            )
+            # Catch "Hún á/fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu."
             cls.add_pattern(
                 (
                     "heiður",  # Trigger lemma for this pattern
-                    "VP > { VP > { ( 'fá'|'hljóta' ) } NP > { 'heiður' PP > { 'að' } } }",
+                    "VP > [ .* VP > { ( 'eiga'|'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' } PP > { 'að' } ]",
                     cls.wrong_preposition_heiður_að,
                     None,
                 )
             )
-            # Catch "Hún fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu."  # Two patterns to catch the same sentence due to variable parsing
+            # Catch alternative parse of the above where the PP is inside the NP-OBJ
             cls.add_pattern(
                 (
                     "heiður",  # Trigger lemma for this pattern
-                    "VP > { VP > { ( 'fá'|'hljóta' ) } NP > { 'heiður' } PP > { 'að' } }",
+                    "VP > [ .* VP > { ( 'eiga'|'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' PP > { 'að' } } ]",
                     cls.wrong_preposition_heiður_að,
                     None,
                 )
@@ -2454,7 +2414,8 @@ class PatternMatcher:
         # Article errors; demonstrative pronouns and nouns with an article
         cls.add_pattern(
             (
-                frozenset(("sá", "þessi", "segja")),  # Trigger lemmas for this pattern
+                # TODO: The trigger lemmas originally included 'segja', is that correct?
+                frozenset(("sá", "þessi")),  # Trigger lemmas for this pattern
                 "NP > [.* fn .* no_gr]",
                 lambda self, match: self.doubledefinite(match),
                 None,

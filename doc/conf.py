@@ -116,7 +116,7 @@ html_theme_options = {
 html_static_path = ["_static"]
 
 # Set the favicon
-html_favicon = "_static/greynir-favicon-32x32.png"
+html_favicon = "_static/yfirlestur-favicon-32x32.png"
 
 # -- Options for HTMLHelp output ------------------------------------------
 

@@ -1,9 +1,13 @@
-==============================================================
-GreynirCorrect: A spelling and grammar corrector for Icelandic
-==============================================================
-
+.. image:: https://img.shields.io/badge/License-MIT-yellow.svg
+    :target: https://opensource.org/licenses/MIT
+.. image:: https://img.shields.io/badge/python-3.6-blue.svg
+    :target: https://www.python.org/downloads/release/python-360/
 .. image:: https://github.com/mideind/GreynirCorrect/workflows/Python%20package/badge.svg?branch=master
     :target: https://github.com/mideind/GreynirCorrect/actions?query=workflow%3A%22Python+package%22
+
+==============================================================
+GreynirCorrect: Spelling and grammar correction for Icelandic
+==============================================================
 
 .. _overview:
 
@@ -111,7 +115,7 @@ Prerequisites
 *************
 
 GreynirCorrect runs on CPython 3.6 or newer, and on PyPy 3.6 or newer. It has
-been tested on Linux, MacOS and Windows. The
+been tested on Linux, macOS and Windows. The
 `PyPi package <https://pypi.org/project/reynir-correct/>`_
 includes binary wheels for common environments, but if the setup on your OS
 requires compilation from sources, you may need
