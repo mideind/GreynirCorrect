@@ -284,7 +284,7 @@ class PatternMatcher:
         pp_af = pp.first_match('"af"')
         assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
-        start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
+        start, end = min(vp.span[0], pp_af.span[0]), max(vp.span[1], pp_af.span[1])
         text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
         detail = (
             "Í samhenginu 'að spyrja að e-u' er notuð "
@@ -666,7 +666,7 @@ class PatternMatcher:
         assert pp_að is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp.span
-        suggest = pp.substituted_text(pp_að, "af")
+        suggest = match.substituted_text(pp_að, "af")
         text = f"'{pp.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
             "Í samhenginu 'leggja e-ð af mörkum' er notuð "
@@ -1964,20 +1964,20 @@ class PatternMatcher:
                     None,
                 )
             )
-            # Catch "Ég reyni að leggja eitthvað að mörkum"
+            # Catch "Ég lét (ekki) gott að mér leiða." (In case of different parse)
             cls.add_pattern(
                 (
-                    frozenset(("mörk", "mark")),  # Trigger lemmas for this pattern
-                    "VP > { VP > { 'leggja' } NP-OBJ > { PP > { \"að\" \"mörkum\" } } }",
-                    cls.wrong_preposition_að_mörkum,
+                    "leiður",  # Trigger lemma for this pattern
+                    "VP > [ VP > [ .* 'láta' .* ] NP > [ .* \"gott\" .* ] PP > [ \"að\" NP > [ (\"mér\"|\"þér\"|\"sér\"|\"okkur\") ] \"leiða\" ] ]",
+                    cls.wrong_preposition_að_leiða,
                     None,
                 )
             )
-            # Catch "Ég lét (ekki) gott að mér leiða."
+            # Catch "Hann lét (ekki) gott að sér leiða"
             cls.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
-                    "VP > [ .* 'láta' .* IP > [ .* NP > [ .* \"gott\" .* (\"að mér\" | \"að þér\" | \"að sér\") ] VP > { \"leiða\" } ] ]",
+                    "VP > [ VP > [ .* 'láta' .* ] .* NP > [ .* \"gott\" .* ] PP > [ \"að\" NP > [ (\"mér\"|\"þér\"|\"sér\"|\"okkur\") ] ] VP > { 'leiða' } ]",
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
@@ -1998,7 +1998,7 @@ class PatternMatcher:
                     None,
                 )
             )
-            # Catch "Hún á/fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu."
+            # Catch "Hún á/fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu." ÞA: Including 'eiga' here causes double annotation
             cls.add_pattern(
                 (
                     "heiður",  # Trigger lemma for this pattern
