@@ -275,11 +275,13 @@ class PatternMatcher:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal phrase
         vp = match.first_match("VP > { 'spyrja' }")
-        # Find the attached prepositional/adverbial phrase
-        pp_af = pp.first_match('"af"')
-        if pp_af is None:
-            pp_af = match.first_match('ADVP > { "af" }')
         assert vp is not None
+        # Find the attached prepositional/adverbial phrase
+        pp = match.first_match('P > { "af" }')
+        if pp is None:
+            pp = match.first_match('ADVP > { "af" }')
+        assert pp is not None
+        pp_af = pp.first_match('"af"')
         assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
@@ -723,7 +725,7 @@ class PatternMatcher:
         suggest = match.substituted_text(pp_að, "af")
         text = f"'{match.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
-            "Í samhenginu 'eiga heiðurinn af' er notuð "
+            "Í samhenginu 'fá/hljóta heiðurinn af' er notuð "
             "forsetningin 'af', ekki 'að'."
         )
         self._ann.append(
@@ -1944,11 +1946,20 @@ class PatternMatcher:
                     None,
                 )
             )
+            # Catch "Jón hefur látið gott að sér leiða."
+            #cls.add_pattern(
+            #    (
+            #        "leiða",  # Trigger lemma for this pattern
+            #        "VP > { VP > { 'láta' } PP > { P > \"að\" } VP > { 'leiða' } }",
+            #        cls.wrong_preposition_að_leiða,
+            #        None,
+            #    )
+            #)
             # Catch "Ég lét gott að mér leiða."
             cls.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'láta' } PP > { \"að\" } VP > { 'leiða' } }",
+                    "VP > [ .* VP > { 'láta' } NP (\"að mér\"|\"að þér\"|\"að sér\") 'leiða']",
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
@@ -1991,16 +2002,13 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "heiður",  # Trigger lemma for this pattern
-                    "VP > [ .* VP > { ( 'eiga'|'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' } PP > { 'að' } ]",
-                    cls.wrong_preposition_heiður_að,
-                    None,
-                )
-            )
-            # Catch alternative parse of the above where the PP is inside the NP-OBJ
-            cls.add_pattern(
-                (
-                    "heiður",  # Trigger lemma for this pattern
-                    "VP > [ .* VP > { ( 'eiga'|'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' PP > { 'að' } } ]",
+                    (
+                    "( "
+                        "VP > [ .* VP > { ( 'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' PP > { P > { 'að' } NP } } ] "
+                    "| "
+                        "VP > [ .* VP > { ( 'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' } PP > { P > { 'að' } NP } ] "
+                    ") "
+                    ),
                     cls.wrong_preposition_heiður_að,
                     None,
                 )
@@ -2009,16 +2017,13 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "eiga",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'eiga' NP } PP > { P > { 'að' } NP } }",
-                    cls.wrong_preposition_eiga_að,
-                    None,
-                )
-            )
-            # Catch "Hún á (ekki) heilan helling að börnum."
-            cls.add_pattern(
-                (
-                    "eiga",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'eiga' } NP PP > { P > { 'að' } NP } }",
+                    (
+                    "( "
+                    "VP > [ .* VP > { 'eiga' } .* NP-OBJ PP > { P > { 'að' } NP } ] "
+                    "| "
+                    "VP > [ .* VP > { 'eiga' } .* NP-OBJ > { PP > { P > { 'að' } NP } } ] "
+                    ") "
+                    ),
                     cls.wrong_preposition_eiga_að,
                     None,
                 )
