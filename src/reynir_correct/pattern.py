@@ -209,7 +209,6 @@ class PatternMatcher:
 
     def wrong_preposition_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
-        print(match)
         # Find the offending verb phrase
         vp = match.first_match("VP > { %verb }", self.ctx_af)
         if vp is None:
@@ -554,13 +553,9 @@ class PatternMatcher:
     def wrong_preposition_uppvis_af(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal phrase
-        vp = match.first_match("VP > { 'verða' }")
-        if vp is None:
-            vp = match.first_match("VP >> { 'verða' }")
+        vp = match.first_match("VP >> { 'verða' }")
         # Find the attached nominal phrase
-        np = match.first_match("NP > { 'uppvís' }")
-        if np is None:
-            np = match.first_match("NP >> { 'uppvís' }")
+        np = match.first_match("NP >> { 'uppvís' }")
         # Find the attached prepositional phrase
         pp = match.first_match('PP > { "af" }')
         if pp is None:
@@ -1903,20 +1898,11 @@ class PatternMatcher:
                     None,
                 )
             )
-            # Catch "Ég varð (ekki) uppvís af athæfinu."
+            # Catch "Ég varð (ekki) uppvís af athæfinu.", "Hann hafði (ekki) orðið uppvís af því."
             cls.add_pattern(
                 (
                     "uppvís",  # Trigger lemma for this pattern
-                    "VP > { VP > { VP > { 'verða' } NP > { 'uppvís' } } PP > { 'af' } }",
-                    cls.wrong_preposition_uppvis_af,
-                    None,
-                )
-            )
-            # Catch "Hann varð (ekki) uppvís af því.", "Hann hafði orðið uppvís af því."
-            cls.add_pattern(
-                (
-                    "uppvís",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'verða' } NP > { NP > { 'uppvís' } PP > { 'af' } } }",
+                    "VP > { VP > { 'verða' } NP > { 'uppvís' } PP > { 'af' } }",
                     cls.wrong_preposition_uppvis_af,
                     None,
                 )
