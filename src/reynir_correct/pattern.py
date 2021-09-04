@@ -2004,9 +2004,9 @@ class PatternMatcher:
                     "heiður",  # Trigger lemma for this pattern
                     (
                     "( "
-                        "VP > [ .* VP > { ( 'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' PP > { P > { 'að' } NP } } ] "
+                        "VP > [ VP-AUX? .* VP > { ( 'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' PP > { P > { 'að' } NP } } ] "
                     "| "
-                        "VP > [ .* VP > { ( 'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' } PP > { P > { 'að' } NP } ] "
+                        "VP > [ VP-AUX? .* VP > { ( 'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' } PP > { P > { 'að' } NP } ] "
                     ") "
                     ),
                     cls.wrong_preposition_heiður_að,
@@ -2019,9 +2019,9 @@ class PatternMatcher:
                     "eiga",  # Trigger lemma for this pattern
                     (
                     "( "
-                    "VP > [ .* VP > { 'eiga' } .* NP-OBJ PP > { P > { 'að' } NP } ] "
+                    "VP > [ VP-AUX? .* VP > { 'eiga' } .* NP-OBJ PP > { P > { 'að' } NP } ] "
                     "| "
-                    "VP > [ .* VP > { 'eiga' } .* NP-OBJ > { PP > { P > { 'að' } NP } } ] "
+                    "VP > [ VP-AUX? .* VP > { 'eiga' } .* NP-OBJ > { PP > { P > { 'að' } NP } } ] "
                     ") "
                     ),
                     cls.wrong_preposition_eiga_að,
