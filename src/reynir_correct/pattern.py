@@ -2082,14 +2082,6 @@ class PatternMatcher:
                     None,
                 )
             )
-            cls.add_pattern(
-                (
-                    "frétt",  # Trigger lemma for this pattern
-                    "IP",
-                    cls.wrong_preposition_frettir_að,
-                    None,
-                )
-            )
             # Catch "Fréttir bárust (ekki) að slysinu."
             cls.add_pattern(
                 (
