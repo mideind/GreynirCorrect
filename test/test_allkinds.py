@@ -1603,8 +1603,8 @@ def test_complex_sentences(verbose=False):
 
 
 def test_tense_mood(verbose=False):
-    # s = "Hann kemur ef hann geti."
-    # check_sentence(s, [(2, 5, "P_NT_TíðHáttur")])     # TODO villan finnst ekki, eftir að útfæra
+    s = "Hann kemur ef hann geti."
+    check_sentence(s, [(4, 4, "P_MOOD_COND")])
     # s = "Hún kemur ef það sé gott veður."
     # check_sentence(s, [(2, 7, "P_NT_TíðHáttur")])     # TODO villan finnst ekki, eftir að útfæra
     # s = "Hún segir að veðrið var gott í dag."
