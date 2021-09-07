@@ -115,7 +115,7 @@ setup(
     ],
     keywords=["nlp", "parser", "icelandic"],
     setup_requires=[],
-    install_requires=["reynir>=3.0.1", "icegrams>=1.1.0", "typing_extensions"],
+    install_requires=["reynir>=3.3.0", "icegrams>=1.1.0", "typing_extensions"],
     # Set up a 'correct' command ('correct.exe' on Windows),
     # which calls main() in src/reynir-correct/main.py
     entry_points={

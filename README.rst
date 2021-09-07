@@ -132,7 +132,7 @@ requires compilation from sources, you may need
 Installation
 ************
 
-To install this package (assuming you have Python 3 with ``pip`` installed):
+To install this package (assuming you have Python >= 3.6 with ``pip`` installed):
 
 .. code-block:: bash
 
