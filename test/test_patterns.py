@@ -221,6 +221,8 @@ def test_verb_að(rc):
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
     s = "Hún á marga að."
     check_sentence(rc, s, [])
+    s = "Hún á ekki aðild að málinu."
+    check_sentence(rc, s, [])
     s = "Hún hefur ekki haft gagn að þessu."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Þetta hafði ekki komið að sjálfu sér."
