@@ -1547,7 +1547,7 @@ class Stats:
                     )
                 )
                 bprint(
-                    "\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}|{:3.2f}".format(
+                    "\tRe, Pr, F1, F0.5: {:3.2f}, {:3.2f}, {:3.2f}, {:3.2f}".format(
                         cast(float, rk.get("recall", 0.0)) * 100.0,
                         cast(float, rk.get("precision", 0.0)) * 100.0,
                         cast(float, rk.get("f1score", 0.0)) * 100.0,
