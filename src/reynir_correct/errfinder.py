@@ -717,6 +717,8 @@ class ErrorFinder(ParseForestNavigator):
         verb's direct object noun phrase """
         obj = None
         vp = tnode.enclosing_tag("VP")
+        if vp is None:
+            return obj
         obj = vp.first_match("NP-OBJ")
         if obj is None:
             # The object could have been moved to the front
@@ -871,6 +873,8 @@ class ErrorFinder(ParseForestNavigator):
             correct_case = CASE_NAMES[correct_case_abbr]
             # Try to recover the verb's direct object
             objtree = self.find_verb_direct_object(tnode)
+            if objtree is None:
+                return
             code = "P_WRONG_CASE" + obj_case_abbr + "_" + correct_case_abbr
             if objtree is not None:
                 # We know what the object is: annotate it
@@ -918,64 +922,72 @@ class ErrorFinder(ParseForestNavigator):
                     )
                 )
         
-        obj: str = ""
-        if terminal.variant(0) == "0":
-            # No objects to check
-            pass
-        else:
-            obj = terminal.variant(1)
-        obj_errors = VerbErrors.OBJ_ERRORS.get(verb, dict())
-        if obj in obj_errors:
-            annotate_wrong_obj_form(obj, obj_errors[obj])
+        def check_obj() -> None:
+            obj: str = ""
+            if terminal.variant(0) == "0":
+                # No objects to check
+                pass
+            else:
+                obj = "" if len(terminal._vparts) < 2 else terminal.variant(1)
+            if not obj:
+                return
+            obj_errors = VerbErrors.OBJ_ERRORS.get(verb, dict())
+            if obj in obj_errors:
+                annotate_wrong_obj_form(obj, obj_errors[obj])
 
-        if not terminal.is_subj:
-            # Check whether we had to match an impersonal verb
-            # with this "normal" (non _subj) terminal
-            # Check whether the verb is present in the VERBS_ERRORS
-            # dictionary, with an 'nf' entry mapping to another case
-            errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
-            if "nf" in errors:
-                # We are using an impersonal verb as a normal verb,
-                # i.e. with a subject in nominative case:
-                # annotate an error
-                annotate_wrong_subject_case("nf", errors["nf"])
-            return
+        def check_subj() -> None:
+            if not terminal.is_subj:
+                # Check whether we had to match an impersonal verb
+                # with this "normal" (non _subj) terminal
+                # Check whether the verb is present in the VERBS_ERRORS
+                # dictionary, with an 'nf' entry mapping to another case
+                errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
+                if "nf" in errors:
+                    # We are using an impersonal verb as a normal verb,
+                    # i.e. with a subject in nominative case:
+                    # annotate an error
+                    annotate_wrong_subject_case("nf", errors["nf"])
+                return
 
-        # This is a so_subj terminal
-        if not (terminal.is_op or terminal.is_sagnb or terminal.is_nh):
-            return
-        # This is a so_subj_op, so_subj_sagnb or so_subj_nh terminal
-        # Check whether the associated verb is allowed
-        # with a subject in this case
-        # node points to a fastparser.Node instance
-        # tnode points to a SimpleTree instance
-        subj_case_abbr = terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
-        if subj_case_abbr == "none":
-            # so_subj_nh_none or similar:
-            # hidden subject ('Í raun þyrfti að yfirfara alla ferla')
-            return
-        assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
-            "Unknown case in " + terminal.name
-        )
+            # This is a so_subj terminal
+            if not (terminal.is_op or terminal.is_sagnb or terminal.is_nh):
+                return
+            # This is a so_subj_op, so_subj_sagnb or so_subj_nh terminal
+            # Check whether the associated verb is allowed
+            # with a subject in this case
+            # node points to a fastparser.Node instance
+            # tnode points to a SimpleTree instance
+            subj_case_abbr = terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
+            if subj_case_abbr == "none":
+                # so_subj_nh_none or similar:
+                # hidden subject ('Í raun þyrfti að yfirfara alla ferla')
+                return
+            assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
+                "Unknown case in " + terminal.name
+            )
 
-        # Check whether this is a verb form that is forbidden from
-        # impersonal use, such as 'lýst' which cannot be used impersonally
-        # as a form of 'ljósta' ('Eldingunni laust niður')
-        token = node.token
-        assert token is not None
-        if token.lower in self._NON_OP_VERB_FORMS:
-            correct, detail = self._NON_OP_VERB_FORMS[token.lower]
-            annotate_wrong_op_verb_form(token.text, correct, detail)
-            return
+            # Check whether this is a verb form that is forbidden from
+            # impersonal use, such as 'lýst' which cannot be used impersonally
+            # as a form of 'ljósta' ('Eldingunni laust niður')
+            token = node.token
+            assert token is not None
+            if token.lower in self._NON_OP_VERB_FORMS:
+                correct, detail = self._NON_OP_VERB_FORMS[token.lower]
+                annotate_wrong_op_verb_form(token.text, correct, detail)
+                return
 
-        # Check whether this verb has an entry in the VERBS_ERRORS
-        # dictionary, and whether that entry then has an item for
-        # the present subject case
-        # TODO: This will get more complex when all arguments are in the same frame
-        subj_errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
-        if subj_case_abbr in subj_errors:
-            # Yes, this appears to be an erroneous subject case
-            annotate_wrong_subject_case(subj_case_abbr, subj_errors[subj_case_abbr])
+            # Check whether this verb has an entry in the VERBS_ERRORS
+            # dictionary, and whether that entry then has an item for
+            # the present subject case
+            # TODO: This will get more complex when all arguments are in the same frame
+            subj_errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
+            if subj_case_abbr in subj_errors:
+                # Yes, this appears to be an erroneous subject case
+                annotate_wrong_subject_case(subj_case_abbr, subj_errors[subj_case_abbr])
+
+        check_obj()
+        check_subj()
+
 
 
 
