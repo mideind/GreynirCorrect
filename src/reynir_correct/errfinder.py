@@ -58,7 +58,8 @@ from reynir.fastparser import ParseForestNavigator, Node
 from reynir.binparser import BIN_Terminal, BIN_Token
 from reynir.settings import VerbSubjects
 from reynir.simpletree import SimpleTree
-from reynir.verbframe import VerbErrors
+from reynir.verbframe import VerbErrors, VerbFrame
+
 
 from .annotation import Annotation
 from .errtokenizer import emulate_case
@@ -207,6 +208,12 @@ class ErrorDetectionToken(BIN_Token):
             verb, set()
         ) or subj in cls._VERB_ERROR_SUBJECTS.get(verb, dict())
 
+    @classmethod
+    def verb_matches_arguments(cls, key: str) -> bool:
+        """ Return True if the given arguments are allowed for this verb 
+        or if these are erroneous arguments which we can flag """
+        # This is overridden in reynir_correct.checker
+        return VerbFrame.matches_arguments(key) or VerbFrame.matches_error_arguments(key)
 
 class ErrorFinder(ParseForestNavigator):
 
