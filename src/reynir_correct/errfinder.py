@@ -686,7 +686,7 @@ class ErrorFinder(ParseForestNavigator):
     def find_verb_subject(tnode: SimpleTree) -> Optional[SimpleTree]:
         """ Starting with a verb terminal node, attempt to find
         the verb's subject noun phrase """
-        subj = None
+        subj: Optional[SimpleTree] = None
         # TODO does this belong in pattern.py?
         # First, check within the enclosing verb phrase
         # (the subject may be embedded within it, as in
@@ -715,7 +715,7 @@ class ErrorFinder(ParseForestNavigator):
     def find_verb_direct_object(tnode: SimpleTree) -> Optional[SimpleTree]:
         """ Starting with a verb terminal node, attempt to find the 
         verb's direct object noun phrase """
-        obj = None
+        obj: Optional[SimpleTree] = None
         vp = tnode.enclosing_tag("VP")
         if vp is None:
             return obj
