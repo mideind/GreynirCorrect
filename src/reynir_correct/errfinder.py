@@ -212,7 +212,7 @@ class ErrorDetectionToken(BIN_Token):
     def verb_matches_arguments(cls, key: str) -> bool:
         """ Return True if the given arguments are allowed for this verb 
         or if these are erroneous arguments which we can flag """
-        # This is overridden in reynir_correct.checker
+        # This is overridden in reynir_correct.errfinder
         return VerbFrame.matches_arguments(key) or VerbFrame.matches_error_arguments(key)
 
 class ErrorFinder(ParseForestNavigator):
@@ -872,8 +872,8 @@ class ErrorFinder(ParseForestNavigator):
                 )
             )
 
-        def annotate_wrong_obj_form(obj_case_abbr: str, correct_case_abbr: str) -> None:
-            """ Create an annotation that describes a verb having a subject
+        def annotate_wrong_obj_case(obj_case_abbr: str, correct_case_abbr: str) -> None:
+            """ Create an annotation that describes a verb having a direct object
             in the wrong case """
             wrong_case = CASE_NAMES[obj_case_abbr]
             # Retrieve the correct case
@@ -931,7 +931,7 @@ class ErrorFinder(ParseForestNavigator):
         
         def check_obj() -> None:
             obj: str = ""
-            if terminal.variant(0) == "0":
+            if len(terminal._vparts) < 1 or terminal.variant(0) == "0":
                 # No objects to check
                 pass
             else:
@@ -940,7 +940,7 @@ class ErrorFinder(ParseForestNavigator):
                 return
             obj_errors = VerbErrors.OBJ_ERRORS.get(verb, dict())
             if obj in obj_errors:
-                annotate_wrong_obj_form(obj, obj_errors[obj])
+                annotate_wrong_obj_case(obj, obj_errors[obj])
 
         def check_subj() -> None:
             if not terminal.is_subj:
@@ -994,9 +994,6 @@ class ErrorFinder(ParseForestNavigator):
 
         check_obj()
         check_subj()
-
-
-
 
     def visit_token(self, level: int, w: Node) -> None:
         """ Entering a terminal/token match node """

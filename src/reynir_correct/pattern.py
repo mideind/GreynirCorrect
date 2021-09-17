@@ -836,7 +836,8 @@ class PatternMatcher:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending preposition
         pp = match.first_match("(P | ADVP) > { 'að' }")
-        assert pp is not None
+        if pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp.span[0], pp.span[1]
         text = "'að' á sennilega að vera 'af'"
