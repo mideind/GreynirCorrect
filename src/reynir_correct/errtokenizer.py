@@ -68,10 +68,10 @@ from reynir.bintokenizer import (
     MatchingStream,
     TokenConstructor,
     load_token,
-    GreynirBin,
     StringIterable,
     TokenIterator,
 )
+from reynir.bindb import GreynirBin
 from reynir.binparser import BIN_Token, VariantHandler
 
 from .settings import (
