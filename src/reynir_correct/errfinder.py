@@ -212,8 +212,11 @@ class ErrorDetectionToken(BIN_Token):
     def verb_matches_arguments(cls, key: str) -> bool:
         """ Return True if the given arguments are allowed for this verb 
         or if these are erroneous arguments which we can flag """
-        # This is overridden in reynir_correct.errfinder
-        return VerbFrame.matches_arguments(key) or VerbFrame.matches_error_arguments(key)
+        # This function overrides BIN_Token.verb_matches_arguments()
+        return VerbFrame.matches_arguments(key) or VerbFrame.matches_error_arguments(
+            key
+        )
+
 
 class ErrorFinder(ParseForestNavigator):
 
@@ -610,8 +613,7 @@ class ErrorFinder(ParseForestNavigator):
                 text="Á sennilega að vera '{0}'".format(correct_np),
                 detail=(
                     "Forsetningin '{0}' stýrir {1}falli.".format(
-                        preposition.lower(),
-                        CASE_NAMES[variants],
+                        preposition.lower(), CASE_NAMES[variants],
                     )
                 ),
                 original=preposition,
@@ -736,7 +738,7 @@ class ErrorFinder(ParseForestNavigator):
                 except AttributeError:
                     pass
             if obj is None:
-                # Not found in VP, look within enclosing 
+                # Not found in VP, look within enclosing
                 # IP node, if any
                 p = tnode.enclosing_tag("IP")
                 if p is not None:
@@ -928,7 +930,7 @@ class ErrorFinder(ParseForestNavigator):
                         suggest="",
                     )
                 )
-        
+
         def check_obj() -> None:
             obj: str = ""
             if len(terminal._vparts) < 1 or terminal.variant(0) == "0":
