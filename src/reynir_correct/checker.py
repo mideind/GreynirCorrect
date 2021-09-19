@@ -62,8 +62,8 @@ from reynir import (
     Sentence,
     Paragraph,
     ProgressFunc,
-    ICELANDIC_RATIO,
 )
+from reynir.incparser import ICELANDIC_RATIO
 from reynir.reynir import Job
 from reynir.bintokenizer import StringIterable
 from reynir.binparser import BIN_Grammar, BIN_Parser, VariantHandler
@@ -340,6 +340,13 @@ def check_single(sentence_text: str) -> Optional[Sentence]:
     # Returns None if no sentence was parsed
     rc = GreynirCorrect()
     return rc.parse_single(sentence_text)
+
+
+def check_tokens(tokens: Iterable[CorrectToken]) -> Optional[Sentence]:
+    """ Check and annotate a single sentence, given as a token list """
+    # Returns None if no sentence was parsed
+    rc = GreynirCorrect()
+    return rc.parse_tokens(tokens)
 
 
 def check(text: str, *, split_paragraphs: bool = False) -> Iterable[Paragraph]:

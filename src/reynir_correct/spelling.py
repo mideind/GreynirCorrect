@@ -48,7 +48,7 @@ from functools import lru_cache
 from reynir import tokenize, correct_spaces, TOK
 from reynir.bindb import GreynirBin, ResultTuple
 from reynir.bintokenizer import StringIterable
-from icegrams import Ngrams, MAX_ORDER
+from icegrams.ngrams import Ngrams, MAX_ORDER
 
 if __name__ == "__main__":
     if not TYPE_CHECKING:

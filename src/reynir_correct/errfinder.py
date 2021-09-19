@@ -58,6 +58,8 @@ from reynir.fastparser import ParseForestNavigator, Node
 from reynir.binparser import BIN_Terminal, BIN_Token
 from reynir.settings import VerbSubjects
 from reynir.simpletree import SimpleTree
+from reynir.verbframe import VerbErrors, VerbFrame
+
 
 from .annotation import Annotation
 from .errtokenizer import emulate_case
@@ -205,6 +207,15 @@ class ErrorDetectionToken(BIN_Token):
         return subj in cls._VERB_SUBJECTS.get(
             verb, set()
         ) or subj in cls._VERB_ERROR_SUBJECTS.get(verb, dict())
+
+    @classmethod
+    def verb_matches_arguments(cls, key: str) -> bool:
+        """ Return True if the given arguments are allowed for this verb 
+        or if these are erroneous arguments which we can flag """
+        # This function overrides BIN_Token.verb_matches_arguments()
+        return VerbFrame.matches_arguments(key) or VerbFrame.matches_error_arguments(
+            key
+        )
 
 
 class ErrorFinder(ParseForestNavigator):
@@ -419,6 +430,7 @@ class ErrorFinder(ParseForestNavigator):
     ) -> AnnotationReturn:
         """ Annotate a mismatch between singular and plural
         in subject vs. verb """
+        # TODO does this belong in pattern.py?
         tnode = self._terminal_nodes[node.start]
         # Find the enclosing inflected phrase
         p = tnode.enclosing_tag("IP")
@@ -601,8 +613,7 @@ class ErrorFinder(ParseForestNavigator):
                 text="Á sennilega að vera '{0}'".format(correct_np),
                 detail=(
                     "Forsetningin '{0}' stýrir {1}falli.".format(
-                        preposition.lower(),
-                        CASE_NAMES[variants],
+                        preposition.lower(), CASE_NAMES[variants],
                     )
                 ),
                 original=preposition,
@@ -684,7 +695,8 @@ class ErrorFinder(ParseForestNavigator):
     def find_verb_subject(tnode: SimpleTree) -> Optional[SimpleTree]:
         """ Starting with a verb terminal node, attempt to find
         the verb's subject noun phrase """
-        subj = None
+        subj: Optional[SimpleTree] = None
+        # TODO does this belong in pattern.py?
         # First, check within the enclosing verb phrase
         # (the subject may be embedded within it, as in
         # ?'Í dag langaði Páli bróður að fara í sund')
@@ -697,16 +709,45 @@ class ErrorFinder(ParseForestNavigator):
                 pass
         if subj is None:
             # If not found there, look within the
-            # enclosing IP (inflected phrase) node, if any
+            # enclosing IP (inflectional phrase) node, if any
             p = tnode.enclosing_tag("IP")
             if p is not None:
-                # Found the inflected phrase:
+                # Found the inflectional phrase:
                 # find the NP-SUBJ node, if any
                 try:
                     subj = p.NP_SUBJ
                 except AttributeError:
                     pass
         return subj
+
+    @staticmethod
+    def find_verb_direct_object(tnode: SimpleTree) -> Optional[SimpleTree]:
+        """ Starting with a verb terminal node, attempt to find the 
+        verb's direct object noun phrase """
+        obj: Optional[SimpleTree] = None
+        vp = tnode.enclosing_tag("VP")
+        if vp is None:
+            return obj
+        obj = vp.first_match("NP-OBJ")
+        if obj is None:
+            # The object could have been moved to the front
+            p = None if vp is None else vp.enclosing_tag("VP")
+            if p is not None:
+                try:
+                    obj = p.NP_OBJ
+                except AttributeError:
+                    pass
+            if obj is None:
+                # Not found in VP, look within enclosing
+                # IP node, if any
+                p = tnode.enclosing_tag("IP")
+                if p is not None:
+                    # Found the IP, find NP-OBJ if any
+                    try:
+                        obj = p.NP_OBJ
+                    except AttributeError:
+                        pass
+        return obj
 
     def _annotate_ordinal(self, node: Node) -> None:
         """ Check for errors in ordinal number terminals ("2.") and annotate them """
@@ -749,6 +790,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def _annotate_verb(self, node: Node) -> None:
         """ Annotate a verb (so) terminal """
+        # TODO does this belong in pattern.py?
         terminal = cast(BIN_Terminal, node.terminal)
         tnode = self._terminal_nodes[node.start]
         verb = tnode.lemma
@@ -832,53 +874,128 @@ class ErrorFinder(ParseForestNavigator):
                 )
             )
 
-        if not terminal.is_subj:
-            # Check whether we had to match an impersonal verb
-            # with this "normal" (non _subj) terminal
-            # Check whether the verb is present in the VERBS_ERRORS
-            # dictionary, with an 'nf' entry mapping to another case
-            errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
-            if "nf" in errors:
-                # We are using an impersonal verb as a normal verb,
-                # i.e. with a subject in nominative case:
-                # annotate an error
-                annotate_wrong_subject_case("nf", errors["nf"])
-            return
+        def annotate_wrong_obj_case(obj_case_abbr: str, correct_case_abbr: str) -> None:
+            """ Create an annotation that describes a verb having a direct object
+            in the wrong case """
+            wrong_case = CASE_NAMES[obj_case_abbr]
+            # Retrieve the correct case
+            correct_case = CASE_NAMES[correct_case_abbr]
+            # Try to recover the verb's direct object
+            objtree = self.find_verb_direct_object(tnode)
+            if objtree is None:
+                return
+            code = "P_WRONG_CASE" + obj_case_abbr + "_" + correct_case_abbr
+            if objtree is not None:
+                # We know what the object is: annotate it
+                start, end = objtree.span
+                obj_text: str = objtree.tidy_text
+                suggestion: str = self.cast_to_case(correct_case_abbr, objtree)
+                correct_np = correct_spaces(suggestion)
+                correct_np = emulate_case(correct_np, template=obj_text)
+                # Skip the annotation if it suggests the same text as the
+                # original one; this can happen if the word forms for two
+                # cases are identical
+                if obj_text != correct_np:
+                    self._ann.append(
+                        Annotation(
+                            start=start,
+                            end=end,
+                            code=code,
+                            text="Á líklega að vera '{0}'".format(correct_np),
+                            detail="Andlag sagnarinnar {0} á að vera "
+                            "í {1}falli í stað {2}falls.".format(
+                                verb, correct_case, wrong_case
+                            ),
+                            original=obj_text,
+                            suggest=correct_np,
+                        )
+                    )
+            else:
+                # We don't seem to find the object, so just annotate the verb.
+                # In this case, there's no suggested correction.
+                assert node.token is not None
+                index = node.token.index
+                self._ann.append(
+                    Annotation(
+                        start=index,
+                        end=index,
+                        code=code,
+                        text="Andlag sagnarinnar 'að {0}' "
+                        "á að vera í {1}falli".format(verb, correct_case),
+                        detail="Andlag sagnarinnar {0} á að vera "
+                        "í {1}falli í stað {2}falls.".format(
+                            verb, correct_case, wrong_case
+                        ),
+                        original=verb,
+                        suggest="",
+                    )
+                )
 
-        # This is a so_subj terminal
-        if not (terminal.is_op or terminal.is_sagnb or terminal.is_nh):
-            return
-        # This is a so_subj_op, so_subj_sagnb or so_subj_nh terminal
-        # Check whether the associated verb is allowed
-        # with a subject in this case
-        # node points to a fastparser.Node instance
-        # tnode points to a SimpleTree instance
-        subj_case_abbr = terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
-        if subj_case_abbr == "none":
-            # so_subj_nh_none or similar:
-            # hidden subject ('Í raun þyrfti að yfirfara alla ferla')
-            return
-        assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
-            "Unknown case in " + terminal.name
-        )
+        def check_obj() -> None:
+            obj: str = ""
+            if len(terminal._vparts) < 1 or terminal.variant(0) == "0":
+                # No objects to check
+                pass
+            else:
+                obj = "" if len(terminal._vparts) < 2 else terminal.variant(1)
+            if not obj:
+                return
+            obj_errors = VerbErrors.OBJ_ERRORS.get(verb, dict())
+            if obj in obj_errors:
+                annotate_wrong_obj_case(obj, obj_errors[obj])
 
-        # Check whether this is a verb form that is forbidden from
-        # impersonal use, such as 'lýst' which cannot be used impersonally
-        # as a form of 'ljósta' ('Eldingunni laust niður')
-        token = node.token
-        assert token is not None
-        if token.lower in self._NON_OP_VERB_FORMS:
-            correct, detail = self._NON_OP_VERB_FORMS[token.lower]
-            annotate_wrong_op_verb_form(token.text, correct, detail)
-            return
+        def check_subj() -> None:
+            if not terminal.is_subj:
+                # Check whether we had to match an impersonal verb
+                # with this "normal" (non _subj) terminal
+                # Check whether the verb is present in the VERBS_ERRORS
+                # dictionary, with an 'nf' entry mapping to another case
+                errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
+                if "nf" in errors:
+                    # We are using an impersonal verb as a normal verb,
+                    # i.e. with a subject in nominative case:
+                    # annotate an error
+                    annotate_wrong_subject_case("nf", errors["nf"])
+                return
 
-        # Check whether this verb has an entry in the VERBS_ERRORS
-        # dictionary, and whether that entry then has an item for
-        # the present subject case
-        errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
-        if subj_case_abbr in errors:
-            # Yes, this appears to be an erroneous subject case
-            annotate_wrong_subject_case(subj_case_abbr, errors[subj_case_abbr])
+            # This is a so_subj terminal
+            if not (terminal.is_op or terminal.is_sagnb or terminal.is_nh):
+                return
+            # This is a so_subj_op, so_subj_sagnb or so_subj_nh terminal
+            # Check whether the associated verb is allowed
+            # with a subject in this case
+            # node points to a fastparser.Node instance
+            # tnode points to a SimpleTree instance
+            subj_case_abbr = terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
+            if subj_case_abbr == "none":
+                # so_subj_nh_none or similar:
+                # hidden subject ('Í raun þyrfti að yfirfara alla ferla')
+                return
+            assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
+                "Unknown case in " + terminal.name
+            )
+
+            # Check whether this is a verb form that is forbidden from
+            # impersonal use, such as 'lýst' which cannot be used impersonally
+            # as a form of 'ljósta' ('Eldingunni laust niður')
+            token = node.token
+            assert token is not None
+            if token.lower in self._NON_OP_VERB_FORMS:
+                correct, detail = self._NON_OP_VERB_FORMS[token.lower]
+                annotate_wrong_op_verb_form(token.text, correct, detail)
+                return
+
+            # Check whether this verb has an entry in the VERBS_ERRORS
+            # dictionary, and whether that entry then has an item for
+            # the present subject case
+            # TODO: This will get more complex when all arguments are in the same frame
+            subj_errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
+            if subj_case_abbr in subj_errors:
+                # Yes, this appears to be an erroneous subject case
+                annotate_wrong_subject_case(subj_case_abbr, subj_errors[subj_case_abbr])
+
+        check_obj()
+        check_subj()
 
     def visit_token(self, level: int, w: Node) -> None:
         """ Entering a terminal/token match node """
@@ -888,7 +1005,7 @@ class ErrorFinder(ParseForestNavigator):
         # TODO: The following actually reduces GreynirCorrect's score on the
         # iceErrorCorpus test set, so we comment it out for the time being.
         # elif terminal.category == "raðnr":
-        #    self._annotate_ordinal(node)
+        #    self._annotate_ordinal(w)
 
     def visit_nonterminal(self, level: int, node: Node) -> Any:
         """ Entering a nonterminal node """

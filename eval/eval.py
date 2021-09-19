@@ -149,7 +149,7 @@ CatResultDict = Dict[str, Union[int, float, str]]
 OUTPUT_LOCK = multiprocessing.Lock()
 
 # Content categories in iceErrorCorpus, embedded within the file paths
-CATEGORIES = (
+GENRES = (
     "essays",
     "onlineNews",
     "wikipedia",
@@ -265,6 +265,7 @@ OUT_OF_SCOPE = {
     "v3-subordinate",
     "wording",  # orðalag   wording ...gerðum allt í raun... > ...gerðum í raun allt...
     "word4number",
+    "wrong-prep",
     "xxx",  # unclassified  unclassified
     "zzz",  # to revisit    unannotated
 }
@@ -291,530 +292,9 @@ NAMES = {
     "wrong_span": "Wrong span",
 }
 
-# Supercategories according to SÍM and corresponding subcategories
-# Errors go into the first possible category. Error categories that
-# can both be independent and dependent of context go under the former.
-SIMCATEGORIES = {
-    "context-independent": [
-        "caps4low",
-        "number-fail",
-        "lower4upper-proper",
-        "lower4upper-acro",
-        "though",
-        "compound-collocation",
-        "compound-nonword",
-        "nonword",
-        "swapped-letters",
-        "letter-rep",
-        "missing-letter",
-        "missing-letters",
-        "missing-accent",
-        "wrong-accent",
-        "merged-words",
-        "split-word",
-        "extra-accent",
-        "extra-letter",
-        "ngnk",
-        "i4y",
-        "y4i",
-        "í4ý",
-        "ý4í",
-        "n4nn",
-        "nn4n",
-        "pronun-writing",
-        "kv4hv",
-        "hv4kv",
-        "bad-contraction",
-        "fw",
-        "foreign-error",
-        "abbreviation-period",
-        "abbreviation",
-    ],
-    "context-dependent": [
-        "lower4upper-initial",
-        "upper4lower-common",
-        "upper4lower-proper",
-        "upper4lower-noninitial",
-        "low4caps",
-        "collocation",
-        "collocation-idiom",
-        "missing-word",
-        "missing-words",
-        "missing-prep",
-        "split-compound",
-        "split-words",
-        "missing-dash",
-        "missing-space",
-        "extra-space",
-        "extra-word",
-        "extra-words",
-        "extra-prep",
-        "repeat-word",
-        "repeat-word-split",
-        "name-error",
-        "gendered",
-        "number4word",
-        "word4number",
-    ],
-    "grammar": [
-        "agreement",
-        "agreement-concord",
-        "agreement-pred",
-        "agreement-pro",
-        "case-verb",
-        "case-prep",
-        "case-adj",
-        "case-collocation",
-        "ind4def",
-        "def4ind",
-        "ind4sub",
-        "ind4sub-conj",
-        "ind4sub-verb",
-        "sub4ind",
-        "sub4ind-conj",
-        "sub4ind-verb",
-        "verb-inflection",
-        "nominal-inflection",
-        "numeral-inflection",
-        "pro-inflection",
-        "plural4singular",
-        "singular4plural",
-        "conjunction",
-        "adjective-inflection",
-        "dative-sub",
-        "dir4loc",
-        "loc4dir",
-        "mid4act",
-        "act4mid",
-        "mid4pass",
-        "pass4mid",
-        "act4pass",
-        "pass4act",
-        "passive",
-        "new-passive",
-        "each",
-        "noun4pro",
-        "pro4noun",
-        "reflexive4pro",
-        "pro4reflexive",
-        "reflexive4noun",
-        "pres4past",
-        "past4pres",
-        "tense4perfect",
-        "perfect4tense",
-        "pers4dem",
-        "dem-pro",
-        "missing-dem-pro",
-        "extra-dem-pro",
-        "indef-pro",
-        "marked4unmarked",
-        "adj4adv",
-        "adv4adj",
-        "have",
-        "cont4simple",
-        "missing-inf-part",
-        "want",
-        "dem4pers",
-        "nom4acc-sub",
-        "acc4nom-sub",
-        "simple4cont",
-        "extra-inf-part",
-        "gen-escape",
-        "genitive",
-        "dem4noun",
-        "noun4dem",
-        "geta",
-        "adj4noun",
-        "noun4adj",
-        "extra-sub",
-        "missing-fin-verb",
-        "missing-sub",
-        "missing-obj",
-        "að4af",
-        "af4að",
-        "wrong-prep",
-        "interr-pro",
-        "hypercorr",
-        "v3",
-        "v3-subordinate",
-        "syntax-other",
-        "aux",
-    ],
-    "style": [
-        "wording",
-        "extra-number",
-        "symbol4number",
-        "number4symbol",
-        "style",
-        "unicelandic",
-        "taboo-word",
-        "loan-syntax",
-        "u4y",
-        "fw4ice",
-        "ice4fw",
-        "nonit4it",
-        "it4nonit",
-        "extra-munu",
-        "words4abbreviation",
-        "abbreviation4words",
-        "symbol4word",
-        "extra-symbol",
-        "dep",
-        "þar4það",
-        "context",
-        "foreign-name",
-    ],
-    "punctuation": [
-        "bracket4comma",
-        "bracket4period",
-        "bracket4square",
-        "colon4comma",
-        "colon4period",
-        "comma-plus-conjunction",
-        "comma4bracket",
-        "comma4colon",
-        "comma4conjunction",
-        "comma4dash",
-        "comma4ex",
-        "comma4period",
-        "comma4qm",
-        "comma4semicolon",
-        "conjunction-drop",
-        "conjunction4comma",
-        "conjunction4period",
-        "conjunction4qm",
-        "conjunction4semicolon",
-        "endash4colon",
-        "endash4comma",
-        "endash4period",
-        "endash4semicolon",
-        "endash4word",
-        "date-abbreviation",
-        "date-period",
-        "dots4comma",
-        "dots4period",
-        "double-punctuation",
-        "ex4comma",
-        "ex4period",
-        "extra-abbreviation",
-        "extra-bracket",
-        "extra-brackets",
-        "extra-colon",
-        "extra-comma",
-        "extra-commas",
-        "extra-conjunction",
-        "extra-endash",
-        "extra-hyphen",
-        "extra-period",
-        "extra-punctuation",
-        "extra-qm",
-        "extra-quot",
-        "extra-quots",
-        "extra-semicolon",
-        "extra-square",
-        "hyphen4colon",
-        "hyphen4comma",
-        "hyphen4endash",
-        "hyphen4period",
-        "hyphen4semicolon",
-        "hyphen4word",
-        "iteration-colon",
-        "misplaced-quot",
-        "missing-bracket",
-        "missing-colon",
-        "missing-comma",
-        "missing-commas",
-        "missing-conjunction",
-        "missing-ex",
-        "missing-endash",
-        "missing-hyphen",
-        "missing-period",
-        "missing-qm",
-        "missing-quot",
-        "missing-quots",
-        "missing-semicolon",
-        "missing-slash",
-        "missing-square",
-        "missing-symbol",
-        "nonsup4sup",
-        "ordinal-period",
-        "period-plus-conjunction",
-        "period4colon",
-        "period4comma",
-        "period4conjunction",
-        "period4endash",
-        "period4ex",
-        "period4qm",
-        "period4semicolon",
-        "qm4comma",
-        "qm4ex",
-        "qm4period",
-        "semicolon4colon",
-        "semicolon4comma",
-        "semicolon4period",
-        "slash4dash",
-        "slash4hyphen",
-        "slash4or",
-        "square4bracket",
-        "word4endash",
-        "word4symbol",
-        "wrong-dash",
-        "wrong-quot",
-        "wrong-quots",
-    ],
-}
-
-# Supercategories in iceErrorCorpus and corresponding subcategories
-SUPERCATEGORIES = {
-    "capitalization": [
-        "lower4upper-initial",
-        "lower4upper-proper",
-        "lower4upper-acro",
-        "upper4lower-common",
-        "upper4lower-proper",
-        "upper4lower-noninitial",
-        "caps4low",
-    ],
-    "collocation": ["collocation", "collocation-idiom", "though",],
-    "grammar": [
-        "agreement",
-        "agreement-concord",
-        "agreement-pred",
-        "agreement-pro",
-        "case-verb",
-        "case-prep",
-        "case-adj",
-        "case-collocation",
-        "ind4def",
-        "def4ind",
-        "ind4sub",
-        "ind4sub-conj",
-        "ind4sub-verb",
-        "sub4ind",
-        "sub4ind-conj",
-        "sub4ind-verb",
-        "verb-inflection",
-        "nominal-inflection",
-        "numeral-inflection",
-        "pro-inflection",
-        "plural4singular",
-        "singular4plural",
-        "conjunction",
-        "adjective-inflection",
-        "dative-sub",
-        "dir4loc",
-        "loc4dir",
-        "mid4act",
-        "act4mid",
-        "mid4pass",
-        "pass4mid",
-        "act4pass",
-        "pass4act",
-        "passive",
-        "new-passive",
-        "each",
-        "noun4pro",
-        "pro4noun",
-        "reflexive4pro",
-        "pro4reflexive",
-        "pres4past",
-        "past4pres",
-        "tense4perfect",
-        "perfect4tense",
-        "pers4dem",
-        "dem-pro",
-        "missing-dem-pro",
-        "extra-dem-pro",
-        "indef-pro",
-        "marked4unmarked",
-        "adj4adv",
-        "adv4adj",
-        "have",
-        "cont4simple",
-        "missing-inf-part",
-        "want",
-        "dem4pers",
-        "nom4acc-sub",
-        "acc4nom-sub",
-        "simple4cont",
-        "extra-inf-part",
-        "gen-escape",
-        "genitive",
-        "dem4noun",
-        "noun4dem",
-        "geta",
-        "adj4noun",
-        "noun4adj",
-        "extra-sub",
-        "missing-fin-verb",
-        "missing-sub",
-        "missing-obj",
-        "að4af",
-        "af4að",
-        "wrong-prep",
-        "interr-pro",
-        "hypercorr",
-    ],
-    "syntax": ["v3", "v3-subordinate", "syntax-other",],
-    "nonword": ["compound-collocation", "compound-nonword", "nonword",],
-    "omission": ["missing-word", "missing-words", "missing-prep",],
-    "typo": [
-        "swapped-letters",
-        "letter-rep",
-        "missing-letter",
-        "missing-accent",
-        "wrong-accent",
-        "extra-accent",
-        "extra-letter",
-        "extra-letters",
-    ],
-    "punctuation": [
-        "comma4period",
-        "comma4qm",
-        "comma4colon",
-        "double-punctuation",
-        "extra-abbreviation",
-        "extra-dash",
-        "iteration-colon",
-        "missing-colon",
-        "missing-comma",
-        "missing-commas",
-        "missing-period",
-        "missing-qm",
-        "missing-conjunction",
-        "missing-quot",
-        "missing-quots",
-        "misplaced-quot",
-        "wrong-quots",
-        "extra-quot",
-        "extra-quots",
-        "extra-punctuation",
-        "extra-comma",
-        "extra-period",
-        "period4comma",
-        "period4colon",
-        "period4conjunction",
-        "conjunction4period",
-        "conjunction4comma",
-        "comma4conjunction",
-        "period4qm",
-        "period-plus-conjunction",
-        "comma-plus-conjunction",
-        "abbreviation-period",
-        "comma4ex",
-        "period4ex",
-        "semicolon4colon",
-        "extra-semicolon",
-        "ordinal-period",
-        "conjunction-drop",
-        "extra-conjunction",
-        "semicolon4comma",
-        "conjunction4qm",
-        "missing-slash",
-        "comma4bracket",
-        "qm4comma",
-        "missing-ex",
-        "qm4ex",
-        "qm4period",
-        "bracket4square",
-        "square4bracket",
-        "dash4comma",
-        "date-period",
-        "comma4semicolon",
-        "word4dash",
-        "dash4word",
-        "missing-semicolon",
-        "abbreviation",
-        "slash4or",
-        "dash4period",
-        "ex4comma",
-        "colon4period",
-        "colon4comma",
-        "ex4period",
-        "extra-colon",
-        "bracket4comma",
-        "extra-qm",
-        "comma4dash",
-        "dash4semicolon",
-        "wrong-dash",
-        "dash4colon",
-        "dots4comma",
-        "missing-symbol",
-        "dots4period",
-        "extra-square",
-        "bracket4period",
-        "word4symbol",
-        "nonsup4sup",
-        "semicolon4period",
-        "period4semicolon",
-        "period4dash",
-        "missing-square",
-        "slash4dash",
-        "extra-commas",
-        "conjunction4semicolon",
-        "missing-bracket",
-        "extra-bracket",
-        "date-abbreviation",
-    ],
-    "spacing": [
-        "merged-words",
-        "split-compound",
-        "split-word",
-        "split-words",
-        "missing-dash",
-        "missing-space",
-        "extra-space",
-    ],
-    "insertion": [
-        "extra-word",
-        "extra-words",
-        "extra-prep",
-        "repeat-word",
-        "repeat-word-split",
-    ],
-    "wording": ["wording", "aux",],
-    "spelling": [
-        "ngnk",
-        "i4y",
-        "y4i",
-        "í4ý",
-        "ý4í",
-        "n4nn",
-        "nn4n",
-        "pronun-writing",
-        "kv4hv",
-        "hv4kv",
-        "name-error",
-        "bad-contraction",
-    ],
-    "foreign": ["fw", "foreign-error",],
-    "exclusion": ["gendered",],
-    "numbers": [
-        "number4word",
-        "word4number",
-        "extra-number",
-        "symbol4number",
-        "number4symbol",
-        "number-fail",
-    ],
-    "style": [
-        "style",
-        "unicelandic",
-        "taboo-word",
-        "loan-syntax",
-        "u4y",
-        "fw4ice",
-        "ice4fw",
-        "nonit4it",
-        "it4nonit",
-        "extra-munu",
-        "words4abbreviation",
-        "abbreviation4words",
-    ],
-    "other": ["symbol4word", "extra-symbol", "dep", "þar4það",],
-    "lexical": ["context",],
-    "unnannotated": ["zzz", "xxx",],
-}
+# Three levels: Supercategories, subcategories and error codes
+# supercategory: {subcategory : [error code]}
+SUPERCATEGORIES = defaultdict(lambda: defaultdict(list))
 
 GCtoIEC = {
     "A001": ["abbreviation-period"],
@@ -905,8 +385,10 @@ GCtoIEC = {
     "P_MOOD_ACK": ["ind4sub-conj"],
     "P_MOOD_REL": ["ind4sub-conj"],
     "P_MOOD_TEMP": ["sub4ind-conj"],
+    "P_MOOD_TEMP/w": ["sub4ind-conj"],
     "P_MOOD_COND": ["sub4ind-conj"],
     "P_MOOD_PURP": ["sub4ind-conj"],
+    "P_DOUBLE_DEFINITE": ["extra-dem-pro"],
     "X_number4word": ["number4word"],
     "N001": ["wrong-quot"],
     "N002": ["extra-punctuation"],
@@ -999,6 +481,13 @@ parser.add_argument(
     "--analysis",
     action="store_true",
     help="Create an analysis report for token results",
+)
+
+parser.add_argument(
+    "-f",
+    "--catfile",
+    type=str,
+    default="iceErrorCorpus/errorCodes.tsv"
 )
 
 # This boolean global is set to True for quiet output,
@@ -1151,16 +640,16 @@ class Stats:
             bprint(f"Processing started at {str(self._starttime)[0:19]}")
             bprint(f"Total processing time {h}h {m:02}m {s:02}s, using {cores} cores")
             bprint(f"\nFiles processed:            {sum(self._files.values()):6}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 bprint(f"   {c:<13}:           {self._files[c]:6}")
             # Total number of tokens processed
             num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
             bprint(f"\nTokens processed:           {num_tokens:6}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 bprint(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
             # Total number of sentences processed
             bprint(f"\nSentences processed:        {num_sentences:6}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 bprint(f"   {c:<13}:           {self._sentences[c]['count']:6}")
 
         def perc(n: int, whole: int) -> str:
@@ -1179,7 +668,7 @@ class Stats:
                 )
             else:
                 bprint(f"\n{NAMES[bv]+':':<20}        {val:6} {perc(val, whole):>6}%")
-            for c in CATEGORIES:
+            for c in GENRES:
                 bprint(f"   {c:<13}:           {self._sentences[c][bv]:6}")
 
         def calc_PRF(
@@ -1194,7 +683,7 @@ class Stats:
             recs: str,
             precs: str,
         ) -> None:
-            """ Calculate precision, recall, F1-score and F0.5-score """
+            """ Calculate precision, recall and F0.5-score """
             # Recall
             if tp + fn == 0:
                 result = "N/A"
@@ -1203,7 +692,7 @@ class Stats:
                 recall = tp / (tp + fn)
                 result = f"{recall:1.4f}"
             bprint(f"\nRecall:                     {result}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 d = self._sentences[c]
                 denominator = d[tps] + d[fns]
                 if denominator == 0:
@@ -1219,7 +708,7 @@ class Stats:
                 precision = tp / (tp + fp)
                 result = f"{precision:1.4f}"
             bprint(f"\nPrecision:                  {result}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 d = self._sentences[c]
                 denominator = d[tps] + d[fps]
                 if denominator == 0:
@@ -1227,27 +716,6 @@ class Stats:
                 else:
                     p = d[precs] = d[tps] / denominator
                     bprint(f"   {c:<13}:           {p:1.4f}")
-            # F1 score
-            if precision + recall > 0.0:
-                f1 = 2 * precision * recall / (precision + recall)
-                result = f"{f1:1.4f}"
-            else:
-                f1 = 0.0
-                result = "N/A"
-            bprint(f"\nF1 score:                   {result}")
-            for c in CATEGORIES:
-                d = self._sentences[c]
-                if recs not in d or precs not in d:
-                    bprint(f"   {c:<13}:              N/A")
-                    continue
-                rc = d[recs]
-                p = d[precs]
-                if p + rc > 0.0:
-                    f1 = 2 * p * rc / (p + rc)
-                    bprint(f"   {c:<13}:           {f1:1.4f}")
-                else:
-                    bprint(f"   {c:<13}:           N/A")
-
             # F0.5 score
             if precision + recall > 0.0:
                 f05 = 1.25 * (precision * recall) / (0.25 * precision + recall)
@@ -1257,7 +725,7 @@ class Stats:
                 result = "N/A"
 
             bprint(f"\nF0.5 score:                   {result}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 d = self._sentences[c]
                 if recs not in d or precs not in d:
                     bprint(f"   {c:<13}:              N/A")
@@ -1266,7 +734,7 @@ class Stats:
                 p = d[precs]
                 if p + rc > 0.0:
                     f05 = 1.25 * (p * rc) / (0.25 * p + rc)
-                    bprint(f"   {c:<13}:           {f1:1.4f}")
+                    bprint(f"   {c:<13}:           {f05:1.4f}")
                 else:
                     bprint(f"   {c:<13}:           N/A")
 
@@ -1282,7 +750,7 @@ class Stats:
                 recall = right / (right + wrong)
                 result = f"{recall:1.4f}"
             bprint(f"\nRecall:                     {result}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 d = self._sentences[c]
                 denominator = d[rights] + d[wrongs]
                 if denominator == 0:
@@ -1292,7 +760,7 @@ class Stats:
                     bprint(f"   {c:<13}:           {rc:1.4f}")
 
         def calc_error_category_metrics(cat: str) -> CatResultDict:
-            """ Calculates precision, recall, f1-score and f0.5-score for a single error category
+            """ Calculates precision, recall and f0.5-score for a single error code
                 N = Number of errors in category z in reference corpus, 
                 Nall =  number of tokens
                 TP = Errors correctly classified as category z
@@ -1300,7 +768,6 @@ class Stats:
                 FN = Errors in category z in reference but not hypothesis
                 Recall = TPz/(TPz+FPz)
                 Precision = TPz/(TPz+FNz)
-                F1-score = 2*(P*R)/(P+R)
                 F0.5-score = 1.25*(P*R)/(0.25*P+R)
             """
             catdict: CatResultDict = {k: v for k, v in self._errtypes[cat].items()}
@@ -1313,7 +780,6 @@ class Stats:
             if tp + fn + fp == 0:  # No values in category
                 catdict["recall"] = "N/A"
                 catdict["precision"] = "N/A"
-                catdict["f1score"] = "N/A"
                 catdict["f05score"] = "N/A"
             else:
                 # Recall
@@ -1322,14 +788,12 @@ class Stats:
                 # Precision
                 if tp + fp != 0:
                     precision = catdict["precision"] = tp / (tp + fp)
-                # F1 score and F0.5 score
+                # F0.5 score
                 if recall + precision > 0.0:
-                    catdict["f1score"] = 2 * precision * recall / (precision + recall)
                     catdict["f05score"] = (
                         1.25 * (precision * recall) / (0.25 * precision + recall)
                     )
                 else:
-                    catdict["f1score"] = 0.0
                     catdict["f05score"] = 0.0
                 # Correction recall
                 right_corr = cast(int, catdict.get("right_corr", 0))
@@ -1385,7 +849,7 @@ class Stats:
                     + "%"
                 )
             bprint(f"\nTrue/false split: {result:>16}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 d = self._sentences[c]
                 num_sents = d["count"]
                 true_results = cast(int, d["true_positives"] + d["true_negatives"])
@@ -1396,7 +860,7 @@ class Stats:
                     result = f"{100.0*true_results/num_sents:3.2f}%/{100.0*false_results/num_sents:3.2f}%"
                 bprint(f"   {c:<13}: {result:>16}")
 
-            # Precision, recall, F1-score, F0.5-score
+            # Precision, recall, F0.5-score
             calc_PRF(
                 true_positives,
                 true_negatives,
@@ -1441,7 +905,7 @@ class Stats:
                 cast(int, d["num_tokens"]) for d in self._sentences.values()
             )
             bprint(f"\nTokens processed:           {num_tokens:6}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 bprint(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
 
             tp = sum(cast(int, d["tp"]) for d in self._sentences.values())
@@ -1506,33 +970,23 @@ class Stats:
             """ Calculate and write scores for each error category to stdout """
             bprint(f"\n\nResults for each error category in order by frequency")
             freqdict: Dict[str, int] = dict()
-            microf1: float = 0.0
             microf05: float = 0.0
             nfreqs: int = 0
-            microf1all: float = 0.0
-            microf05all: float = 0.0
-            nfreqsall: int = 0
             resultdict: Dict[str, CatResultDict] = dict()
 
             # Iterate over category counts
             for cat in self._errtypes.keys():
-                # Get recall, precision, F1 and F0.5; recall for correction and span
+                # Get recall, precision and F0.5; recall for correction and span
                 catdict = resultdict[cat] = calc_error_category_metrics(cat)
 
                 # Collect micro scores, both overall and for in-scope categories
                 freq = cast(int, catdict["freq"])
                 assert isinstance(freq, int)
-                f1score = cast(float, catdict["f1score"])
                 f05score = cast(float, catdict["f05score"])
-                assert isinstance(f1score, float)
                 assert isinstance(f05score, float)
                 if cat not in OUT_OF_SCOPE:
-                    microf1 += f1score * freq
                     microf05 += f05score * freq
                     nfreqs += freq
-                microf1all += f1score * freq
-                microf05all += f05score * freq
-                nfreqsall += freq
 
                 # Create freqdict for sorting error categories by frequency
                 freqdict[cat] = freq
@@ -1547,10 +1001,9 @@ class Stats:
                     )
                 )
                 bprint(
-                    "\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}|{:3.2f}".format(
+                    "\tRe, Pr, F0.5: {:3.2f}, {:3.2f}, {:3.2f}".format(
                         cast(float, rk.get("recall", 0.0)) * 100.0,
                         cast(float, rk.get("precision", 0.0)) * 100.0,
-                        cast(float, rk.get("f1score", 0.0)) * 100.0,
                         cast(float, rk.get("f05score", 0.0)) * 100.0,
                     )
                 )
@@ -1567,101 +1020,84 @@ class Stats:
                         )
                     )
 
-            # Micro F1-score
-            # Results for in-scope categories and all categories
-            if nfreqs != 0:
-                bprint(
-                    "Micro F1-score: {:3.2f}  ({:3.2f})".format(
-                        microf1 / nfreqs * 100.0, microf1all / nfreqsall * 100.0
-                    )
-                )
-            else:
-                bprint(f"Micro F1-score: N/A")
             # Micro F0.5-score
             # Results for in-scope categories and all categories
             if nfreqs != 0:
                 bprint(
-                    "Micro F0.5-score: {:3.2f}  ({:3.2f})".format(
-                        microf05 / nfreqs * 100.0, microf05all / nfreqsall * 100.0
+                    "F0.5-score: {:3.2f}".format(
+                        microf05 / nfreqs * 100.0,
                     )
                 )
             else:
-                bprint(f"Micro F0.5-score: N/A")
+                bprint(f"F0.5-score: N/A")
 
-        def output_supercategory_scores(errorcats: Dict[str, List[str]]) -> None:
-            """ Results for each SÍM category
-                (context-dependent, context-independent, grammar, style) """
-            for entry, catlist in errorcats.items():
-                microf1 = 0.0
-                microf05 = 0.0
-                nfreqs = 0
-                microf1all = 0.0
-                microf05all = 0.0
-                nfreqsall = 0
-                correcs = 0.0
-                correcsall = 0.0
-                # microrec = 0.0
-                # microrecall = 0.0
-                # microprec = 0.0
-                # microprecall = 0.0
-                # TODO taka saman corr_rec og span_rec; skoða hvernig fæ F-skor,
-                # svipað og fyrir hitt, þegar er ekki með TN inni
-                bprint("\n{}:".format(entry.capitalize()))
-                for cat in catlist:
-                    et = calc_error_category_metrics(cat)
-                    if et.get("f1score", "N/A") == "N/A":
-                        continue
-                    freq = cast(int, et["freq"])
-                    if cat not in OUT_OF_SCOPE:
-                        microf1 += cast(float, et["f1score"]) * freq
-                        microf05 += cast(float, et["f05score"]) * freq
-                        if et["corr_rec"] != "N/A":
-                            correcs += cast(float, et["corr_rec"]) * freq
-                        nfreqs += freq
-                        bprint(
-                            "\t{}   {:3.2f}|{:3.2f}|{:>6}".format(
-                                cat,
-                                cast(float, et["f1score"]) * 100.0,
-                                cast(float, et["f05score"]) * 100.0,
+        def output_supercategory_scores():
+            """ Results for each supercategory in iEC given in SUPERCATEGORIES,
+                each subcategory, and error code """
+            bprint("Supercategory: frequency, F-score")
+            bprint("\tSubcategory: frequency, F-score")
+            bprint("\t\tError code: frequency, (recall, precision, F-score), (tp, fn, fp), correct recall")
+            totalfreq = 0
+            totalf = 0.0
+            for supercat in SUPERCATEGORIES:
+                # supercategory: {subcategory : error code}
+                # entry = supercategory, catlist = {subcategory : error code}
+                superblob = ""
+                superfreq = 0
+                superf = 0.0
+
+                for subcat in SUPERCATEGORIES[supercat]:
+                    subblob = ""
+                    subfreq = 0
+                    subf = 0.0
+                    for code in SUPERCATEGORIES[supercat][subcat]:
+                        if code not in OUT_OF_SCOPE:
+                            et = calc_error_category_metrics(code)
+                            if et["f05score"] == "N/A":
+                                continue
+                            freq = cast(int, et["freq"])
+                            fscore = cast(float, et["f05score"])
+                            # codework
+                            subblob = subblob + "\t\t{} {}  ({}, {}, {}) ({},{},{})| {}\n".format(
+                                code,
                                 freq,
+                                cast(float, et["recall"]) * 100.0 if "recall" in et else 0.0,
+                                cast(float, et["precision"]) * 100.0 if "precision" in et else 0.0,
+                                fscore * 100.0,
+                                cast(int, et["tp"]) if "tp" in et else 0,
+                                cast(int, et["fn"]) if "fn" in et else 0,
+                                cast(int, et["fp"]) if "fp" in et else 0,
+                                cast(int, et["corr_rec"]) if "corr_rec" in et else 0,
                             )
-                        )
-                    microf1all += cast(float, et["f1score"]) * freq
-                    microf05all += cast(float, et["f05score"]) * freq
-                    if et.get("corr_rec", "N/A") != "N/A":
-                        correcsall += cast(float, et["corr_rec"]) * freq
-                    nfreqsall += freq
-                if nfreqs != 0:
-                    bprint(
-                        "Micro F1-score: {:3.2f}  ({:3.2f})".format(
-                            microf1 / nfreqs * 100.0, microf1all / nfreqsall * 100.0
-                        )
-                    )
-                    bprint(
-                        "Micro F0.5-score: {:3.2f}  ({:3.2f})".format(
-                            microf05 / nfreqs * 100.0, microf05all / nfreqsall * 100.0
-                        )
-                    )
-                    bprint(
-                        "Error correction recall: {:3.2f} ({:3.2f})".format(
-                            correcs / nfreqs * 100.0, correcsall / nfreqsall * 100.0
-                        )
-                    )
+                            # subwork
+                            subfreq += freq
+                            subf += fscore * freq
+                    if subfreq != 0:
+                        subblob = "\t{}   {} {}\n".format(subcat.capitalize(), subfreq, subf / subfreq) + subblob
+                    else:
+                        subblob = "\t{}    0    N/A\n".format(subcat.capitalize()) + subblob
+                    # superwork
+                    # freq, f05
+                    superblob += subblob
+                    superfreq += subfreq
+                    superf += subf              # TODO is this correct?
+                if superfreq != 0:
+                    superblob = "\n{}   {} {}\n".format(supercat.capitalize(), superfreq, superf / superfreq) + superblob
                 else:
-                    bprint(f"Micro F1-score: N/A")
-                    bprint(f"Micro F0.5-score: N/A")
-                    bprint(f"Error correction recall: N/A")
-
+                    superblob = "\n{}    0    N/A\n".format(supercat.capitalize()) + superblob
+                totalfreq += superfreq
+                totalf += superf                # TODO is this correct?
+                bprint("".join(superblob))
+            bprint("Total frequency: {}".format(totalfreq))
+            bprint("Total F-score: {}".format(totalf / totalfreq * 100.0))
         #output_duration()
         #output_sentence_scores()
         #output_token_scores()
-        output_error_cat_scores()
+        #output_error_cat_scores()
 
         bprint(f"\n\nResults for iEC-categories:")
-        output_supercategory_scores(SUPERCATEGORIES)
-        #bprint(f"\n\nResults for SÍM-categories:")
-        #output_supercategory_scores(SIMCATEGORIES)
-
+        output_supercategory_scores()
+        
         # Print the accumulated output before exiting
         for s in buffer:
             print(s)
@@ -1708,12 +1144,12 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
     # Statistics about processed sentences. These data will
     # be returned back to the parent process.
     stats: List[StatsTuple] = []
-    # Counter of iceErrorCorpus error types (xtypes) encountered
+    # Counter of iceErrorCorpus error codes (xtypes) encountered
     true_positives: Dict[str, int] = defaultdict(int)
     false_negatives: Dict[str, int] = defaultdict(int)
-    # Counter of iceErrorCorpus error types in unparsable sentences
+    # Counter of iceErrorCorpus error codes in unparsable sentences
     ups: Dict[str, int] = defaultdict(int)
-    # Stats for each error type (xtypes)
+    # Stats for each error code (xtypes)
     errtypefreqs: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs().copy)
 
     try:
@@ -1741,7 +1177,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 exc = sent.attrib.get("exclude", "")
                 if exc:
                     continue
-            check = False  # When args.single, checking single error category
+            check = False  # When args.single, checking single error code
             # Sentence identifier (index)
             index = sent.attrib.get("n", "")
             tokens: List[Tuple[str, str]] = []
@@ -1983,9 +1419,9 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             if ysugg and xsugg and ysugg.intersection(xsugg):
                                 samespan = True
 
-                        # iEC error subcategory
+                        # iEC error code
                         xtype = cast(str, xtok["xtype"])
-                        # By default, use iEC error category
+                        # By default, use iEC error code
                         # on the GreynirCorrect side as well
                         ytype = xtype
                         if ytok.code in GCtoIEC:
@@ -2183,7 +1619,15 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
         errtypefreqs=errtypefreqs,
     )
 
-
+def initialize_cats(catfile):
+    first = True
+    with open(catfile, "r") as cfile:
+        for row in cfile:
+            split = row.split("\t")
+            if first:
+                first = False
+            else:
+                SUPERCATEGORIES[split[0].strip()][split[1].strip()].append(split[2].strip())
 def main() -> None:
     """ Main program """
     # Parse the command line arguments
@@ -2211,6 +1655,9 @@ def main() -> None:
     global ANALYSIS
     ANALYSIS = args.analysis
 
+    global CATFILE
+    CATFILE = args.catfile
+
     # Maximum number of files to process (0=all files)
     max_count = args.number
     # Initialize the statistics collector
@@ -2219,6 +1666,9 @@ def main() -> None:
     path: str = args.path
     # When running measurements only, we use _TEST_PATH as the default,
     # otherwise _DEV_PATH
+    
+    initialize_cats(CATFILE)
+
     if path is None:
         path = _TEST_PATH if args.measure else _DEV_PATH
 
@@ -2234,19 +1684,19 @@ def main() -> None:
         else:
             it = glob.iglob(path, recursive=True)
         for fpath in it:
-            # Find out which category the file belongs to by
+            # Find out which genre the file belongs to by
             # inference from the file name
-            for category in CATEGORIES:
-                if category in fpath:
+            for genre in GENRES:
+                if genre in fpath:
                     break
             else:
                 assert (
                     False
-                ), f"File path does not contain a recognized category: {fpath}"
-            # Add the file to the statistics under its category
-            stats.add_file(category)
+                ), f"File path does not contain a recognized genre: {fpath}"
+            # Add the file to the statistics under its genre
+            stats.add_file(genre)
             # Yield the file information to the multiprocessing pool
-            yield fpath, category
+            yield fpath, genre
             count += 1
             # If there is a limit on the number of processed files,
             # and we're done, stop the generator
