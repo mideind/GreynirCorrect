@@ -1,3 +1,4 @@
+
 .. image:: https://img.shields.io/badge/License-MIT-yellow.svg
     :target: https://opensource.org/licenses/MIT
 .. image:: https://img.shields.io/badge/python-3.6-blue.svg
@@ -18,12 +19,16 @@ Overview
 **GreynirCorrect** is a Python 3 (>= 3.6) package and command line tool for
 **checking and correcting spelling and grammar** in Icelandic text.
 
-GreynirCorrect relies on the `Greynir <https://pypi.org/project/reynir/>`_ package,
+GreynirCorrect relies on the `Greynir <https://pypi.org/project/reynir/>`__ package,
 by the same authors, to tokenize and parse text.
 
 GreynirCorrect is documented in detail `here <https://yfirlestur.is/doc/>`__.
 
 The software has three main modes of operation, described below.
+
+As a fourth alternative, you can call the JSON REST API of `Yfirlestur.is <https://yfirlestur.is>`__
+to apply the GreynirCorrect spelling and grammar engine to your text,
+as `documented here <https://github.com/mideind/Yfirlestur#https-api>`__.
 
 Token-level correction
 ----------------------
@@ -103,9 +108,13 @@ Output::
 
    'Páli, vini mínum, langaði að horfa á sjónvarpið.'
 
-Note that the ``annotation.start`` and ``annotation.end`` properties
-(here ``start`` is 0 and ``end`` is 4) contain the indices of the first
+The ``annotation.start`` and ``annotation.end`` properties
+(here ``start`` is 0 and ``end`` is 4) contain the 0-based indices of the first
 and last tokens to which the annotation applies.
+The ``annotation.start_char`` and ``annotation.end_char`` properties
+contain the indices of the first and last character to which the
+annotation applies, within the original input string.
+
 ``P_WRONG_CASE_þgf_þf`` and ``S004`` are error codes.
 
 .. _prerequisites:
@@ -244,6 +253,16 @@ virtualenv), then run:
 
    $ python -m pytest
 
+****************
+Acknowledgements
+****************
+
+Parts of this software are developed under the auspices of the
+Icelandic Government's 5-year Language Technology Programme for Icelandic,
+which is managed by Almannarómur and described
+`here <https://www.stjornarradid.is/lisalib/getfile.aspx?itemid=56f6368e-54f0-11e7-941a-005056bc530c>`__
+(English version `here <https://clarin.is/media/uploads/mlt-en.pdf>`__).
+
 .. _license:
 
 *********************
@@ -258,12 +277,6 @@ Copyright and License
 **Copyright © 2021 Miðeind ehf.**
 
 GreynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
-
-Parts of this software are developed under the auspices of the
-Icelandic Government's 5-year Language Technology Programme for Icelandic,
-which is described
-`here <https://www.stjornarradid.is/lisalib/getfile.aspx?itemid=56f6368e-54f0-11e7-941a-005056bc530c>`__
-(English version `here <https://clarin.is/media/uploads/mlt-en.pdf>`__).
 
 This software is licensed under the *MIT License*:
 
