@@ -37,7 +37,7 @@
 # Run with 'pytest -v' for verbose mode
 
 import reynir_correct as rc
-import tokenizer
+from reynir_correct import detokenize
 
 # Tests for errtokenizer.py
 
@@ -52,7 +52,7 @@ def dump(tokens):
 
 def normalize(g):
     """ Return a corrected, normalized string form of the token list in g """
-    return tokenizer.detokenize(g, normalize=True)
+    return detokenize(g, normalize=True)
 
 
 def test_punctuation(verbose=False):
@@ -1655,7 +1655,7 @@ def test_conjunctions(verbose=False):
     s = "Hafsteinn vissi svarið þó hann segði það ekki upphátt."
     check_sentence(s, [(3, 3, "P_NT_ÞóAð")])
     s = "Ég kem á hátíðina víst að pabbi þinn kemst ekki."
-    # check_sentence(s, [(4, 5, "P_NT_VístAð")])            # TODO engin villa finnst! Var ekki búið að útfæra þetta?
+    check_sentence(s, [(4, 5, "P_NT_VístAð")])
     s = "Ég kem á hátíðina fyrst að pabbi þinn kemst ekki."
     check_sentence(s, [(5, 5, "P_NT_Að/w")])
     s = "Hatturinn passar á höfuðið nema að það sé eyrnaband undir honum."

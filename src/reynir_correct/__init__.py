@@ -51,14 +51,20 @@ from .checker import (
     AnnotatedSentence,
 )
 
-from .version import __version__
-
 # Annotations
 from .annotation import Annotation
 
+from .version import __version__
 
 __author__ = u"Miðeind ehf"
 __copyright__ = "(C) 2021 Miðeind ehf."
 
+__all__ = (
+    "Greynir", "correct_spaces", "mark_paragraphs", "Sentence", "Paragraph",
+    "detokenize", "Settings", "CorrectionPipeline", "tokenize", "Correct_TOK",
+    "GreynirCorrect", "check", "check_single", "check_with_stats",
+    "check_with_custom_parser", "AnnotatedSentence", "Annotation",
+    "__version__", "__author__", "__copyright__"
+)
 
 Settings.read("config/GreynirCorrect.conf")

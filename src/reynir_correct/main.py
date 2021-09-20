@@ -36,7 +36,18 @@
 
 """
 
-from typing import List, Optional, Sequence, Tuple, Iterator, Iterable, Dict, Any, Union, cast
+from typing import (
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Iterator,
+    Iterable,
+    Dict,
+    Any,
+    Union,
+    cast,
+)
 
 import sys
 import argparse
@@ -110,7 +121,9 @@ group.add_argument(
 )
 group.add_argument("--spaced", help="Separate tokens with spaces", action="store_true")
 group.add_argument(
-    "--grammar", help="Annotate grammar and spelling errors; output JSON", action="store_true"
+    "--grammar",
+    help="Annotate grammar and spelling errors; output JSON",
+    action="store_true",
 )
 
 
@@ -221,11 +234,10 @@ def check_spelling(args: argparse.Namespace, **options: Any) -> None:
 
 
 def check_grammar(args: argparse.Namespace, **options: Any) -> None:
+    """ Do a full spelling and grammar check of the source text """
 
     def sentence_stream() -> Iterator[List[CorrectToken]]:
-        """ Yield a stream of sentence tuples from the source text,
-            where each tuple contains a normalized (detokenized) sentence
-            string and an original sentence string. """
+        """ Yield a stream of sentence token lists from the source text """
         # Initialize sentence accumulator list
         curr_sent: List[CorrectToken] = []
         for t in tokenize(gen(args.infile), **options):
@@ -253,19 +265,20 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
         # Create a normalized form of the sentence
         cleaned = detokenize(toklist, normalize=True)
 
+        # Invoke the spelling and grammar checker on the token list
         sent = check_tokens(toklist)
 
         if sent is None:
             # Should not happen?
             continue
 
-        a: List[Annotation] = getattr(
-            sent, "annotations", cast(List[Annotation], [])
-        )
+        # Extract the annotation list (defensive programming here)
+        a: List[Annotation] = getattr(sent, "annotations", cast(List[Annotation], []))
         # Sort in ascending order by token start index, and then by end index
         # (more narrow/specific annotations before broader ones)
         a.sort(key=lambda ann: (ann.start, ann.end))
 
+        # Convert the annotations to a standard format before encoding in JSON
         annotations: List[AnnDict] = [
             AnnDict(
                 # Start token index of this annotation
@@ -277,10 +290,9 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
                 # Character offset of the end of the annotation in the original text
                 # (inclusive, i.e. the offset of the last character)
                 end_char=(
-                    token_offsets[ann.end + 1]
-                    if ann.end + 1 < len_tokens
-                    else offset
-                ) - 1,
+                    token_offsets[ann.end + 1] if ann.end + 1 < len_tokens else offset
+                )
+                - 1,
                 code=ann.code,
                 text=ann.text,
                 detail=ann.detail or "",
@@ -289,24 +301,22 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
             for ann in a
         ]
 
+        # Create final dictionary for JSON encoding
         ard = AnnResultDict(
-            original=cleaned,
-            corrected=sent.tidy_text,
-            annotations=annotations,
+            original=cleaned, corrected=sent.tidy_text, annotations=annotations,
         )
 
         print(json_dumps(ard), file=args.outfile)
 
 
-
 def main() -> None:
-    """ Main function, called when the correct command is invoked """
+    """ Main function, called when the 'correct' command is invoked """
 
     args = parser.parse_args()
 
     # By default, no options apply
     options: Dict[str, bool] = {}
-    if not (args.csv or args.json):
+    if not (args.csv or args.json or args.grammar):
         # If executing a plain ('shallow') correct,
         # apply most suggestions to the text
         options["apply_suggestions"] = True
