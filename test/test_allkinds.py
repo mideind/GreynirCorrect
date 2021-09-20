@@ -1711,6 +1711,24 @@ def test_correct_sentences(verbose=False):
     check_sentence(s, [])
 
 
+def test_correction_is_valid(verbose=False):
+    # Check that 'Ferðavefir' is not corrected (or suggested) to 'Ferðavefur',
+    # which doesn't work grammatically
+    s = (
+        "Samkvæmt heimasíðu sinni sérhæfa Ferðavefir sig í ýmsa þjónustu fyrir "
+        "ferðaþjónustufyrirtæki, líkt og vefsíðugerð, hönnun og ráðgjöf um rekstur."
+    )
+    check_sentence(s, [])
+    s = (
+        "Vanrækt hefur verið að uppfæra skattkerfið í samræmi við breytingar á "
+        "launum og verðlagi, skattagötum og sniðgönguleiðum hefur fjölgað og "
+        "stjórnvöld hafa breytt skattalögum til hagsbóta fyrir "
+        "hátekju- og stóreignafólk."
+    )
+    sent = rc.check_single(s)
+    check_sentence(s, [])
+
+
 def test_corrected_sentences(verbose=False):
     # Setningar sem þáttast ekki upprunalega út af villum.
     # Villurnar eru svo leiðréttar í errtokenizer.py.
