@@ -251,7 +251,8 @@ the ``correct`` command does not perform grammar checking by default.
 
 .. _tests:
 
-To perform whole-sentence grammar checking and annotation as well as spell checking:
+To perform whole-sentence grammar checking and annotation as well as spell checking,
+use the ``--grammar`` option:
 
 .. code-block:: bash
 
@@ -300,11 +301,11 @@ To perform whole-sentence grammar checking and annotation as well as spell check
 The output has been formatted for legibility - each input sentence is actually
 represented by a JSON object in a single line of text, terminated by newline.
 
-Note that the `corrected` field only includes token-level spelling correction
-(in this case *þreittur* -> *þreyttur*), but no grammar corrections.
+Note that the ``corrected`` field only includes token-level spelling correction
+(in this case *þreittur* ``->`` *þreyttur*), but no grammar corrections.
 To apply corrections and suggestions from the annotations,
-replace source text or tokens (as identified by the `start` and `end`,
-or `start_char` and `end_char` properties) with the `suggest` field, if present.
+replace source text or tokens (as identified by the ``start`` and ``end``,
+or ``start_char`` and ``end_char`` properties) with the ``suggest`` field, if present.
 
 .. _tests:
 
