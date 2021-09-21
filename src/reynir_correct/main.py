@@ -63,6 +63,20 @@ from .annotation import Annotation
 from .checker import check_tokens
 
 
+class AnnTokenDict(TypedDict, total=False):
+
+    """ Type of the token dictionaries returned from check_grammar() """
+
+    # Token kind
+    k: int
+    # Token text
+    x: str
+    # Original text of token
+    o: str
+    # Character offset of token, indexed from the start of the checked text
+    i: int
+
+
 class AnnDict(TypedDict):
 
     """ A single annotation, as returned by the Yfirlestur.is API """
@@ -82,8 +96,9 @@ class AnnResultDict(TypedDict):
     """ The annotation result for a sentence """
 
     original: str
-    annotations: List[AnnDict]
     corrected: str
+    annotations: List[AnnDict]
+    tokens: List[AnnTokenDict]
 
 
 # File types for UTF-8 encoded text files
@@ -256,21 +271,41 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
 
         len_tokens = len(toklist)
 
-        # Maintain token character offsets, accumulated over the entire source text
-        token_offsets: Dict[int, int] = dict()
-        for ix, t in enumerate(toklist):
-            token_offsets[ix] = offset
-            offset += len(t.original or "")
-
-        # Create a normalized form of the sentence
-        cleaned = detokenize(toklist, normalize=True)
-
         # Invoke the spelling and grammar checker on the token list
         sent = check_tokens(toklist)
 
         if sent is None:
             # Should not happen?
             continue
+
+        tokens: List[AnnTokenDict]
+        if sent.tree is None:
+            # Not parsed: use the raw token list
+            tokens = [
+                AnnTokenDict(k=d.kind, x=d.txt, o=d.original or d.txt)
+                for d in sent.tokens
+            ]
+        else:
+            # Successfully parsed: use the text from the terminals (where available)
+            # since we have more info there, for instance on em/en dashes.
+            # Create a map of token indices to corresponding terminal text
+            assert sent.terminals is not None
+            token_map = {t.index: t.text for t in sent.terminals}
+            tokens = [
+                AnnTokenDict(
+                    k=d.kind, x=token_map.get(ix, d.txt), o=d.original or d.txt
+                )
+                for ix, d in enumerate(sent.tokens)
+            ]
+
+        # Maintain token character offsets, accumulated over the entire source text
+        token_offsets: Dict[int, int] = dict()
+        for ix, t in enumerate(toklist):
+            token_offsets[ix] = offset
+            offset += len(t.original or t.txt or "")
+
+        # Create a normalized form of the sentence
+        cleaned = detokenize(toklist, normalize=True)
 
         # Extract the annotation list (defensive programming here)
         a: List[Annotation] = getattr(sent, "annotations", cast(List[Annotation], []))
@@ -303,7 +338,7 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
 
         # Create final dictionary for JSON encoding
         ard = AnnResultDict(
-            original=cleaned, corrected=sent.tidy_text, annotations=annotations,
+            original=cleaned, corrected=sent.tidy_text, tokens=tokens, annotations=annotations,
         )
 
         print(json_dumps(ard), file=args.outfile)

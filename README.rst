@@ -26,7 +26,8 @@ GreynirCorrect is documented in detail `here <https://yfirlestur.is/doc/>`__.
 
 The software has three main modes of operation, described below.
 
-As a fourth alternative, you can call the JSON REST API of `Yfirlestur.is <https://yfirlestur.is>`__
+As a fourth alternative, you can call the JSON REST API
+of `Yfirlestur.is <https://yfirlestur.is>`__
 to apply the GreynirCorrect spelling and grammar engine to your text,
 as `documented here <https://github.com/mideind/Yfirlestur#https-api>`__.
 
@@ -202,9 +203,18 @@ on the command line:
 |                   | output in Icelandic form and hyphens to be        |
 |                   | regularized.                                      |
 +-------------------+---------------------------------------------------+
+| | ``--grammar``   | Output whole-sentence annotations, including      |
+|                   | corrections and suggestions for spelling and      |
+|                   | grammar. Each sentence in the input is output as  |
+|                   | a text line containing a JSON object, terminated  |
+|                   | by a newline.                                     |
++-------------------+---------------------------------------------------+
 
-The CSV and JSON formats are identical to those documented for the
-`Tokenizer package <https://github.com/mideind/Tokenizer>`_.
+The CSV and JSON formats of token objects are identical to those documented
+for the `Tokenizer package <https://github.com/mideind/Tokenizer>`__.
+
+The JSON format of whole-sentence annotations is identical to the one documented for
+the `Yfirlestur.is HTTPS REST API <https://github.com/mideind/Yfirlestur#https-api>`__.
 
 Type ``correct -h`` to get a short help message.
 
@@ -227,7 +237,7 @@ Command Line Examples
    0,"",""
 
 Note how *vil* is not corrected, as it is a valid and common word, and
-the ``correct`` command does not perform grammar checking.
+the ``correct`` command does not perform grammar checking by default.
 
 .. code-block:: bash
 
@@ -238,6 +248,63 @@ the ``correct`` command does not perform grammar checking.
    {"k":"WORD","t":"fyrir"}
    {"k":"WORD","t":"hestinn"}
    {"k":"END SENT"}
+
+.. _tests:
+
+To perform whole-sentence grammar checking and annotation as well as spell checking:
+
+.. code-block:: bash
+
+   $ echo "Ég kláraði verkefnið þrátt fyrir að ég var þreittur." | correct --grammar
+      {
+         "original":"Ég kláraði verkefnið þrátt fyrir að ég var þreittur.",
+         "corrected":"Ég kláraði verkefnið þrátt fyrir að ég var þreyttur.",
+         "tokens":[
+            {"k":6,"x":"Ég","o":"Ég"},
+            {"k":6,"x":"kláraði","o":" kláraði"},
+            {"k":6,"x":"verkefnið","o":" verkefnið"},
+            {"k":6,"x":"þrátt fyrir","o":" þrátt fyrir"},
+            {"k":6,"x":"að","o":" að"},
+            {"k":6,"x":"ég","o":" ég"},
+            {"k":6,"x":"var","o":" var"},
+            {"k":6,"x":"þreyttur","o":" þreittur"},
+            {"k":1,"x":".","o":"."}
+         ],
+         "annotations":[
+            {
+               "start":6,
+               "end":6,
+               "start_char":35,
+               "end_char":37,
+               "code":"P_MOOD_ACK",
+               "text":"Hér er réttara að nota viðtengingarhátt
+                  sagnarinnar 'vera', þ.e. 'væri'.",
+               "detail":"Í viðurkenningarsetningum á borð við 'Z'
+                  í dæminu 'X gerði Y þrátt fyrir að Z' á sögnin að vera
+                  í viðtengingarhætti fremur en framsöguhætti.",
+               "suggest":"væri"
+            },
+            {
+               "start":7,
+               "end":7,
+               "start_char":38,
+               "end_char":41,
+               "code":"S004",
+               "text":"Orðið 'þreittur' var leiðrétt í 'þreyttur'",
+               "detail":"",
+               "suggest":"þreyttur"
+            }
+         ]
+      }
+
+The output has been formatted for legibility - each input sentence is actually
+represented by a JSON object in a single line of text, terminated by newline.
+
+Note that the `corrected` field only includes token-level spelling correction
+(in this case *þreittur* -> *þreyttur*), but no grammar corrections.
+To apply corrections and suggestions from the annotations,
+replace source text or tokens (as identified by the `start` and `end`,
+or `start_char` and `end_char` properties) with the `suggest` field, if present.
 
 .. _tests:
 

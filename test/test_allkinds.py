@@ -1603,6 +1603,8 @@ def test_complex_sentences(verbose=False):
 
 
 def test_tense_mood(verbose=False):
+    s = "Ég kláraði verkefnið þrátt fyrir að ég var syfjaður."
+    check_sentence(s, [(6, 6, "P_MOOD_ACK")])
     s = "Hann kemur ef hann geti."
     check_sentence(s, [(4, 4, "P_MOOD_COND")])
     # s = "Hún kemur ef það sé gott veður."
@@ -1719,6 +1721,8 @@ def test_correction_is_valid(verbose=False):
         "ferðaþjónustufyrirtæki, líkt og vefsíðugerð, hönnun og ráðgjöf um rekstur."
     )
     check_sentence(s, [])
+    # Check that 'hátekju' is not corrected (or suggested) to 'hátekjum'
+    # within a hyphenated composite word
     s = (
         "Vanrækt hefur verið að uppfæra skattkerfið í samræmi við breytingar á "
         "launum og verðlagi, skattagötum og sniðgönguleiðum hefur fjölgað og "
