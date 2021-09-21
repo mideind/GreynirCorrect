@@ -1073,7 +1073,7 @@ class Stats:
                             subfreq += freq
                             subf += fscore * freq
                     if subfreq != 0:
-                        subblob = "\t{}   {} {}\n".format(subcat.capitalize(), subfreq, subf / subfreq) + subblob
+                        subblob = "\t{}   {} {}\n".format(subcat.capitalize(), subfreq, subf / subfreq * 100.0) + subblob
                     else:
                         subblob = "\t{}    0    N/A\n".format(subcat.capitalize()) + subblob
                     # superwork
@@ -1082,7 +1082,7 @@ class Stats:
                     superfreq += subfreq
                     superf += subf              # TODO is this correct?
                 if superfreq != 0:
-                    superblob = "\n{}   {} {}\n".format(supercat.capitalize(), superfreq, superf / superfreq) + superblob
+                    superblob = "\n{}   {} {}\n".format(supercat.capitalize(), superfreq, superf / superfreq * 100.0) + superblob
                 else:
                     superblob = "\n{}    0    N/A\n".format(supercat.capitalize()) + superblob
                 totalfreq += superfreq

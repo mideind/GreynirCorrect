@@ -1260,6 +1260,7 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original="vera að",
+                suggest=suggest,
             )
         )
 
