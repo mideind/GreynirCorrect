@@ -173,7 +173,7 @@ def test_noun_af(rc):
     s = "Grunnur af verkefninu er tilbúinn."
     check_sentence(rc, s, [(0, 1, "P_WRONG_PREP_AF")])
 #    s = "Hann lagði ekki grunninn af verkefninu."
-  #  check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
+#    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
 #    s = "Þau gerðu leit af dótinu."
 #    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AF")])
     s = "Leit af dótinu hefur ekki skilað árangri."
@@ -191,8 +191,8 @@ def test_verb_að(rc):
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Vissulega er hægt að vera hluti að heildinni."
     check_sentence(rc, s, [(4, 7, "P_WRONG_PREP_AÐ")])
-    #s = "Þeir sögðu að ég hefði verið hluti að heildinni."   # Annotation variable depending on parsing
-    #check_sentence(rc, s, [(6, 8, "P_WRONG_PREP_AÐ")])
+#    s = "Þeir sögðu að ég hefði verið hluti að heildinni."   # Annotation variable depending on parsing
+#    check_sentence(rc, s, [(6, 8, "P_WRONG_PREP_AÐ")])
     s = "Þar að leiðandi virkar þetta."
     check_sentence(rc, s, [(0, 2, "P_aðaf")])
     s = "Þetta virkar þar að leiðandi."
@@ -291,12 +291,12 @@ def test_dir_loc(rc):
     check_sentence(rc, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
 #    s = "Hann var oft upp á hestinum."
 #    check_sentence(rc, s, [(3, 5, "P_DIR_LOC")])
-#    s = "Málið liggur í augum upp."
-#    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
+    s = "Málið liggur í augum upp."
+    check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
 #    s = "Þau eru alltaf uppí bústað."
-#    check_sentence(rc, s, [(1, 4, "P_DIR_LOC"), (3, 3, "W001/w")])     # Span is either 1,4 or 3,4, but always corrected.
-#    s = "Hún var niður í bæ í gær."
-#    check_sentence(rc, s, [(1, 5, "P_DIR_LOC")])
+#    check_sentence(rc, s, [(1, 4, "P_DIR_LOC"), (3, 3, "W001/w")])     # Span is either 1,4 or 3,4 (depending on parsing), but always corrected.
+    s = "Hún var niður í bæ í gær."
+    check_sentence(rc, s, [(1, 5, "P_DIR_LOC")])
 #    s = "Ég varð mér út um smá mat."
 #    check_sentence(rc, s, [(3, 6, "P_DIR_LOC")])
 #    s = "Þegar upp er staðið erum við öll eins."
@@ -311,7 +311,7 @@ def test_dir_loc(rc):
     check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
 #    s = "Hann læsti sig inn í gær."
 #    check_sentence(rc, s, [(1, 4, "P_DIR_LOC")])
-#    s = "Hún gaf það upp í fréttum."
-#    check_sentence(rc, s, [])
+    s = "Hún gaf það upp í fréttum."
+    check_sentence(rc, s, [])
     s = "Ég ólst upp í Breiðholtinu."
     check_sentence(rc, s, [])
