@@ -431,8 +431,10 @@ class CorrectToken(Tok):
             suggested spelling correction """
         assert self.kind == TOK.WORD
         # We assume that the token has already been marked
-        # with a SpellingSuggestion error
-        assert isinstance(self._err, SpellingSuggestion)
+        # with a SpellingError or SpellingSuggestion error
+        assert isinstance(self._err, SpellingSuggestion) or isinstance(
+            self._err, SpellingError
+        )
         if self.val is None:
             self.val = list(m)
         else:
@@ -745,12 +747,16 @@ class SpellingSuggestion(Error):
         # Go through the meaning list, which includes BIN_Tuple tuples
         # corresponding to both the original and the suggested word forms
         token_ref = token.lower
+        has_hyphen = "-" in token_ref
         assert self.suggest is not None
         suggestion_ref = self.suggest.lower()
         for m in cast(Iterable[BIN_Tuple], token.t2):
             if terminal.matches_token(token, m):
                 # This meaning matches the terminal
                 meaning_ref = m.ordmynd.lower()
+                if "-" in m.stofn and not has_hyphen:
+                    # Understood as a compound word
+                    meaning_ref = meaning_ref.replace("-", "")
                 if meaning_ref == token_ref:
                     # This is the original text
                     matches_original = True
@@ -1631,12 +1637,14 @@ def lookup_unknown_words(
             a string containing the corrected word to be displayed """
         ct = token_ctor.Word(corrected, m, token=token)
         if "." in corrected:
-            text = "Skammstöfunin '{0}' var leiðrétt í '{1}'".format(
-                token.txt, corrected
-            )
+            text = f"Skammstöfunin '{token.txt}' var leiðrétt í '{corrected}'"
         else:
-            text = "Orðið '{0}' var leiðrétt í '{1}'".format(token.txt, corrected)
+            text = f"Orðið '{token.txt}' var leiðrétt í '{corrected}'"
         ct.set_error(SpellingError("{0:03}".format(code), text, token.txt, corrected))
+        # Add the original token meanings to the end of the corrected
+        # token meanings, enabling the parser to revert to the original
+        # if the corrected meanings do not fit grammatically
+        ct.add_corrected_meanings(token.meanings)
         return ct
 
     def suggest_word(
@@ -1644,7 +1652,7 @@ def lookup_unknown_words(
     ) -> CorrectToken:
         """ Mark the current token with an annotation but don't correct
             it, as we are not confident enough of the correction """
-        text = "Orðið '{0}' gæti átt að vera '{1}'".format(token.txt, corrected)
+        text = f"Orðið '{token.txt}' gæti átt að vera '{corrected}'"
         token.set_error(
             SpellingSuggestion("{0:03}".format(code), text, token.txt, corrected)
         )
@@ -1797,7 +1805,7 @@ def lookup_unknown_words(
                 # We have a candidate correction: take a closer look at it
                 _, m = db.lookup_g(corrected_txt, at_sentence_start=at_sentence_start)
                 if (token.txt[0].lower() == "ó" and corrected_txt == token.txt[1:]) or (
-                        corrected_txt[0].lower() == "ó" and token.txt == corrected_txt[1:]
+                    corrected_txt[0].lower() == "ó" and token.txt == corrected_txt[1:]
                 ):
                     # The correction simply removed or added "ó" at the start of the
                     # word: probably not a good idea
@@ -1816,12 +1824,12 @@ def lookup_unknown_words(
                     # Don't correct PCR-próf to Pcr-próf,
                     # or félags- og barnamálaráðherra to félags- og varnamálaráðherra
                     pass
-                elif len(token.txt) == 1 and (
-                    corrected_txt
-                    != SINGLE_LETTER_CORRECTIONS.get((at_sentence_start, token.txt))
-                ):
-                    # Only allow single-letter corrections of a->á and i->í
-                    pass
+                # elif len(token.txt) == 1 and (
+                #    corrected_txt
+                #    != SINGLE_LETTER_CORRECTIONS.get((at_sentence_start, token.txt))
+                # ):
+                #    # Only allow single-letter corrections of a->á and i->í
+                #    pass
                 elif not apply_suggestions and only_suggest(token, m):
                     # We have a candidate correction but the original word does
                     # exist in BÍN, so we're not super confident: yield a suggestion
@@ -1859,7 +1867,7 @@ def lookup_unknown_words(
                 token.set_error(
                     UnknownWordError(
                         code="001",
-                        txt="Óþekkt orð: '{0}'".format(token.txt),
+                        txt=f"Óþekkt orð: '{token.txt}'",
                         original=token.txt,
                         suggest="",
                     )
@@ -1981,7 +1989,11 @@ def fix_capitalization(
         # !!! if token.error is not None
         if token.kind in {TOK.WORD, TOK.PERSON, TOK.ENTITY}:
             if is_wrong(token):
-                if token.txt.islower() or "-" in token.txt and token.txt.split("-")[0].islower():
+                if (
+                    token.txt.islower()
+                    or "-" in token.txt
+                    and token.txt.split("-")[0].islower()
+                ):
                     # Token is lowercase but should be capitalized
                     original_txt = token.txt
                     # !!! TODO: Maybe the following should be just token.txt.capitalize()
@@ -2398,6 +2410,20 @@ class Correct_TOK(Bin_TOK):
             # an associated error: make sure that it is preserved
             ct.copy(token)
         return ct
+
+    @classmethod
+    def before_composition(cls, tq: List[Tok]) -> None:
+        """ Overridable function to look at and eventually
+            modify a token queue before it is amalgamated
+            into a composite word """
+        # We roll back any spelling corrections up to the
+        # last word in the token sequence
+        for ix, t in enumerate(tq[0:-1]):
+            if isinstance(t, CorrectToken) and t.error_code == "S004":
+                # Spelling error: roll back correction
+                tq[ix] = CorrectToken(
+                    TOK.WORD, t.error_original, t.val, t.original, t.origin_spans
+                )
 
 
 class CorrectionPipeline(DefaultPipeline):

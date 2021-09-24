@@ -255,7 +255,7 @@ class ErrorFinder(ParseForestNavigator):
         return super().go(self._sent.deep_tree)
 
     @staticmethod
-    def _node_span(node: Node) -> Tuple[int, int]:
+    def node_span(node: Node) -> Tuple[int, int]:
         """ Return the start and end indices of the tokens
         spanned by the given node """
         first_token, last_token = node.token_span
@@ -271,11 +271,11 @@ class ErrorFinder(ParseForestNavigator):
         of which node is the root """
         if node is None:
             return None
-        first, last = self._node_span(node)
+        first, last = self.node_span(node)
         toklist = self._tokens[first : last + 1]
         return SimpleTree.from_deep_tree(node, toklist, first_token_index=first)
 
-    def _node_text(self, node: Node, original_case: bool = False) -> str:
+    def node_text(self, node: Node, original_case: bool = False) -> str:
         """ Return the text within the span of the node """
 
         def text(t: Tok) -> str:
@@ -296,7 +296,7 @@ class ErrorFinder(ParseForestNavigator):
             # No uppercase lemma in BÍN: return a lower case copy
             return t.txt.lower()
 
-        first, last = self._node_span(node)
+        first, last = self.node_span(node)
         text_func: Callable[[Tok], str] = (lambda t: t.txt) if original_case else text
         return correct_spaces(
             " ".join(text_func(t) for t in self._tokens[first : last + 1] if t.txt)
@@ -307,12 +307,11 @@ class ErrorFinder(ParseForestNavigator):
 
     def AðvörunHeldur(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'heldur' er ofaukið
-        # !!! TODO: Add suggestion here by replacing
-        # !!! 'heldur en' with 'en'
         return dict(
             text="'{0}' er sennilega ofaukið".format(txt),
             detail="Yfirleitt nægir að nota 'en' í þessu samhengi.",
             original=txt,
+            suggest="en",
         )
 
     def AðvörunSíðan(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -328,30 +327,33 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaVístAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'víst að' á sennilega að vera 'fyrst að'
+        orig_txt = self.node_text(node, original_case=True)
         return dict(
             text="'{0}' á sennilega að vera 'fyrst að'".format(txt),
             detail=(
                 "Rétt er að nota 'fyrst að' fremur en 'víst að' "
                 " til að tengja saman atburð og forsendu."
             ),
-            original="víst að",
-            suggest="fyrst að",
+            original=orig_txt,
+            suggest=emulate_case("fyrst að", template=orig_txt),
         )
 
     def VillaFráÞvíAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'allt frá því' á sennilega að vera 'allt frá því að'
+        orig_txt = self.node_text(node, original_case=True)
         return dict(
             text="'{0}' á sennilega að vera '{0} að'".format(txt),
             detail=(
                 "Rétt er að nota samtenginguna 'að' í þessu samhengi, "
                 "til dæmis 'allt frá því að Anna hóf námið'."
             ),
-            original=txt,
-            suggest="{0} að".format(txt),
+            original=orig_txt,
+            suggest=f"{orig_txt} að",
         )
 
     def VillaAnnaðhvort(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # Í stað 'annaðhvort' á sennilega að standa 'annað hvort'
+        orig_txt = self.node_text(node, original_case=True)
         return dict(
             text="Í stað '{0}' á sennilega að standa 'annað hvort'".format(txt),
             detail=(
@@ -359,12 +361,13 @@ class ErrorFinder(ParseForestNavigator):
                 "'annað hvort systkinanna'. Rita á 'annaðhvort' í samtengingu, "
                 "til dæmis 'Annaðhvort fer ég út eða þú'."
             ),
-            original=txt,
-            suggest="annað hvort",
+            original=orig_txt,
+            suggest=emulate_case("annað hvort", template=orig_txt),
         )
 
     def VillaAnnaðHvort(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # Í stað 'annað hvort' á sennilega að standa 'annaðhvort'
+        orig_txt = self.node_text(node, original_case=True)
         return dict(
             text="Í stað '{0}' á sennilega að standa 'annaðhvort'".format(txt),
             detail=(
@@ -373,8 +376,8 @@ class ErrorFinder(ParseForestNavigator):
                 "Rita á 'annað hvort' í tveimur orðum þegar um er að ræða fornöfn, "
                 "til dæmis 'annað hvort systkinanna'."
             ),
-            original=txt,
-            suggest="annaðhvort",
+            original=orig_txt,
+            suggest=emulate_case("annaðhvort", template=orig_txt),
         )
 
     def VillaTvípunkturFs(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -458,8 +461,7 @@ class ErrorFinder(ParseForestNavigator):
                 original=verb.tidy_text,
             )
         return (
-            "Sögn sem á við '{0}' á sennilega að vera "
-            "í eintölu, ekki fleirtölu".format(txt)
+            f"Sögn sem á við '{txt}' á sennilega að vera í eintölu, ekki fleirtölu"
         )
 
     def VillaFjöldiHluti(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
@@ -492,14 +494,14 @@ class ErrorFinder(ParseForestNavigator):
             txt,
             variants,
             node,
-            "Nafnliðurinn '{0}' er í eintölu "
-            "og með honum á því að vera sögn í eintölu.".format(txt),
+            f"Nafnliðurinn '{txt}' er í eintölu "
+            f"og með honum á því að vera sögn í eintölu.",
         )
 
     def VillaEinkunn(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # Fornafn í einkunn er ekki í sama falli og nafnorð,
         # t.d. 'þessum mann'
-        wrong_pronoun = self._node_text(node, original_case=True)
+        wrong_pronoun = self.node_text(node, original_case=True)
         correct_case = variants.split("_")[0]
         pronoun_node = next(node.enum_child_nodes())
         assert pronoun_node is not None
@@ -561,7 +563,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaÞóAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # [jafnvel] þó' á sennilega að vera '[jafnvel] þó að
-        suggestion = "{0} að".format(txt)
+        suggestion = f"{txt} að"
         return dict(
             text="'{0}' á sennilega að vera '{1}' (eða 'þótt')".format(txt, suggestion),
             detail=(
@@ -577,8 +579,8 @@ class ErrorFinder(ParseForestNavigator):
         children = list(node.enum_child_nodes())
         ch0, ch1 = children
         assert ch0 is not None
-        subject = self._node_text(ch0)
-        # verb_phrase = self._node_text(children[1])
+        subject = self.node_text(ch0)
+        # verb_phrase = self.node_text(children[1])
         number = "eintölu" if "et" in variants else "fleirtölu"
         # Find the verb
         ch1node = cast(Node, ch1)
@@ -710,13 +712,14 @@ class ErrorFinder(ParseForestNavigator):
     def VillaManns(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # Sögn á að vera í fleirtölu, líkt og frumlagið
         child = list(node.enum_child_nodes())
-        ch0 = child[0]
-        assert ch0 is not None
-        subject = self.node_text((ch0))
+        ch0node = child[0]
+        assert ch0node is not None
+        subject = self.node_text((ch0node))
         # Find the verb
-        ch0node = cast(Node, ch0)
         subjtree: Optional[SimpleTree] = self._simple_tree(ch0node)
         if subjtree is None:
+            return dict()
+        if self._sent.tree is None:
             return dict()
         subjwhole = self._sent.tree.first_match("NP-SUBJ >> { \"manns\" }")
         if subjwhole is None:
@@ -1064,8 +1067,8 @@ class ErrorFinder(ParseForestNavigator):
         original = None
         ann_text = None
         ann_detail = None
-        start, end = self._node_span(node)
-        span_text = self._node_text(node)
+        start, end = self.node_span(node)
+        span_text = self.node_text(node)
         # See if we have a custom text function for this
         # error-tagged nonterminal
         name = node.nonterminal.name

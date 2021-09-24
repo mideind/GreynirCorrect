@@ -185,6 +185,8 @@ def test_error_finder(rc):
     check_sentence(rc, s, [(4, 6, "P_NT_FráÞvíAð")])
     s = "Friðgeir vildi vera heima víst að Sigga yrði að vera heima."
     check_sentence(rc, s, [(4, 5, "P_NT_VístAð")])
+    s = "Víst að Sigga var heima ákvað Friðgeir að vera heima."
+    check_sentence(rc, s, [(0, 1, "P_NT_VístAð")])
     s = "Friðgeir taldi víst að Sigga yrði að vera heima."
     check_sentence(rc, s, [])
     s = "Ég er ekki meiri fáviti heldur en þú."

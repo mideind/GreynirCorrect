@@ -66,6 +66,8 @@ from reynir.verbframe import VerbErrors
 from reynir.matcher import ContextDict
 from reynir.bintokenizer import ALL_CASES
 
+from reynir_correct.errtokenizer import emulate_case
+
 from .annotation import Annotation
 from reynir_correct.errtokenizer import emulate_case
 
@@ -192,7 +194,7 @@ class PatternMatcher:
                 # First instance: create the class-wide pattern list
                 self.create_patterns()
 
-    def get_wordform(self, lemma: str, cat: str, variants: Iterable[str]) -> str:
+    def get_wordform(self, word: str, lemma: str, cat: str, variants: Iterable[str]) -> str:
         """ Get correct wordform from BinPackage, 
             given a set of variants """
         realvars: Union[Set[str], Iterable[str]]
@@ -203,7 +205,7 @@ class PatternMatcher:
                 realvars -= ALL_CASES
         else:
             realvars = variants
-        wordforms = BIN.lookup_variants(lemma, cat, tuple(realvars), lemma=lemma)
+        wordforms = BIN.lookup_variants(word, cat, tuple(realvars), lemma=lemma)
         if not wordforms:
             return ""
         # Can be many possible word forms; we want the first one in most cases
@@ -1243,7 +1245,7 @@ class PatternMatcher:
         if realso is None:
             return
         _, end = realso.span
-        suggest = self.get_wordform(realso.lemma, realso.cat, so.all_variants)
+        suggest = self.get_wordform(realso.text.lower(), realso.lemma, realso.cat, so.all_variants)
         if not suggest:
             return
         text = (
@@ -1489,13 +1491,14 @@ class PatternMatcher:
             return
         variants = set(so.all_variants) - {"vh"}
         variants.add("fh")
-        suggest = self.get_wordform(so.lemma, so.cat, variants)
-        if suggest == so.tidy_text:
+        so_text = so.text.lower()
+        suggest = self.get_wordform(so_text, so.lemma, so.cat, variants)
+        if suggest == so_text:
             return
         if not suggest:
             return
         text = (
-            f"Hér á líklega að nota framsöguhátt sagnarinnar '{so.tidy_text}', "
+            f"Hér á líklega að nota framsöguhátt sagnarinnar '{so_text}', "
             f"þ.e. '{suggest}'."
         )
         detail = ""
@@ -1519,8 +1522,8 @@ class PatternMatcher:
                 code="P_MOOD_" + kind,
                 text=text,
                 detail=detail,
-                original=so.tidy_text,
-                suggest=suggest,
+                original=so.text,
+                suggest=emulate_case(suggest, template=so.text),
             )
         )
 
@@ -1536,10 +1539,9 @@ class PatternMatcher:
         start, end = so.span
         variants = set(so.all_variants) - {"fh"}
         variants.add("vh")
-        suggest = self.get_wordform(so.lemma, so.cat, variants)
-        if suggest == so.tidy_text:
-            return
-        if not suggest:
+        so_text = so.text.lower()
+        suggest = self.get_wordform(so_text, so.lemma, so.cat, variants)
+        if not suggest or suggest == so_text:
             return
         text = (
             f"Hér er réttara að nota viðtengingarhátt "
@@ -1566,8 +1568,8 @@ class PatternMatcher:
                 code="P_MOOD_" + kind,
                 text=text,
                 detail=detail,
-                original=so.tidy_text,
-                suggest=suggest,
+                original=so.text,
+                suggest=emulate_case(suggest, template=so.text),
             )
         )
 

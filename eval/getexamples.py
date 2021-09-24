@@ -58,15 +58,16 @@ import argparse
 
 from typing import (
     List,
-    Optional, TYPE_CHECKING,
+    Optional,
+    TYPE_CHECKING,
     Union,
     Tuple,
     Iterable,
     cast,
     DefaultDict,
 )
-import reynir_correct as gc
-from reynir_correct import Annotation, AnnotatedSentence
+from reynir_correct.annotation import Annotation
+from reynir_correct.checker import AnnotatedSentence, check
 from tokenizer import detokenize, Tok, TOK
 
 if TYPE_CHECKING:
@@ -86,9 +87,7 @@ GCCATS: DefaultDict[str, List[str]] = defaultdict(list)
 # Define the command line arguments
 
 parser = argparse.ArgumentParser(
-    description=(
-        "This program collects examples of each error category"
-    )
+    description=("This program collects examples of each error category")
 )
 
 parser.add_argument(
@@ -129,7 +128,7 @@ def get_examples(fpath: str) -> None:
     # swoop at the end (after acquiring the output lock)
     buffer: List[str] = []
 
-    def bprint(s: str):
+    def bprint(s: str) -> None:
         """ Buffered print: accumulate output for printing at the end """
         buffer.append(s)
 
@@ -215,8 +214,7 @@ def get_examples(fpath: str) -> None:
             # Pass it to GreynirCorrect
             if ONLYREF:
                 continue
-
-            pg = [list(p) for p in gc.check(text)]
+            pg = [list(p) for p in check(text)]
             s: Optional[AnnotatedSentence] = None
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 assert isinstance(pg[0][0], AnnotatedSentence)
@@ -229,15 +227,9 @@ def get_examples(fpath: str) -> None:
                     errcode = errcode.replace("/", "_")
                 GCCATS[errcode].append(
                     "{}\t{}-{}\t{}\t{}\n".format(
-                        text,
-                        ann.start,
-                        ann.end,
-                        ann.text,
-                        ann.suggest
+                        text, ann.start, ann.end, ann.text, ann.suggest
                     )
-
-                )    
-
+                )
 
     except ET.ParseError:
         # Already handled the exception: exit as gracefully as possible
@@ -245,21 +237,20 @@ def get_examples(fpath: str) -> None:
 
 
 if __name__ == "__main__":
-    
+
     # Parse the command line arguments
     args = parser.parse_args()
 
     global ONLYREF
     ONLYREF = args.ref
 
-
     it = glob.iglob(_DEV_PATH, recursive=True)
     j = 0
     for fpath in it:
-        if j%10 == 0:
+        if j % 10 == 0:
             print("{} files done".format(j))
         get_examples(fpath)
-        j+=1
+        j += 1
 
     for xtype in IECCATS:
         with open("examples_iEC/" + xtype + ".txt", "w") as myfile:

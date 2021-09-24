@@ -37,7 +37,7 @@
 # Run with 'pytest -v' for verbose mode
 
 import reynir_correct as rc
-import tokenizer
+from reynir_correct import detokenize
 
 # Tests for errtokenizer.py
 
@@ -52,7 +52,7 @@ def dump(tokens):
 
 def normalize(g):
     """ Return a corrected, normalized string form of the token list in g """
-    return tokenizer.detokenize(g, normalize=True)
+    return detokenize(g, normalize=True)
 
 
 def test_punctuation(verbose=False):
@@ -1603,6 +1603,8 @@ def test_complex_sentences(verbose=False):
 
 
 def test_tense_mood(verbose=False):
+    s = "Ég kláraði verkefnið þrátt fyrir að ég var syfjaður."
+    check_sentence(s, [(6, 6, "P_MOOD_ACK")])
     s = "Hann kemur ef hann geti."
     check_sentence(s, [(4, 4, "P_MOOD_COND")])
     # s = "Hún kemur ef það sé gott veður."
@@ -1655,7 +1657,7 @@ def test_conjunctions(verbose=False):
     s = "Hafsteinn vissi svarið þó hann segði það ekki upphátt."
     check_sentence(s, [(3, 3, "P_NT_ÞóAð")])
     s = "Ég kem á hátíðina víst að pabbi þinn kemst ekki."
-    # check_sentence(s, [(4, 5, "P_NT_VístAð")])            # TODO engin villa finnst! Var ekki búið að útfæra þetta?
+    check_sentence(s, [(4, 5, "P_NT_VístAð")])
     s = "Ég kem á hátíðina fyrst að pabbi þinn kemst ekki."
     check_sentence(s, [(5, 5, "P_NT_Að/w")])
     s = "Hatturinn passar á höfuðið nema að það sé eyrnaband undir honum."
@@ -1708,6 +1710,26 @@ def test_correct_sentences(verbose=False):
         "Á göngudeild gigtar á Landspítalanum sé tilvísunum forgangsraðað "
         "og er meðalbiðtími innan marka."
     )
+    check_sentence(s, [])
+
+
+def test_correction_is_valid(verbose=False):
+    # Check that 'Ferðavefir' is not corrected (or suggested) to 'Ferðavefur',
+    # which doesn't work grammatically
+    s = (
+        "Samkvæmt heimasíðu sinni sérhæfa Ferðavefir sig í ýmsa þjónustu fyrir "
+        "ferðaþjónustufyrirtæki, líkt og vefsíðugerð, hönnun og ráðgjöf um rekstur."
+    )
+    check_sentence(s, [])
+    # Check that 'hátekju' is not corrected (or suggested) to 'hátekjum'
+    # within a hyphenated composite word
+    s = (
+        "Vanrækt hefur verið að uppfæra skattkerfið í samræmi við breytingar á "
+        "launum og verðlagi, skattagötum og sniðgönguleiðum hefur fjölgað og "
+        "stjórnvöld hafa breytt skattalögum til hagsbóta fyrir "
+        "hátekju- og stóreignafólk."
+    )
+    sent = rc.check_single(s)
     check_sentence(s, [])
 
 

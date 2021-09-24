@@ -87,6 +87,7 @@
 """
 
 from typing import (
+    TYPE_CHECKING,
     Dict,
     List,
     Optional,
@@ -107,15 +108,19 @@ import glob
 import random
 import argparse
 import xml.etree.ElementTree as ET
-import multiprocessing
 
-# import multiprocessing.dummy as multiprocessing
+if TYPE_CHECKING:
+    # For some reason, types seem to be missing from the multiprocessing module
+    # but not from multiprocessing.dummy
+    import multiprocessing.dummy as multiprocessing
+else:
+    import multiprocessing
 
-import reynir_correct as gc
 from reynir import _Sentence
 from tokenizer import detokenize, Tok, TOK
 
-from reynir_correct.checker import AnnotatedSentence
+from reynir_correct.annotation import Annotation
+from reynir_correct.checker import AnnotatedSentence, check as gc_check
 
 
 # Disable Pylint warnings arising from Pylint not understanding the typing module
@@ -294,7 +299,9 @@ NAMES = {
 
 # Three levels: Supercategories, subcategories and error codes
 # supercategory: {subcategory : [error code]}
-SUPERCATEGORIES = defaultdict(lambda: defaultdict(list))
+SUPERCATEGORIES: DefaultDict[str, DefaultDict[str, List[str]]] = defaultdict(
+    lambda: defaultdict(list)
+)
 
 GCtoIEC = {
     "A001": ["abbreviation-period"],
@@ -306,9 +313,9 @@ GCtoIEC = {
     "Z005": ["upper4lower-common"],
     "Z005/w": ["upper4lower-common"],
     "Z006": ["lower4upper-acro"],
-    "E001" : ["No responding iEC category"],
-    "E002" : ["No responding iEC category"],
-    "E003" : ["No responding iEC category"],
+    "E001": ["No responding iEC category"],
+    "E002": ["No responding iEC category"],
+    "E003": ["No responding iEC category"],
     "E004": ["fw"],
     "C001": ["repeat-word"],
     "C002": ["merged-words"],
@@ -484,10 +491,7 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-f",
-    "--catfile",
-    type=str,
-    default="iceErrorCorpus/errorCodes.tsv"
+    "-f", "--catfile", type=str, default="iceErrorCorpus/errorCodes.tsv"
 )
 
 # This boolean global is set to True for quiet output,
@@ -875,8 +879,8 @@ class Stats:
             )
 
             # Most common false negative error types
-            #total = sum(self._false_negatives.values())
-            #if total > 0:
+            # total = sum(self._false_negatives.values())
+            # if total > 0:
             #    bprint(f"\nMost common false negative error types")
             #    bprint(f"--------------------------------------\n")
             #    for index, (xtype, cnt) in enumerate(
@@ -887,8 +891,8 @@ class Stats:
             #        bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
 
             # Most common error types in unparsable sentences
-            #tot = sum(self._tp_unparsables.values())
-            #if tot > 0:
+            # tot = sum(self._tp_unparsables.values())
+            # if tot > 0:
             #    bprint(f"\nMost common error types for unparsable sentences")
             #    bprint(f"------------------------------------------------\n")
             #    for index, (xtype, cnt) in enumerate(
@@ -1023,11 +1027,7 @@ class Stats:
             # Micro F0.5-score
             # Results for in-scope categories and all categories
             if nfreqs != 0:
-                bprint(
-                    "F0.5-score: {:3.2f}".format(
-                        microf05 / nfreqs * 100.0,
-                    )
-                )
+                bprint("F0.5-score: {:3.2f}".format(microf05 / nfreqs * 100.0,))
             else:
                 bprint(f"F0.5-score: N/A")
 
@@ -1036,7 +1036,9 @@ class Stats:
                 each subcategory, and error code """
             bprint("Supercategory: frequency, F-score")
             bprint("\tSubcategory: frequency, F-score")
-            bprint("\t\tError code: frequency, (recall, precision, F-score), (tp, fn, fp), correct recall")
+            bprint(
+                "\t\tError code: frequency, (recall, precision, F-score), (tp, fn, fp), correct recall"
+            )
             totalfreq = 0
             totalf = 0.0
             for supercat in SUPERCATEGORIES:
@@ -1058,46 +1060,70 @@ class Stats:
                             freq = cast(int, et["freq"])
                             fscore = cast(float, et["f05score"])
                             # codework
-                            subblob = subblob + "\t\t{} {}  ({}, {}, {}) ({},{},{})| {}\n".format(
-                                code,
-                                freq,
-                                cast(float, et["recall"]) * 100.0 if "recall" in et else 0.0,
-                                cast(float, et["precision"]) * 100.0 if "precision" in et else 0.0,
-                                fscore * 100.0,
-                                cast(int, et["tp"]) if "tp" in et else 0,
-                                cast(int, et["fn"]) if "fn" in et else 0,
-                                cast(int, et["fp"]) if "fp" in et else 0,
-                                cast(int, et["corr_rec"]) if "corr_rec" in et else 0,
+                            subblob = (
+                                subblob
+                                + "\t\t{} {}  ({}, {}, {}) ({},{},{})| {}\n".format(
+                                    code,
+                                    freq,
+                                    cast(float, et["recall"]) * 100.0
+                                    if "recall" in et
+                                    else 0.0,
+                                    cast(float, et["precision"]) * 100.0
+                                    if "precision" in et
+                                    else 0.0,
+                                    fscore * 100.0,
+                                    cast(int, et["tp"]) if "tp" in et else 0,
+                                    cast(int, et["fn"]) if "fn" in et else 0,
+                                    cast(int, et["fp"]) if "fp" in et else 0,
+                                    cast(int, et["corr_rec"])
+                                    if "corr_rec" in et
+                                    else 0,
+                                )
                             )
                             # subwork
                             subfreq += freq
                             subf += fscore * freq
                     if subfreq != 0:
-                        subblob = "\t{}   {} {}\n".format(subcat.capitalize(), subfreq, subf / subfreq * 100.0) + subblob
+                        subblob = (
+                            "\t{}   {} {}\n".format(
+                                subcat.capitalize(), subfreq, subf / subfreq
+                            )
+                            + subblob
+                        )
                     else:
-                        subblob = "\t{}    0    N/A\n".format(subcat.capitalize()) + subblob
+                        subblob = (
+                            "\t{}    0    N/A\n".format(subcat.capitalize()) + subblob
+                        )
                     # superwork
                     # freq, f05
                     superblob += subblob
                     superfreq += subfreq
-                    superf += subf              # TODO is this correct?
+                    superf += subf  # TODO is this correct?
                 if superfreq != 0:
-                    superblob = "\n{}   {} {}\n".format(supercat.capitalize(), superfreq, superf / superfreq * 100.0) + superblob
+                    superblob = (
+                        "\n{}   {} {}\n".format(
+                            supercat.capitalize(), superfreq, superf / superfreq
+                        )
+                        + superblob
+                    )
                 else:
-                    superblob = "\n{}    0    N/A\n".format(supercat.capitalize()) + superblob
+                    superblob = (
+                        "\n{}    0    N/A\n".format(supercat.capitalize()) + superblob
+                    )
                 totalfreq += superfreq
-                totalf += superf                # TODO is this correct?
+                totalf += superf  # TODO is this correct?
                 bprint("".join(superblob))
             bprint("Total frequency: {}".format(totalfreq))
             bprint("Total F-score: {}".format(totalf / totalfreq * 100.0))
-        #output_duration()
-        #output_sentence_scores()
-        #output_token_scores()
-        #output_error_cat_scores()
+
+        # output_duration()
+        # output_sentence_scores()
+        # output_token_scores()
+        # output_error_cat_scores()
 
         bprint(f"\n\nResults for iEC-categories:")
         output_supercategory_scores()
-        
+
         # Print the accumulated output before exiting
         for s in buffer:
             print(s)
@@ -1275,7 +1301,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 # Nothing to do: drop this and go to the next sentence
                 continue
             # Pass it to GreynirCorrect
-            pg = [list(p) for p in gc.check(text)]
+            pg = [list(p) for p in gc_check(text)]
             s: Optional[_Sentence] = None
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 s = pg[0][0]
@@ -1300,7 +1326,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 bprint("000: *** Sentence identifier is missing ('n' attribute) ***")
 
             def sentence_results(
-                hyp_annotations: List[gc.Annotation], ref_annotations: List[ErrorDict]
+                hyp_annotations: List[Annotation], ref_annotations: List[ErrorDict]
             ) -> Tuple[bool, bool]:
                 gc_error = False
                 ice_error = False
@@ -1355,7 +1381,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             gc_error, ice_error = sentence_results(s.annotations, errors)
 
             def token_results(
-                hyp_annotations: Iterable[gc.Annotation],
+                hyp_annotations: Iterable[Annotation],
                 ref_annotations: Iterable[ErrorDict],
             ) -> Tuple[int, int, int, int, int, int, int]:
                 """ Calculate statistics on annotations at the token span level """
@@ -1367,7 +1393,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
                 y = iter(hyp_annotations)  # GreynirCorrect annotations
                 x = iter(ref_annotations)  # iEC annotations
-                ytok: Optional[gc.Annotation] = None
+                ytok: Optional[Annotation] = None
                 xtok: Optional[ErrorDict] = None
 
                 if ANALYSIS:
@@ -1619,7 +1645,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
         errtypefreqs=errtypefreqs,
     )
 
-def initialize_cats(catfile):
+
+def initialize_cats(catfile: str) -> None:
     first = True
     with open(catfile, "r") as cfile:
         for row in cfile:
@@ -1627,7 +1654,10 @@ def initialize_cats(catfile):
             if first:
                 first = False
             else:
-                SUPERCATEGORIES[split[0].strip()][split[1].strip()].append(split[2].strip())
+                s0, s1, s2 = [s.strip() for s in split[0:3]]
+                SUPERCATEGORIES[s0][s1].append(s2)
+
+
 def main() -> None:
     """ Main program """
     # Parse the command line arguments
@@ -1655,9 +1685,6 @@ def main() -> None:
     global ANALYSIS
     ANALYSIS = args.analysis
 
-    global CATFILE
-    CATFILE = args.catfile
-
     # Maximum number of files to process (0=all files)
     max_count = args.number
     # Initialize the statistics collector
@@ -1666,8 +1693,8 @@ def main() -> None:
     path: str = args.path
     # When running measurements only, we use _TEST_PATH as the default,
     # otherwise _DEV_PATH
-    
-    initialize_cats(CATFILE)
+
+    initialize_cats(args.catfile)
 
     if path is None:
         path = _TEST_PATH if args.measure else _DEV_PATH
@@ -1690,9 +1717,7 @@ def main() -> None:
                 if genre in fpath:
                     break
             else:
-                assert (
-                    False
-                ), f"File path does not contain a recognized genre: {fpath}"
+                assert False, f"File path does not contain a recognized genre: {fpath}"
             # Add the file to the statistics under its genre
             stats.add_file(genre)
             # Yield the file information to the multiprocessing pool
