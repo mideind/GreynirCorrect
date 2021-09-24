@@ -464,14 +464,28 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaFjöldiHluti(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
         # Sögn sem á við 'fjöldi Evrópuríkja' á að vera í eintölu
-        return self.singular_error(
-            txt,
-            variants,
-            node,
-            "Nafnliðurinn '{0}' er í eintölu "
-            "og með honum á því að vera sögn í eintölu.".format(txt),
+        tnode = self._terminal_nodes[node.start]
+        # Find the closing inflected phrase
+        ip = tnode.enclosing_tag("IP")
+        if ip is None:
+            return ""
+        verb = ip.first_match("so_ft")
+        if verb is None:
+            return "Sögnin á sennilega að vera í fleirtölu eins og frumlagið  "
+        start, end = verb.span
+        children = list(node.enum_child_nodes())
+        ch0, ch1, _ = children
+        if ch0 is None or ch1 is None:
+            return "Sögnin á sennilega að vera í fleirtölu eins og frumlagið"
+        subjtext = self.node_text(ch0) + " " + self.node_text(ch1)
+        return dict(
+            text=f"Sögnin '{verb.tidy_text}' á sennilega að vera í eintölu eins og frumlagið '{subjtext}'",
+            detail= f"Nafnliðurinn '{subjtext}' er í eintölu og með honum á því að vera sögn í eintölu.",
+            start=start,
+            end=end,
+            original=verb.tidy_text
         )
-
+    
     def VillaEinnAf(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
         # Sögn sem á við 'einn af drengjunum' á að vera í eintölu
         return self.singular_error(
@@ -576,7 +590,8 @@ class ErrorFinder(ParseForestNavigator):
                 so = vp.first_match("so")
         # Annotate the verb phrase
         assert ch1 is not None
-        start, end = self._node_span(ch1)
+        start, end = self.node_span(ch1)
+        detail: str = f"Nafnliðurinn '{subject}' er í eintölu og með honum á því að vera sögn í eintölu."
         if so is not None:
             sostart, soend = so.span
             end = start + soend
@@ -587,6 +602,7 @@ class ErrorFinder(ParseForestNavigator):
             ),
             start=start,
             end=end,
+            detail=detail,
         )
 
     def VillaFsMeðFallstjórn(
@@ -689,6 +705,34 @@ class ErrorFinder(ParseForestNavigator):
             text="Á sennilega að vera '{0}'".format(correct_np),
             detail=detail,
             suggest=suggestion,
+        )
+
+    def VillaManns(self, txt: str, variants: str, node: Node) -> AnnotationDict:
+        # Sögn á að vera í fleirtölu, líkt og frumlagið
+        child = list(node.enum_child_nodes())
+        ch0 = child[0]
+        assert ch0 is not None
+        subject = self.node_text((ch0))
+        # Find the verb
+        ch0node = cast(Node, ch0)
+        subjtree: Optional[SimpleTree] = self._simple_tree(ch0node)
+        if subjtree is None:
+            return dict()
+        subjwhole = self._sent.tree.first_match("NP-SUBJ >> { \"manns\" }")
+        if subjwhole is None:
+            return dict()
+        ip = subjwhole.enclosing_tag("IP")            
+        if ip is None:
+            return dict()
+        so = ip.first_match("so_et")
+        if so is None:
+            return dict()
+        start, end = so.span
+        return dict(
+            text=f"Sögn á að vera í fleirtölu líkt og frumlagið '{subject}'",
+            start=start,
+            end=end,
+            detail=f"Sögnin á að vera í fleirtölu, þrátt fyrir 'manns' í frumlagi.",
         )
 
     @staticmethod

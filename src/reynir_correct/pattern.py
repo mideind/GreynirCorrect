@@ -67,6 +67,7 @@ from reynir.matcher import ContextDict
 from reynir.bintokenizer import ALL_CASES
 
 from .annotation import Annotation
+from reynir_correct.errtokenizer import emulate_case
 
 
 # The types involved in pattern processing
@@ -170,6 +171,7 @@ class PatternMatcher:
     ctx_verb_01: ContextDict = cast(ContextDict, None)
     ctx_verb_02: ContextDict = cast(ContextDict, None)
     ctx_noun_að: ContextDict = cast(ContextDict, None)
+    ctx_subjsing: ContextDict = cast(ContextDict, None)
     ctx_place_names: ContextDict = cast(ContextDict, None)
     ctx_uncertain_verbs: ContextDict = cast(ContextDict, None)
     ctx_confident_verbs: ContextDict = cast(ContextDict, None)
@@ -1483,7 +1485,6 @@ class PatternMatcher:
         if so is None:
             return
         start, end = so.span
-        # Check if so is in a different subclause
         if "þt" in so.all_variants:
             return
         variants = set(so.all_variants) - {"vh"}
@@ -1533,7 +1534,6 @@ class PatternMatcher:
         if so is None:
             return
         start, end = so.span
-        # Check if so is in a different subclause
         variants = set(so.all_variants) - {"fh"}
         variants.add("vh")
         suggest = self.get_wordform(so.lemma, so.cat, variants)
@@ -1610,6 +1610,121 @@ class PatternMatcher:
                 detail=detail,
                 original=match.tidy_text,
                 suggest=suggest,
+            )
+        )
+
+    def plursub(self, kind: str, match: SimpleTree) -> None:
+        """ Subject is singular in meaning grammatically, e.g. '40.000 manns', 'meirihluti' """
+        # Check if verb is singular
+        ip = match.enclosing_tag("IP")
+        if ip is None:
+            return
+        vp = ip.first_match("VP > so_et")
+        if vp is None:
+            return
+        so = vp.first_match("so")
+        if so is None:
+            return
+        no = match.first_match("no_ft")
+        if no is None:
+            return
+        start, end = so.span
+        variants = set(so.all_variants) - {"et"}
+        variants.add("ft")
+        so_text = so.text.lower()
+        suggest = self.get_wordform(so_text, so.lemma, so.cat, variants)
+        if not suggest or suggest == so_text:
+            return
+        text = (
+            f"Hér er réttara að nota fleirtölu "
+            f"sagnarinnar '{so.lemma}', þ.e. '{suggest}'."
+        )
+        if kind == "GEN":
+            nogen = match.first_match("NP-POSS > { no_ft_ef }")
+            if nogen is None:
+                return
+            detail = f"Þrátt fyrir að eignarfallsliðurinn '{nogen.lemma}' sé eintölumerkingar er aðalnafnliðurinn '{no.lemma}' frumlagið og stjórnar tölu sagnarinnar '{so.lemma}'."
+        elif kind == "QUANT":
+            detail = f"Fleirtölunafnorðið '{no.lemma}' hefur eintölumerkingu en er málfræðilega fleirtala og sögnin '{so.lemma}' á því að standa í fleirtölu."
+        else:
+            return
+            
+        generic = frozenset(("P_NT_ÍTölu", "P_NT_FjöldiHluti")) # TODO update list
+        # This is more precise, we want to delete the more generic one
+        for ann in self._ann:
+            if ann.code in generic and ann.start == start and ann.end == end:
+                self._ann.remove(ann)
+
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_PLURSUB_" + kind,
+                text=text,
+                detail=detail,
+                original=so.text,
+                suggest=emulate_case(suggest, template=so.text),
+            )
+        )
+
+
+
+    def singsub(self, kind: str, match: SimpleTree) -> None:
+        """ Subject is plural in meaning but singular grammatically, e.g. 'Hluti ferðamanna', 'tvíeykið X og Y """
+        # Check if verb is plural
+        ip = match.enclosing_tag("IP")
+        if ip is None:
+            return
+        vp = ip.first_match("VP > so_ft")
+        if vp is None:
+            return
+        so = vp.first_match("so")
+        if so is None:
+            return
+        no = match.first_match("no_et")
+        if no is None:
+            return
+        start, end = so.span
+        variants = set(so.all_variants) - {"ft"}
+        variants.add("et")
+        so_text = so.text.lower()
+        suggest = self.get_wordform(so_text, so.lemma, so.cat, variants)
+        if not suggest or suggest == so_text:
+            return
+        text = (
+            f"Hér er réttara að nota eintölu "
+            f"sagnarinnar '{so.lemma}', þ.e. '{suggest}'."
+        )
+        if kind == "GEN":
+            nogen = match.first_match("NP-POSS > { no_ft_ef }")
+            if nogen is None:
+                return
+            detail = f"Þrátt fyrir að eignarfallsliðurinn '{nogen.lemma}' sé fleirtölumerkingar er aðalnafnliðurinn '{no.lemma}' frumlagið og stjórnar tölu sagnarinnar '{so.lemma}'."
+        elif kind == "QUANT":
+            detail = f"Eintölunafnorðið '{no.lemma}' hefur fleirtölumerkingu en er málfræðilega eintala og sögnin '{so.lemma}' á því að standa í eintölu."
+        elif kind == "AF":
+            noaf = match.first_match("PP >> { no_ft_þgf }")
+            if noaf is None:
+                return
+            detail = f"Tala sagnarinnar '{so.lemma}' stjórnast af tölu '{no.lemma}', ekki '{noaf.lemma}' í forsetningarlið."
+        else:
+            return
+
+        generic = frozenset(("P_NT_ÍTölu", "P_NT_FjöldiHluti"))
+        # This is more precise, we want to delete the more generic one
+        for ann in self._ann:
+            if ann.code in generic and ann.start == start and ann.end == end:
+                self._ann.remove(ann)
+
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_SINGSUB_" + kind,
+                text=text,
+                detail=detail,
+                original=so.text,
+                suggest=emulate_case(suggest, template=so.text),
             )
         )
 
@@ -2794,6 +2909,48 @@ class PatternMatcher:
                 "VP > { VP > { 'vera' } PP >> { PP > { ADVP > { 'upp' } P > { 'á' } NP > { 'Skagi' } } } }",
                 lambda self, match: self.dir_loc(match),
                 None,
+            )
+        )
+
+        def subjsing(nouns: Set[str], tree: SimpleTree) -> bool:
+            """ Context matching function for the %noun macro """
+            if not tree.is_terminal:
+                return False
+            if not "et" in tree.all_variants:
+                return False
+            lemma = tree.own_lemma
+            if not lemma:
+                # The passed-in tree node is probably not a terminal
+                return False
+            return lemma in nouns
+
+        NOUNS_NUM: FrozenSet[str] = frozenset(("þríeyki", "tvíeyki", "hluti", "hópur"))
+        # The macro %noun is resolved by calling the function subjnum()
+        # with the potentially matching tree node as an argument.
+        cls.ctx_subjsing = {"noun": partial(subjsing, NOUNS_NUM)}
+
+        cls.add_pattern(
+            (
+                NOUNS_NUM,  # Trigger lemmas for this pattern
+                "NP-SUBJ >> [ %noun .* 'og' ]",
+                lambda self, match: self.singsub("QUANT", match),
+                cls.ctx_subjsing,
+            )
+        )
+        cls.add_pattern(
+            (
+                NOUNS_NUM,  # Trigger lemmas for this pattern
+                "NP-SUBJ >> [ %noun .* NP-POSS >> { no_ft_ef } ]",
+                lambda self, match: self.singsub("GEN", match),
+                cls.ctx_subjsing,
+            )
+        )
+        cls.add_pattern(
+            (
+                NOUNS_NUM,
+                "NP-SUBJ >> [ %noun .* PP >> [ no_ft_ef  ]]",
+                lambda self, match: self.singsub("AF", match),
+                cls.ctx_subjsing,
             )
         )
 

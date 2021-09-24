@@ -80,6 +80,12 @@ test/spantest.py
 # Error analysis
 eval/examples_iEC/
 
+# Extra resources
+src/reynir_correct/resources/*.csv
+src/reynir_correct/resources/*.py
+src/reynir_correct/resources/*.txt
+src/reynir_correct/resources/*/*.csv
+
 # Symlink to iceErrorCorpus for evaluation
 eval/iceErrorCorpus
 
