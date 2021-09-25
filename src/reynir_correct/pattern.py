@@ -194,7 +194,8 @@ class PatternMatcher:
                 # First instance: create the class-wide pattern list
                 self.create_patterns()
 
-    def get_wordform(self, word: str, lemma: str, cat: str, variants: Iterable[str]) -> str:
+    @classmethod
+    def get_wordform(cls, word: str, lemma: str, cat: str, variants: Iterable[str]) -> str:
         """ Get correct wordform from BinPackage, 
             given a set of variants """
         realvars: Union[Set[str], Iterable[str]]
