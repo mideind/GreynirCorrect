@@ -446,32 +446,36 @@ class ErrorFinder(ParseForestNavigator):
     ) -> AnnotationReturn:
         """ Annotate a mismatch between singular and plural
         in subject vs. verb """
-        # TODO does this belong in pattern.py?
         tnode = self._terminal_nodes[node.start]
         # Find the enclosing inflected phrase
-        p = tnode.enclosing_tag("IP")
-        verb = None
-        if p is not None:
+        ip = tnode.enclosing_tag("IP")
+        if ip is not None:
             try:
                 # Found it: try to locate the main verb
-                verb = p.VP.VP
+                vp = ip.VP.VP
             except AttributeError:
                 try:
-                    verb = p.VP
+                    vp = ip.VP
                 except AttributeError:
                     pass
-        if verb is not None:
-            start, end = verb.span
+        so = vp.first_match("so_ft")
+
+        if so is not None:
+            start, end = so.span
+            vars = set(so.all_variants) - {"ft"}
+            vars.add("et")
+            suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, so.cat, vars)            
             return dict(
                 text=(
                     "Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(
-                        verb.tidy_text
+                        so.tidy_text
                     )
                 ),
                 detail=detail,
                 start=start,
                 end=end,
-                original=verb.tidy_text,
+                original=so.tidy_text,
+                suggest=suggest,
             )
         return (
             f"Sögn sem á við '{txt}' á sennilega að vera í eintölu, ekki fleirtölu"
