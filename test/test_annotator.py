@@ -180,13 +180,13 @@ def test_error_finder(rc):
     s = "Ég talaði við annaðhvort barnanna."
     check_sentence(rc, s, [(3, 3, "P_NT_Annaðhvort")])
     s = "Ég hef verið slappur frá því ég fékk sprautuna."
-    check_sentence(rc, s, [(4, 5, "P_NT_FráÞvíAð")])
+    check_sentence(rc, s, [(5, 5, "P_NT_FráÞvíAð")])
     s = "Ég hef verið slappur allt frá því ég fékk sprautuna."
-    check_sentence(rc, s, [(4, 6, "P_NT_FráÞvíAð")])
+    check_sentence(rc, s, [(6, 6, "P_NT_FráÞvíAð")])
     s = "Friðgeir vildi vera heima víst að Sigga yrði að vera heima."
-    check_sentence(rc, s, [(4, 5, "P_NT_VístAð")])
+    check_sentence(rc, s, [(4, 4, "P_NT_VístAð")])
     s = "Víst að Sigga var heima ákvað Friðgeir að vera heima."
-    check_sentence(rc, s, [(0, 1, "P_NT_VístAð")])
+    check_sentence(rc, s, [(0, 0, "P_NT_VístAð")])
     s = "Friðgeir taldi víst að Sigga yrði að vera heima."
     check_sentence(rc, s, [])
     s = "Ég er ekki meiri fáviti heldur en þú."

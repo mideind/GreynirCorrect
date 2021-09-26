@@ -1413,7 +1413,7 @@ def test_NP_agreement(verbose=False):
     # fallið er tékkað virðist vera.
     # check_sentence(s, [(3, 5, "P_NT_X")])
     s = "Hann hélt utan um dóttir sína."
-    check_sentence(s, [(2, 4, "P_NT_FsMeðFallstjórn")])
+    check_sentence(s, [(3, 4, "P_NT_FsMeðFallstjórn")])
     s = "Barnið var með kaldar fingur en heitar fætur."
     # TODO villurnar greinast ekki, vantar líklega reglur.
     # check_sentence(s, [(4, 6, "P_NT_KynInnanNafnliðar"), (6, 8, "P_NT_Fall")])
@@ -1582,7 +1582,7 @@ def test_verb_arguments(verbose=False):
     s = "Kirkjuna bar við himinn þegar við komum þar um morguninn."
     # TODO Verbs.conf ætti að dekka þetta -- útfæra goggunarröð?
     check_sentence(
-        s, [(2, 3, "P_NT_FsMeðFallstjórn")]
+        s, [(3, 3, "P_NT_FsMeðFallstjórn")]
     )
 
 
@@ -1657,7 +1657,7 @@ def test_conjunctions(verbose=False):
     s = "Hafsteinn vissi svarið þó hann segði það ekki upphátt."
     check_sentence(s, [(3, 3, "P_NT_ÞóAð")])
     s = "Ég kem á hátíðina víst að pabbi þinn kemst ekki."
-    check_sentence(s, [(4, 5, "P_NT_VístAð")])
+    check_sentence(s, [(4, 4, "P_NT_VístAð")])
     s = "Ég kem á hátíðina fyrst að pabbi þinn kemst ekki."
     check_sentence(s, [(5, 5, "P_NT_Að/w")])
     s = "Hatturinn passar á höfuðið nema að það sé eyrnaband undir honum."

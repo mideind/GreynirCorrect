@@ -488,22 +488,22 @@ class ErrorFinder(ParseForestNavigator):
         # Find the closing inflected phrase
         ip = tnode.enclosing_tag("IP")
         if ip is None:
-            return ""
+            return "Sögnin á sennilega að vera í eintölu eins og frumlagið"
         verb = ip.first_match("so_ft")
         if verb is None:
-            return "Sögnin á sennilega að vera í fleirtölu eins og frumlagið  "
+            return "Sögnin á sennilega að vera í eintölu eins og frumlagið"
         start, end = verb.span
         children = list(node.enum_child_nodes())
-        ch0, ch1, _ = children
-        if ch0 is None or ch1 is None:
-            return "Sögnin á sennilega að vera í fleirtölu eins og frumlagið"
-        subjtext = self.node_text(ch0) + " " + self.node_text(ch1)
+        _, ch1,ch2 = children
+        if ch1 is None or ch2 is None:
+            return "Sögnin á sennilega að vera í eintölu eins og frumlagið"
+        subjtext = self.node_text(ch1) + " " + self.node_text(ch2)
         vars = set(verb.all_variants) - {"ft"}
         vars.add("et")
         suggestion = PatternMatcher.get_wordform(verb.text.lower(), verb.lemma, verb.cat, vars)
         return dict(
             text=f"Sögnin '{verb.tidy_text}' á sennilega að vera í eintölu eins og frumlagið '{subjtext}'",
-            detail= f"Nafnliðurinn '{subjtext}' er í eintölu og með honum á því að vera sögn í eintölu.",
+            detail= f"Orðið '{self.node_text(ch1)}' stjórnar tölu sagnarinnar svo hún á að vera í eintölu.",
             start=start,
             end=end,
             original=verb.tidy_text,
@@ -659,7 +659,7 @@ class ErrorFinder(ParseForestNavigator):
         if obj:
             assert pp is not None
             preposition = pp.P.text
-            suggestion = preposition + " " + self.cast_to_case(variants, subj)
+            suggestion = preposition + " " + self.cast_to_case(variants, obj)
             correct_np = correct_spaces(suggestion)
             if correct_np == pp.text:
                 # Avoid suggesting the original text
@@ -883,7 +883,7 @@ class ErrorFinder(ParseForestNavigator):
                 start=node.start,
                 end=node.start,
                 code="number4word",
-                original=self.node_text(node)
+                original=self.node_text(node),
                 suggest=correct,
             )
         )
