@@ -290,7 +290,8 @@ class PatternMatcher:
         assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], pp_af.span[0]), max(vp.span[1], pp_af.span[1])
-        text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
+        text = "Í '{0}' á 'af' sennilega að vera 'að'".format(vp.tidy_text)
+        #text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
         detail = (
             "Í samhenginu 'að spyrja að e-u' er notuð "
             "forsetningin 'að', ekki 'af'."
