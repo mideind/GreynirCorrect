@@ -1037,7 +1037,7 @@ class Stats:
             bprint("Supercategory: frequency, F-score")
             bprint("\tSubcategory: frequency, F-score")
             bprint(
-                "\t\tError code: frequency, (recall, precision, F-score), (tp, fn, fp), correct recall"
+                "\t\tError code: frequency, (recall, precision, F-score), (tp, fn, fp)| correct recall"
             )
             totalfreq = 0
             totalf = 0.0
@@ -1062,7 +1062,7 @@ class Stats:
                             # codework
                             subblob = (
                                 subblob
-                                + "\t\t{} {}  ({}, {}, {}) ({},{},{})| {}\n".format(
+                                + "\t\t{} {}  ({:3.2f}, {:3.2f}, {:3.2f}) ({},{},{})| {}\n".format(
                                     code,
                                     freq,
                                     cast(float, et["recall"]) * 100.0
@@ -1071,18 +1071,18 @@ class Stats:
                                     cast(float, et["precision"]) * 100.0
                                     if "precision" in et
                                     else 0.0,
-                                    fscore * 100.0,
+                                    cast(float, fscore) * 100.0,
                                     cast(int, et["tp"]) if "tp" in et else 0,
                                     cast(int, et["fn"]) if "fn" in et else 0,
                                     cast(int, et["fp"]) if "fp" in et else 0,
-                                    cast(int, et["corr_rec"])
+                                    cast(float, et["corr_rec"])
                                     if "corr_rec" in et
-                                    else 0,
+                                    else 0.0,
                                 )
                             )
                             # subwork
                             subfreq += freq
-                            subf += fscore * freq
+                            subf += fscore * freq * 100.0
                     if subfreq != 0:
                         subblob = (
                             "\t{}   {} {}\n".format(
@@ -1114,7 +1114,7 @@ class Stats:
                 totalf += superf  # TODO is this correct?
                 bprint("".join(superblob))
             bprint("Total frequency: {}".format(totalfreq))
-            bprint("Total F-score: {}".format(totalf / totalfreq * 100.0))
+            bprint("Total F-score: {}".format(totalf / totalfreq))
 
         # output_duration()
         # output_sentence_scores()
