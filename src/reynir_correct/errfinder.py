@@ -332,8 +332,11 @@ class ErrorFinder(ParseForestNavigator):
     def VillaVístAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'víst að' á sennilega að vera 'fyrst að'
         ch0, _ = node.enum_child_nodes()
-        start, end = self.node_span(ch0)
-        orig =self.node_text(ch0, original_case=True)
+        start, end = self.node_span(node)
+        orig = self.node_text(node)
+        if ch0:
+            start, end = self.node_span(ch0)
+            orig =self.node_text(ch0, original_case=True)
         return dict(
             text="'{0}' á sennilega að vera 'fyrst að'".format(txt),
             detail=(
@@ -349,9 +352,12 @@ class ErrorFinder(ParseForestNavigator):
     def VillaFráÞvíAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'allt frá því' á sennilega að vera 'allt frá því að'
         children = list(node.enum_child_nodes())
+        start, end = self.node_span(node)
+        orig = self.node_text(node)
         ch = children[-1]
-        orig_txt = self.node_text(ch, original_case=True)
-        start, end = self.node_span(ch)
+        if ch:
+            start, end = self.node_span(ch)
+            orig_txt =self.node_text(ch, original_case=True)
         return dict(
             text="'{0}' á sennilega að vera '{0} að'".format(txt),
             detail=(
@@ -1118,7 +1124,7 @@ class ErrorFinder(ParseForestNavigator):
         # in the grammar file (Greynir.grammar)
         suggestion = None
         original = None
-        ann_text = None
+        ann_text: str = ""
         ann_detail = None
         start, end = self.node_span(node)
         span_text = self.node_text(node)
