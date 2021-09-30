@@ -353,7 +353,7 @@ class ErrorFinder(ParseForestNavigator):
         # 'allt frá því' á sennilega að vera 'allt frá því að'
         children = list(node.enum_child_nodes())
         start, end = self.node_span(node)
-        orig = self.node_text(node)
+        orig_txt = self.node_text(node)
         ch = children[-1]
         if ch:
             start, end = self.node_span(ch)
@@ -455,6 +455,7 @@ class ErrorFinder(ParseForestNavigator):
         tnode = self._terminal_nodes[node.start]
         # Find the enclosing inflected phrase
         ip = tnode.enclosing_tag("IP")
+        vp: Optional[SimpleTree] = None
         if ip is not None:
             try:
                 # Found it: try to locate the main verb
@@ -464,13 +465,13 @@ class ErrorFinder(ParseForestNavigator):
                     vp = ip.VP
                 except AttributeError:
                     pass
-        so = vp.first_match("so_ft")
+        so = None if vp is None else vp.first_match("so_ft")
 
         if so is not None:
             start, end = so.span
             vars = set(so.all_variants) - {"ft"}
             vars.add("et")
-            suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, so.cat, vars)            
+            suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, so.cat, vars)
             return dict(
                 text=(
                     "Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(
@@ -627,27 +628,38 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self.node_span(ch1)
         detail: str = f"Nafnliðurinn '{subject}' er í eintölu og með honum á því að vera sögn í eintölu."
         origin = subject
-        if so is not None:
-            origin = so.tidy_text
-            sostart, soend = so.span
-            end = start + soend
-            start = start + sostart
-            vars = set()
-            if "et" in variants:
-                vars = set(so.all_variants) - {"et"}
-                vars.add("ft")
-            elif "ft" in variants:
-                vars = set(so.all_variants) - {"ft"}
-                vars.add("et")
+        if so is None:
+            return dict(
+                text="Sögnin á sennilega að vera í {1} eins og frumlagið '{0}'".format(
+                    subject, number
+                ),
+                detail=detail,
+                start=start,
+                end=end,
+                original=origin,
+                suggest="",
+            )
+        origin = so.tidy_text
+        sostart, soend = so.span
+        end = start + soend
+        start = start + sostart
+        v = set(so.all_variants)
+        if "et" in v:
+            v -= {"et"}
+            v.add("ft")
+        elif "ft" in v:
+            v -= {"ft"}
+            v.add("et")
+        suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, "so", v)
         return dict(
-            text="Sögnin á sennilega að vera í {1} eins og frumlagið '{0}'".format(
-                subject, number
+            text="Sögnin á sennilega að vera í {1}, þ.e. '{0}'".format(
+                suggest, number
             ),
             detail=detail,
             start=start,
             end=end,
             original=origin,
-            suggest="",
+            suggest=emulate_case(suggest, template=origin),
         )
 
     def VillaFsMeðFallstjórn(

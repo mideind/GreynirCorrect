@@ -1491,20 +1491,18 @@ def test_verb_agreement(verbose=False):
     # komið inn í Verbs.conf. Þetta er líklega ekki réttur villukóði.
     # check_sentence(s, [(2, 2, "P_WRONG_PARTICLE_uppi")])
     s = "Maðurinn dáðist af málverkinu."
-    # TODO Villan greinist ekki, PP-villur ekki studdar í Verbs.conf eins og er
-    #check_sentence(s, [(1, 2, "P_WRONG_PREP_AF")])
+    check_sentence(s, [(1, 2, "P_WRONG_PREP_AF")])
     s = "Barnið á hættu á að detta í brunninn."
     # TODO erfitt að eiga við, líklega ekki réttur villukóði, bæta við Verbs.conf.
     # check_sentence(s, [(1, 1, "P_WRONG_FORM")])
     s = "Hetjan á heiður að björguninni."
-    # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
-    # check_sentence(s, [(3, 4, "P_WRONG_PP_af")])
+    check_sentence(s, [(1, 4, "P_WRONG_PREP_AÐ")])
     s = "Ferðafólkið fór erlendis að leita lamba."
     # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
-    # check_sentence(s, [(2, 3, "P_WRONG_PARTICLE_til_útlanda")])
+    #check_sentence(s, [(2, 3, "P_WRONG_PARTICLE_til_útlanda")])
     s = "Túlkurinn gaf í skin að mælandi hefði misskilið túlkinn."
     # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
-    # check_sentence(s, [(2, 4, "P_WRONG_PP_í_skyn")])
+    #check_sentence(s, [(2, 4, "P_WRONG_PP_í_skyn")])
 
 
 def test_hvor_annar(verbose=False):
