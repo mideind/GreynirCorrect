@@ -68,8 +68,8 @@ from .pattern import PatternMatcher
 AnnotationDict = Dict[str, Union[str, int]]
 AnnotationTuple2 = Tuple[str, str]
 AnnotationTuple4 = Tuple[str, int, int, str]
-AnnotationTuple6 = Tuple[str, int, int, str, str, str]
-AnnotationReturn = Union[str, AnnotationTuple2, AnnotationTuple4, AnnotationDict]
+AnnotationTuple6 = Tuple[str, str, int, int,str, str]
+AnnotationReturn = Union[str, AnnotationTuple2, AnnotationTuple4, AnnotationTuple6, AnnotationDict]
 AnnotationFunc = Callable[[str, str, Node], AnnotationReturn]
 
 
@@ -331,7 +331,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaVístAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'víst að' á sennilega að vera 'fyrst að'
-        ch0, _ = list(node.enum_child_nodes())
+        ch0, _ = node.enum_child_nodes()
         start, end = self.node_span(ch0)
         orig =self.node_text(ch0, original_case=True)
         return dict(
@@ -626,7 +626,7 @@ class ErrorFinder(ParseForestNavigator):
             sostart, soend = so.span
             end = start + soend
             start = start + sostart
-            vars: set[str] = set()
+            vars = set()
             if "et" in variants:
                 vars = set(so.all_variants) - {"et"}
                 vars.add("ft")
