@@ -53,7 +53,8 @@ Command-line tool
 -----------------
 
 GreynirCorrect can be invoked as a command-line tool
-to perform token-level correction. The command is ``correct infile.txt outfile.txt``.
+to perform token-level correction and, optionally, grammar analysis.
+The command is ``correct infile.txt outfile.txt``.
 The command-line tool is further documented below.
 
 .. _examples:
@@ -249,8 +250,6 @@ the ``correct`` command does not perform grammar checking by default.
    {"k":"WORD","t":"hestinn"}
    {"k":"END SENT"}
 
-.. _tests:
-
 To perform whole-sentence grammar checking and annotation as well as spell checking,
 use the ``--grammar`` option:
 
@@ -303,6 +302,7 @@ represented by a JSON object in a single line of text, terminated by newline.
 
 Note that the ``corrected`` field only includes token-level spelling correction
 (in this case *þreittur* ``->`` *þreyttur*), but no grammar corrections.
+The grammar corrections are found in the ``annotations`` list.
 To apply corrections and suggestions from the annotations,
 replace source text or tokens (as identified by the ``start`` and ``end``,
 or ``start_char`` and ``end_char`` properties) with the ``suggest`` field, if present.
