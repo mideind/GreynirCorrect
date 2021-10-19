@@ -50,7 +50,7 @@ class Annotation:
         text: str,
         detail: Optional[str] = None,
         original: Optional[str] = None,
-        suggest: Optional[str] = None,
+        suggest: str = None,
         is_warning: bool = False,
     ) -> None:
         assert isinstance(start, int)
