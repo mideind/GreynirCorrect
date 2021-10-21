@@ -615,18 +615,27 @@ class PatternMatcher:
         pp = match.first_match("PP > { \"að\" }")
         assert np is not None
         assert pp is not None
+        print(np.span[-1])
+        print(pp.span[0])
         start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
         text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
         detail = (
             "Í samhenginu 'hafa áhyggjur af e-u' er notuð "
             "forsetningin 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" af ") == 1:
+        if match.tidy_text.count(" að ") == 1:
             # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
+            suggest = match.tidy_text.replace(" að ", " af ")
         else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+            np_ter = match.first_match("'áhyggja'")
+            # The instance of 'að' which comes right after the np terminal is substituted
+            all_m = match.all_matches(" 'að' ")
+            for m in all_m:
+                if m.span[0] > np_ter.span[-1]:
+                    subtree = m
+                    break
+            assert subtree is not None
+            suggest = match.substituted_text(subtree, 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -642,15 +651,24 @@ class PatternMatcher:
     def wrong_preposition_hluti_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Calculate the start and end token indices, spanning both phrases
-        start, end = match.span
+        np = match.first_match("NP > { 'hluti' }")
+        pp = match.first_match("PP > { 'að' }")
+        start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
         text = "'hluti að' á sennilega að vera 'hluti af'"
-        detail = "Í samhenginu 'hluti af e-u' er notuð " "forsetningin 'af', ekki 'að'."
+        detail = "Í samhenginu 'hluti af e-u' er notuð forsetningin 'af', ekki 'að'."
         if match.tidy_text.count(" að ") == 1:
             # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
+            suggest = pp.tidy_text.replace(" að ", " af ")
         else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+            vp_ter = match.first_match("'hluti'")
+            # The instance of 'að' which comes right after the vp terminal is substituted
+            all_m = match.all_matches(" 'að' ")
+            for m in all_m:
+                if m.span[0] > vp_ter.span[-1]:
+                    subtree = m
+                    break
+            assert subtree is not None
+            suggest = match.substituted_text(subtree, 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -801,8 +819,15 @@ class PatternMatcher:
             # Only one way to substitute að -> af: do it
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+            np_ter = match.first_match("('mikill'|'lítill'|'fullur')")
+            # The instance of 'að' which comes right after the np terminal is substituted
+            all_m = match.all_matches(" 'að' ")
+            for m in all_m:
+                if m.span[0] > np_ter.span[-1]:
+                    subtree = m
+                    break
+            assert subtree is not None
+            suggest = match.substituted_text(subtree, 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -827,8 +852,15 @@ class PatternMatcher:
             # Only one way to substitute að -> af: do it
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+            np_ter = match.first_match("'gagn'")
+            # The instance of 'að' which comes right after the np terminal is substituted
+            all_m = match.all_matches(" 'að' ")
+            for m in all_m:
+                if m.span[0] > np_ter.span[-1]:
+                    subtree = m
+                    break
+            assert subtree is not None
+            suggest = match.substituted_text(subtree, 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -858,8 +890,15 @@ class PatternMatcher:
             # Only one way to substitute að -> af: do it
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+            np_ter = match.first_match("'frétt'")
+            # The instance of 'að' which comes right after the np terminal is substituted
+            all_m = match.all_matches(" 'að' ")
+            for m in all_m:
+                if m.span[0] > np_ter.span[-1]:
+                    subtree = m
+                    break
+            assert subtree is not None
+            suggest = match.substituted_text(subtree, 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -892,8 +931,15 @@ class PatternMatcher:
             # Only one way to substitute að -> af: do it
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+            vp_ter = match.first_match("'stafa'")
+            # The instance of 'að' which comes right after the vp terminal is substituted
+            all_m = match.all_matches(" 'að' ")
+            for m in all_m:
+                if m.span[0] > vp_ter.span[-1]:
+                    subtree = m
+                    break
+            assert subtree is not None
+            suggest = match.substituted_text(subtree, 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -925,8 +971,15 @@ class PatternMatcher:
             # Only one way to substitute að -> af: do it
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+            np_ter = match.first_match("'óléttur'")
+            # The instance of 'að' which comes right after the np terminal is substituted
+            all_m = match.all_matches(" 'að' ")
+            for m in all_m:
+                if m.span[0] > np_ter.span[-1]:
+                    subtree = m
+                    break
+            assert subtree is not None
+            suggest = match.substituted_text(subtree, 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -950,9 +1003,23 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         if " að " in vp.tidy_text:
-            text = "'{0}' á sennilega að vera '{1}'".format(
-                vp.tidy_text, vp.tidy_text.replace(" að ", " af ")
-            )
+            if vp.tidy_text.count(" að ") > 1:
+                vp_ter = match.first_match("'heyra'")
+                # The instance of 'að' which comes right after the vp terminal is substituted
+                all_m = match.all_matches(" 'að' ")
+                for m in all_m:
+                    if m.span[0] > vp_ter.span[-1]:
+                        subtree = m
+                        break
+                assert subtree is not None
+                replacement = match.substituted_text(subtree, 'af')
+                text = "'{0}' á sennilega að vera '{1}'".format(
+                    vp.tidy_text, replacement
+                )
+            else:
+                text = "'{0}' á sennilega að vera '{1}'".format(
+                    vp.tidy_text, vp.tidy_text.replace(" að ", " af ")
+                )
         else:
             text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
         detail = (
@@ -963,8 +1030,7 @@ class PatternMatcher:
             # Only one way to substitute að -> af: do it
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+            suggest = replacement
         self._ann.append(
             Annotation(
                 start=start,
@@ -996,8 +1062,15 @@ class PatternMatcher:
             # Only one way to substitute að -> af: do it
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+            np_ter = match.first_match("'gaman'")
+            # The instance of 'að' which comes right after the np terminal is substituted
+            all_m = match.all_matches(" 'að' ")
+            for m in all_m:
+                if m.span[0] > np_ter.span[-1]:
+                    subtree = m
+                    break
+            assert subtree is not None
+            suggest = match.substituted_text(subtree, 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -1022,8 +1095,15 @@ class PatternMatcher:
             # Only one way to substitute að -> af: do it
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+            np_ter = match.first_match("'heillaður'")
+            # The instance of 'að' which comes right after the np terminal is substituted
+            all_m = match.all_matches(" 'að' ")
+            for m in all_m:
+                if m.span[0] > np_ter.span[-1]:
+                    subtree = m
+                    break
+            assert subtree is not None
+            suggest = match.substituted_text(subtree, 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -1056,8 +1136,15 @@ class PatternMatcher:
             # Only one way to substitute að -> af: do it
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+            vp_ter = match.first_match("'velja'")
+            # The instance of 'að' which comes right after the vp terminal is substituted
+            all_m = match.all_matches(" 'að' ")
+            for m in all_m:
+                if m.span[0] > vp_ter.span[-1]:
+                    subtree = m
+                    break
+            assert subtree is not None
+            suggest = match.substituted_text(subtree, 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -1173,6 +1260,7 @@ class PatternMatcher:
             match.tidy_text, correct_verb, verb
         )
         suggest = ""
+        print('suggest:', suggest)
         self._ann.append(
             Annotation(
                 start=start,
@@ -1313,14 +1401,12 @@ class PatternMatcher:
         if p is None:
             return
         start, end = match.span
-        match_text = match.tidy_text
-        tidy_text = p.tidy_text
-        correction = tidy_text[:-1] + "i" + " " + tidy_text[-1]
+        correction = p.tidy_text[:-1] + "i" + " " + p.tidy_text[-1]
         text = f"Hér á líklega að vera '{correction}' í stað '{tidy_text}'"
         detail = "Í samhenginu '{0}' er rétt að nota '{1}' í stað '{2}'.".format(
-            match_text, correction, tidy_text
+            match.tidy_text, correction, p.tidy_text
         )
-        suggest = match_text.replace(tidy_text, correction)
+        suggest = match.tidy_text.replace(p.tidy_text, correction)
         self._ann.append(
             Annotation(
                 start=start,
@@ -1372,96 +1458,14 @@ class PatternMatcher:
             )
         )
 
-    def dir_loc_standa(self, match: SimpleTree) -> None:
-        advp = match.first_match("ADVP > { 'upp' }")
-        if advp is None:
-            return
-        start, end = match.span
-        correction = advp.tidy_text + "i"
-        text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            match.tidy_text, correction, advp.tidy_text
-        )
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_DIR_LOC",
-                text=text,
-                detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
-            )
-        )
-
-    def dir_loc_safna(self, match: SimpleTree) -> None:
-        advp = match.first_match("ADVP > { 'inn' }")
+    def dir_loc_simple(self, match: SimpleTree) -> None:
+        advp = match.first_match("ADVP > { ('inn'|'út'|'niður'|'upp') }")
         assert advp is not None
         start, end = match.span
-        correction = advp.tidy_text + "i"
-        text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            match.tidy_text, correction, advp.tidy_text
-        )
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_DIR_LOC",
-                text=text,
-                detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
-            )
-        )
-
-    def dir_loc_niður(self, match: SimpleTree) -> None:
-        advp = match.first_match("ADVP > { 'niður' }")
-        assert advp is not None
-        start, end = match.span
-        correction = "niðri"
-        text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            match.tidy_text, correction, advp.tidy_text
-        )
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_DIR_LOC",
-                text=text,
-                detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
-            )
-        )
-
-    def dir_loc_búð(self, match: SimpleTree) -> None:
-        advp = match.first_match("ADVP > { 'út' }")
-        assert advp is not None
-        start, end = match.span
-        correction = advp.tidy_text + "i"
-        text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            match.tidy_text, correction, advp.tidy_text
-        )
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_DIR_LOC",
-                text=text,
-                detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
-            )
-        )
-
-    def dir_loc_læsa(self, match: SimpleTree) -> None:
-        advp = match.first_match("ADVP > { 'inn' }")
-        assert advp is not None
-        start, end = match.span
-        correction = advp.tidy_text + "i"
+        if 'niður' in match.tidy_text:
+            correction = "niðri"
+        else:
+            correction = advp.tidy_text + "i"
         text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
         detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
             match.tidy_text, correction, advp.tidy_text
@@ -2799,7 +2803,7 @@ class PatternMatcher:
             (
                 "niður",  # Trigger lemma for this pattern
                 "( PP|VP|IP ) > [ .* ADVP > { 'niður' } PP > { P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) } ]",
-                lambda self, match: self.dir_loc_niður(match),
+                lambda self, match: self.dir_loc_simple(match),
                 None,
             )
         )
@@ -2807,7 +2811,7 @@ class PatternMatcher:
             (
                 "niður",  # Trigger lemma for this pattern
                 "VP > [ VP > { 'vera' } .* PP > { ADVP > { 'niður' } P > { 'í' } NP } ]",
-                lambda self, match: self.dir_loc_niður(match),
+                lambda self, match: self.dir_loc_simple(match),
                 None,
             )
         )
@@ -2823,7 +2827,7 @@ class PatternMatcher:
             (
                 "standa",  # Trigger lemma for this pattern
                 "IP > { ADVP > { 'upp' } VP > { VP > { 'vera' } NP > { 'standa' } } }",
-                lambda self, match: self.dir_loc_standa(match),
+                lambda self, match: self.dir_loc_simple(match),
                 None,
             )
         )
@@ -2831,7 +2835,7 @@ class PatternMatcher:
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP > [ 'vera' ] NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } }",
-                lambda self, match: self.dir_loc_búð(match),
+                lambda self, match: self.dir_loc_simple(match),
                 None,
             )
         )
