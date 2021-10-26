@@ -1402,7 +1402,7 @@ class PatternMatcher:
             return
         start, end = match.span
         correction = p.tidy_text[:-1] + "i" + " " + p.tidy_text[-1]
-        text = f"Hér á líklega að vera '{correction}' í stað '{tidy_text}'"
+        text = f"Hér á líklega að vera '{correction}' í stað '{p.tidy_text}'"
         detail = "Í samhenginu '{0}' er rétt að nota '{1}' í stað '{2}'.".format(
             match.tidy_text, correction, p.tidy_text
         )
@@ -1414,7 +1414,7 @@ class PatternMatcher:
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
-                original=match_text,
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )

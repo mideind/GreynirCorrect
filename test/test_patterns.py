@@ -189,11 +189,11 @@ def test_noun_af(rc):
 
 def test_verb_að(rc):
     s = "Ég er ekki hluti að heildinni."
-    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(2, 5, "P_WRONG_PREP_AÐ")])
     s = "Við höfum öll verið hluti að heildinni."
-    check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(4, 6, "P_WRONG_PREP_AÐ")])
     s = "Vissulega er hægt að vera hluti að heildinni."
-    check_sentence(rc, s, [(4, 7, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
 #    s = "Þeir sögðu að ég hefði verið hluti að heildinni."   # Annotation variable depending on parsing
 #    check_sentence(rc, s, [(6, 8, "P_WRONG_PREP_AÐ")])
     s = "Þar að leiðandi virkar þetta."
