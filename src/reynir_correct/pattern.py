@@ -608,6 +608,22 @@ class PatternMatcher:
             )
         )
 
+    def suggestion_complex(self, match: SimpleTree, phrase: str, prep: str) -> str:
+        """ Find the preposition to correct for the suggestion """
+        p_ter = match.first_match(f"'{phrase}'")
+        assert p_ter is not None
+        # The instance of 'að' which comes right after the phrase terminal is substituted
+        all_m = match.all_matches(f"@'{prep}'")
+        subtree = None
+        for m in all_m:
+            assert m is not None
+            if m.span[0] > p_ter.span[-1]:
+                subtree = m
+                break
+        assert subtree is not None
+        suggest = match.substituted_text(subtree, 'af')
+        return suggest
+
     def wrong_preposition_ahyggja_að(self, match: SimpleTree) -> None:
         """ Handle a match of a suspect preposition pattern """
         # Calculate the start and end token indices, spanning both phrases
@@ -615,29 +631,13 @@ class PatternMatcher:
         pp = match.first_match("PP > { \"að\" }")
         assert np is not None
         assert pp is not None
-        print(np.span[-1])
-        print(pp.span[0])
         start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
         text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
         detail = (
             "Í samhenginu 'hafa áhyggjur af e-u' er notuð "
             "forsetningin 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            np_ter = match.first_match("'áhyggja'")
-            assert np_ter is not None
-            # The instance of 'að' which comes right after the np terminal is substituted
-            all_m = match.all_matches(" 'að' ")
-            for m in all_m:
-                assert m is not None
-                if m.span[0] > np_ter.span[-1]:
-                    subtree = m
-                    break
-            assert subtree is not None
-            suggest = match.substituted_text(subtree, 'af')
+        suggest = self.suggestion_complex(match, 'áhyggja', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -660,21 +660,7 @@ class PatternMatcher:
         start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
         text = "'hluti að' á sennilega að vera 'hluti af'"
         detail = "Í samhenginu 'hluti af e-u' er notuð forsetningin 'af', ekki 'að'."
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = pp.tidy_text.replace(" að ", " af ")
-        else:
-            vp_ter = match.first_match("'hluti'")
-            assert vp_ter is not None
-            # The instance of 'að' which comes right after the vp terminal is substituted
-            all_m = match.all_matches(" 'að' ")
-            for m in all_m:
-                assert m is not None
-                if m.span[0] > vp_ter.span[-1]:
-                    subtree = m
-                    break
-            assert subtree is not None
-            suggest = match.substituted_text(subtree, 'af')
+        suggest = self.suggestion_complex(match, 'hluti', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -821,21 +807,8 @@ class PatternMatcher:
             "Orðasambandið 'vera mikið/lítið til af e-u' innifelur "
             "yfirleitt forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            np_ter = match.first_match("('mikill'|'lítill'|'fullur')")
-            assert np_ter is not None
-            # The instance of 'að' which comes right after the np terminal is substituted
-            all_m = match.all_matches(" 'að' ")
-            for m in all_m:
-                assert m is not None
-                if m.span[0] > np_ter.span[-1]:
-                    subtree = m
-                    break
-            assert subtree is not None
-            suggest = match.substituted_text(subtree, 'af')
+        # TODO: malformed literal in pattern regarding mikill|lítill|fullur
+        suggest = self.suggestion_complex(match, "('mikill'|'lítill'|'fullur')", 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -856,21 +829,7 @@ class PatternMatcher:
             "Orðasambandið 'að hafa gagn af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            np_ter = match.first_match("'gagn'")
-            assert np_ter is not None
-            # The instance of 'að' which comes right after the np terminal is substituted
-            all_m = match.all_matches(" 'að' ")
-            for m in all_m:
-                assert m is not None
-                if m.span[0] > np_ter.span[-1]:
-                    subtree = m
-                    break
-            assert subtree is not None
-            suggest = match.substituted_text(subtree, 'af')
+        suggest = self.suggestion_complex(match, 'gagn', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -896,21 +855,7 @@ class PatternMatcher:
             "Orðasambandið 'fréttir berast af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            np_ter = match.first_match("'frétt'")
-            assert np_ter is not None
-            # The instance of 'að' which comes right after the np terminal is substituted
-            all_m = match.all_matches(" 'að' ")
-            for m in all_m:
-                assert m is not None
-                if m.span[0] > np_ter.span[-1]:
-                    subtree = m
-                    break
-            assert subtree is not None
-            suggest = match.substituted_text(subtree, 'af')
+        suggest = self.suggestion_complex(match, 'frétt', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -939,21 +884,7 @@ class PatternMatcher:
             "Orðasambandið 'að stafa af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            vp_ter = match.first_match("'stafa'")
-            assert vp_ter is not None
-            # The instance of 'að' which comes right after the vp terminal is substituted
-            all_m = match.all_matches(" 'að' ")
-            for m in all_m:
-                assert m is not None
-                if m.span[0] > vp_ter.span[-1]:
-                    subtree = m
-                    break
-            assert subtree is not None
-            suggest = match.substituted_text(subtree, 'af')
+        suggest = self.suggestion_complex(match, 'stafa', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -981,21 +912,7 @@ class PatternMatcher:
             "Orðasambandið 'að vera ólétt/ur af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            np_ter = match.first_match("'óléttur'")
-            assert np_ter is not None
-            # The instance of 'að' which comes right after the np terminal is substituted
-            all_m = match.all_matches(" 'að' ")
-            for m in all_m:
-                assert m is not None
-                if m.span[0] > np_ter.span[-1]:
-                    subtree = m
-                    break
-            assert subtree is not None
-            suggest = match.substituted_text(subtree, 'af')
+        suggest = self.suggestion_complex(match, 'óléttur', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -1044,11 +961,7 @@ class PatternMatcher:
             "Orðasambandið 'að heyra af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            suggest = replacement
+        suggest = self.suggestion_complex(match, 'heyra', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -1076,21 +989,7 @@ class PatternMatcher:
             "Orðasambandið 'að hafa gaman af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            np_ter = match.first_match("'gaman'")
-            assert np_ter is not None
-            # The instance of 'að' which comes right after the np terminal is substituted
-            all_m = match.all_matches(" 'að' ")
-            for m in all_m:
-                assert m is not None
-                if m.span[0] > np_ter.span[-1]:
-                    subtree = m
-                    break
-            assert subtree is not None
-            suggest = match.substituted_text(subtree, 'af')
+        suggest = self.suggestion_complex(match, 'gaman', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -1111,21 +1010,7 @@ class PatternMatcher:
         detail = (
             "Í samhenginu 'heillaður af e-u' er notuð " "forsetningin 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            np_ter = match.first_match("'heillaður'")
-            assert np_ter is not None
-            # The instance of 'að' which comes right after the np terminal is substituted
-            all_m = match.all_matches(" 'að' ")
-            for m in all_m:
-                assert m is not None
-                if m.span[0] > np_ter.span[-1]:
-                    subtree = m
-                    break
-            assert subtree is not None
-            suggest = match.substituted_text(subtree, 'af')
+        suggest = self.suggestion_complex(match, 'heillaður', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -1154,21 +1039,7 @@ class PatternMatcher:
             "Orðasambandið 'að vera valin/n af e-m' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            vp_ter = match.first_match("'velja'")
-            assert vp_ter is not None
-            # The instance of 'að' which comes right after the vp terminal is substituted
-            all_m = match.all_matches(" 'að' ")
-            for m in all_m:
-                assert m is not None
-                if m.span[0] > vp_ter.span[-1]:
-                    subtree = m
-                    break
-            assert subtree is not None
-            suggest = match.substituted_text(subtree, 'af')
+        suggest = self.suggestion_complex(match, 'velja', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -1284,7 +1155,6 @@ class PatternMatcher:
             match.tidy_text, correct_verb, verb
         )
         suggest = ""
-        print('suggest:', suggest)
         self._ann.append(
             Annotation(
                 start=start,
