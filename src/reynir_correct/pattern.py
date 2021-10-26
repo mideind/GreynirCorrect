@@ -628,6 +628,7 @@ class PatternMatcher:
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
             np_ter = match.first_match("'áhyggja'")
+            assert np_ter is not None
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
@@ -664,6 +665,7 @@ class PatternMatcher:
             suggest = pp.tidy_text.replace(" að ", " af ")
         else:
             vp_ter = match.first_match("'hluti'")
+            assert vp_ter is not None
             # The instance of 'að' which comes right after the vp terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
@@ -824,6 +826,7 @@ class PatternMatcher:
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
             np_ter = match.first_match("('mikill'|'lítill'|'fullur')")
+            assert np_ter is not None
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
@@ -858,6 +861,7 @@ class PatternMatcher:
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
             np_ter = match.first_match("'gagn'")
+            assert np_ter is not None
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
@@ -897,6 +901,7 @@ class PatternMatcher:
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
             np_ter = match.first_match("'frétt'")
+            assert np_ter is not None
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
@@ -939,6 +944,7 @@ class PatternMatcher:
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
             vp_ter = match.first_match("'stafa'")
+            assert vp_ter is not None
             # The instance of 'að' which comes right after the vp terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
@@ -980,6 +986,7 @@ class PatternMatcher:
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
             np_ter = match.first_match("'óléttur'")
+            assert np_ter is not None
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
@@ -1014,6 +1021,7 @@ class PatternMatcher:
         if " að " in vp.tidy_text:
             if vp.tidy_text.count(" að ") > 1:
                 vp_ter = match.first_match("'heyra'")
+                assert vp_ter is not None
                 # The instance of 'að' which comes right after the vp terminal is substituted
                 all_m = match.all_matches(" 'að' ")
                 for m in all_m:
@@ -1073,6 +1081,7 @@ class PatternMatcher:
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
             np_ter = match.first_match("'gaman'")
+            assert np_ter is not None
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
@@ -1107,6 +1116,7 @@ class PatternMatcher:
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
             np_ter = match.first_match("'heillaður'")
+            assert np_ter is not None
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
@@ -1149,6 +1159,7 @@ class PatternMatcher:
             suggest = match.tidy_text.replace(" að ", " af ")
         else:
             vp_ter = match.first_match("'velja'")
+            assert vp_ter is not None
             # The instance of 'að' which comes right after the vp terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
