@@ -631,6 +631,7 @@ class PatternMatcher:
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
+                assert m is not None
                 if m.span[0] > np_ter.span[-1]:
                     subtree = m
                     break
@@ -653,6 +654,8 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         np = match.first_match("NP > { 'hluti' }")
         pp = match.first_match("PP > { 'að' }")
+        assert np is not None
+        assert pp is not None
         start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
         text = "'hluti að' á sennilega að vera 'hluti af'"
         detail = "Í samhenginu 'hluti af e-u' er notuð forsetningin 'af', ekki 'að'."
@@ -664,6 +667,7 @@ class PatternMatcher:
             # The instance of 'að' which comes right after the vp terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
+                assert m is not None
                 if m.span[0] > vp_ter.span[-1]:
                     subtree = m
                     break
@@ -823,6 +827,7 @@ class PatternMatcher:
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
+                assert m is not None
                 if m.span[0] > np_ter.span[-1]:
                     subtree = m
                     break
@@ -856,6 +861,7 @@ class PatternMatcher:
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
+                assert m is not None
                 if m.span[0] > np_ter.span[-1]:
                     subtree = m
                     break
@@ -894,6 +900,7 @@ class PatternMatcher:
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
+                assert m is not None
                 if m.span[0] > np_ter.span[-1]:
                     subtree = m
                     break
@@ -935,6 +942,7 @@ class PatternMatcher:
             # The instance of 'að' which comes right after the vp terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
+                assert m is not None
                 if m.span[0] > vp_ter.span[-1]:
                     subtree = m
                     break
@@ -975,6 +983,7 @@ class PatternMatcher:
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
+                assert m is not None
                 if m.span[0] > np_ter.span[-1]:
                     subtree = m
                     break
@@ -1008,6 +1017,7 @@ class PatternMatcher:
                 # The instance of 'að' which comes right after the vp terminal is substituted
                 all_m = match.all_matches(" 'að' ")
                 for m in all_m:
+                    assert m is not None
                     if m.span[0] > vp_ter.span[-1]:
                         subtree = m
                         break
@@ -1066,6 +1076,7 @@ class PatternMatcher:
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
+                assert m is not None
                 if m.span[0] > np_ter.span[-1]:
                     subtree = m
                     break
@@ -1099,6 +1110,7 @@ class PatternMatcher:
             # The instance of 'að' which comes right after the np terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
+                assert m is not None
                 if m.span[0] > np_ter.span[-1]:
                     subtree = m
                     break
@@ -1140,6 +1152,7 @@ class PatternMatcher:
             # The instance of 'að' which comes right after the vp terminal is substituted
             all_m = match.all_matches(" 'að' ")
             for m in all_m:
+                assert m is not None
                 if m.span[0] > vp_ter.span[-1]:
                     subtree = m
                     break
