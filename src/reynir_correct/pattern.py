@@ -286,17 +286,15 @@ class PatternMatcher:
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
-        start, end = min(vp.span[0], pp_af.span[0]), max(vp.span[1], pp_af.span[1])
+        start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "Í '{0}' á 'af' sennilega að vera 'að'".format(vp.tidy_text)
         #text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
         detail = (
             "Í samhenginu 'að spyrja að e-u' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, 'spyrja', 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -319,8 +317,6 @@ class PatternMatcher:
             pp = match.first_match('ADVP > { "af" }')
         assert np is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "'verða vitni af' á sennilega að vera 'verða vitni að'"
@@ -328,7 +324,7 @@ class PatternMatcher:
             "Í samhenginu 'verða vitni að e-u' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, 'vitni', 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -352,8 +348,6 @@ class PatternMatcher:
             pp = match.first_match('ADVP > { "af" }')
         assert np is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         if vp is None:
             start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
@@ -366,7 +360,7 @@ class PatternMatcher:
         detail = (
             "Í samhenginu 'gera grín að e-u' er notuð " "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, 'grín', 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -391,8 +385,6 @@ class PatternMatcher:
         assert vp is not None
         assert np is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -403,7 +395,7 @@ class PatternMatcher:
             "Í samhenginu 'leiða {0} af e-u' er notuð "
             "forsetningin 'að', ekki 'af'.".format(np.tidy_text)
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, 'leiða', 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -420,8 +412,11 @@ class PatternMatcher:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal and nominal phrases
         vp = match.first_match("VP > { 'marka' }")
+        # Flag to determine lemma for suggestion_complex()
+        np_p = False
         if vp is None:
             vp = match.first_match("NP > { 'markaður' }")
+            np_p = True
         np = match.first_match("NP >> { ( 'upphaf'|'upphafinn' ) }")
         if np is None:
             np = match.first_match("VP > { 'upphefja' }")
@@ -432,8 +427,6 @@ class PatternMatcher:
         assert vp is not None
         assert np is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -444,8 +437,10 @@ class PatternMatcher:
             "Í samhenginu 'marka upphaf að e-u' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        # TODO: replace this in all places with suggestion_complex?
-        suggest = match.substituted_text(pp_af, "að")
+        if np_p is False:
+            suggest = self.suggestion_complex(match, 'marka', 'af')
+        else:
+            suggest = self.suggestion_complex(match, 'markaður', 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -473,8 +468,6 @@ class PatternMatcher:
         assert vp is not None
         assert pp is not None
         assert np is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], pp.span[0], np.span[0]),
@@ -485,7 +478,7 @@ class PatternMatcher:
             "Í samhenginu 'leggja einhvern að velli' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, 'leggja', 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -508,8 +501,6 @@ class PatternMatcher:
         pp = match.first_match('ADVP > { "af" }')
         assert advp is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(advp.span[0], pp.span[0]), max(advp.span[1], pp.span[1])
         text = "'utan af' á sennilega að vera 'utan að'"
@@ -517,7 +508,7 @@ class PatternMatcher:
             "Í samhenginu 'kunna eitthvað utan að' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, 'utan', 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -543,8 +534,6 @@ class PatternMatcher:
         assert vp is not None
         assert np is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -555,7 +544,7 @@ class PatternMatcher:
             "Í samhenginu 'verða uppvís að einhverju' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, 'uppvís', 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -585,8 +574,6 @@ class PatternMatcher:
         assert vp is not None
         assert pp is not None
         assert np is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], pp.span[0], np.span[0]),
@@ -596,7 +583,7 @@ class PatternMatcher:
         detail = (
             "Í samhenginu 'að verða að ósk' er notuð " "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, 'verða', 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -622,7 +609,10 @@ class PatternMatcher:
                 subtree = m
                 break
         assert subtree is not None
-        suggest = match.substituted_text(subtree, 'af')
+        if prep == 'að':
+            suggest = match.substituted_text(subtree, 'af')
+        elif prep == 'af':
+            suggest = match.substituted_text(subtree, 'að')
         return suggest
 
     def wrong_preposition_ahyggja_að(self, match: SimpleTree) -> None:
@@ -679,11 +669,9 @@ class PatternMatcher:
         # Find the offending prepositional phrase
         pp = match.first_match('PP > { "að" "mörkum" }')
         assert pp is not None
-        pp_að = pp.first_match('"að"')
-        assert pp_að is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp.span
-        suggest = match.substituted_text(pp_að, "af")
+        suggest = self.suggestion_complex(match, 'leggja', 'að')
         text = f"'{pp.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
             "Í samhenginu 'leggja e-ð af mörkum' er notuð "
@@ -707,9 +695,7 @@ class PatternMatcher:
         start, end = match.span
         pp = match.first_match("P > { 'að' }")
         assert pp is not None
-        pp_að = pp.first_match('"að"')
-        assert pp_að is not None
-        suggest = match.substituted_text(pp_að, "af")
+        suggest = self.suggestion_complex(match, 'láta', 'að')
         text = f"'{match.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
             "Í samhenginu 'láta gott af sér leiða' er notuð "
@@ -735,11 +721,9 @@ class PatternMatcher:
         pp = match.first_match("P > { 'að' }")
         assert np is not None
         assert pp is not None
-        pp_að = pp.first_match('"að"')
-        assert pp_að is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
-        suggest = match.substituted_text(pp_að, "af")
+        suggest = self.suggestion_complex(match, 'heiður', 'að')
         text = f"'{match.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
             "Í samhenginu 'fá/hljóta heiðurinn af' er notuð "
@@ -775,14 +759,12 @@ class PatternMatcher:
             pp = match.first_match('PP > { "að" }')
         assert vp is not None
         assert pp is not None
-        pp_að = pp.first_match('"að"')
-        assert pp_að is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
             max(vp.span[1], np.span[1], pp.span[1]),
         )
-        suggest = match.substituted_text(pp_að, "af")
+        suggest = self.suggestion_complex(match, 'eiga', 'að')
         text = f"'{match.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
             f"Orðasambandið '{match.tidy_text}' tekur yfirleitt með sér "
@@ -1028,7 +1010,7 @@ class PatternMatcher:
             "Orðasambandið 'að vera valin/n af e-m' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if np == False:
+        if np is False:
             suggest = self.suggestion_complex(match, 'velja', 'að')
         else:
             suggest = self.suggestion_complex(match, 'valinn', 'að')
