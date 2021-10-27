@@ -444,6 +444,7 @@ class PatternMatcher:
             "Í samhenginu 'marka upphaf að e-u' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
+        # TODO: replace this in all places with suggestion_complex?
         suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
             Annotation(
@@ -807,8 +808,12 @@ class PatternMatcher:
             "Orðasambandið 'vera mikið/lítið til af e-u' innifelur "
             "yfirleitt forsetninguna 'af', ekki 'að'."
         )
-        # TODO: malformed literal in pattern regarding mikill|lítill|fullur
-        suggest = self.suggestion_complex(match, "('mikill'|'lítill'|'fullur')", 'að')
+        if 'mikill' in match.lemmas:
+            suggest = self.suggestion_complex(match, "mikill", 'að')
+        elif 'lítið' in match.lemmas:
+            suggest = self.suggestion_complex(match, "lítið", 'að')
+        elif 'fullur' in match.lemmas:
+            suggest = self.suggestion_complex(match, "fullur", 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -874,9 +879,10 @@ class PatternMatcher:
         vp = match.first_match("VP > { 'stafa' }")
         assert vp is not None
         start, end = match.span
+        suggest = self.suggestion_complex(match, 'stafa', 'að')
         if " að " in vp.tidy_text:
             text = "'{0}' á sennilega að vera '{1}'".format(
-                vp.tidy_text, vp.tidy_text.replace(" að ", " af ")
+                match.tidy_text, suggest
             )
         else:
             text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
@@ -884,7 +890,6 @@ class PatternMatcher:
             "Orðasambandið 'að stafa af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        suggest = self.suggestion_complex(match, 'stafa', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -1008,8 +1013,11 @@ class PatternMatcher:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending nominal phrase
         vp = match.first_match("VP > { 'velja' }")
+        # Flag to determine the lemma sent to suggestion_complex()
+        np = False
         if vp is None:
             vp = match.first_match("NP > { 'valinn' }")
+            np = True
         assert vp is not None
         start, end = match.span
         if " að " in vp.tidy_text:
@@ -1020,7 +1028,10 @@ class PatternMatcher:
             "Orðasambandið 'að vera valin/n af e-m' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        suggest = self.suggestion_complex(match, 'velja', 'að')
+        if np == False:
+            suggest = self.suggestion_complex(match, 'velja', 'að')
+        else:
+            suggest = self.suggestion_complex(match, 'valinn', 'að')
         self._ann.append(
             Annotation(
                 start=start,
@@ -1985,6 +1996,15 @@ class PatternMatcher:
                     None,
                 )
             )
+            # Catch "...lét ég (ekki) gott að mér leiða"
+            cls.add_pattern(
+                (
+                    "leiða",  # Trigger lemma for this pattern
+                    "VP > [ VP > [ .* 'láta' .* ] .* IP > [ NP > [ .* \"gott\" PP > [ \"að\" NP > [ (\"mér\"|\"þér\"|\"sér\"|\"okkur\") ] ] ] VP > { 'leiða' } ] ]",
+                    cls.wrong_preposition_að_leiða,
+                    None,
+                )
+            )
             cls.add_pattern(
                 (
                     frozenset(("leiða", "leiður")),  # Trigger lemma for this pattern (probably a wrong parse)
@@ -2107,7 +2127,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "stafa",  # Trigger lemma for this pattern
-                    "( VP|IP ) > { VP >> { 'stafa' } ( PP|ADVP ) > { 'að' } }",
+                    "VP > { VP >> { 'stafa' } ( PP|ADVP ) > { 'að' } }",
                     cls.wrong_preposition_stafa_að,
                     None,
                 )
@@ -2125,7 +2145,11 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "heyra",  # Trigger lemma for this pattern
-                    "VP > { VP >> { 'heyra' } PP > { 'að' } }",
+                    "( "
+                    "VP > { VP >> { 'heyra' } PP > { 'að' } }"
+                    "| "
+                    "VP > [ VP > { 'heyra' } .* NP > { PP > { 'að' } } .* ]"
+                    ") ",
                     cls.wrong_preposition_heyra_að,
                     None,
                 )
@@ -2134,7 +2158,11 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "gaman",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'hafa' } NP > { 'gaman' } PP > { 'að' } }",
+                    "( "
+                    "VP > { VP > { 'hafa' } NP > { 'gaman' } PP > { 'að' } }"
+                    "| "
+                    "VP > [ .* VP > { 'hafa' } .* NP > { 'gaman' PP > { 'að' } } .* ]"
+                    ")",
                     cls.wrong_preposition_hafa_gaman_að,
                     None,
                 )
