@@ -412,11 +412,10 @@ class PatternMatcher:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending verbal and nominal phrases
         vp = match.first_match("VP > { 'marka' }")
-        # Flag to determine lemma for suggestion_complex()
-        np_p = False
+        lemma = 'marka'
         if vp is None:
             vp = match.first_match("NP > { 'markaður' }")
-            np_p = True
+            lemma = 'markaður'
         np = match.first_match("NP >> { ( 'upphaf'|'upphafinn' ) }")
         if np is None:
             np = match.first_match("VP > { 'upphefja' }")
@@ -437,10 +436,7 @@ class PatternMatcher:
             "Í samhenginu 'marka upphaf að e-u' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        if np_p is False:
-            suggest = self.suggestion_complex(match, 'marka', 'af')
-        else:
-            suggest = self.suggestion_complex(match, 'markaður', 'af')
+        suggest = self.suggestion_complex(match, lemma, 'af')
         self._ann.append(
             Annotation(
                 start=start,
@@ -596,11 +592,11 @@ class PatternMatcher:
             )
         )
 
-    def suggestion_complex(self, match: SimpleTree, phrase: str, prep: str) -> str:
+    def suggestion_complex(self, match: SimpleTree, lemma: str, prep: str) -> str:
         """ Find the preposition to correct for the suggestion """
-        p_ter = match.first_match(f"'{phrase}'")
+        p_ter = match.first_match(f"'{lemma}'")
         assert p_ter is not None
-        # The instance of 'að' which comes right after the phrase terminal is substituted
+        # The instance of the preposition which comes right after the phrase terminal is substituted
         all_m = match.all_matches(f"@'{prep}'")
         subtree = None
         for m in all_m:
@@ -794,6 +790,8 @@ class PatternMatcher:
             suggest = self.suggestion_complex(match, "mikill", 'að')
         elif 'lítið' in match.lemmas:
             suggest = self.suggestion_complex(match, "lítið", 'að')
+        elif 'lítill' in match.lemmas:
+            suggest = self.suggestion_complex(match, "lítill", 'að')
         elif 'fullur' in match.lemmas:
             suggest = self.suggestion_complex(match, "fullur", 'að')
         self._ann.append(
@@ -995,11 +993,10 @@ class PatternMatcher:
         """ Handle a match of a suspect preposition pattern """
         # Find the offending nominal phrase
         vp = match.first_match("VP > { 'velja' }")
-        # Flag to determine the lemma sent to suggestion_complex()
-        np = False
+        lemma = 'velja'
         if vp is None:
             vp = match.first_match("NP > { 'valinn' }")
-            np = True
+            lemma = 'valinn'
         assert vp is not None
         start, end = match.span
         if " að " in vp.tidy_text:
@@ -1010,10 +1007,7 @@ class PatternMatcher:
             "Orðasambandið 'að vera valin/n af e-m' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if np is False:
-            suggest = self.suggestion_complex(match, 'velja', 'að')
-        else:
-            suggest = self.suggestion_complex(match, 'valinn', 'að')
+        suggest = self.suggestion_complex(match, lemma, 'að')
         self._ann.append(
             Annotation(
                 start=start,
