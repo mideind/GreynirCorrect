@@ -260,8 +260,10 @@ def test_verb_að(rc):
 #    check_sentence(rc, s, [(3, 7, "P_WRONG_PREP_AÐ")])
     s = "Hún er ólétt að sínu þriðja barni."
     check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
-    s = "Það kom henni á óvart að hún væri ólétt að strák."
-    check_sentence(rc, s, [(8, 9, "P_WRONG_PREP_AÐ")])
+#    s = "Það kom henni á óvart að hún væri ólétt að strák." # Annotation variable depending on parse
+#    check_sentence(rc, s, [(8, 9, "P_WRONG_PREP_AÐ")])
+    s = "Að öllu leyti eru öll ólétt að stelpum."
+    check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
     s = "Hann hefur ekki heyrt að lausa starfinu."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Að endingu heyrði ég að starfinu."
