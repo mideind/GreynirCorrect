@@ -935,33 +935,14 @@ class PatternMatcher:
         assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
-        if " að " in vp.tidy_text:
-            if vp.tidy_text.count(" að ") > 1:
-                vp_ter = match.first_match("'heyra'")
-                assert vp_ter is not None
-                # The instance of 'að' which comes right after the vp terminal is substituted
-                all_m = match.all_matches(" 'að' ")
-                for m in all_m:
-                    assert m is not None
-                    if m.span[0] > vp_ter.span[-1]:
-                        subtree = m
-                        break
-                assert subtree is not None
-                replacement = match.substituted_text(subtree, 'af')
-                text = "'{0}' á sennilega að vera '{1}'".format(
-                    vp.tidy_text, replacement
+        suggest = self.suggestion_complex(match, 'heyra', 'að')
+        text = "'{0}' á sennilega að vera '{1}'".format(
+                    match.tidy_text, suggest
                 )
-            else:
-                text = "'{0}' á sennilega að vera '{1}'".format(
-                    vp.tidy_text, vp.tidy_text.replace(" að ", " af ")
-                )
-        else:
-            text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
         detail = (
             "Orðasambandið 'að heyra af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        suggest = self.suggestion_complex(match, 'heyra', 'að')
         self._ann.append(
             Annotation(
                 start=start,
