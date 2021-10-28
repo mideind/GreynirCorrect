@@ -746,8 +746,9 @@ class PatternMatcher:
         # Find the nominal object
         np = match.first_match("( NP|ADVP )")
         assert np is not None
-        if "aðild" in np.lemmas:
-            # 'Eiga aðild að e-u' is legal; do not complain
+        legal_lemmas = frozenset(("aðild", "frumkvæði", "hlut", "upptak"))
+        if any(lemma in legal_lemmas for lemma in np.lemmas): 
+            # 'Eiga aðild/frumkvæði/hlut/upptök að e-u' is legal; do not complain
             return
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "að" }')
