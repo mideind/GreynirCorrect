@@ -189,14 +189,20 @@ def test_noun_af(rc):
 
 def test_verb_að(rc):
     s = "Ég er ekki hluti að heildinni."
-    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(2, 5, "P_WRONG_PREP_AÐ")])
     s = "Við höfum öll verið hluti að heildinni."
-    check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(4, 6, "P_WRONG_PREP_AÐ")])
     s = "Vissulega er hægt að vera hluti að heildinni."
-    check_sentence(rc, s, [(4, 7, "P_WRONG_PREP_AÐ")])
+    check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
 #    s = "Þeir sögðu að ég hefði verið hluti að heildinni."   # Annotation variable depending on parsing
 #    check_sentence(rc, s, [(6, 8, "P_WRONG_PREP_AÐ")])
+    s = "Að öllu óbreyttu er hann hluti að heildinni."
+    check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
+    s = "Ég vildi vera hluti að heildinni að mestu leyti."
+    check_sentence(rc, s, [(3, 5, "P_WRONG_PREP_AÐ")])
     s = "Þar að leiðandi virkar þetta."
+    check_sentence(rc, s, [(0, 2, "P_aðaf")])
+    s = "Þar að leiðandi virkar þetta að mestu leyti."
     check_sentence(rc, s, [(0, 2, "P_aðaf")])
     s = "Þetta virkar þar að leiðandi."
     check_sentence(rc, s, [(2, 4, "P_aðaf")])
@@ -210,50 +216,84 @@ def test_verb_að(rc):
     check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
     s = "Sama hvað ég gerði lagði ég mikið að mörkum."
     check_sentence(rc, s, [(7, 8, "P_WRONG_PREP_AÐ")])
+    s = "Að hans mati lagði hann mikið að mörkum."
+    check_sentence(rc, s, [(6, 7, "P_WRONG_PREP_AÐ")])
     s = "Ég heillast að þannig fólki."
     check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AÐ")])
+    s = "Það að heillast að þannig fólki er algengt."
+    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
     s = "Ég lét gott að mér leiða."
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
+    s = "Að mínu mati lét ég ekki gott að mér leiða."
+    check_sentence(rc, s, [(3, 9, "P_WRONG_PREP_AÐ")])
     s = "Hún á heiðurinn að þessu."
     check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AÐ")])
     s = "Hún hafði ekki átt heiðurinn að þessu en fékk heiðurinn að þessu."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ"), (9, 11, "P_WRONG_PREP_AÐ")])
     s = "Hún hlaut heiðurinn að þessu."
     check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
+    s = "Að endingu hljótum við öll heiðurinn að því."
+    check_sentence(rc, s, [(4, 6, "P_WRONG_PREP_AÐ")])
     s = "Hún á heilan helling að börnum."
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
     s = "Hún á marga að."
     check_sentence(rc, s, [])
+    s = "Að mínu mati eigum við mikið að mat."
+    check_sentence(rc, s, [(3, 7, "P_WRONG_PREP_AÐ")])
     s = "Hún á ekki aðild að málinu."
+    check_sentence(rc, s, [])
+    s = "Hún á ekki upptök að málinu."
     check_sentence(rc, s, [])
     s = "Hún hefur ekki haft gagn að þessu."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
+    s = "Að mínu mati hef ég ekki gagn að þessu."
+    check_sentence(rc, s, [(3, 8, "P_WRONG_PREP_AÐ")])
     s = "Þetta hafði ekki komið að sjálfu sér."
     check_sentence(rc, s, [(4, 6, "P_aðaf")])
     s = "Fréttir bárust seint að slysinu."
+    check_sentence(rc, s, [(3, 3, "P_WRONG_PREP_AÐ")])
+    s = "Að endingu berast fréttir að slysinu."
     check_sentence(rc, s, [(3, 3, "P_WRONG_PREP_AÐ")])
     s = "Þetta er afgreitt mál að minni hálfu."
     check_sentence(rc, s, [(4, 6, "P_WRONG_PREP_AÐ")])
     s = "Hætta hefur aldrei stafað að þessu."
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
+#    s = "Að mínu mati stafar ekki hætta að þessu."  # Annotation variable depending on parse
+#    check_sentence(rc, s, [(3, 7, "P_WRONG_PREP_AÐ")])
     s = "Hún er ólétt að sínu þriðja barni."
     check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
+#    s = "Það kom henni á óvart að hún væri ólétt að strák." # Annotation variable depending on parse
+#    check_sentence(rc, s, [(8, 9, "P_WRONG_PREP_AÐ")])
+    s = "Að öllu leyti eru öll ólétt að stelpum."
+    check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
     s = "Hann hefur ekki heyrt að lausa starfinu."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
+    s = "Að endingu heyrði ég að starfinu."
+    check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AÐ")])
     s = "Ég hef aldrei haft gaman að henni."
     check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
+#    s = "Ég sagði að ég hefði gaman að henni."  # Annotation variable depending on parse
+#    check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
     s = "Þau voru sérstaklega valin að stjórninni."
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
+    s = "Þú ert valinn að guði að okkar mati."
+    check_sentence(rc, s, [(1, 7, "P_WRONG_PREP_AÐ")])
     s = "Það er til mjög lítið að mjólk."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Ekki er mikið til að mjólk."
+    check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
+    s = "Að öllu leyti er til fullt að mjólk."
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
     s = "Ég hef ekki unnið verkefni að þessu tagi."
     check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
     s = "Verkefni að þessum toga eru erfið."
     check_sentence(rc, s, [(1, 3, "P_WRONG_PREP_AÐ")])
+    s = "Að mínu mati gerði ég þetta að krafti."
+    check_sentence(rc, s, [(6, 7, "P_WRONG_PREP_AÐ")])
     s = "Hann gerði það að sjálfsdáðum."
     check_sentence(rc, s, [(3, 4, "P_aðaf")])
+    s = "Að sjálfsögðu gerði ég þetta að sjálfsdáðum."
+    check_sentence(rc, s, [(4, 5, "P_aðaf")])
     s = "Hún hefur ekki gert þetta að miklum krafti."
     check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
     

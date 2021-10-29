@@ -86,8 +86,8 @@ SKIPVARS = frozenset(("op", "subj", "0", "1", "2"))
 
 class IcelandicPlaces:
 
-    """ Wraps a dictionary of Icelandic place names with their
-        associated prepositions """
+    """Wraps a dictionary of Icelandic place names with their
+    associated prepositions"""
 
     # This is not strictly accurate as the correct prepositions
     # are based on convention, not rational rules. :/
@@ -113,14 +113,14 @@ class IcelandicPlaces:
 
     @classmethod
     def _load_json(cls) -> None:
-        """ Load the place name dictionary from a JSON file into memory """
+        """Load the place name dictionary from a JSON file into memory"""
         with open(cls.ICELOC_PREP_JSONPATH, encoding="utf-8") as f:
             cls.ICELOC_PREP = json.load(f)
 
     @classmethod
     def lookup_preposition(cls, place: str) -> Optional[str]:
-        """ Look up the correct preposition to use with a placename,
-            or None if the placename is not known """
+        """Look up the correct preposition to use with a placename,
+        or None if the placename is not known"""
         if cls.ICELOC_PREP is None:
             cls._load_json()
         assert cls.ICELOC_PREP is not None
@@ -138,7 +138,7 @@ class IcelandicPlaces:
 
     @classmethod
     def includes(cls, place: str) -> bool:
-        """ Return True if the given place is found in the dictionary """
+        """Return True if the given place is found in the dictionary"""
         if cls.ICELOC_PREP is None:
             cls._load_json()
         assert cls.ICELOC_PREP is not None
@@ -147,7 +147,7 @@ class IcelandicPlaces:
 
 class PatternMatcher:
 
-    """ Class to match parse trees with patterns to find probable usage errors """
+    """Class to match parse trees with patterns to find probable usage errors"""
 
     # The patterns to be matched are created when the
     # first class instance is initialized.
@@ -195,9 +195,11 @@ class PatternMatcher:
                 self.create_patterns()
 
     @classmethod
-    def get_wordform(cls, word: str, lemma: str, cat: str, variants: Iterable[str]) -> str:
-        """ Get correct wordform from BinPackage, 
-            given a set of variants """
+    def get_wordform(
+        cls, word: str, lemma: str, cat: str, variants: Iterable[str]
+    ) -> str:
+        """Get correct wordform from BinPackage,
+        given a set of variants"""
         realvars: Union[Set[str], Iterable[str]]
         if cat == "so":
             # Get rid of irrelevant variants for verbs
@@ -213,7 +215,7 @@ class PatternMatcher:
         return wordforms[0].bmynd
 
     def wrong_preposition_af(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verb phrase
         vp = match.first_match("VP > { %verb }", self.ctx_af)
         if vp is None:
@@ -245,7 +247,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verb phrase
         vp = match.first_match("VP > { %verb }", self.ctx_að)
         if vp is None:
@@ -277,7 +279,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_spyrja_af(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal phrase
         vp = match.first_match("VP > { 'spyrja' }")
         assert vp is not None
@@ -286,17 +288,14 @@ class PatternMatcher:
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
-        start, end = min(vp.span[0], pp_af.span[0]), max(vp.span[1], pp_af.span[1])
+        start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "Í '{0}' á 'af' sennilega að vera 'að'".format(vp.tidy_text)
-        #text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
+        # text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
         detail = (
-            "Í samhenginu 'að spyrja að e-u' er notuð "
-            "forsetningin 'að', ekki 'af'."
+            "Í samhenginu 'að spyrja að e-u' er notuð " "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, "spyrja", "af")
         self._ann.append(
             Annotation(
                 start=start,
@@ -310,7 +309,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_vitni_af(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending nominal phrase
         np = match.first_match(". >> { 'vitni' }")
         # Find the attached prepositional phrase
@@ -319,8 +318,6 @@ class PatternMatcher:
             pp = match.first_match('ADVP > { "af" }')
         assert np is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "'verða vitni af' á sennilega að vera 'verða vitni að'"
@@ -328,7 +325,7 @@ class PatternMatcher:
             "Í samhenginu 'verða vitni að e-u' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, "vitni", "af")
         self._ann.append(
             Annotation(
                 start=start,
@@ -342,7 +339,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_grin_af(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal and nominal phrases
         vp = match.first_match("VP > { 'gera' }")
         np = match.first_match("NP >> { 'grín' }")
@@ -352,8 +349,6 @@ class PatternMatcher:
             pp = match.first_match('ADVP > { "af" }')
         assert np is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         if vp is None:
             start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
@@ -366,7 +361,7 @@ class PatternMatcher:
         detail = (
             "Í samhenginu 'gera grín að e-u' er notuð " "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, "grín", "af")
         self._ann.append(
             Annotation(
                 start=start,
@@ -380,7 +375,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_leida_af(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal and nominal phrases
         vp = match.first_match("VP > { 'leiða' }")
         np = match.first_match("NP >> { ( 'líkur'|'rök'|'rak' ) }")
@@ -391,8 +386,6 @@ class PatternMatcher:
         assert vp is not None
         assert np is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -403,7 +396,7 @@ class PatternMatcher:
             "Í samhenginu 'leiða {0} af e-u' er notuð "
             "forsetningin 'að', ekki 'af'.".format(np.tidy_text)
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, "leiða", "af")
         self._ann.append(
             Annotation(
                 start=start,
@@ -417,11 +410,13 @@ class PatternMatcher:
         )
 
     def wrong_preposition_marka_af(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal and nominal phrases
         vp = match.first_match("VP > { 'marka' }")
+        lemma = "marka"
         if vp is None:
             vp = match.first_match("NP > { 'markaður' }")
+            lemma = "markaður"
         np = match.first_match("NP >> { ( 'upphaf'|'upphafinn' ) }")
         if np is None:
             np = match.first_match("VP > { 'upphefja' }")
@@ -432,8 +427,6 @@ class PatternMatcher:
         assert vp is not None
         assert np is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -444,7 +437,7 @@ class PatternMatcher:
             "Í samhenginu 'marka upphaf að e-u' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, lemma, "af")
         self._ann.append(
             Annotation(
                 start=start,
@@ -458,7 +451,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_leggja_af(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal phrase
         vp = match.first_match("VP > { 'leggja' }")
         if vp is None:
@@ -468,12 +461,10 @@ class PatternMatcher:
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
         # Find the offending nominal phrase
-        np = match.first_match("NP >> { \"velli\" }")
+        np = match.first_match('NP >> { "velli" }')
         assert vp is not None
         assert pp is not None
         assert np is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], pp.span[0], np.span[0]),
@@ -484,7 +475,7 @@ class PatternMatcher:
             "Í samhenginu 'leggja einhvern að velli' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, "leggja", "af")
         self._ann.append(
             Annotation(
                 start=start,
@@ -498,7 +489,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_utan_af(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending adverbial phrase
         advp = match.first_match("ADVP > { 'utan' }")
         if advp is None:
@@ -507,8 +498,6 @@ class PatternMatcher:
         pp = match.first_match('ADVP > { "af" }')
         assert advp is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(advp.span[0], pp.span[0]), max(advp.span[1], pp.span[1])
         text = "'utan af' á sennilega að vera 'utan að'"
@@ -516,7 +505,7 @@ class PatternMatcher:
             "Í samhenginu 'kunna eitthvað utan að' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, "utan", "af")
         self._ann.append(
             Annotation(
                 start=start,
@@ -530,7 +519,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_uppvis_af(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal phrase
         vp = match.first_match("VP >> { 'verða' }")
         # Find the attached nominal phrase
@@ -542,8 +531,6 @@ class PatternMatcher:
         assert vp is not None
         assert np is not None
         assert pp is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -554,7 +541,7 @@ class PatternMatcher:
             "Í samhenginu 'verða uppvís að einhverju' er notuð "
             "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, "uppvís", "af")
         self._ann.append(
             Annotation(
                 start=start,
@@ -568,7 +555,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_verða_af(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal phrase
         vp = match.first_match("VP > { 'verða' }")
         if vp is None:
@@ -584,8 +571,6 @@ class PatternMatcher:
         assert vp is not None
         assert pp is not None
         assert np is not None
-        pp_af = pp.first_match('"af"')
-        assert pp_af is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], pp.span[0], np.span[0]),
@@ -595,7 +580,7 @@ class PatternMatcher:
         detail = (
             "Í samhenginu 'að verða að ósk' er notuð " "forsetningin 'að', ekki 'af'."
         )
-        suggest = match.substituted_text(pp_af, "að")
+        suggest = self.suggestion_complex(match, "verða", "af")
         self._ann.append(
             Annotation(
                 start=start,
@@ -608,11 +593,30 @@ class PatternMatcher:
             )
         )
 
+    def suggestion_complex(self, match: SimpleTree, lemma: str, prep: str) -> str:
+        """Find the preposition to correct for the suggestion"""
+        p_ter = match.first_match(f"'{lemma}'")
+        assert p_ter is not None
+        # The instance of the preposition which comes right after the phrase terminal is substituted
+        all_m = match.all_matches(f"@'{prep}'")
+        subtree = None
+        for m in all_m:
+            assert m is not None
+            if m.span[0] > p_ter.span[-1]:
+                subtree = m
+                break
+        assert subtree is not None
+        if prep == "að":
+            suggest = match.substituted_text(subtree, "af")
+        elif prep == "af":
+            suggest = match.substituted_text(subtree, "að")
+        return suggest
+
     def wrong_preposition_ahyggja_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Calculate the start and end token indices, spanning both phrases
         np = match.first_match("NP > { 'áhyggja' }")
-        pp = match.first_match("PP > { \"að\" }")
+        pp = match.first_match('PP > { "að" }')
         assert np is not None
         assert pp is not None
         start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
@@ -621,12 +625,7 @@ class PatternMatcher:
             "Í samhenginu 'hafa áhyggjur af e-u' er notuð "
             "forsetningin 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" af ") == 1:
-            # Only one way to substitute af -> að: do it
-            suggest = match.tidy_text.replace(" af ", " að ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = self.suggestion_complex(match, "áhyggja", "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -640,17 +639,16 @@ class PatternMatcher:
         )
 
     def wrong_preposition_hluti_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Calculate the start and end token indices, spanning both phrases
-        start, end = match.span
+        np = match.first_match("NP > { 'hluti' }")
+        pp = match.first_match("PP > { 'að' }")
+        assert np is not None
+        assert pp is not None
+        start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
         text = "'hluti að' á sennilega að vera 'hluti af'"
-        detail = "Í samhenginu 'hluti af e-u' er notuð " "forsetningin 'af', ekki 'að'."
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        detail = "Í samhenginu 'hluti af e-u' er notuð forsetningin 'af', ekki 'að'."
+        suggest = self.suggestion_complex(match, "hluti", "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -664,15 +662,13 @@ class PatternMatcher:
         )
 
     def wrong_preposition_að_mörkum(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending prepositional phrase
         pp = match.first_match('PP > { "að" "mörkum" }')
         assert pp is not None
-        pp_að = pp.first_match('"að"')
-        assert pp_að is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp.span
-        suggest = match.substituted_text(pp_að, "af")
+        suggest = self.suggestion_complex(match, "leggja", "að")
         text = f"'{pp.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
             "Í samhenginu 'leggja e-ð af mörkum' er notuð "
@@ -691,14 +687,12 @@ class PatternMatcher:
         )
 
     def wrong_preposition_að_leiða(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Calculate the start and end token indices, spanning both phrases
         start, end = match.span
         pp = match.first_match("P > { 'að' }")
         assert pp is not None
-        pp_að = pp.first_match('"að"')
-        assert pp_að is not None
-        suggest = match.substituted_text(pp_að, "af")
+        suggest = self.suggestion_complex(match, "láta", "að")
         text = f"'{match.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
             "Í samhenginu 'láta gott af sér leiða' er notuð "
@@ -717,18 +711,16 @@ class PatternMatcher:
         )
 
     def wrong_preposition_heiður_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending nominal phrase
         np = match.first_match("NP > { 'heiður' }")
         # Find the attached prepositional phrase
         pp = match.first_match("P > { 'að' }")
         assert np is not None
         assert pp is not None
-        pp_að = pp.first_match('"að"')
-        assert pp_að is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
-        suggest = match.substituted_text(pp_að, "af")
+        suggest = self.suggestion_complex(match, "heiður", "að")
         text = f"'{match.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
             "Í samhenginu 'fá/hljóta heiðurinn af' er notuð "
@@ -747,7 +739,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_eiga_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verb phrase
         vp = match.first_match("VP > { 'eiga' }")
         if vp is None:
@@ -755,8 +747,9 @@ class PatternMatcher:
         # Find the nominal object
         np = match.first_match("( NP|ADVP )")
         assert np is not None
-        if "aðild" in np.lemmas:
-            # 'Eiga aðild að e-u' is legal; do not complain
+        legal_lemmas = frozenset(("aðild", "frumkvæði", "hlut", "upptak"))
+        if any(lemma in legal_lemmas for lemma in np.lemmas):
+            # 'Eiga aðild/frumkvæði/hlut/upptök að e-u' is legal; do not complain
             return
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "að" }')
@@ -764,14 +757,12 @@ class PatternMatcher:
             pp = match.first_match('PP > { "að" }')
         assert vp is not None
         assert pp is not None
-        pp_að = pp.first_match('"að"')
-        assert pp_að is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
             max(vp.span[1], np.span[1], pp.span[1]),
         )
-        suggest = match.substituted_text(pp_að, "af")
+        suggest = self.suggestion_complex(match, "eiga", "að")
         text = f"'{match.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
             f"Orðasambandið '{match.tidy_text}' tekur yfirleitt með sér "
@@ -790,19 +781,21 @@ class PatternMatcher:
         )
 
     def wrong_preposition_vera_til_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         start, end = match.span
         text = "'til að' á sennilega að vera 'til af'"
         detail = (
             "Orðasambandið 'vera mikið/lítið til af e-u' innifelur "
             "yfirleitt forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        if "mikill" in match.lemmas:
+            suggest = self.suggestion_complex(match, "mikill", "að")
+        elif "lítið" in match.lemmas:
+            suggest = self.suggestion_complex(match, "lítið", "að")
+        elif "lítill" in match.lemmas:
+            suggest = self.suggestion_complex(match, "lítill", "að")
+        elif "fullur" in match.lemmas:
+            suggest = self.suggestion_complex(match, "fullur", "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -816,19 +809,14 @@ class PatternMatcher:
         )
 
     def wrong_preposition_gagn_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         start, end = match.span
         text = "'gagn að' á sennilega að vera 'gagn af'"
         detail = (
             "Orðasambandið 'að hafa gagn af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = self.suggestion_complex(match, "gagn", "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -842,7 +830,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_frettir_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending preposition
         pp = match.first_match("(P | ADVP) > { 'að' }")
         if pp is None:
@@ -854,12 +842,7 @@ class PatternMatcher:
             "Orðasambandið 'fréttir berast af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = self.suggestion_complex(match, "frétt", "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -873,27 +856,20 @@ class PatternMatcher:
         )
 
     def wrong_preposition_stafa_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal phrase
         vp = match.first_match("VP > { 'stafa' }")
         assert vp is not None
         start, end = match.span
+        suggest = self.suggestion_complex(match, "stafa", "að")
         if " að " in vp.tidy_text:
-            text = "'{0}' á sennilega að vera '{1}'".format(
-                vp.tidy_text, vp.tidy_text.replace(" að ", " af ")
-            )
+            text = "'{0}' á sennilega að vera '{1}'".format(match.tidy_text, suggest)
         else:
             text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
         detail = (
             "Orðasambandið 'að stafa af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -907,7 +883,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_ólétt_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending nominal phrase
         np = match.first_match("NP > { 'óléttur' }")
         # Find the attached prepositional phrase
@@ -921,12 +897,7 @@ class PatternMatcher:
             "Orðasambandið 'að vera ólétt/ur af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = self.suggestion_complex(match, "óléttur", "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -940,7 +911,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_heyra_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal phrase
         vp = match.first_match("VP > { 'heyra' }")
         # Find the attached prepositional phrase
@@ -949,22 +920,12 @@ class PatternMatcher:
         assert pp is not None
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
-        if " að " in vp.tidy_text:
-            text = "'{0}' á sennilega að vera '{1}'".format(
-                vp.tidy_text, vp.tidy_text.replace(" að ", " af ")
-            )
-        else:
-            text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
+        suggest = self.suggestion_complex(match, "heyra", "að")
+        text = "'{0}' á sennilega að vera '{1}'".format(match.tidy_text, suggest)
         detail = (
             "Orðasambandið 'að heyra af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
         self._ann.append(
             Annotation(
                 start=start,
@@ -978,7 +939,7 @@ class PatternMatcher:
         )
 
     def wrong_preposition_hafa_gaman_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending nominal phrase
         np = match.first_match("NP > { 'gaman' }")
         # Find the attached prepositional phrase
@@ -992,12 +953,7 @@ class PatternMatcher:
             "Orðasambandið 'að hafa gaman af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = self.suggestion_complex(match, "gaman", "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -1011,19 +967,14 @@ class PatternMatcher:
         )
 
     def wrong_preposition_heillaður_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Calculate the start and end token indices, spanning both phrases
         start, end = match.span
         text = "'heillaður að' á sennilega að vera 'heillaður af'"
         detail = (
             "Í samhenginu 'heillaður af e-u' er notuð " "forsetningin 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = self.suggestion_complex(match, "heillaður", "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -1037,27 +988,26 @@ class PatternMatcher:
         )
 
     def wrong_preposition_valinn_að(self, match: SimpleTree) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending nominal phrase
         vp = match.first_match("VP > { 'velja' }")
+        lemma = "velja"
         if vp is None:
             vp = match.first_match("NP > { 'valinn' }")
+            lemma = "valinn"
         assert vp is not None
         start, end = match.span
         if " að " in vp.tidy_text:
-            text = "'{0}' á sennilega að vera '{1}'".format(vp.tidy_text, vp.tidy_text.replace(" að ", " af "))
+            text = "'{0}' á sennilega að vera '{1}'".format(
+                vp.tidy_text, vp.tidy_text.replace(" að ", " af ")
+            )
         else:
             text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
         detail = (
             "Orðasambandið 'að vera valin/n af e-m' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
-        if match.tidy_text.count(" að ") == 1:
-            # Only one way to substitute að -> af: do it
-            suggest = match.tidy_text.replace(" að ", " af ")
-        else:
-            # !!! TODO: More intelligent substitution to create a suggestion
-            suggest = ""
+        suggest = self.suggestion_complex(match, lemma, "að")
         self._ann.append(
             Annotation(
                 start=start,
@@ -1071,7 +1021,7 @@ class PatternMatcher:
         )
 
     def wrong_að_use(self, match: SimpleTree, context: ContextDict) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending noun
         np = match.first_match(" %noun ", context)
         # Find the attached prepositional phrase
@@ -1101,7 +1051,7 @@ class PatternMatcher:
         )
 
     def check_pp_with_place(self, match: SimpleTree) -> None:
-        """ Check whether the correct preposition is being used with a place name """
+        """Check whether the correct preposition is being used with a place name"""
         place = match.NP.lemma
         correct_preposition = IcelandicPlaces.lookup_preposition(place)
         if correct_preposition is None:
@@ -1133,8 +1083,8 @@ class PatternMatcher:
         )
 
     def wrong_noun_with_verb(self, match: SimpleTree) -> None:
-        """ Wrong noun used with a verb, for instance
-            'bjóða e-m birginn' instead of 'byrginn' """
+        """Wrong noun used with a verb, for instance
+        'bjóða e-m birginn' instead of 'byrginn'"""
         # TODO: This code is provisional, intended as a placeholder for similar cases
         start, end = match.span
         text = "Mælt er með að rita 'bjóða e-m byrginn' í stað 'birginn'."
@@ -1154,11 +1104,14 @@ class PatternMatcher:
         )
 
     def wrong_verb_use(
-        self, match: SimpleTree, correct_verb: str, context: ContextDict,
+        self,
+        match: SimpleTree,
+        correct_verb: str,
+        context: ContextDict,
     ) -> None:
-        """ Annotate wrong verbs being used with nouns,
-            for instance 'byði hnekki' where the verb should
-            be 'bíða' -> 'biði hnekki' instead of 'bjóða' """
+        """Annotate wrong verbs being used with nouns,
+        for instance 'byði hnekki' where the verb should
+        be 'bíða' -> 'biði hnekki' instead of 'bjóða'"""
         vp = match.first_match("VP > { %verb }", context)
         assert vp is not None
         verb = next(ch for ch in vp.children if ch.tcat == "so").own_lemma_mm
@@ -1169,8 +1122,10 @@ class PatternMatcher:
         text = "Hér á líklega að vera sögnin '{0}' í stað '{1}'.".format(
             correct_verb, verb
         )
-        detail = "Í samhenginu '{0}' er rétt að nota sögnina '{1}' í stað '{2}'.".format(
-            match.tidy_text, correct_verb, verb
+        detail = (
+            "Í samhenginu '{0}' er rétt að nota sögnina '{1}' í stað '{2}'.".format(
+                match.tidy_text, correct_verb, verb
+            )
         )
         suggest = ""
         self._ann.append(
@@ -1186,7 +1141,7 @@ class PatternMatcher:
         )
 
     def wrong_af_use(self, match: SimpleTree, context: ContextDict) -> None:
-        """ Handle a match of a suspect preposition pattern """
+        """Handle a match of a suspect preposition pattern"""
         # Find the offending nominal phrase
         np = match.first_match(" %noun ", context)
         # Find the attached prepositional phrase
@@ -1198,8 +1153,10 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "Hér á líklega að vera forsetningin 'að' í stað 'af'."
-        detail = "Í samhenginu '{0}' er rétt að nota forsetninguna 'að' í stað 'af'.".format(
-            match.tidy_text
+        detail = (
+            "Í samhenginu '{0}' er rétt að nota forsetninguna 'að' í stað 'af'.".format(
+                match.tidy_text
+            )
         )
         suggest = match.substituted_text(pp_af, "að")
         self._ann.append(
@@ -1215,7 +1172,7 @@ class PatternMatcher:
         )
 
     def vera_að(self, match: SimpleTree) -> None:
-        """ 'vera að' in front of verb is unneccessary """
+        """'vera að' in front of verb is unneccessary"""
         # TODO don't match verbs that allow 'vera að'
         so = match.first_match("VP >> 'vera'")
         if so is None:
@@ -1247,7 +1204,9 @@ class PatternMatcher:
         if realso is None:
             return
         _, end = realso.span
-        suggest = self.get_wordform(realso.text.lower(), realso.lemma, realso.cat, so.all_variants)
+        suggest = self.get_wordform(
+            realso.text.lower(), realso.lemma, realso.cat, so.all_variants
+        )
         if not suggest:
             return
         text = (
@@ -1293,8 +1252,10 @@ class PatternMatcher:
             assert False
         correction = adv.tidy_text + "i"
         text = f"Hér á líklega að vera '{correction}' í stað '{adv.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            narrow_match, correction, adv.tidy_text
+        detail = (
+            "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+                narrow_match, correction, adv.tidy_text
+            )
         )
         self._ann.append(
             Annotation(
@@ -1313,14 +1274,12 @@ class PatternMatcher:
         if p is None:
             return
         start, end = match.span
-        match_text = match.tidy_text
-        tidy_text = p.tidy_text
-        correction = tidy_text[:-1] + "i" + " " + tidy_text[-1]
-        text = f"Hér á líklega að vera '{correction}' í stað '{tidy_text}'"
+        correction = p.tidy_text[:-1] + "i" + " " + p.tidy_text[-1]
+        text = f"Hér á líklega að vera '{correction}' í stað '{p.tidy_text}'"
         detail = "Í samhenginu '{0}' er rétt að nota '{1}' í stað '{2}'.".format(
-            match_text, correction, tidy_text
+            match.tidy_text, correction, p.tidy_text
         )
-        suggest = match_text.replace(tidy_text, correction)
+        suggest = match.tidy_text.replace(p.tidy_text, correction)
         self._ann.append(
             Annotation(
                 start=start,
@@ -1328,7 +1287,7 @@ class PatternMatcher:
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
-                original=match_text,
+                original=match.tidy_text,
                 suggest=suggest,
             )
         )
@@ -1357,8 +1316,10 @@ class PatternMatcher:
             else:
                 context = advp.tidy_text + " " + pp.tidy_text
         text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            context, correction, advp.tidy_text
+        detail = (
+            "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+                context, correction, advp.tidy_text
+            )
         )
         self._ann.append(
             Annotation(
@@ -1372,99 +1333,19 @@ class PatternMatcher:
             )
         )
 
-    def dir_loc_standa(self, match: SimpleTree) -> None:
-        advp = match.first_match("ADVP > { 'upp' }")
-        if advp is None:
-            return
-        start, end = match.span
-        correction = advp.tidy_text + "i"
-        text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            match.tidy_text, correction, advp.tidy_text
-        )
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_DIR_LOC",
-                text=text,
-                detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
-            )
-        )
-
-    def dir_loc_safna(self, match: SimpleTree) -> None:
-        advp = match.first_match("ADVP > { 'inn' }")
+    def dir_loc_simple(self, match: SimpleTree) -> None:
+        advp = match.first_match("ADVP > { ('inn'|'út'|'niður'|'upp') }")
         assert advp is not None
         start, end = match.span
-        correction = advp.tidy_text + "i"
+        if "niður" in match.tidy_text:
+            correction = "niðri"
+        else:
+            correction = advp.tidy_text + "i"
         text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            match.tidy_text, correction, advp.tidy_text
-        )
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_DIR_LOC",
-                text=text,
-                detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
+        detail = (
+            "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+                match.tidy_text, correction, advp.tidy_text
             )
-        )
-
-    def dir_loc_niður(self, match: SimpleTree) -> None:
-        advp = match.first_match("ADVP > { 'niður' }")
-        assert advp is not None
-        start, end = match.span
-        correction = "niðri"
-        text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            match.tidy_text, correction, advp.tidy_text
-        )
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_DIR_LOC",
-                text=text,
-                detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
-            )
-        )
-
-    def dir_loc_búð(self, match: SimpleTree) -> None:
-        advp = match.first_match("ADVP > { 'út' }")
-        assert advp is not None
-        start, end = match.span
-        correction = advp.tidy_text + "i"
-        text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            match.tidy_text, correction, advp.tidy_text
-        )
-        self._ann.append(
-            Annotation(
-                start=start,
-                end=end,
-                code="P_DIR_LOC",
-                text=text,
-                detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
-            )
-        )
-
-    def dir_loc_læsa(self, match: SimpleTree) -> None:
-        advp = match.first_match("ADVP > { 'inn' }")
-        assert advp is not None
-        start, end = match.span
-        correction = advp.tidy_text + "i"
-        text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-            match.tidy_text, correction, advp.tidy_text
         )
         self._ann.append(
             Annotation(
@@ -1479,9 +1360,9 @@ class PatternMatcher:
         )
 
     def mood_sub(self, kind: str, match: SimpleTree) -> None:
-        """ Subjunctive mood, present tense, is used instead of indicative 
-            in conditional ("COND"), purpose ("PURP"), relative ("REL")
-            or temporal ("TEMP/w") subclauses """
+        """Subjunctive mood, present tense, is used instead of indicative
+        in conditional ("COND"), purpose ("PURP"), relative ("REL")
+        or temporal ("TEMP/w") subclauses"""
         vp = match.first_match("VP > so_vh")
         if vp is None:
             return
@@ -1530,8 +1411,8 @@ class PatternMatcher:
         )
 
     def mood_ind(self, kind: str, match: SimpleTree) -> None:
-        """ Indicative mood is used instead of subjunctive 
-            in concessive or purpose subclauses """
+        """Indicative mood is used instead of subjunctive
+        in concessive or purpose subclauses"""
         vp = match.first_match("VP > so_fh")
         if vp is None:
             return
@@ -1576,8 +1457,8 @@ class PatternMatcher:
         )
 
     def doubledefinite(self, match: SimpleTree) -> None:
-        """ A definite noun appears with a definite pronoun,
-            e.g. 'þessi maðurinn' """
+        """A definite noun appears with a definite pronoun,
+        e.g. 'þessi maðurinn'"""
         no = match.first_match("no")
         if no is None:
             return
@@ -1618,7 +1499,7 @@ class PatternMatcher:
         )
 
     def plursub(self, kind: str, match: SimpleTree) -> None:
-        """ Subject is singular in meaning grammatically, e.g. '40.000 manns', 'meirihluti' """
+        """Subject is singular in meaning grammatically, e.g. '40.000 manns', 'meirihluti'"""
         # Check if verb is singular
         ip = match.enclosing_tag("IP")
         if ip is None:
@@ -1652,8 +1533,8 @@ class PatternMatcher:
             detail = f"Fleirtölunafnorðið '{no.lemma}' hefur eintölumerkingu en er málfræðilega fleirtala og sögnin '{so.lemma}' á því að standa í fleirtölu."
         else:
             return
-            
-        generic = frozenset(("P_NT_ÍTölu", "P_NT_FjöldiHluti")) # TODO update list
+
+        generic = frozenset(("P_NT_ÍTölu", "P_NT_FjöldiHluti"))  # TODO update list
         # This is more precise, we want to delete the more generic one
         for ann in self._ann:
             if ann.code in generic and ann.start == start and ann.end == end:
@@ -1671,10 +1552,8 @@ class PatternMatcher:
             )
         )
 
-
-
     def singsub(self, kind: str, match: SimpleTree) -> None:
-        """ Subject is plural in meaning but singular grammatically, e.g. 'Hluti ferðamanna', 'tvíeykið X og Y """
+        """Subject is plural in meaning but singular grammatically, e.g. 'Hluti ferðamanna', 'tvíeykið X og Y"""
         # Check if verb is plural
         ip = match.enclosing_tag("IP")
         if ip is None:
@@ -1734,7 +1613,7 @@ class PatternMatcher:
 
     @classmethod
     def add_pattern(cls, p: PatternTuple) -> None:
-        """ Validates and adds a pattern to the class global pattern list """
+        """Validates and adds a pattern to the class global pattern list"""
         _, pattern, _, ctx = p
         if "%" in pattern:
             assert ctx is not None, "Missing context for pattern with %macro"
@@ -1744,7 +1623,7 @@ class PatternMatcher:
 
     @classmethod
     def create_patterns(cls) -> None:
-        """ Initialize the list of patterns and handling functions """
+        """Initialize the list of patterns and handling functions"""
 
         # Access the dictionary of verb+preposition attachment errors
         # from the settings (actually from the reynir settings),
@@ -1822,14 +1701,14 @@ class PatternMatcher:
                 )
             )
             # Catch "Það sem Jón spurði ekki af...", "Jón spyr (ekki) af því."
-        #    cls.add_pattern(
-        #        (
-        #            "spyrja",  # Trigger lemma for this pattern
-        #            "IP > { VP >> { 'spyrja' } ADVP > { 'af' } }",
-        #            cls.wrong_preposition_af,
-        #            cls.ctx_af,
-        #        )
-        #    )
+            #    cls.add_pattern(
+            #        (
+            #            "spyrja",  # Trigger lemma for this pattern
+            #            "IP > { VP >> { 'spyrja' } ADVP > { 'af' } }",
+            #            cls.wrong_preposition_af,
+            #            cls.ctx_af,
+            #        )
+            #    )
             cls.add_pattern(
                 (
                     "spyrja",  # Trigger lemma for this pattern
@@ -1839,14 +1718,14 @@ class PatternMatcher:
                 )
             )
             # Catch "Jón spyr af því."
-        #    cls.add_pattern(
-        #        (
-        #            "spyrja",  # Trigger lemma for this pattern
-        #            "IP > { VP >> { 'spyrja' } PP > { 'af' } }",
-        #            cls.wrong_preposition_af,
-        #            None,
-        #        )
-        #    )
+            #    cls.add_pattern(
+            #        (
+            #            "spyrja",  # Trigger lemma for this pattern
+            #            "IP > { VP >> { 'spyrja' } PP > { 'af' } }",
+            #            cls.wrong_preposition_af,
+            #            None,
+            #        )
+            #    )
             # Catch "...vegna þess að dýr leita af öðrum smærri dýrum."
             cls.add_pattern(
                 (
@@ -1870,7 +1749,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "grín",  # Trigger lemma for this pattern
-                    #"IP",
+                    # "IP",
                     "VP > { NP > { 'grín' } ( PP|ADVP ) > { \"af\" } }",
                     cls.wrong_preposition_grin_af,
                     None,
@@ -1914,14 +1793,14 @@ class PatternMatcher:
                     None,
                 )
             )
-        #    cls.add_pattern(
-        #        (
-        #            "upphefja",  # Trigger lemma for this pattern
-        #            "IP",
-        #            cls.wrong_preposition_marka_af,
-        #            None,
-        #        )
-        #    )
+            #    cls.add_pattern(
+            #        (
+            #            "upphefja",  # Trigger lemma for this pattern
+            #            "IP",
+            #            cls.wrong_preposition_marka_af,
+            #            None,
+            #        )
+            #    )
             # Catch "Það hefur ekki markað upphafið af því."
             cls.add_pattern(
                 (
@@ -1937,7 +1816,7 @@ class PatternMatcher:
                     frozenset(
                         ("völlur", "vell", "velli")
                     ),  # Trigger lemmas for this pattern
-                    "VP > { VP > { 'leggja' } PP > { P > { \"af\" } NP > { \"velli\" } } }",
+                    'VP > { VP > { \'leggja\' } PP > { P > { "af" } NP > { "velli" } } }',
                     cls.wrong_preposition_leggja_af,
                     None,
                 )
@@ -2028,7 +1907,7 @@ class PatternMatcher:
                 (
                     "hluti",  # Trigger lemma for this pattern
                     "VP > { NP > { 'hluti' } PP > { \"að\" } }",
-                    #"VP > { VP > { 'vera' NP-PRD > { 'hluti' } } PP > { 'að' } }",
+                    # "VP > { VP > { 'vera' NP-PRD > { 'hluti' } } PP > { 'að' } }",
                     cls.wrong_preposition_hluti_að,
                     None,
                 )
@@ -2056,7 +1935,7 @@ class PatternMatcher:
                 (
                     "áhyggja",  # Trigger lemma for this pattern
                     "VP > { NP > { 'áhyggja' } PP > { \"að\" } }",
-                    #"VP > { VP >> { 'áhyggja' } PP > { 'að' } }",
+                    # "VP > { VP >> { 'áhyggja' } PP > { 'að' } }",
                     cls.wrong_preposition_ahyggja_að,
                     None,
                 )
@@ -2065,25 +1944,25 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     frozenset(("mörk", "mark")),  # Trigger lemmas for this pattern
-                    "VP > { VP >> { 'leggja' } PP > { \"að\" \"mörkum\" } }",
+                    'VP > { VP >> { \'leggja\' } PP > { "að" "mörkum" } }',
                     cls.wrong_preposition_að_mörkum,
                     None,
                 )
             )
             # Catch "Jón hefur látið gott að sér leiða."
-            #cls.add_pattern(
+            # cls.add_pattern(
             #    (
             #        "leiða",  # Trigger lemma for this pattern
             #        "VP > { VP > { 'láta' } PP > { P > \"að\" } VP > { 'leiða' } }",
             #        cls.wrong_preposition_að_leiða,
             #        None,
             #    )
-            #)
+            # )
             # Catch "Ég lét gott að mér leiða."
             cls.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
-                    "VP > [ .* VP > { 'láta' } NP (\"að mér\"|\"að þér\"|\"að sér\") 'leiða']",
+                    'VP > [ .* VP > { \'láta\' } NP ("að mér"|"að þér"|"að sér") \'leiða\']',
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
@@ -2092,7 +1971,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "leiður",  # Trigger lemma for this pattern
-                    "VP > [ VP > [ .* 'láta' .* ] NP > [ .* \"gott\" .* ] PP > [ \"að\" NP > [ (\"mér\"|\"þér\"|\"sér\"|\"okkur\") ] \"leiða\" ] ]",
+                    'VP > [ VP > [ .* \'láta\' .* ] NP > [ .* "gott" .* ] PP > [ "að" NP > [ ("mér"|"þér"|"sér"|"okkur") ] "leiða" ] ]',
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
@@ -2101,23 +1980,36 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
-                    "VP > [ VP > [ .* 'láta' .* ] .* NP > [ .* \"gott\" .* ] PP > [ \"að\" NP > [ (\"mér\"|\"þér\"|\"sér\"|\"okkur\") ] ] VP > { 'leiða' } ]",
+                    'VP > [ VP > [ .* \'láta\' .* ] .* NP > [ .* "gott" .* ] PP > [ "að" NP > [ ("mér"|"þér"|"sér"|"okkur") ] ] VP > { \'leiða\' } ]',
+                    cls.wrong_preposition_að_leiða,
+                    None,
+                )
+            )
+            # Catch "...lét ég (ekki) gott að mér leiða"
+            cls.add_pattern(
+                (
+                    "leiða",  # Trigger lemma for this pattern
+                    'VP > [ VP > [ .* \'láta\' .* ] .* IP > [ NP > [ .* "gott" PP > [ "að" NP > [ ("mér"|"þér"|"sér"|"okkur") ] ] ] VP > { \'leiða\' } ] ]',
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
             )
             cls.add_pattern(
                 (
-                    frozenset(("leiða", "leiður")),  # Trigger lemma for this pattern (probably a wrong parse)
-                    "VP > [ .* 'láta' .* NP-OBJ > [ .* \"gott\" .* (\"að mér leiða\" | \"að sér leiða\" | \"að þér leiða\") ] ]",
+                    frozenset(
+                        ("leiða", "leiður")
+                    ),  # Trigger lemma for this pattern (probably a wrong parse)
+                    'VP > [ .* \'láta\' .* NP-OBJ > [ .* "gott" .* ("að mér leiða" | "að sér leiða" | "að þér leiða") ] ]',
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
             )
             cls.add_pattern(
                 (
-                    frozenset(("leiða", "leiður")),  # Trigger lemma for this pattern (probably a wrong parse)
-                    "VP > { IP-INF > { \"að\" \"láta\" } NP-PRD > { \"gott\" } PP > [ \"að\" ( \"mér\" | \"þér\" | \"sér\" ) \"leiða\" ] }",
+                    frozenset(
+                        ("leiða", "leiður")
+                    ),  # Trigger lemma for this pattern (probably a wrong parse)
+                    'VP > { IP-INF > { "að" "láta" } NP-PRD > { "gott" } PP > [ "að" ( "mér" | "þér" | "sér" ) "leiða" ] }',
                     cls.wrong_preposition_að_leiða,
                     None,
                 )
@@ -2127,11 +2019,11 @@ class PatternMatcher:
                 (
                     "heiður",  # Trigger lemma for this pattern
                     (
-                    "( "
+                        "( "
                         "VP > [ VP-AUX? .* VP > { ( 'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' PP > { P > { 'að' } NP } } ] "
-                    "| "
+                        "| "
                         "VP > [ VP-AUX? .* VP > { ( 'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' } PP > { P > { 'að' } NP } ] "
-                    ") "
+                        ") "
                     ),
                     cls.wrong_preposition_heiður_að,
                     None,
@@ -2142,11 +2034,11 @@ class PatternMatcher:
                 (
                     "eiga",  # Trigger lemma for this pattern
                     (
-                    "( "
-                    "VP > [ VP-AUX? .* VP > { 'eiga' } .* NP-OBJ PP > { P > { 'að' } NP } ] "
-                    "| "
-                    "VP > [ VP-AUX? .* VP > { 'eiga' } .* NP-OBJ > { PP > { P > { 'að' } NP } } ] "
-                    ") "
+                        "( "
+                        "VP > [ VP-AUX? .* VP > { 'eiga' } .* NP-OBJ PP > { P > { 'að' } NP } ] "
+                        "| "
+                        "VP > [ VP-AUX? .* VP > { 'eiga' } .* NP-OBJ > { PP > { P > { 'að' } NP } } ] "
+                        ") "
                     ),
                     cls.wrong_preposition_eiga_að,
                     None,
@@ -2228,7 +2120,7 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "stafa",  # Trigger lemma for this pattern
-                    "( VP|IP ) > { VP >> { 'stafa' } ( PP|ADVP ) > { 'að' } }",
+                    "VP > { VP >> { 'stafa' } ( PP|ADVP ) > { 'að' } }",
                     cls.wrong_preposition_stafa_að,
                     None,
                 )
@@ -2246,7 +2138,11 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "heyra",  # Trigger lemma for this pattern
-                    "VP > { VP >> { 'heyra' } PP > { 'að' } }",
+                    "( "
+                    "VP > { VP >> { 'heyra' } PP > { 'að' } }"
+                    "| "
+                    "VP > [ VP > { 'heyra' } .* NP > { PP > { 'að' } } .* ]"
+                    ") ",
                     cls.wrong_preposition_heyra_að,
                     None,
                 )
@@ -2255,7 +2151,11 @@ class PatternMatcher:
             cls.add_pattern(
                 (
                     "gaman",  # Trigger lemma for this pattern
-                    "VP > { VP > { 'hafa' } NP > { 'gaman' } PP > { 'að' } }",
+                    "( "
+                    "VP > { VP > { 'hafa' } NP > { 'gaman' } PP > { 'að' } }"
+                    "| "
+                    "VP > [ .* VP > { 'hafa' } .* NP > { 'gaman' PP > { 'að' } } .* ]"
+                    ")",
                     cls.wrong_preposition_hafa_gaman_að,
                     None,
                 )
@@ -2265,7 +2165,7 @@ class PatternMatcher:
                 (
                     "velja",  # Trigger lemma for this pattern
                     "VP > { VP > { 'velja' } PP > { 'að' } }",
-                    #"NP-PRD > { NP-PRD > { 'velja' } PP > { 'að' } }",
+                    # "NP-PRD > { NP-PRD > { 'velja' } PP > { 'að' } }",
                     cls.wrong_preposition_valinn_að,
                     None,
                 )
@@ -2282,8 +2182,8 @@ class PatternMatcher:
 
         # Verbs used wrongly with particular nouns
         def wrong_noun(nouns: FrozenSet[str], tree: SimpleTree) -> bool:
-            """ Context matching function for the %noun macro in combinations
-                of verbs and their noun objects """
+            """Context matching function for the %noun macro in combinations
+            of verbs and their noun objects"""
             lemma = tree.own_lemma
             if not lemma:
                 # The passed-in tree node is probably not a terminal
@@ -2314,7 +2214,9 @@ class PatternMatcher:
                 "bjóða",  # Trigger lemma for this pattern
                 "VP > { VP > { %verb } NP-OBJ >> { %noun } }",
                 lambda self, match: self.wrong_verb_use(
-                    match, "bíða", cls.ctx_verb_01,
+                    match,
+                    "bíða",
+                    cls.ctx_verb_01,
                 ),
                 cls.ctx_verb_01,
             )
@@ -2327,7 +2229,9 @@ class PatternMatcher:
                 "hegna",  # Trigger lemma for this pattern
                 "VP > { VP > { %verb } NP-OBJ >> { %noun } }",
                 lambda self, match: self.wrong_verb_use(
-                    match, "hengja", cls.ctx_verb_02,
+                    match,
+                    "hengja",
+                    cls.ctx_verb_02,
                 ),
                 cls.ctx_verb_02,
             )
@@ -2335,8 +2239,8 @@ class PatternMatcher:
 
         # 'af' incorrectly used with particular nouns
         def wrong_noun_af(nouns: FrozenSet[str], tree: SimpleTree) -> bool:
-            """ Context matching function for the %noun macro in combination
-                with 'af' """
+            """Context matching function for the %noun macro in combination
+            with 'af'"""
             lemma = tree.own_lemma
             if not lemma:
                 # The passed-in tree node is probably not a terminal
@@ -2412,8 +2316,8 @@ class PatternMatcher:
         )
 
         def wrong_noun_að(nouns: Set[str], tree: SimpleTree) -> bool:
-            """ Context matching function for the %noun macro in combination
-                with 'að' """
+            """Context matching function for the %noun macro in combination
+            with 'að'"""
             lemma = tree.own_lemma
             if not lemma:
                 # The passed-in tree node is probably not a terminal
@@ -2445,9 +2349,9 @@ class PatternMatcher:
         )
 
         def maybe_place(tree: SimpleTree) -> bool:
-            """ Context matching function for the %maybe_place macro.
-                Returns True if the associated lemma is an uppercase
-                word that might be a place name. """
+            """Context matching function for the %maybe_place macro.
+            Returns True if the associated lemma is an uppercase
+            word that might be a place name."""
             lemma = tree.lemma
             return lemma[0].isupper() if lemma else False
 
@@ -2545,8 +2449,8 @@ class PatternMatcher:
 
         # Check errors in dir4loc
         def dir4loc(verbs: Set[str], tree: SimpleTree) -> bool:
-            """ Context matching function for the %noun macro in combination
-                with 'að' """
+            """Context matching function for the %noun macro in combination
+            with 'að'"""
             lemma = tree.own_lemma
             if not lemma:
                 # The passed-in tree node is probably not a terminal
@@ -2799,7 +2703,7 @@ class PatternMatcher:
             (
                 "niður",  # Trigger lemma for this pattern
                 "( PP|VP|IP ) > [ .* ADVP > { 'niður' } PP > { P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) } ]",
-                lambda self, match: self.dir_loc_niður(match),
+                lambda self, match: self.dir_loc_simple(match),
                 None,
             )
         )
@@ -2807,7 +2711,7 @@ class PatternMatcher:
             (
                 "niður",  # Trigger lemma for this pattern
                 "VP > [ VP > { 'vera' } .* PP > { ADVP > { 'niður' } P > { 'í' } NP } ]",
-                lambda self, match: self.dir_loc_niður(match),
+                lambda self, match: self.dir_loc_simple(match),
                 None,
             )
         )
@@ -2823,7 +2727,7 @@ class PatternMatcher:
             (
                 "standa",  # Trigger lemma for this pattern
                 "IP > { ADVP > { 'upp' } VP > { VP > { 'vera' } NP > { 'standa' } } }",
-                lambda self, match: self.dir_loc_standa(match),
+                lambda self, match: self.dir_loc_simple(match),
                 None,
             )
         )
@@ -2831,7 +2735,7 @@ class PatternMatcher:
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP > [ 'vera' ] NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } }",
-                lambda self, match: self.dir_loc_búð(match),
+                lambda self, match: self.dir_loc_simple(match),
                 None,
             )
         )
@@ -2917,7 +2821,7 @@ class PatternMatcher:
         )
 
         def subjsing(nouns: Set[str], tree: SimpleTree) -> bool:
-            """ Context matching function for the %noun macro """
+            """Context matching function for the %noun macro"""
             if not tree.is_terminal:
                 return False
             if not "et" in tree.all_variants:
@@ -2959,7 +2863,7 @@ class PatternMatcher:
         )
 
     def run(self) -> None:
-        """ Apply the patterns to the sentence """
+        """Apply the patterns to the sentence"""
         tree = None if self._sent is None else self._sent.tree
         if tree is None:
             # No tree: nothing to do
@@ -2973,8 +2877,8 @@ class PatternMatcher:
         lemmas = set(lemma.replace("-", "") for lemma in lemmas_mm)
 
         def lemma_match(trigger: Union[str, FrozenSet[str], Set[str]]) -> bool:
-            """ Returns True if any of the given trigger lemmas
-                occur in the sentence """
+            """Returns True if any of the given trigger lemmas
+            occur in the sentence"""
             if not trigger:
                 return True
             if isinstance(trigger, str):
