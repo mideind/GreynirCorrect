@@ -377,7 +377,7 @@ class ErrorFinder(ParseForestNavigator):
             text="Í stað '{0}' á sennilega að standa 'annað hvort'".format(txt),
             detail=(
                 "Rita á 'annað hvort' þegar um er að ræða fornöfn, til dæmis "
-                "'annað hvort systkinanna'. Rita á 'annaðhvort' í samtengingunni, "
+                "'annað hvort systkinanna'. Rita á 'annaðhvort' í samtengingunni "
                 "'annaðhvort eða', til dæmis 'Annaðhvort fer ég út eða þú'."
             ),
             original=orig_txt,
