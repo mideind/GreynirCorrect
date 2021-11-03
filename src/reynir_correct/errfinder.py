@@ -312,8 +312,8 @@ class ErrorFinder(ParseForestNavigator):
         return dict(
             text="'{0}' er sennilega ofaukið".format(txt),
             detail="Yfirleitt nægir að nota 'en' í þessu samhengi.",
-            original=txt,
-            suggest=emulate_case("en", template=orig_txt),
+            original=orig_txt,
+            suggest="",     # Word should be deleted
         )
 
     def AðvörunSíðan(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -336,9 +336,9 @@ class ErrorFinder(ParseForestNavigator):
         orig = self.node_text(node)
         if ch0:
             start, end = self.node_span(ch0)
-            orig =self.node_text(ch0, original_case=True)
+            orig = self.node_text(ch0, original_case=True)
         return dict(
-            text="'{0}' á sennilega að vera 'fyrst að'".format(txt),
+            text="'{0}' á sennilega að vera 'fyrst'".format(orig),
             detail=(
                 "Rétt er að nota 'fyrst að' fremur en 'víst að' "
                 " til að tengja saman atburð og forsendu."
@@ -350,7 +350,7 @@ class ErrorFinder(ParseForestNavigator):
         )
 
     def VillaFráÞvíAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
-        # 'allt frá því' á sennilega að vera 'allt frá því að'
+        # '(allt) frá því' á sennilega að vera '(allt) frá því að'
         children = list(node.enum_child_nodes())
         start, end = self.node_span(node)
         orig_txt = self.node_text(node)
@@ -377,8 +377,8 @@ class ErrorFinder(ParseForestNavigator):
             text="Í stað '{0}' á sennilega að standa 'annað hvort'".format(txt),
             detail=(
                 "Rita á 'annað hvort' þegar um er að ræða fornöfn, til dæmis "
-                "'annað hvort systkinanna'. Rita á 'annaðhvort' í samtengingu, "
-                "til dæmis 'Annaðhvort fer ég út eða þú'."
+                "'annað hvort systkinanna'. Rita á 'annaðhvort' í samtengingunni "
+                "'annaðhvort eða', til dæmis 'Annaðhvort fer ég út eða þú'."
             ),
             original=orig_txt,
             suggest=emulate_case("annað hvort", template=orig_txt),
@@ -401,13 +401,20 @@ class ErrorFinder(ParseForestNavigator):
 
     def VillaTvípunkturFs(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # Tvípunktur milli forsetningar og nafnliðar
+        _, ch1, _ = node.enum_child_nodes()
+        start, end = self.node_span(node)
         correct = re.sub(r"\s*:", "", txt)
+        if ch1:
+            start, end = self.node_span(ch1)
+            correct = ""
         return dict(
-            text="Tvípunktur er óþarfi í '{0}'".format(txt),
+            text="Tvípunktur er óþarfi",
             detail=(
                 "Óþarft er að hafa tvípunkt milli forsetningar og nafnliðarins "
                 "sem hún stýrir falli á."
             ),
+            start=start,
+            end=end,
             original=txt,
             suggest=correct,
         )
@@ -560,7 +567,7 @@ class ErrorFinder(ParseForestNavigator):
                 " í stað 'sem og'."
             ),
             original=txt,
-            suggest="",
+            suggest="",     # Token should be deleted
         )
 
     def AðvörunAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -572,7 +579,7 @@ class ErrorFinder(ParseForestNavigator):
                 "borð við 'áður en', 'síðan', 'enda þótt' o.s.frv."
             ),
             original=txt,
-            suggest="",
+            suggest="",     # Token should be deleted
         )
 
     def AðvörunKomma(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -584,7 +591,7 @@ class ErrorFinder(ParseForestNavigator):
                 "('áður en ég fer [,] má sækja tölvuna') o.s.frv."
             ),
             original=",",
-            suggest="",
+            suggest="",     # Token should be deleted
         )
 
     def VillaNé(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -696,13 +703,15 @@ class ErrorFinder(ParseForestNavigator):
                 suggest=suggestion,
             )
         # In this case, there's no suggested correction
-        return dict(
-            text="Forsetningin '{0}' stýrir {1}falli.".format(
-                txt.split()[0].lower(), CASE_NAMES[variants]
-            ),
-        )
+        # and it is likely a wrong annotation causing false positives
+        return dict()
+        #return dict(
+        #    text="Forsetningin '{0}' stýrir {1}falli.".format(
+        #        txt.split()[0].lower(), CASE_NAMES[variants]
+        #    ),
+        #)
 
-    def SvigaInnihaldNl(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
+    def AðvörunSvigaInnihaldNl(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
         """ Explanatory noun phrase in a different case than the noun phrase
         that it explains """
         np = self._simple_tree(node)

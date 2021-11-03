@@ -290,18 +290,20 @@ class GreynirCorrect(Greynir):
             toktext = correct_spaces(
                 " ".join(t.txt for t in sent.tokens[start:end] if t.txt)
             )
-            ann.append(
-                # E001: Unable to parse sentence
-                Annotation(
-                    start=0,
-                    end=len(sent.tokens) - 1,
-                    code="E001",
-                    text="Málsgreinin fellur ekki að reglum",
-                    detail="Þáttun brást í kring um {0}. tóka ('{1}')".format(
-                        err_index + 1, toktext
-                    ),
-                )
-            )
+            # NOTE: Reporting unparsable sentences causes too many false positives,
+            #       token-level annotations are sufficient.
+            # ann.append(
+            #     # E001: Unable to parse sentence
+            #     Annotation(
+            #         start=0,
+            #         end=len(sent.tokens) - 1,
+            #         code="E001",
+            #         text="Málsgreinin fellur ekki að reglum",
+            #         detail="Þáttun brást í kring um {0}. tóka ('{1}')".format(
+            #             err_index + 1, toktext
+            #         ),
+            #     )
+            # )
         else:
             # Successfully parsed:
             # Add annotations for error-marked nonterminals from the grammar
