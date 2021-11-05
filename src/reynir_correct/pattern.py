@@ -606,10 +606,12 @@ class PatternMatcher:
                 subtree = m
                 break
         assert subtree is not None
+        suggest = ""
         if prep == "að":
             suggest = match.substituted_text(subtree, "af")
         elif prep == "af":
             suggest = match.substituted_text(subtree, "að")
+        assert suggest != ""  # All cases should be handled above
         return suggest
 
     def wrong_preposition_ahyggja_að(self, match: SimpleTree) -> None:
@@ -788,6 +790,7 @@ class PatternMatcher:
             "Orðasambandið 'vera mikið/lítið til af e-u' innifelur "
             "yfirleitt forsetninguna 'af', ekki 'að'."
         )
+        suggest = ""
         if "mikill" in match.lemmas:
             suggest = self.suggestion_complex(match, "mikill", "að")
         elif "lítið" in match.lemmas:
@@ -796,6 +799,7 @@ class PatternMatcher:
             suggest = self.suggestion_complex(match, "lítill", "að")
         elif "fullur" in match.lemmas:
             suggest = self.suggestion_complex(match, "fullur", "að")
+        assert suggest != ""
         self._ann.append(
             Annotation(
                 start=start,

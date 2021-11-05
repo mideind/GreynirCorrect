@@ -1071,7 +1071,7 @@ class Stats:
                                     cast(float, et["precision"]) * 100.0
                                     if "precision" in et
                                     else 0.0,
-                                    cast(float, fscore) * 100.0,
+                                    fscore * 100.0,
                                     cast(int, et["tp"]) if "tp" in et else 0,
                                     cast(int, et["fn"]) if "fn" in et else 0,
                                     cast(int, et["fp"]) if "fp" in et else 0,

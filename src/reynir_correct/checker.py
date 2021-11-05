@@ -64,7 +64,7 @@ from reynir import (
     ProgressFunc,
 )
 from reynir.incparser import ICELANDIC_RATIO
-from reynir.reynir import Job
+from reynir.reynir import DEFAULT_MAX_SENT_TOKENS, Job, ProgressFunc
 from reynir.bintokenizer import StringIterable
 from reynir.binparser import BIN_Grammar, BIN_Parser, VariantHandler
 from reynir.fastparser import (
@@ -147,8 +147,13 @@ class GreynirCorrect(Greynir):
     _reducer = None
     _lock = Lock()
 
-    def __init__(self) -> None:
+    def __init__(self, **options: Any) -> None:
         super().__init__()
+        self._annotate_unparsed_sentences = options.pop(
+            "annotate_unparsed_sentences", True
+        )
+        if options:
+            raise ValueError(f"Unknown option(s) for GreynirCorrect: {options}")
 
     def tokenize(self, text: StringIterable) -> Iterator[Tok]:
         """ Use the correcting tokenizer instead of the normal one """
@@ -281,29 +286,28 @@ class GreynirCorrect(Greynir):
                 )
             ]
         elif not parsed:
-            # If the sentence couldn't be parsed,
-            # put an annotation on it as a whole.
-            # In this case, we keep the token-level annotations.
-            err_index = sent.err_index or 0
-            start = max(0, err_index - 1)
-            end = min(len(sent.tokens), err_index + 2)
-            toktext = correct_spaces(
-                " ".join(t.txt for t in sent.tokens[start:end] if t.txt)
-            )
-            # NOTE: Reporting unparsable sentences causes too many false positives,
-            #       token-level annotations are sufficient.
-            # ann.append(
-            #     # E001: Unable to parse sentence
-            #     Annotation(
-            #         start=0,
-            #         end=len(sent.tokens) - 1,
-            #         code="E001",
-            #         text="Málsgreinin fellur ekki að reglum",
-            #         detail="Þáttun brást í kring um {0}. tóka ('{1}')".format(
-            #             err_index + 1, toktext
-            #         ),
-            #     )
-            # )
+            if self._annotate_unparsed_sentences:
+                # If the sentence couldn't be parsed,
+                # put an annotation on it as a whole.
+                # In this case, we keep the token-level annotations.
+                err_index = sent.err_index or 0
+                start = max(0, err_index - 1)
+                end = min(len(sent.tokens), err_index + 2)
+                toktext = correct_spaces(
+                    " ".join(t.txt for t in sent.tokens[start:end] if t.txt)
+                )
+                ann.append(
+                    # E001: Unable to parse sentence
+                    Annotation(
+                        start=0,
+                        end=len(sent.tokens) - 1,
+                        code="E001",
+                        text="Málsgreinin fellur ekki að reglum",
+                        detail="Þáttun brást í kring um {0}. tóka ('{1}')".format(
+                            err_index + 1, toktext
+                        ),
+                    )
+                )
         else:
             # Successfully parsed:
             # Add annotations for error-marked nonterminals from the grammar
@@ -319,7 +323,7 @@ class GreynirCorrect(Greynir):
         # codes for identical spans
         i = 1
         while i < len(ann):
-            a, prev = ann[i], ann[i-1]
+            a, prev = ann[i], ann[i - 1]
             if a.code == prev.code and a.start == prev.start and a.end == prev.end:
                 # Identical annotation: remove it from the list
                 del ann[i]
@@ -337,41 +341,51 @@ class GreynirCorrect(Greynir):
         return sent
 
 
-def check_single(sentence_text: str) -> Optional[Sentence]:
+def check_single(sentence_text: str, **options: Any) -> Optional[Sentence]:
     """ Check and annotate a single sentence, given in plain text """
     # Returns None if no sentence was parsed
-    rc = GreynirCorrect()
-    return rc.parse_single(sentence_text)
+    max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
+    rc = GreynirCorrect(**options)
+    return rc.parse_single(sentence_text, max_sent_tokens=max_sent_tokens)
 
 
-def check_tokens(tokens: Iterable[CorrectToken]) -> Optional[Sentence]:
+def check_tokens(tokens: Iterable[CorrectToken], **options: Any) -> Optional[Sentence]:
     """ Check and annotate a single sentence, given as a token list """
     # Returns None if no sentence was parsed
-    rc = GreynirCorrect()
-    return rc.parse_tokens(tokens)
+    max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
+    rc = GreynirCorrect(**options)
+    return rc.parse_tokens(tokens, max_sent_tokens=max_sent_tokens)
 
 
-def check(text: str, *, split_paragraphs: bool = False) -> Iterable[Paragraph]:
+def check(text: str, **options: Any) -> Iterable[Paragraph]:
     """ Return a generator of checked paragraphs of text,
         each being a generator of checked sentences with
         annotations """
-    rc = GreynirCorrect()
+    split_paragraphs = options.pop("split_paragraphs", False)
+    max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
+    rc = GreynirCorrect(**options)
     # This is an asynchronous (on-demand) parse job
-    job = rc.submit(text, parse=True, split_paragraphs=split_paragraphs)
+    job = rc.submit(
+        text,
+        parse=True,
+        split_paragraphs=split_paragraphs,
+        max_sent_tokens=max_sent_tokens,
+    )
     yield from job.paragraphs()
 
 
 def check_with_custom_parser(
     text: str,
     *,
-    split_paragraphs: bool = False,
     parser_class: Type[GreynirCorrect] = GreynirCorrect,
-    progress_func: ProgressFunc = None
+    progress_func: ProgressFunc = None,
+    split_paragraphs: bool = False,
+    annotate_unparsed_sentences: bool = True,
 ) -> CheckResult:
     """ Return a dict containing parsed paragraphs as well as statistics,
         using the given correction/parser class. This is a low-level
         function; normally check_with_stats() should be used. """
-    rc = parser_class()
+    rc = parser_class(annotate_unparsed_sentences=annotate_unparsed_sentences)
     job = rc.submit(
         text,
         parse=True,
@@ -383,14 +397,26 @@ def check_with_custom_parser(
     paragraphs = [[sent for sent in pg] for pg in job.paragraphs()]
     return CheckResult(
         paragraphs=paragraphs,
+        num_tokens=job.num_tokens,
         num_sentences=job.num_sentences,
         num_parsed=job.num_parsed,
-        num_tokens=job.num_tokens,
         ambiguity=job.ambiguity,
         parse_time=job.parse_time,
     )
 
 
-def check_with_stats(text: str, *, split_paragraphs: bool = False) -> CheckResult:
+def check_with_stats(
+    text: str,
+    *,
+    split_paragraphs: bool = False,
+    progress_func: ProgressFunc = None,
+    annotate_unparsed_sentences: bool = True,
+) -> CheckResult:
     """ Return a dict containing parsed paragraphs as well as statistics """
-    return check_with_custom_parser(text, split_paragraphs=split_paragraphs)
+    return check_with_custom_parser(
+        text,
+        split_paragraphs=split_paragraphs,
+        progress_func=progress_func,
+        annotate_unparsed_sentences=annotate_unparsed_sentences,
+    )
+

@@ -742,6 +742,9 @@ class SpellingSuggestion(Error):
         """ Return True if this suggestion would not work
             grammatically within the parsed sentence and should
             therefore be discarded """
+        if not token.is_word:
+            # We only perform this check for word tokens
+            return False
         matches_original = False
         matches_suggestion = False
         # Go through the meaning list, which includes BIN_Tuple tuples
@@ -2001,7 +2004,9 @@ def fix_capitalization(
                         correct = "-".join(
                             part.capitalize() for part in token.txt.split("-")
                         )
-                    elif " " in token.txt:
+                    elif " " in token.txt and token.kind != TOK.WORD:
+                        # For person and entity names, convert each part of
+                        # a multi-part name to upper case
                         correct = token.txt.title()
                     else:
                         correct = token.txt.capitalize()
