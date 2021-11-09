@@ -742,6 +742,8 @@ class Settings:
                 "morphemes": Settings._handle_morphemes,
                 "ow_forms": Settings._handle_ow_forms,
                 "error_forms": Settings._handle_error_forms,
+                "auto_ow": Settings._handle_ow_forms,
+                "auto_error": Settings._handle_error_forms,
             }
             handler = None  # Current section handler
 
