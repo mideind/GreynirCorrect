@@ -79,6 +79,7 @@ test/spantest.py
 
 # Error analysis
 eval/examples_iEC/
+eval/examples_GC/
 
 # Extra resources
 src/reynir_correct/resources/*.csv

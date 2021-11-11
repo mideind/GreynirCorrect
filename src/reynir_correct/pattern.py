@@ -1463,11 +1463,14 @@ class PatternMatcher:
     def doubledefinite(self, match: SimpleTree) -> None:
         """A definite noun appears with a definite pronoun,
         e.g. 'þessi maðurinn'"""
-        no = match.first_match("no")
+        no = match.first_match("no_gr")
         if no is None:
             return
         fn = match.first_match("fn")
         if fn is None:
+            return
+        comma = match.first_match("@\",\"")
+        if comma is not None:
             return
         fn_lemma = fn.lemma
         if fn_lemma not in {"sá", "þessi"}:
@@ -1481,7 +1484,7 @@ class PatternMatcher:
         v = BIN.lookup_variants(no.lemma, no.cat, tuple(variants))
         if not v:
             return
-        suggest = v[0].bmynd
+        suggest = v[0].bmynd.replace("-", "")
         text = (
             f"Hér ætti annaðhvort að sleppa '{fn.tidy_text}' eða "
             f"breyta '{no.tidy_text}' í '{suggest}'."
@@ -2443,7 +2446,6 @@ class PatternMatcher:
         # Article errors; demonstrative pronouns and nouns with an article
         cls.add_pattern(
             (
-                # TODO: The trigger lemmas originally included 'segja', is that correct?
                 frozenset(("sá", "þessi")),  # Trigger lemmas for this pattern
                 "NP > [.* fn .* no_gr]",
                 lambda self, match: self.doubledefinite(match),
