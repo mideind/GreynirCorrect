@@ -126,6 +126,9 @@ parser.add_argument(
     default=sys.stdout,
     help="UTF-8 output text file",
 )
+parser.add_argument(
+    "--text", help="Output cleaned text in raw text format", action="store_true"
+)
 
 group = parser.add_mutually_exclusive_group()
 group.add_argument(
@@ -258,6 +261,8 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
         for t in tokenize(gen(args.infile), **options):
             # Normal shallow parse, one line per sentence,
             # tokens separated by spaces
+            # Note this uses the tokenize function in errtokenizer.py
+            # instead of the one in Tokenizer
             curr_sent.append(t)
             if t.kind in TOK.END:
                 # End of sentence/paragraph
@@ -268,9 +273,7 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
 
     offset = 0
     for toklist in sentence_stream():
-
         len_tokens = len(toklist)
-
         # Invoke the spelling and grammar checker on the token list
         sent = check_tokens(toklist)
 
@@ -306,13 +309,12 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
 
         # Create a normalized form of the sentence
         cleaned = detokenize(toklist, normalize=True)
-
         # Extract the annotation list (defensive programming here)
         a: List[Annotation] = getattr(sent, "annotations", cast(List[Annotation], []))
         # Sort in ascending order by token start index, and then by end index
         # (more narrow/specific annotations before broader ones)
         a.sort(key=lambda ann: (ann.start, ann.end))
-
+            
         # Convert the annotations to a standard format before encoding in JSON
         annotations: List[AnnDict] = [
             AnnDict(
@@ -335,14 +337,34 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
             )
             for ann in a
         ]
+        if args.text:
+            if sent.tree is None:
+                # No need to do more, no grammar errors have been checked
+                print(cleaned)
+            else:
+                # We know we have a sent tree, can use that
+                # Use toklist and a
+                cleantoklist: List[CorrectToken] = toklist
+                for xann in a:
+                    if xann.start == xann.end:
+                        # Single-token grammar error, easy to correct
+                        cleantoklist[xann.start+1].txt = xann.suggest
+                    else:
+                        # "Okkur börnunum langar í fisk"
+                        pass
+                        #print("Found multiword correction:")
+                doubleclean = detokenize(cleantoklist, normalize=True)
+                print(doubleclean)
+        else:
+            # Create final dictionary for JSON encoding
+            ard = AnnResultDict(
+                original=cleaned, corrected=sent.tidy_text, tokens=tokens, annotations=annotations,
+            )
 
-        # Create final dictionary for JSON encoding
-        ard = AnnResultDict(
-            original=cleaned, corrected=sent.tidy_text, tokens=tokens, annotations=annotations,
-        )
+            print(json_dumps(ard), file=args.outfile)
 
-        print(json_dumps(ard), file=args.outfile)
-
+def check_all(args: argparse.Namespace, **options: Any) -> None:
+    pass
 
 def main() -> None:
     """ Main function, called when the 'correct' command is invoked """
@@ -356,8 +378,8 @@ def main() -> None:
         # apply most suggestions to the text
         options["apply_suggestions"] = True
 
-    if args.grammar:
-        # Check grammar, output a JSON object for each sentence
+    elif args.grammar:
+        # Check grammar, output a text or JSON object for each sentence
         check_grammar(args, **options)
     else:
         # Check spelling, output text or token objects in JSON or CSV form
