@@ -799,7 +799,8 @@ class PatternMatcher:
             suggest = self.suggestion_complex(match, "lítill", "að")
         elif "fullur" in match.lemmas:
             suggest = self.suggestion_complex(match, "fullur", "að")
-        assert suggest != ""
+        if suggest == "":
+            return
         self._ann.append(
             Annotation(
                 start=start,
