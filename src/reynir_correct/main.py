@@ -351,8 +351,11 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
                         cleantoklist[xann.start+1].txt = xann.suggest
                     else:
                         # "Okkur börnunum langar í fisk"
-                        pass
-                        #print("Found multiword correction:")
+                        # Only case is one ann, many toks in toklist
+                        allsuggs = xann.suggest.split(" ")
+                        i = 2
+                        for entry in allsuggs:
+                            cleantoklist[xann.start+i].txt = entry
                 doubleclean = detokenize(cleantoklist, normalize=True)
                 print(doubleclean)
         else:
