@@ -1576,6 +1576,7 @@ def lookup_unknown_words(
     token_stream: Iterable[CorrectToken],
     only_ci: bool,
     apply_suggestions: bool,
+    sss: bool,
 ) -> Iterator[CorrectToken]:
 
     """ Try to identify unknown words in the token stream, for instance
@@ -1833,7 +1834,7 @@ def lookup_unknown_words(
                 # ):
                 #    # Only allow single-letter corrections of a->á and i->í
                 #    pass
-                elif not apply_suggestions and only_suggest(token, m):
+                elif not apply_suggestions and not sss and only_suggest(token, m):
                     # We have a candidate correction but the original word does
                     # exist in BÍN, so we're not super confident: yield a suggestion
                     if Settings.DEBUG:
@@ -2448,6 +2449,8 @@ class CorrectionPipeline(DefaultPipeline):
         # If apply_suggestions is True, we are aggressive in modifying
         # tokens with suggested corrections, i.e. not just suggesting them
         self._apply_suggestions = options.pop("apply_suggestions", False)
+        # Skip spelling suggestions
+        self._sss = options.pop("sss", False)
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """ Add a correction pass just before BÍN annotation """
@@ -2473,7 +2476,7 @@ class CorrectionPipeline(DefaultPipeline):
         ct_stream = fix_capitalization(ct_stream, self._db, token_ctor, only_ci)
         # Fix single-word errors
         ct_stream = lookup_unknown_words(
-            self._corrector, token_ctor, ct_stream, only_ci, self._apply_suggestions
+            self._corrector, token_ctor, ct_stream, only_ci, self._apply_suggestions, self._sss
         )
         # Check taboo words
         if not only_ci:
