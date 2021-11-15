@@ -346,9 +346,16 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
                 # Use toklist and a
                 cleantoklist: List[CorrectToken] = toklist
                 for xann in a:
+                    if not xann.suggest:
+                        # Nothing to correct with, nothing we can do
+                        continue
                     if xann.start == xann.end:
                         # Single-token grammar error, easy to correct
-                        cleantoklist[xann.start+1].txt = xann.suggest
+                        if xann.suggest == "DELETE":
+                            # Token should be deleted.
+                            cleantoklist[xann.start+1].txt = ""
+                        else:
+                            cleantoklist[xann.start+1].txt = xann.suggest
                     else:
                         # "Okkur börnunum langar í fisk"
                         # Only case is one ann, many toks in toklist
