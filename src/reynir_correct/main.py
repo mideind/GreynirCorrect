@@ -129,7 +129,7 @@ parser.add_argument(
 parser.add_argument(
     "--text", help="Output cleaned text in raw text format", action="store_true"
 )
-
+0
 group = parser.add_mutually_exclusive_group()
 group.add_argument(
     "--csv", help="Output one token per line in CSV format", action="store_true"
@@ -340,7 +340,7 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
         if args.text:
             if sent.tree is None:
                 # No need to do more, no grammar errors have been checked
-                print(cleaned)
+                print(cleaned, file=args.outfile)
             else:
                 # We know we have a sent tree, can use that
                 # Use toklist and a
@@ -364,7 +364,7 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
                         for entry in allsuggs:
                             cleantoklist[xann.start+i].txt = entry
                 doubleclean = detokenize(cleantoklist, normalize=True)
-                print(doubleclean)
+                print(doubleclean, file=args.outfile)
         else:
             # Create final dictionary for JSON encoding
             ard = AnnResultDict(
@@ -372,9 +372,6 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
             )
 
             print(json_dumps(ard), file=args.outfile)
-
-def check_all(args: argparse.Namespace, **options: Any) -> None:
-    pass
 
 def main() -> None:
     """ Main function, called when the 'correct' command is invoked """
