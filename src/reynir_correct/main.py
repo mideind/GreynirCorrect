@@ -385,7 +385,7 @@ def main() -> None:
         # apply most suggestions to the text
         options["apply_suggestions"] = True
 
-    elif args.grammar:
+    if args.grammar:
         # Check grammar, output a text or JSON object for each sentence
         check_grammar(args, **options)
     else:
