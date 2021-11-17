@@ -721,6 +721,7 @@ class SpellingSuggestion(Error):
         a word might be misspelled. """
 
     # W001: Replacement suggested
+    # W002: A list of suggestions are suggested
 
     def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
         # Spelling suggestion codes start with "W"
@@ -1576,6 +1577,7 @@ def lookup_unknown_words(
     token_stream: Iterable[CorrectToken],
     only_ci: bool,
     apply_suggestions: bool,
+    suggestion_list: bool,
 ) -> Iterator[CorrectToken]:
 
     """ Try to identify unknown words in the token stream, for instance
@@ -2448,6 +2450,9 @@ class CorrectionPipeline(DefaultPipeline):
         # If apply_suggestions is True, we are aggressive in modifying
         # tokens with suggested corrections, i.e. not just suggesting them
         self._apply_suggestions = options.pop("apply_suggestions", False)
+        # If suggestion_list is True, we get a list of suggestions from
+        # the spelling suggestion module
+        self._suggestion_list = options.pop("suggestion_list", False)
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """ Add a correction pass just before BÍN annotation """
@@ -2473,7 +2478,12 @@ class CorrectionPipeline(DefaultPipeline):
         ct_stream = fix_capitalization(ct_stream, self._db, token_ctor, only_ci)
         # Fix single-word errors
         ct_stream = lookup_unknown_words(
-            self._corrector, token_ctor, ct_stream, only_ci, self._apply_suggestions
+            self._corrector,
+            token_ctor,
+            ct_stream,
+            only_ci,
+            self._apply_suggestions,
+            self._suggestion_list,
         )
         # Check taboo words
         if not only_ci:
