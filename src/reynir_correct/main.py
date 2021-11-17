@@ -142,10 +142,10 @@ group.add_argument(
 )
 
 parser.add_argument(
-    "skip_spelling_suggestion",
+    "suppress_suggestions",
     "--sss",
     action="store_true",
-    help="Create an analysis report for token results",
+    help="Suppress more agressive error suggestions",
 )
 
 def gen(f: Iterator[str]) -> Iterable[str]:
