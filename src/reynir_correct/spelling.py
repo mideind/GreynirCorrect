@@ -35,7 +35,7 @@
 
 """
 
-from typing import DefaultDict, List, Tuple, Set, Optional, Iterable, Callable
+from typing import DefaultDict, List, Tuple, Set, Union, Optional, Iterable, Callable
 from typing import TYPE_CHECKING
 
 import math
@@ -474,7 +474,29 @@ class Corrector:
         context: Tuple[str, ...],
         at_sentence_start: bool,
     ) -> str:
-        """ Find the best spelling correction for this word.
+        candidates = self._best_candidates(original_word, word, context, at_sentence_start)
+        if not candidates:
+            # No good candidates
+            return word
+        # Find the candidate with the highest probability
+        m = max(candidates, key=lambda t: t[1])
+        if m[1] < self._MIN_LOG_PROBABILITY and (
+            word in self.ngrams or original_word in self.ngrams
+        ):
+            # Best candidate is very unlikely: return the original word
+            # print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
+            return word
+        # Return the most likely word
+        return m[0]
+
+    def _best_candidates(
+        self,
+        original_word: str,
+        word: str,
+        context: Tuple[str, ...],
+        at_sentence_start: bool,
+    ) -> List[Tuple[str, float]]:
+        """ Find the best candidates for spelling correction for this word.
             Credits for parts of this elegant code are due to Peter Norvig,
             cf. http://nbviewer.jupyter.org/url/norvig.com/ipython/
             How%20to%20Do%20Things%20with%20Words.ipynb """
@@ -618,13 +640,13 @@ class Corrector:
             )
         if log_prob > self._UNIGRAM_ACCEPT_THRESHOLD:
             # print(f"The original word {word} is above the threshold, returning it")
-            return word
+            return []
         # Otherwise, generate replacement candidates
         candidates = list(gen_candidates(original_word, word))
         if not candidates:
             # No candidates beside the word itself: return it
             # print(f"Candidate {word} is only candidate, returning it")
-            return word
+            return []
         # Return the highest probability candidate
         if Settings.DEBUG:
             for i, (c, log_prob) in enumerate(
@@ -635,16 +657,16 @@ class Corrector:
                         i + 1, word, c, log_prob
                     )
                 )
-        # Find the candidate with the highest probability
-        m = max(candidates, key=lambda t: t[1])
-        if m[1] < self._MIN_LOG_PROBABILITY and (
-            word in self.ngrams or original_word in self.ngrams
-        ):
-            # Best candidate is very unlikely: return the original word
-            # print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
-            return word
-        # Return the most likely word
-        return m[0]
+        # Skip very unlikely candidates
+        best_candidates = list([x for x in candidates if not (
+            x[1] < self._MIN_LOG_PROBABILITY 
+            and (
+                word in self.ngrams 
+                or original_word in self.ngrams
+            )
+        )])
+        candsort = sorted(best_candidates, key=lambda t: t[1], reverse=True)
+        return candsort
 
     @staticmethod
     def _case_of(text: str) -> Callable[[str], str]:
@@ -696,6 +718,20 @@ class Corrector:
         return self._case_of(word)(
             self._correct(word, self._cast(word), context, at_sentence_start)
         )
+
+    def suggest_list(
+        self, 
+        word: str, 
+        *, 
+        context: Tuple[str, ...] = (), 
+        at_sentence_start: bool = False
+    ) -> List[Tuple[str, float]]:
+        """ Return a list of suggestions for a single word, keeping its case
+        (lower/upper/title) intact. The optional context parameter contains 
+        a tuple of preceding words, used to enable a more accurate probability 
+        prediction. """
+        x = self._best_candidates(word, self._cast(word), context, at_sentence_start)
+        return list([(self._case_of(word)(y[0]), y[1]) for y in x])
 
     def __getitem__(self, word: str) -> str:
         """ For the fun of it, support corrector["myword"] syntax """
