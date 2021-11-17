@@ -58,7 +58,8 @@ from typing_extensions import TypedDict
 from tokenizer import detokenize, normalized_text_from_tokens
 from tokenizer.definitions import AmountTuple, NumberTuple
 
-from .errtokenizer import TOK, CorrectToken, Error, tokenize
+from .errtokenizer import TOK, CorrectToken, Error
+from .errtokenizer import tokenize as errtokenize
 from .annotation import Annotation
 from .checker import check_tokens
 
@@ -127,9 +128,9 @@ parser.add_argument(
     help="UTF-8 output text file",
 )
 parser.add_argument(
-    "--text", help="Output cleaned text in raw text format", action="store_true"
+    "--text", help="Output corrected text only", action="store_true"
 )
-0
+
 group = parser.add_mutually_exclusive_group()
 group.add_argument(
     "--csv", help="Output one token per line in CSV format", action="store_true"
@@ -209,7 +210,7 @@ def check_spelling(args: argparse.Namespace, **options: Any) -> None:
     else:
         to_text = partial(detokenize, normalize=True)
 
-    for t in tokenize(gen(args.infile), **options):
+    for t in errtokenize(gen(args.infile), **options):
         if args.csv:
             # Output the tokens in CSV format, one line per token
             if t.txt:
@@ -258,7 +259,7 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
         """ Yield a stream of sentence token lists from the source text """
         # Initialize sentence accumulator list
         curr_sent: List[CorrectToken] = []
-        for t in tokenize(gen(args.infile), **options):
+        for t in errtokenize(gen(args.infile), **options):
             # Normal shallow parse, one line per sentence,
             # tokens separated by spaces
             # Note this uses the tokenize function in errtokenizer.py
@@ -314,7 +315,7 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
         # Sort in ascending order by token start index, and then by end index
         # (more narrow/specific annotations before broader ones)
         a.sort(key=lambda ann: (ann.start, ann.end))
-            
+   
         # Convert the annotations to a standard format before encoding in JSON
         annotations: List[AnnDict] = [
             AnnDict(
@@ -338,31 +339,25 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
             for ann in a
         ]
         if args.text:
-            if sent.tree is None:
+            arev = a.sort(key=lambda ann: (ann.start, ann.end))
+            if sent.tree is None or arev is None:
                 # No need to do more, no grammar errors have been checked
                 print(cleaned, file=args.outfile)
             else:
-                # We know we have a sent tree, can use that
-                # Use toklist and a
+                # We know we have a sentence tree, can use that
                 cleantoklist: List[CorrectToken] = toklist
-                for xann in a:
-                    if not xann.suggest:
+                for xann in arev:
+                    if xann.suggest is None:
                         # Nothing to correct with, nothing we can do
                         continue
-                    if xann.start == xann.end:
-                        # Single-token grammar error, easy to correct
-                        if xann.suggest == "DELETE":
-                            # Token should be deleted.
-                            cleantoklist[xann.start+1].txt = ""
-                        else:
-                            cleantoklist[xann.start+1].txt = xann.suggest
-                    else:
+                    cleantoklist[xann.start+1].txt = xann.suggest
+                    if xann.start != xann.end:
+                        # Annotation spans many tokens
                         # "Okkur börnunum langar í fisk"
                         # Only case is one ann, many toks in toklist
-                        allsuggs = xann.suggest.split(" ")
-                        i = 2
-                        for entry in allsuggs:
-                            cleantoklist[xann.start+i].txt = entry
+                        # Give the first token the correct value
+                        # Delete the other tokens
+                        del cleantoklist[xann.start+2:xann.end]
                 doubleclean = detokenize(cleantoklist, normalize=True)
                 print(doubleclean, file=args.outfile)
         else:

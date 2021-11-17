@@ -65,7 +65,7 @@ from .errtokenizer import emulate_case
 from .pattern import PatternMatcher
 
 # Typing stuff
-AnnotationDict = Dict[str, Union[str, int]]
+AnnotationDict = Dict[str, Union[str, int, None]]
 AnnotationTuple2 = Tuple[str, str]
 AnnotationTuple4 = Tuple[str, int, int, str]
 AnnotationTuple6 = Tuple[str, str, int, int,str, str]
@@ -313,7 +313,7 @@ class ErrorFinder(ParseForestNavigator):
             text="'{0}' er sennilega ofaukið".format(txt),
             detail="Yfirleitt nægir að nota 'en' í þessu samhengi.",
             original=orig_txt,
-            suggest="DELETE",     # Word should be deleted
+            suggest="",     # Word should be deleted
         )
 
     def AðvörunSíðan(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -326,7 +326,7 @@ class ErrorFinder(ParseForestNavigator):
                 "'fyrir tveimur dögum (síðan)'"
             ),
             original=emulate_case("síðan", template=orig_txt),
-            suggest="DELETE",
+            suggest="",
         )
 
     def VillaVístAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -567,7 +567,7 @@ class ErrorFinder(ParseForestNavigator):
                 " í stað 'sem og'."
             ),
             original=txt,
-            suggest="DELETE",     # Token should be deleted
+            suggest="",     # Token should be deleted
         )
 
     def AðvörunAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -579,7 +579,7 @@ class ErrorFinder(ParseForestNavigator):
                 "borð við 'áður en', 'síðan', 'enda þótt' o.s.frv."
             ),
             original=txt,
-            suggest="DELETE",     # Token should be deleted
+            suggest="",     # Token should be deleted
         )
 
     def AðvörunKomma(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -591,7 +591,7 @@ class ErrorFinder(ParseForestNavigator):
                 "('áður en ég fer [,] má sækja tölvuna') o.s.frv."
             ),
             original=",",
-            suggest="DELETE",     # Token should be deleted
+            suggest="",     # Token should be deleted
         )
 
     def VillaNé(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -644,7 +644,7 @@ class ErrorFinder(ParseForestNavigator):
                 start=start,
                 end=end,
                 original=origin,
-                suggest="", # No suggest value available
+                suggest=None, # No suggest value available
             )
         origin = so.tidy_text
         sostart, soend = so.span
@@ -978,7 +978,7 @@ class ErrorFinder(ParseForestNavigator):
                             verb, correct_case, wrong_case, personal
                         ),
                         original=verb,
-                        suggest="",  # No suggest value available
+                        suggest=None,  # No suggest value available
                     )
                 )
 
@@ -1054,7 +1054,7 @@ class ErrorFinder(ParseForestNavigator):
                         end=index,
                         code=code,
                         original=verb,
-                        suggest="",  # No suggest value available
+                        suggest=None,  # No suggest value available
                     )
                 )
 
