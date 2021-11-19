@@ -68,13 +68,15 @@ from .pattern import PatternMatcher
 AnnotationDict = Dict[str, Union[str, int, None]]
 AnnotationTuple2 = Tuple[str, str]
 AnnotationTuple4 = Tuple[str, int, int, str]
-AnnotationTuple6 = Tuple[str, str, int, int,str, str]
-AnnotationReturn = Union[str, AnnotationTuple2, AnnotationTuple4, AnnotationTuple6, AnnotationDict]
+AnnotationTuple6 = Tuple[str, str, int, int, str, str]
+AnnotationReturn = Union[
+    str, AnnotationTuple2, AnnotationTuple4, AnnotationTuple6, AnnotationDict
+]
 AnnotationFunc = Callable[[str, str, Node], AnnotationReturn]
 
 
 class CastFunction(Protocol):
-    """ Type annotation protocol for a case casting function """
+    """Type annotation protocol for a case casting function"""
 
     def fget(self, tree: SimpleTree) -> str:
         ...
@@ -135,15 +137,15 @@ ORDINALS = {
 
 class ErrorDetectionToken(BIN_Token):
 
-    """ A subclass of BIN_Token that adds error detection behavior
-    to the base class """
+    """A subclass of BIN_Token that adds error detection behavior
+    to the base class"""
 
     _VERB_ERROR_SUBJECTS = VerbSubjects.VERBS_ERRORS
 
     def __init__(self, t: Tok, original_index: int) -> None:
-        """ original_index is the index of this token in
+        """original_index is the index of this token in
         the original token list, as submitted to the parser,
-        including not-understood tokens such as quotation marks """
+        including not-understood tokens such as quotation marks"""
         super().__init__(t, original_index)
         # Store the capitalization state, carried over from CorrectToken instances.
         # The state is one of (None, "sentence_start", "after_ordinal", "in_sentence").
@@ -153,23 +155,23 @@ class ErrorDetectionToken(BIN_Token):
 
     @property
     def cap_sentence_start(self) -> bool:
-        """ True if this token appears at sentence start """
+        """True if this token appears at sentence start"""
         return self._cap == "sentence_start"
 
     @property
     def cap_after_ordinal(self) -> bool:
-        """ True if this token appears after an ordinal at sentence start """
+        """True if this token appears after an ordinal at sentence start"""
         return self._cap == "after_ordinal"
 
     @property
     def cap_in_sentence(self) -> bool:
-        """ True if this token appears within a sentence """
+        """True if this token appears within a sentence"""
         return self._cap == "in_sentence"
 
     @classmethod
     def verb_is_strictly_impersonal(cls, verb: str, form: str) -> bool:
-        """ Return True if the given verb should not be allowed to match
-        with a normal (non _op) verb terminal """
+        """Return True if the given verb should not be allowed to match
+        with a normal (non _op) verb terminal"""
         if "OP" in form and not VerbSubjects.is_strictly_impersonal(verb):
             # We have a normal terminal, but an impersonal verb form. However,
             # that verb is not marked with an error correction from nominative
@@ -185,7 +187,7 @@ class ErrorDetectionToken(BIN_Token):
 
     @classmethod
     def verb_cannot_be_impersonal(cls, verb: str, form: str) -> bool:
-        """ Return True if this verb cannot match an so_xxx_op terminal """
+        """Return True if this verb cannot match an so_xxx_op terminal"""
         # We have a relaxed condition here because we want to catch
         # verbs being used impersonally that shouldn't be. So we don't
         # check for "OP" (impersonal) in the form, but we're not so relaxed
@@ -202,17 +204,17 @@ class ErrorDetectionToken(BIN_Token):
 
     @classmethod
     def verb_subject_matches(cls, verb: str, subj: str) -> bool:
-        """ Returns True if the given subject type/case is allowed
+        """Returns True if the given subject type/case is allowed
         for this verb or if it is an erroneous subject
-        which we can flag """
+        which we can flag"""
         return subj in cls._VERB_SUBJECTS.get(
             verb, set()
         ) or subj in cls._VERB_ERROR_SUBJECTS.get(verb, dict())
 
     @classmethod
     def verb_matches_arguments(cls, key: str) -> bool:
-        """ Return True if the given arguments are allowed for this verb 
-        or if these are erroneous arguments which we can flag """
+        """Return True if the given arguments are allowed for this verb
+        or if these are erroneous arguments which we can flag"""
         # This function overrides BIN_Token.verb_matches_arguments()
         return VerbFrame.matches_arguments(key) or VerbFrame.matches_error_arguments(
             key
@@ -221,9 +223,9 @@ class ErrorDetectionToken(BIN_Token):
 
 class ErrorFinder(ParseForestNavigator):
 
-    """ Utility class to find nonterminals in parse trees that are
+    """Utility class to find nonterminals in parse trees that are
     tagged as errors in the grammar, and terminals matching
-    verb forms marked as errors """
+    verb forms marked as errors"""
 
     _CAST_FUNCTIONS: Dict[str, CastFunction] = {
         "nf": cast(CastFunction, SimpleTree.nominative_np),
@@ -252,24 +254,24 @@ class ErrorFinder(ParseForestNavigator):
         self._terminal_nodes = sent.terminal_nodes
 
     def run(self) -> Any:
-        """ Start navigating the deep tree structure of the sentence """
+        """Start navigating the deep tree structure of the sentence"""
         return super().go(self._sent.deep_tree)
 
     @staticmethod
     def node_span(node: Node) -> Tuple[int, int]:
-        """ Return the start and end indices of the tokens
-        spanned by the given node """
+        """Return the start and end indices of the tokens
+        spanned by the given node"""
         first_token, last_token = node.token_span
         return (first_token.index, last_token.index)
 
     def cast_to_case(self, case: str, tree: SimpleTree) -> str:
-        """ Return the contents of a noun phrase node
-        inflected in the given case """
+        """Return the contents of a noun phrase node
+        inflected in the given case"""
         return self._CAST_FUNCTIONS[case].fget(tree)
 
     def _simple_tree(self, node: Node) -> Optional[SimpleTree]:
-        """ Return a SimpleTree instance spanning the deep tree
-        of which node is the root """
+        """Return a SimpleTree instance spanning the deep tree
+        of which node is the root"""
         if node is None:
             return None
         first, last = self.node_span(node)
@@ -277,13 +279,13 @@ class ErrorFinder(ParseForestNavigator):
         return SimpleTree.from_deep_tree(node, toklist, first_token_index=first)
 
     def node_text(self, node: Node, original_case: bool = False) -> str:
-        """ Return the text within the span of the node """
+        """Return the text within the span of the node"""
 
         def text(t: Tok) -> str:
-            """ If the token t is a word token, return a lower case
+            """If the token t is a word token, return a lower case
             version of its text, unless we have a reason to keep
             the original case, i.e. if it is a lemma that is upper case
-            in BÍN """
+            in BÍN"""
             if t.kind != TOK.WORD:
                 # Not a word token: keep the original text
                 return t.txt
@@ -313,7 +315,7 @@ class ErrorFinder(ParseForestNavigator):
             text="'{0}' er sennilega ofaukið".format(txt),
             detail="Yfirleitt nægir að nota 'en' í þessu samhengi.",
             original=orig_txt,
-            suggest="",     # Word should be deleted
+            suggest="",  # Word should be deleted
         )
 
     def AðvörunSíðan(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -357,7 +359,7 @@ class ErrorFinder(ParseForestNavigator):
         ch = children[-1]
         if ch:
             start, end = self.node_span(ch)
-            orig_txt =self.node_text(ch, original_case=True)
+            orig_txt = self.node_text(ch, original_case=True)
         return dict(
             text="'{0}' á sennilega að vera '{0} að'".format(txt),
             detail=(
@@ -457,8 +459,8 @@ class ErrorFinder(ParseForestNavigator):
     def singular_error(
         self, txt: str, variants: str, node: Node, detail: str
     ) -> AnnotationReturn:
-        """ Annotate a mismatch between singular and plural
-        in subject vs. verb """
+        """Annotate a mismatch between singular and plural
+        in subject vs. verb"""
         tnode = self._terminal_nodes[node.start]
         # Find the enclosing inflected phrase
         ip = tnode.enclosing_tag("IP")
@@ -478,7 +480,9 @@ class ErrorFinder(ParseForestNavigator):
             start, end = so.span
             vars = set(so.all_variants) - {"ft"}
             vars.add("et")
-            suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, so.cat, vars)
+            suggest = PatternMatcher.get_wordform(
+                so.text.lower(), so.lemma, so.cat, vars
+            )
             return dict(
                 text=(
                     "Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(
@@ -491,9 +495,7 @@ class ErrorFinder(ParseForestNavigator):
                 original=so.tidy_text,
                 suggest=suggest,
             )
-        return (
-            f"Sögn sem á við '{txt}' á sennilega að vera í eintölu, ekki fleirtölu"
-        )
+        return f"Sögn sem á við '{txt}' á sennilega að vera í eintölu, ekki fleirtölu"
 
     def VillaFjöldiHluti(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
         # Sögn sem á við 'fjöldi Evrópuríkja' á að vera í eintölu
@@ -508,22 +510,24 @@ class ErrorFinder(ParseForestNavigator):
             return "Sögnin á sennilega að vera í eintölu eins og frumlagið"
         start, end = verb.span
         children = list(node.enum_child_nodes())
-        _, ch1,ch2 = children
+        _, ch1, ch2 = children
         if ch1 is None or ch2 is None:
             return "Sögnin á sennilega að vera í eintölu eins og frumlagið"
         subjtext = self.node_text(ch1) + " " + self.node_text(ch2)
         vars = set(verb.all_variants) - {"ft"}
         vars.add("et")
-        suggestion = PatternMatcher.get_wordform(verb.text.lower(), verb.lemma, verb.cat, vars)
+        suggestion = PatternMatcher.get_wordform(
+            verb.text.lower(), verb.lemma, verb.cat, vars
+        )
         return dict(
             text=f"Sögnin '{verb.tidy_text}' á sennilega að vera í eintölu eins og frumlagið '{subjtext}'",
-            detail= f"Orðið '{self.node_text(ch1)}' stjórnar tölu sagnarinnar svo hún á að vera í eintölu.",
+            detail=f"Orðið '{self.node_text(ch1)}' stjórnar tölu sagnarinnar svo hún á að vera í eintölu.",
             start=start,
             end=end,
             original=verb.tidy_text,
             suggest=suggestion,
         )
-    
+
     def VillaEinnAf(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
         # Sögn sem á við 'einn af drengjunum' á að vera í eintölu
         return self.singular_error(
@@ -567,7 +571,7 @@ class ErrorFinder(ParseForestNavigator):
                 " í stað 'sem og'."
             ),
             original=txt,
-            suggest="",     # Token should be deleted
+            suggest="",  # Token should be deleted
         )
 
     def AðvörunAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -579,7 +583,7 @@ class ErrorFinder(ParseForestNavigator):
                 "borð við 'áður en', 'síðan', 'enda þótt' o.s.frv."
             ),
             original=txt,
-            suggest="",     # Token should be deleted
+            suggest="",  # Token should be deleted
         )
 
     def AðvörunKomma(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -591,7 +595,7 @@ class ErrorFinder(ParseForestNavigator):
                 "('áður en ég fer [,] má sækja tölvuna') o.s.frv."
             ),
             original=",",
-            suggest="",     # Token should be deleted
+            suggest="",  # Token should be deleted
         )
 
     def VillaNé(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -644,7 +648,7 @@ class ErrorFinder(ParseForestNavigator):
                 start=start,
                 end=end,
                 original=origin,
-                suggest=None, # No suggest value available
+                suggest=None,  # No suggest value available
             )
         origin = so.tidy_text
         sostart, soend = so.span
@@ -659,9 +663,7 @@ class ErrorFinder(ParseForestNavigator):
             v.add("et")
         suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, "so", v)
         return dict(
-            text="Sögnin á sennilega að vera í {1}, þ.e. '{0}'".format(
-                suggest, number
-            ),
+            text="Sögnin á sennilega að vera í {1}, þ.e. '{0}'".format(suggest, number),
             detail=detail,
             start=start,
             end=end,
@@ -694,7 +696,8 @@ class ErrorFinder(ParseForestNavigator):
                 text="Á sennilega að vera '{0}'".format(correct_np),
                 detail=(
                     "Forsetningin '{0}' stýrir {1}falli.".format(
-                        preposition.lower(), CASE_NAMES[variants],
+                        preposition.lower(),
+                        CASE_NAMES[variants],
                     )
                 ),
                 start=start,
@@ -705,15 +708,17 @@ class ErrorFinder(ParseForestNavigator):
         # In this case, there's no suggested correction
         # and it is likely a wrong annotation causing false positives
         return dict()
-        #return dict(
+        # return dict(
         #    text="Forsetningin '{0}' stýrir {1}falli.".format(
         #        txt.split()[0].lower(), CASE_NAMES[variants]
         #    ),
-        #)
+        # )
 
-    def AðvörunSvigaInnihaldNl(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
-        """ Explanatory noun phrase in a different case than the noun phrase
-        that it explains """
+    def AðvörunSvigaInnihaldNl(
+        self, txt: str, variants: str, node: Node
+    ) -> AnnotationReturn:
+        """Explanatory noun phrase in a different case than the noun phrase
+        that it explains"""
         np = self._simple_tree(node)
         assert np is not None
         suggest = self.cast_to_case(variants, np)
@@ -725,7 +730,7 @@ class ErrorFinder(ParseForestNavigator):
         )
 
     def VillaSíðastLiðinn(self, txt: str, variants: str, node: Node) -> AnnotationDict:
-        """ 'síðast liðinn' written in two words instead of one """
+        """'síðast liðinn' written in two words instead of one"""
         correct = txt.replace(" ", "")
         return dict(
             text="Venjulega er ritað '{0}'".format(correct),
@@ -795,10 +800,10 @@ class ErrorFinder(ParseForestNavigator):
             return dict()
         if self._sent.tree is None:
             return dict()
-        subjwhole = self._sent.tree.first_match("NP-SUBJ >> { \"manns\" }")
+        subjwhole = self._sent.tree.first_match('NP-SUBJ >> { "manns" }')
         if subjwhole is None:
             return dict()
-        ip = subjwhole.enclosing_tag("IP")            
+        ip = subjwhole.enclosing_tag("IP")
         if ip is None:
             return dict()
         so = ip.first_match("so_et")
@@ -819,8 +824,8 @@ class ErrorFinder(ParseForestNavigator):
 
     @staticmethod
     def find_verb_subject(tnode: SimpleTree) -> Optional[SimpleTree]:
-        """ Starting with a verb terminal node, attempt to find
-        the verb's subject noun phrase """
+        """Starting with a verb terminal node, attempt to find
+        the verb's subject noun phrase"""
         subj: Optional[SimpleTree] = None
         # TODO does this belong in pattern.py?
         # First, check within the enclosing verb phrase
@@ -848,8 +853,8 @@ class ErrorFinder(ParseForestNavigator):
 
     @staticmethod
     def find_verb_direct_object(tnode: SimpleTree) -> Optional[SimpleTree]:
-        """ Starting with a verb terminal node, attempt to find the 
-        verb's direct object noun phrase """
+        """Starting with a verb terminal node, attempt to find the
+        verb's direct object noun phrase"""
         obj: Optional[SimpleTree] = None
         vp = tnode.enclosing_tag("VP")
         if vp is None:
@@ -876,7 +881,7 @@ class ErrorFinder(ParseForestNavigator):
         return obj
 
     def _annotate_ordinal(self, node: Node) -> None:
-        """ Check for errors in ordinal number terminals ("2.") and annotate them """
+        """Check for errors in ordinal number terminals ("2.") and annotate them"""
         token = cast("ErrorDetectionToken", node.token)
         if token is None or token.t0 != TOK.ORDINAL:
             # The matched token is not a numeric ordinal: no complaint
@@ -916,7 +921,7 @@ class ErrorFinder(ParseForestNavigator):
         )
 
     def _annotate_verb(self, node: Node) -> None:
-        """ Annotate a verb (so) terminal """
+        """Annotate a verb (so) terminal"""
         # TODO does this belong in pattern.py?
         terminal = cast(BIN_Terminal, node.terminal)
         tnode = self._terminal_nodes[node.start]
@@ -925,8 +930,8 @@ class ErrorFinder(ParseForestNavigator):
         def annotate_wrong_subject_case(
             subj_case_abbr: str, correct_case_abbr: str
         ) -> None:
-            """ Create an annotation that describes a verb having a subject
-            in the wrong case """
+            """Create an annotation that describes a verb having a subject
+            in the wrong case"""
             wrong_case = CASE_NAMES[subj_case_abbr]
             # Retrieve the correct case
             correct_case = CASE_NAMES[correct_case_abbr]
@@ -983,7 +988,7 @@ class ErrorFinder(ParseForestNavigator):
                 )
 
         def annotate_wrong_op_verb_form(verb: str, correct: str, detail: str) -> None:
-            """ Annotate wrong impersonal verb forms, such as 'Mér lýst' """
+            """Annotate wrong impersonal verb forms, such as 'Mér lýst'"""
             token = node.token
             assert token is not None
             index = token.index
@@ -1002,8 +1007,8 @@ class ErrorFinder(ParseForestNavigator):
             )
 
         def annotate_wrong_obj_case(obj_case_abbr: str, correct_case_abbr: str) -> None:
-            """ Create an annotation that describes a verb having a direct object
-            in the wrong case """
+            """Create an annotation that describes a verb having a direct object
+            in the wrong case"""
             wrong_case = CASE_NAMES[obj_case_abbr]
             # Retrieve the correct case
             correct_case = CASE_NAMES[correct_case_abbr]
@@ -1125,7 +1130,7 @@ class ErrorFinder(ParseForestNavigator):
         check_subj()
 
     def visit_token(self, level: int, w: Node) -> None:
-        """ Entering a terminal/token match node """
+        """Entering a terminal/token match node"""
         terminal = cast(BIN_Terminal, w.terminal)
         if terminal.category == "so":
             self._annotate_verb(w)
@@ -1135,7 +1140,7 @@ class ErrorFinder(ParseForestNavigator):
         #    self._annotate_ordinal(w)
 
     def visit_nonterminal(self, level: int, node: Node) -> Any:
-        """ Entering a nonterminal node """
+        """Entering a nonterminal node"""
         if node.is_interior or node.nonterminal is None or node.nonterminal.is_optional:
             # Not an interesting node
             return None
@@ -1183,7 +1188,9 @@ class ErrorFinder(ParseForestNavigator):
                 elif len(ann) == 4:
                     ann_text, start, end, suggestion = cast(AnnotationTuple4, ann)
                 elif len(ann) == 6:
-                    ann_text, ann_detail, start, end, original, suggestion = cast(AnnotationTuple6, ann)
+                    ann_text, ann_detail, start, end, original, suggestion = cast(
+                        AnnotationTuple6, ann
+                    )
             else:
                 if len(ann) == 0:
                     # Empty dict: this means that upon closer inspection,
