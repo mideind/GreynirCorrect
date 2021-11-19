@@ -35,6 +35,7 @@
 """
 
 from typing import (
+    Callable,
     Mapping,
     Sequence,
     cast,
@@ -312,7 +313,8 @@ class CorrectToken(Tok):
             TOK.descr[self.kind], self.txt, self.val, self.original
         )
 
-    __str__ = __repr__
+    # Pylance currently needs a cast for this to work
+    __str__ = cast(Callable[[object], str], __repr__)
 
     def concatenate(
         self, other: Tok, *, separator: str = "", metadata_from_other: bool = False
@@ -1607,11 +1609,9 @@ def lookup_unknown_words(
     def replace_word(
         code: int, token: CorrectToken, corrected: str, corrected_display: Optional[str]
     ) -> CorrectToken:
-
         """ Return a token for a corrected version of token_txt,
             marked with a SpellingError if corrected_display is
             a string containing the corrected word to be displayed """
-
         _, m = db.lookup_g(corrected, at_sentence_start)
         ct = token_ctor.Word(corrected, m, token=token if corrected_display else None)
         if corrected_display:
@@ -1688,6 +1688,7 @@ def lookup_unknown_words(
         return (not m) or "-" in m[0].stofn
 
     for token in token_stream:
+
         if token.kind == TOK.S_BEGIN:
             yield token
             # A new sentence is starting
@@ -1695,12 +1696,14 @@ def lookup_unknown_words(
             context = tuple()
             parenthesis_stack = []
             continue
+
         # Store the previous context in case we need to construct
         # a new current context (after token substitution)
         prev_context = context
         if token.txt:
             # Maintain a context trigram, ending with the current token
             context = (prev_context + tuple(token.txt.split()))[-3:]
+
         if token.kind == TOK.PUNCTUATION or token.kind == TOK.ORDINAL:
             # Manage the parenthesis stack
             if token.txt in PARENS:

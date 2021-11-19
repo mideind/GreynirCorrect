@@ -1748,5 +1748,39 @@ def test_compounds():
     check_sentence(s, [])
 
 
+def test_styles():
+    a = rc.check_single("Spanendurnir afdjöfluðu á afarorðunum.")
+    assert len(a.annotations) == 3
+    assert a.annotations[0].code == "Y001/w"
+    assert "úrelt" in a.annotations[0].detail
+    assert a.annotations[1].code == "Y001/w"
+    assert "sjaldgæft" in a.annotations[1].detail
+    assert a.annotations[2].code == "Y001/w"
+    assert "úrelt" in a.annotations[2].detail
+    a = rc.check_single("Jón átti höfundarétt og spaghetti fyrir sveitastjórnarkosningarnar.")
+    assert len(a.annotations) == 3
+    assert a.annotations[0].code == "Y001/w"
+    assert "villa" in a.annotations[0].detail
+    assert "höfundarétt" in a.annotations[0].detail
+    assert "spagettí" in a.annotations[1].text
+    assert a.annotations[2].code == "Y001/w"
+    assert "villa" in a.annotations[2].detail
+    assert "sveitastjórnarkosningarnar" in a.annotations[2].detail
+    a = rc.check_single("Kamesið mitt er ferlega óhreint.")
+    assert len(a.annotations) == 1
+    assert a.annotations[0].code == "Y001/w"
+    assert "úrelt" in a.annotations[0].detail
+    assert "Kamesið" in a.annotations[0].detail
+    assert "Kamersið" in a.annotations[0].detail
+    assert a.annotations[0].suggest == "Kamersið"
+    a = rc.check_single("Páll kyngdi belgverska konfektinu.")
+    assert len(a.annotations) == 1
+    assert a.annotations[0].code == "Y001/w"
+    assert "gamalt" in a.annotations[0].detail
+    assert "belgverska" in a.annotations[0].detail
+    assert "belgíska" in a.annotations[0].detail
+    assert a.annotations[0].suggest == "belgíska"
+
+
 if __name__ == "__main__":
     pass
