@@ -43,7 +43,7 @@ from test_annotator import check_sentence  # type: ignore
 
 @pytest.fixture(scope="module")
 def rc():
-    """ Provide a module-scoped GreynirCorrect instance as a test fixture """
+    """Provide a module-scoped GreynirCorrect instance as a test fixture"""
     r = reynir_correct.GreynirCorrect()
     yield r
     # Do teardown here
@@ -98,7 +98,7 @@ def test_verb_af(rc):
 
     s = "Jón hefur ekki lagt hann af velli."
     # TODO "af velli" ends up under "hann"
-    #check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AF")])
+    # check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AF")])
 
     s = "Jón leiðir líkur af því."
     check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AF")])
@@ -129,14 +129,14 @@ def test_verb_af(rc):
 
     s = "Jón spyr af því."
     # TODO not picked up
-    #check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AF")])
+    # check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AF")])
 
     s = "Það sem Jón spurði ekki af var óljóst."
     check_sentence(rc, s, [(2, 5, "P_WRONG_PREP_AF")])
 
     s = "Jón stuðlar af því."
     # TODO not picked up
-    #check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AF")])
+    # check_sentence(rc, s, [(1, 2, "P_WRONG_PREP_AF")])
 
     s = "Honum varð af ósk sinni."
     check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AF")])
@@ -171,14 +171,14 @@ def test_noun_af(rc):
     check_sentence(rc, s, [(0, 1, "P_WRONG_PREP_AF")])
     s = "Drög af verkefninu eru tilbúin."
     check_sentence(rc, s, [(0, 1, "P_WRONG_PREP_AF")])
-#    s = "Þau kláruðu drög af verkefninu."
-#    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AF")])
+    #    s = "Þau kláruðu drög af verkefninu."
+    #    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AF")])
     s = "Grunnur af verkefninu er tilbúinn."
     check_sentence(rc, s, [(0, 1, "P_WRONG_PREP_AF")])
-#    s = "Hann lagði ekki grunninn af verkefninu."
-#    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
-#    s = "Þau gerðu leit af dótinu."
-#    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AF")])
+    #    s = "Hann lagði ekki grunninn af verkefninu."
+    #    check_sentence(rc, s, [(3, 4, "P_WRONG_PREP_AF")])
+    #    s = "Þau gerðu leit af dótinu."
+    #    check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AF")])
     s = "Leit af dótinu hefur ekki skilað árangri."
     check_sentence(rc, s, [(0, 1, "P_WRONG_PREP_AF")])
     s = "Þetta er lykillinn af velgengni."
@@ -194,8 +194,8 @@ def test_verb_að(rc):
     check_sentence(rc, s, [(4, 6, "P_WRONG_PREP_AÐ")])
     s = "Vissulega er hægt að vera hluti að heildinni."
     check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
-#    s = "Þeir sögðu að ég hefði verið hluti að heildinni."   # Annotation variable depending on parsing
-#    check_sentence(rc, s, [(6, 8, "P_WRONG_PREP_AÐ")])
+    #    s = "Þeir sögðu að ég hefði verið hluti að heildinni."   # Annotation variable depending on parsing
+    #    check_sentence(rc, s, [(6, 8, "P_WRONG_PREP_AÐ")])
     s = "Að öllu óbreyttu er hann hluti að heildinni."
     check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
     s = "Ég vildi vera hluti að heildinni að mestu leyti."
@@ -211,7 +211,7 @@ def test_verb_að(rc):
     s = "Ég hef áhyggjur að því að honum líði illa."
     check_sentence(rc, s, [(2, 8, "P_WRONG_PREP_AÐ")])
     s = "Ég lagði ekki mikið að mörkum."
-    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")]) 
+    check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
     s = "Ég hafði lagt mikið að mörkum."
     check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
     s = "Sama hvað ég gerði lagði ég mikið að mörkum."
@@ -258,12 +258,12 @@ def test_verb_að(rc):
     check_sentence(rc, s, [(4, 6, "P_WRONG_PREP_AÐ")])
     s = "Hætta hefur aldrei stafað að þessu."
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
-#    s = "Að mínu mati stafar ekki hætta að þessu."  # Annotation variable depending on parse
-#    check_sentence(rc, s, [(3, 7, "P_WRONG_PREP_AÐ")])
+    #    s = "Að mínu mati stafar ekki hætta að þessu."  # Annotation variable depending on parse
+    #    check_sentence(rc, s, [(3, 7, "P_WRONG_PREP_AÐ")])
     s = "Hún er ólétt að sínu þriðja barni."
     check_sentence(rc, s, [(2, 3, "P_WRONG_PREP_AÐ")])
-#    s = "Það kom henni á óvart að hún væri ólétt að strák." # Annotation variable depending on parse
-#    check_sentence(rc, s, [(8, 9, "P_WRONG_PREP_AÐ")])
+    #    s = "Það kom henni á óvart að hún væri ólétt að strák." # Annotation variable depending on parse
+    #    check_sentence(rc, s, [(8, 9, "P_WRONG_PREP_AÐ")])
     s = "Að öllu leyti eru öll ólétt að stelpum."
     check_sentence(rc, s, [(2, 4, "P_WRONG_PREP_AÐ")])
     s = "Hann hefur ekki heyrt að lausa starfinu."
@@ -272,12 +272,12 @@ def test_verb_að(rc):
     check_sentence(rc, s, [(1, 4, "P_WRONG_PREP_AÐ")])
     s = "Ég hef aldrei haft gaman að henni."
     check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
-#    s = "Ég sagði að ég hefði gaman að henni."  # Annotation variable depending on parse
-#    check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
+    #    s = "Ég sagði að ég hefði gaman að henni."  # Annotation variable depending on parse
+    #    check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
     s = "Þau voru sérstaklega valin að stjórninni."
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AÐ")])
-    s = "Þú ert valinn að guði að okkar mati."
-    check_sentence(rc, s, [(1, 7, "P_WRONG_PREP_AÐ")])
+    #    s = "Þú ert valinn að guði að okkar mati."  # Annotation variable depending on parse
+    #    check_sentence(rc, s, [(1, 7, "P_WRONG_PREP_AÐ")])
     s = "Það er til mjög lítið að mjólk."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Ekki er mikið til að mjólk."
@@ -296,7 +296,7 @@ def test_verb_að(rc):
     check_sentence(rc, s, [(4, 5, "P_aðaf")])
     s = "Hún hefur ekki gert þetta að miklum krafti."
     check_sentence(rc, s, [(5, 7, "P_WRONG_PREP_AÐ")])
-    
+
 
 def test_placename_pp(rc):
     s = "Ég hef búið á Hafnarfirði alla mína tíð en flyt nú í Akureyri."
@@ -319,41 +319,42 @@ def test_verb_líst(rc):
     # TODO: The following gets no annotation:
     # 'Ég verð að segja að mér lýst ekkert á þetta.'
 
+
 def test_dir_loc(rc):
     s = "Börnin voru út á túni allan daginn."
     check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
     s = "Börnin voru útá túni allan daginn."
     check_sentence(rc, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
-#    s = "Út í heimi er þetta öðruvísi."
-#    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
-#    s = "Útí heimi er þetta öðruvísi."
-#    check_sentence(rc, s, [(0, 1, "P_DIR_LOC")])
+    #    s = "Út í heimi er þetta öðruvísi."
+    #    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
+    #    s = "Útí heimi er þetta öðruvísi."
+    #    check_sentence(rc, s, [(0, 1, "P_DIR_LOC")])
     s = "Börnin voru inn á vellinum allan daginn."
     check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
     s = "Börnin voru inná vellinum allan daginn."
     check_sentence(rc, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
-#    s = "Hann var oft upp á hestinum."
-#    check_sentence(rc, s, [(3, 5, "P_DIR_LOC")])
+    #    s = "Hann var oft upp á hestinum."
+    #    check_sentence(rc, s, [(3, 5, "P_DIR_LOC")])
     s = "Málið liggur í augum upp."
     check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
-#    s = "Þau eru alltaf uppí bústað."
-#    check_sentence(rc, s, [(1, 4, "P_DIR_LOC"), (3, 3, "W001/w")])     # Span is either 1,4 or 3,4 (depending on parsing), but always corrected.
+    #    s = "Þau eru alltaf uppí bústað."
+    #    check_sentence(rc, s, [(1, 4, "P_DIR_LOC"), (3, 3, "W001/w")])     # Span is either 1,4 or 3,4 (depending on parsing), but always corrected.
     s = "Hún var niður í bæ í gær."
     check_sentence(rc, s, [(1, 5, "P_DIR_LOC")])
-#    s = "Ég varð mér út um smá mat."
-#    check_sentence(rc, s, [(3, 6, "P_DIR_LOC")])
-#    s = "Þegar upp er staðið erum við öll eins."
-#    check_sentence(rc, s, [(1, 3, "P_DIR_LOC")])
-#    s = "Út í heimi er þetta öðruvísi."
-#    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
+    #    s = "Ég varð mér út um smá mat."
+    #    check_sentence(rc, s, [(3, 6, "P_DIR_LOC")])
+    #    s = "Þegar upp er staðið erum við öll eins."
+    #    check_sentence(rc, s, [(1, 3, "P_DIR_LOC")])
+    #    s = "Út í heimi er þetta öðruvísi."
+    #    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
     s = "Börnin safnast saman inn í búð."
     check_sentence(rc, s, [(3, 5, "P_DIR_LOC")])
     s = "Ég keypti þetta út í búð."
     check_sentence(rc, s, [(3, 5, "P_DIR_LOC")])
     s = "Illgresið er út um allt."
     check_sentence(rc, s, [(2, 4, "P_DIR_LOC")])
-#    s = "Hann læsti sig inn í gær."
-#    check_sentence(rc, s, [(1, 4, "P_DIR_LOC")])
+    #    s = "Hann læsti sig inn í gær."
+    #    check_sentence(rc, s, [(1, 4, "P_DIR_LOC")])
     s = "Hún gaf það upp í fréttum."
     check_sentence(rc, s, [])
     s = "Ég ólst upp í Breiðholtinu."
