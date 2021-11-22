@@ -316,7 +316,7 @@ class GreynirCorrect(Greynir):
                 # Check whether the token meanings are all marked with
                 # style warnings in BÍN
                 _, k_meanings = db.lookup_ksnid(t.txt)
-                if all(style_warning(k) for k in k_meanings):
+                if k_meanings and all(style_warning(k) for k in k_meanings):
                     # Every meaning has a style warning in BÍN: Annotate it.
                     # We use the first meaning only, but theoretically there could
                     # be different annotations for different meanings.
