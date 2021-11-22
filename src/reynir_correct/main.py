@@ -350,13 +350,13 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
                         # Nothing to correct with, nothing we can do
                         continue
                     cleantoklist[xann.start + 1].txt = xann.suggest
-                    if xann.start != xann.end:
+                    if xann.end > xann.start:
                         # Annotation spans many tokens
                         # "Okkur börnunum langar í fisk"
                         # Only case is one ann, many toks in toklist
                         # Give the first token the correct value
                         # Delete the other tokens
-                        del cleantoklist[xann.start + 2 : xann.end]
+                        del cleantoklist[xann.start + 2 : xann.end + 2]
                 doubleclean = detokenize(cleantoklist, normalize=True)
                 print(doubleclean, file=args.outfile)
         else:
