@@ -144,11 +144,12 @@ group.add_argument(
 )
 
 parser.add_argument(
-    "suppress_suggestions",
+    "-suppress_suggestions",
     "--sss",
     action="store_true",
     help="Suppress more agressive error suggestions",
 )
+
 
 def gen(f: Iterator[str]) -> Iterable[str]:
     """Generate the lines of text in the input file"""
