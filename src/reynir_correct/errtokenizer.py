@@ -226,7 +226,7 @@ def is_cap(word: str) -> bool:
 
 
 def style_warning(k: Ksnid) -> str:
-    """ Return a style warning for the given Ksnid tuple, if any """
+    """Return a style warning for the given Ksnid tuple, if any"""
     if k.malsnid in STYLE_WARNINGS:
         return k.malsnid
     if k.bmalsnid in STYLE_WARNINGS:
@@ -429,7 +429,7 @@ class CorrectToken(Tok):
 
     @property
     def has_error(self) -> bool:
-        """ Return True if this token has an associated error """
+        """Return True if this token has an associated error"""
         return self._err is not None
 
     @property
@@ -730,8 +730,8 @@ class TabooWarning(Error):
 @register_error_class
 class StyleWarning(Error):
 
-    """ A StyleWarning marks a word that is annotated with a
-        style comment in BÍN (malsnid/bmalsnid properties in Ksnid). """
+    """A StyleWarning marks a word that is annotated with a
+    style comment in BÍN (malsnid/bmalsnid properties in Ksnid)."""
 
     # Y001: Style warning for word
 
@@ -1681,7 +1681,7 @@ def lookup_unknown_words(
         code: int, token: CorrectToken, corrected: str, corrected_display: Optional[str]
     ) -> CorrectToken:
 
-      """Return a token for a corrected version of token_txt,
+        """Return a token for a corrected version of token_txt,
         marked with a SpellingError if corrected_display is
         a string containing the corrected word to be displayed"""
         _, m = db.lookup_g(corrected, at_sentence_start)
@@ -2365,7 +2365,7 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
 def check_style(
     token_stream: Iterable[CorrectToken], db: GreynirBin
 ) -> Iterator[CorrectToken]:
-    """ Annotate context-independent, word-level style errors """
+    """Annotate context-independent, word-level style errors"""
 
     for token in token_stream:
         # Check style

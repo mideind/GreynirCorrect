@@ -43,14 +43,13 @@ from typing import (
     Tuple,
     List,
     Dict,
-    TypedDict,
     Any,
     Callable,
     Union,
     Optional,
     cast,
 )
-from typing_extensions import Protocol
+from typing_extensions import Protocol, TypedDict
 
 import re
 
@@ -516,7 +515,7 @@ class ErrorFinder(ParseForestNavigator):
             suggest = PatternMatcher.get_wordform(
                 so.text.lower(), so.lemma, so.cat, vars
             )
-            return dict(
+            return AnnotationDict(
                 text=(
                     "Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(
                         so.tidy_text
@@ -552,7 +551,7 @@ class ErrorFinder(ParseForestNavigator):
         suggestion = PatternMatcher.get_wordform(
             verb.text.lower(), verb.lemma, verb.cat, vars
         )
-        return dict(
+        return AnnotationDict(
             text=f"Sögnin '{verb.tidy_text}' á sennilega að vera í eintölu eins og frumlagið '{subjtext}'",
             detail=f"Orðið '{self.node_text(ch1)}' stjórnar tölu sagnarinnar svo hún á að vera í eintölu.",
             start=start,
