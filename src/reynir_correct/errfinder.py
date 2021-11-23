@@ -73,7 +73,7 @@ class AnnotationDict(TypedDict):
     start: Optional[int]
     end: Optional[int]
     original: Optional[str]
-    suggest: Union[str, None]
+    suggest: Optional[str]
 
 
 # AnnotationDict = Dict[str, Union[str, int, None]]
@@ -766,7 +766,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def AðvörunSvigaInnihaldNl(
         self, txt: str, variants: str, node: Node
-    ) -> AnnotationReturn:
+    ) -> AnnotationDict:
         """Explanatory noun phrase in a different case than the noun phrase
         that it explains"""
         np = self._simple_tree(node)

@@ -144,8 +144,8 @@ group.add_argument(
 )
 
 parser.add_argument(
-    "-suppress_suggestions",
-    "--sss",
+    "--suppress_suggestions",
+    "-sss",
     action="store_true",
     help="Suppress more agressive error suggestions",
 )
@@ -282,7 +282,7 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
         len_tokens = len(toklist)
         # Invoke the spelling and grammar checker on the token list
         sent = check_tokens(toklist)
-
+        print(sent)
         if sent is None:
             # Should not happen?
             continue
@@ -344,14 +344,13 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
             for ann in a
         ]
         if args.text:
-            arev = a
-            arev.sort(key=lambda ann: (ann.start, ann.end), reverse=True)
+            arev = sorted(a, key=lambda ann: (ann.start, ann.end), reverse=True)
             if sent.tree is None:
                 # No need to do more, no grammar errors have been checked
                 print(cleaned, file=args.outfile)
             else:
                 # We know we have a sentence tree, can use that
-                cleantoklist: List[CorrectToken] = toklist
+                cleantoklist: List[CorrectToken] = toklist[:]
                 for xann in arev:
                     if xann.suggest is None:
                         # Nothing to correct with, nothing we can do
