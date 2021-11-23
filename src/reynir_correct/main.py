@@ -143,6 +143,12 @@ group.add_argument(
     action="store_true",
 )
 
+parser.add_argument(
+    "suppress_suggestions",
+    "--sss",
+    action="store_true",
+    help="Suppress more agressive error suggestions",
+)
 
 def gen(f: Iterator[str]) -> Iterable[str]:
     """Generate the lines of text in the input file"""
@@ -382,7 +388,6 @@ def main() -> None:
         # If executing a plain ('shallow') correct,
         # apply most suggestions to the text
         options["apply_suggestions"] = True
-
     if args.grammar:
         # Check grammar, output a text or JSON object for each sentence
         check_grammar(args, **options)

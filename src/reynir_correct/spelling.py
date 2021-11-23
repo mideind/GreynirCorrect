@@ -601,7 +601,7 @@ class Corrector:
             e1 = edits1(pairs) - e0
             for c in known(e1):
                 yield (c, P(c) + EDIT_1_FACTOR)
-            # The following edit distance=2 stuff is hugely expensive
+            # The following edit distance=2 stuff is currently too expensive
             # in terms of processor time and memory
             # e2 = edits2(pairs) - e1 - e0
             # for c in known(e2):
