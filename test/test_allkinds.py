@@ -41,6 +41,7 @@ from reynir_correct import detokenize
 
 # Tests for errtokenizer.py
 
+
 def dump(tokens):
     print("\n{0} tokens:\n".format(len(tokens)))
     for token in tokens:
@@ -51,7 +52,7 @@ def dump(tokens):
 
 
 def normalize(g):
-    """ Return a corrected, normalized string form of the token list in g """
+    """Return a corrected, normalized string form of the token list in g"""
     return detokenize(g, normalize=True)
 
 
@@ -87,7 +88,7 @@ def test_multiple_spaces(verbose=False):
 
 
 def test_doubling(verbose=False):
-    """ Test words that are erroneously written twice or more often"""
+    """Test words that are erroneously written twice or more often"""
     # Simple instance
     g = rc.tokenize("Ég hélt mér mér fast í sætið.")
     g = list(g)
@@ -558,9 +559,9 @@ def test_paradigm_spelling_errors(verbose=False):
         dump(g)
     s = normalize(g)
     # assert "leiðinlegt" in s   # TODO er þetta ekki í þekktu villunum sem á eftir að koma inn?
-    assert "þægilegt" in s     # TODO sama
+    assert "þægilegt" in s  # TODO sama
     # assert "tímanlega" in s     # TODO sama
-    assert "fjögurleytið" in s    # TODO sama
+    assert "fjögurleytið" in s  # TODO sama
     assert g[3].error_code == "W001/w"
     assert g[5].error_code == "S001"
     assert g[8].error_code == "W001/w"
@@ -708,9 +709,10 @@ def test_capitalization(verbose=False):
         "Í norður-belfast og norður-Belfast er rigning en ekki í suður-afríku hjá suður-afríkumönnum."
     )
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
-    #assert "Norður-Belfast" in s
+    # assert "Norður-Belfast" in s
     assert "Suður-Afríku" in s
     assert "Suður-Afríkumönnum" in s
 
@@ -718,7 +720,8 @@ def test_capitalization(verbose=False):
         "Þau gengu frá suður-kóreu og þaðan á norður-hliðina og norður- og suðurhlutann."
     )
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "Suður-Kóreu" in s
     assert "norðurhliðina" in s
@@ -728,36 +731,36 @@ def test_capitalization(verbose=False):
         "Í norður-kóreu er menningin önnur en í suður-kóreu og allt önnur á nýja-sjálandi."
     )
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "Norður-Kóreu" in s
     assert "Suður-Kóreu" in s
     assert "Nýja-Sjálandi" in s
 
-    g = rc.tokenize(
-        "Í karíbahafi eru Karabísk mál töluð."
-    )
+    g = rc.tokenize("Í karíbahafi eru Karabísk mál töluð.")
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "Karíbahafi" in s
     assert "karabísk" in s
 
-    g = rc.tokenize(
-        "Á internetinu finna Súnnítar ýmsar Upplýsingar."
-    )
+    g = rc.tokenize("Á internetinu finna Súnnítar ýmsar Upplýsingar.")
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "Internetinu" in s
-    assert "súnnítar" in s   
-    #assert "upplýsingar" in s
+    assert "súnnítar" in s
+    # assert "upplýsingar" in s
 
     g = rc.tokenize(
         "Ég er með Alzheimers-sjúkdóm en Félags- og Barnamálaráðherra ekki og heldur ekki Ferðamála-, iðnaðar- og nýsköpunarráðherra."
     )
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "alzheimers-sjúkdóm" in s
     assert "félags- og barnamálaráðherra" in s
@@ -767,7 +770,8 @@ def test_capitalization(verbose=False):
         "Þau gengu laugaveg í sumar og fóru á þingvelli, heimsóttu austur-evrópu, vestur-evrópu, Austurevrópskt fólk, mið-austurlönd og litla-hraun."
     )
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "Laugaveg" in s
     assert "Þingvelli" in s
@@ -777,11 +781,10 @@ def test_capitalization(verbose=False):
     assert "Mið-Austurlönd" in s
     assert "Litla-Hraun" in s
 
-    g = rc.tokenize(
-        "Þjóðin tók þátt í vetrarólympíuleikunum en líbanar ekki."
-    )
+    g = rc.tokenize("Þjóðin tók þátt í vetrarólympíuleikunum en líbanar ekki.")
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "Vetrarólympíuleikunum" in s
     assert "Líbanar" in s
@@ -823,51 +826,46 @@ def test_acronyms(verbose=False):
     assert "Hr." in s
     assert g[1].error_code != "Z006"
 
-    g = rc.tokenize(
-        "Hann er Suðurkóreskur og er suður-kóreumaður frá suður-kóreu."
-    )
+    g = rc.tokenize("Hann er Suðurkóreskur og er suður-kóreumaður frá suður-kóreu.")
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "suðurkóreskur" in s
     assert "Suður-Kóreumaður" in s
     assert "Suður-Kóreu" in s
 
-    g = rc.tokenize(
-        "Hann er Norðurkóreskur og er norður-kóreumaður frá norður-kóreu."
-    )
+    g = rc.tokenize("Hann er Norðurkóreskur og er norður-kóreumaður frá norður-kóreu.")
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "norðurkóreskur" in s
     assert "Norður-Kóreumaður" in s
     assert "Norður-Kóreu" in s
 
-    g = rc.tokenize(
-        "Hann er Nýsjálenskur og er nýsjálendingur frá nýja-sjálandi."
-    )
+    g = rc.tokenize("Hann er Nýsjálenskur og er nýsjálendingur frá nýja-sjálandi.")
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "nýsjálenskur" in s
     assert "Nýsjálendingur" in s
     assert "Nýja-Sjálandi" in s
 
-    g = rc.tokenize(
-        "Hann er Suðurafrískur og er suður-afríkumaður frá suður-afríku."
-    )
+    g = rc.tokenize("Hann er Suðurafrískur og er suður-afríkumaður frá suður-afríku.")
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "suðurafrískur" in s
     assert "Suður-Afríkumaður" in s
     assert "Suður-Afríku" in s
 
-    g = rc.tokenize(
-        "Þau heimsóttu norðurland og hittu norðlendinga í Meistaradeild."
-    )
+    g = rc.tokenize("Þau heimsóttu norðurland og hittu norðlendinga í Meistaradeild.")
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "Norðurland" in s
     assert "Norðlendinga" in s
@@ -877,23 +875,25 @@ def test_acronyms(verbose=False):
         "Haldið er upp á Páskadag, Verslunarmannahelgina, Jólin og Bóndadag."
     )
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "páskadag" in s
     assert "verslunarmannahelgina" in s
     assert "jólin" in s
     assert "bóndadag" in s
-    assert g[5].error_code == "Z001"    #páskadag
-    assert g[7].error_code == "Z001"    #verslunarmannahelgina
-    assert g[9].error_code == "Z001"    #jólin
-    assert g[11].error_code == "Z001"   #bóndadag
+    assert g[5].error_code == "Z001"  # páskadag
+    assert g[7].error_code == "Z001"  # verslunarmannahelgina
+    assert g[9].error_code == "Z001"  # jólin
+    assert g[11].error_code == "Z001"  # bóndadag
 
     g = rc.tokenize(
         "Talað var við Dómsmálaráðherra, Ríkissaksóknara, Biskupinn og Doktorinn "
         "á Mánudögum og Þriðjudögum."
     )
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "dómsmálaráðherra" in s
     # assert "ríkissaksóknara" in s
@@ -901,46 +901,48 @@ def test_acronyms(verbose=False):
     assert "doktorinn" in s
     assert "mánudögum" in s
     assert "þriðjudögum" in s
-    assert g[4].error_code == "Z001"    #dómsmálaráðherra
+    assert g[4].error_code == "Z001"  # dómsmálaráðherra
     # assert g[6].error_code == "Z001"    #ríkissaksóknara
-    assert g[8].error_code == "Z001"    #biskupinn
-    assert g[10].error_code == "Z001"   #doktorinn
-    assert g[12].error_code == "Z001"   #mánudögum
-    assert g[14].error_code == "Z001"   #þriðjudögum
+    assert g[8].error_code == "Z001"  # biskupinn
+    assert g[10].error_code == "Z001"  # doktorinn
+    assert g[12].error_code == "Z001"  # mánudögum
+    assert g[14].error_code == "Z001"  # þriðjudögum
 
     g = rc.tokenize(
         "Þau læra Íslensku og Landafræði með Allsherjarþinginu og Öryggisráðinu en líka um Indóevrópsk mál og Óðinshana."
     )
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "íslensku" in s
     assert "landafræði" in s
     assert "allsherjarþinginu" in s
     assert "öryggisráðinu" in s
     assert "indóevrópsk" in s
-    assert g[3].error_code == "Z001"    #íslensku
-    assert g[5].error_code == "Z001"    #landafræði
-    assert g[7].error_code == "Z001"    #allsherjarþinginu
-    assert g[9].error_code == "Z001"    #öryggisráðinu
-    assert g[13].error_code == "Z001"   #indóevrópsk
-    assert g[16].error_code == "Z001"   #óðinshana
+    assert g[3].error_code == "Z001"  # íslensku
+    assert g[5].error_code == "Z001"  # landafræði
+    assert g[7].error_code == "Z001"  # allsherjarþinginu
+    assert g[9].error_code == "Z001"  # öryggisráðinu
+    assert g[13].error_code == "Z001"  # indóevrópsk
+    assert g[16].error_code == "Z001"  # óðinshana
 
     g = rc.tokenize(
         "Í Vín má kaupa Vínartertu og Rínarvín en Póstmódernismi og Maríutásur eru vinsælar."
     )
     g = list(g)
-    if verbose: dump(g)
+    if verbose:
+        dump(g)
     s = normalize(g)
     assert "Vín" in s
     assert "vínartertu" in s
     assert "rínarvín" in s
     assert "póstmódernismi" in s
     assert "maríutásur" in s
-    assert g[5].error_code == "Z001"    #vínartertu
-    assert g[7].error_code == "Z001"    #rínarvín
-    assert g[9].error_code == "Z001"    #póstmódernismi
-    assert g[11].error_code == "Z001"   #maríutásur
+    assert g[5].error_code == "Z001"  # vínartertu
+    assert g[7].error_code == "Z001"  # rínarvín
+    assert g[9].error_code == "Z001"  # póstmódernismi
+    assert g[11].error_code == "Z001"  # maríutásur
 
 
 def test_inflectional_errors(verbose=False):
@@ -954,9 +956,9 @@ def test_inflectional_errors(verbose=False):
     assert "Tréð" in s
     assert "rekstrar" in s
     assert "rúmsins" in s
-    assert g[1].error_code == "S002"    # tréð, TODO eftir að útfæra
-    assert g[4].error_code == "S002"    # rekstrar, TODO eftir að útfæra
-    assert g[5].error_code == "S002"    # rúmsins, TODO eftir að útfæra
+    assert g[1].error_code == "S002"  # tréð, TODO eftir að útfæra
+    assert g[4].error_code == "S002"  # rekstrar, TODO eftir að útfæra
+    assert g[5].error_code == "S002"  # rúmsins, TODO eftir að útfæra
 
     g = rc.tokenize("Þér finndist víðfermt í árverkni.")
     g = list(g)
@@ -964,11 +966,11 @@ def test_inflectional_errors(verbose=False):
         dump(g)
     s = normalize(g)
     assert "fyndist" in s
-    assert "víðfeðmt" in s     # TODO greinir sem so. víð-ferma!
+    assert "víðfeðmt" in s  # TODO greinir sem so. víð-ferma!
     assert "árvekni" in s
-    assert g[2].error_code == "S001"    # fyndist, TODO eftir að útfæra
-    assert g[3].error_code == "S004"    # víðfeðmt, TODO eftir að útfæra
-    assert g[5].error_code == "S001"    # árvekni, TODO eftir að útfæra
+    assert g[2].error_code == "S001"  # fyndist, TODO eftir að útfæra
+    assert g[3].error_code == "S004"  # víðfeðmt, TODO eftir að útfæra
+    assert g[5].error_code == "S001"  # árvekni, TODO eftir að útfæra
 
     g = rc.tokenize("Ein kúin kom aldrei til baka vegna eldingunnar.")
     g = list(g)
@@ -1282,7 +1284,9 @@ def test_taboo_words(verbose=False):
     assert g[3].error_code == "T001/w"
     assert g[6].error_code == "T001/w"
 
-    g = rc.tokenize("Jón ætlaði að afhomma Pál en Múhameðstrúarmennirnir komu í veg fyrir það.")
+    g = rc.tokenize(
+        "Jón ætlaði að afhomma Pál en Múhameðstrúarmennirnir komu í veg fyrir það."
+    )
     g = list(g)
     if verbose:
         dump(g)
@@ -1362,8 +1366,8 @@ def test_correct_words(verbose=False):
 
 
 def check_sentence(s: str, annotations, is_foreign=False):
-    """ Check whether a given single sentence gets the
-        specified annotations when checked """
+    """Check whether a given single sentence gets the
+    specified annotations when checked"""
 
     def check_sent(sent):
         assert sent is not None
@@ -1443,21 +1447,15 @@ def test_NP_agreement(verbose=False):
 def test_number_agreement(verbose=False):
     # Tala
     s = "Fleiri en einn slasaðist í árekstrinum."
-    check_sentence(
-        s, [(3, 3, "P_NT_ÍTölu")]
-    )
+    check_sentence(s, [(3, 3, "P_NT_ÍTölu")])
     s = "Hann er einn þeirra sem slasaðist í árekstrinum."
     # check_sentence(s, [(5, 6, "P_NT_Þeirra")])        # TODO engin villa finnst.
     s = "Minnihluti starfsmanna samþykktu samninginn."
-    check_sentence(
-        s, [(2, 2, "P_NT_FjöldiHluti")]
-    )
+    check_sentence(s, [(2, 2, "P_NT_FjöldiHluti")])
     # TODO villan greinist, en ætti að vera staðsett á sögninni
     # til að hægt sé að leiðrétta hana... Hvernig er þetta leiðrétt? Er bara ábending?
     s = "Helmingur landsmanna horfðu á barnaefnið."
-    check_sentence(
-        s, [(2, 2, "P_NT_FjöldiHluti")]
-    )
+    check_sentence(s, [(2, 2, "P_NT_FjöldiHluti")])
     # TODO villan greinist en ætti að vera staðsett á sögninni svo hægt sé
     # að leiðrétta hana. Skoða hvernig/hvort villan er leiðrétt.
     s = "Hér eru tuttugu og ein appelsínur."
@@ -1499,10 +1497,10 @@ def test_verb_agreement(verbose=False):
     check_sentence(s, [(1, 4, "P_WRONG_PREP_AÐ")])
     s = "Ferðafólkið fór erlendis að leita lamba."
     # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
-    #check_sentence(s, [(2, 3, "P_WRONG_PARTICLE_til_útlanda")])
+    # check_sentence(s, [(2, 3, "P_WRONG_PARTICLE_til_útlanda")])
     s = "Túlkurinn gaf í skin að mælandi hefði misskilið túlkinn."
     # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
-    #check_sentence(s, [(2, 4, "P_WRONG_PP_í_skyn")])
+    # check_sentence(s, [(2, 4, "P_WRONG_PP_í_skyn")])
 
 
 def test_hvor_annar(verbose=False):
@@ -1541,12 +1539,12 @@ def test_vera(verbose=False):
     s = "Ég var að fara í sund þegar ég fékk símtalið."
     check_sentence(s, [(1, 3, "P_VeraAð")])
     s = "Hún er að skrifa vel."
-    #check_sentence(s, [(1, 3, "P_VeraAð")]) # Greinist ekki lengur sem villa, undanskil 3.p. pfn. því geta verið ómannleg.
+    # check_sentence(s, [(1, 3, "P_VeraAð")]) # Greinist ekki lengur sem villa, undanskil 3.p. pfn. því geta verið ómannleg.
     s = "Kristín er að skrifa vel."
     check_sentence(s, [(1, 3, "P_VeraAð")])
 
     s = "Það gekk mikið á þegar Jack Valentine var ekki að sofa."
-    #check_sentence(s, [(7, 10, "P_VeraAð")])   # TODO 'Jack Valentine' is an entity, like Ikea. Should it be allowed to fire an error rule?
+    # check_sentence(s, [(7, 10, "P_VeraAð")])   # TODO 'Jack Valentine' is an entity, like Ikea. Should it be allowed to fire an error rule?
 
 
 def test_nhm(verbose=False):
@@ -1580,9 +1578,7 @@ def test_verb_arguments(verbose=False):
 
     s = "Kirkjuna bar við himinn þegar við komum þar um morguninn."
     # TODO Verbs.conf ætti að dekka þetta -- útfæra goggunarröð?
-    check_sentence(
-        s, [(3, 3, "P_NT_FsMeðFallstjórn")]
-    )
+    check_sentence(s, [(3, 3, "P_NT_FsMeðFallstjórn")])
 
 
 def test_complex_sentences(verbose=False):
@@ -1637,7 +1633,7 @@ def test_foreign_sentences(verbose=False):
         "Brooks Koepka lék hringinn á þremur undir pari og er því "
         "líkt og Thomas og Schauffele á tíu höggum undir pari."
     )
-    #check_sentence(s, [(14, 14, "U001/w")])        # Changed so capitalized unknown words are not marked as errors
+    # check_sentence(s, [(14, 14, "U001/w")])        # Changed so capitalized unknown words are not marked as errors
     s = (
         "If you asked people to try to picture hunting for truffles, the "
         "expensive subterranean fungi, many would no doubt imagine men "
@@ -1678,8 +1674,8 @@ def test_impersonal_verbs(verbose=False):
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])
     s = "Mér klæjar undan áburðinum."
     check_sentence(s, [(0, 0, "P_WRONG_CASE_þgf_þf")])
-    #s = "Hann sagði að konan hefði misminnt að potturinn væri með loki."
-    #check_sentence(s, [(3, 3, "P_WRONG_CASE_nf_þf")])
+    # s = "Hann sagði að konan hefði misminnt að potturinn væri með loki."
+    # check_sentence(s, [(3, 3, "P_WRONG_CASE_nf_þf")])
     s = "Bréfberinn spurði hvort Páli vantaði fleiri frímerki."
     check_sentence(s, [(3, 3, "P_WRONG_CASE_þgf_þf")])
     s = (
@@ -1720,7 +1716,7 @@ def test_correction_is_valid(verbose=False):
         "ferðaþjónustufyrirtæki, líkt og vefsíðugerð, hönnun og ráðgjöf um rekstur."
     )
     # TODO this is corrected, why does that happen?
-    #check_sentence(s, [])
+    # check_sentence(s, [])
     # Check that 'hátekju' is not corrected (or suggested) to 'hátekjum'
     # within a hyphenated composite word
     s = (
@@ -1730,8 +1726,8 @@ def test_correction_is_valid(verbose=False):
         "hátekju- og stóreignafólk."
     )
     # TODO this is corrected, why?
-    #sent = rc.check_single(s)
-    #check_sentence(s, [])
+    # sent = rc.check_single(s)
+    # check_sentence(s, [])
 
 
 def test_corrected_sentences(verbose=False):
@@ -1757,29 +1753,42 @@ def test_styles():
     assert "sjaldgæft" in a.annotations[1].detail
     assert a.annotations[2].code == "Y001/w"
     assert "úrelt" in a.annotations[2].detail
-    a = rc.check_single("Jón átti höfundarétt og spaghetti fyrir sveitastjórnarkosningarnar.")
-    assert len(a.annotations) == 3
-    assert a.annotations[0].code == "Y001/w"
-    assert "villa" in a.annotations[0].detail
-    assert "höfundarétt" in a.annotations[0].detail
-    assert "spagettí" in a.annotations[1].text
-    assert a.annotations[2].code == "Y001/w"
-    assert "villa" in a.annotations[2].detail
-    assert "sveitastjórnarkosningarnar" in a.annotations[2].detail
-    a = rc.check_single("Kamesið mitt er ferlega óhreint.")
-    assert len(a.annotations) == 1
-    assert a.annotations[0].code == "Y001/w"
-    assert "úrelt" in a.annotations[0].detail
-    assert "Kamesið" in a.annotations[0].detail
-    assert "Kamersið" in a.annotations[0].detail
-    assert a.annotations[0].suggest == "Kamersið"
-    a = rc.check_single("Páll kyngdi belgverska konfektinu.")
-    assert len(a.annotations) == 1
-    assert a.annotations[0].code == "Y001/w"
-    assert "gamalt" in a.annotations[0].detail
-    assert "belgverska" in a.annotations[0].detail
-    assert "belgíska" in a.annotations[0].detail
-    assert a.annotations[0].suggest == "belgíska"
+    #    a = rc.check_single("Jón átti höfundarétt og spaghetti fyrir sveitastjórnarkosningarnar.")
+    #    assert len(a.annotations) == 3
+    #    assert a.annotations[0].code == "Y001/w"
+    #    assert "villa" in a.annotations[0].detail
+    #    assert "höfundarétt" in a.annotations[0].detail
+    #    assert "spagettí" in a.annotations[1].text
+    #    assert a.annotations[2].code == "Y001/w"
+    #    assert "villa" in a.annotations[2].detail
+    #    assert "sveitastjórnarkosningarnar" in a.annotations[2].detail
+    #    a = rc.check_single("Kamesið mitt er ferlega óhreint.")
+    #    assert len(a.annotations) == 1
+    #    assert a.annotations[0].code == "Y001/w"
+    #    assert "úrelt" in a.annotations[0].detail
+    #    assert "Kamesið" in a.annotations[0].detail
+    #    assert "Kamersið" in a.annotations[0].detail
+    #    assert a.annotations[0].suggest == "Kamersið"
+
+
+#    a = rc.check_single("Páll kyngdi belgverska konfektinu.")
+#    assert len(a.annotations) == 1
+#    assert a.annotations[0].code == "Y001/w"
+#    assert "gamalt" in a.annotations[0].detail
+#    assert "belgverska" in a.annotations[0].detail
+#    assert "belgíska" in a.annotations[0].detail
+#    assert a.annotations[0].suggest == "belgíska"
+
+
+def test_né():
+    s = "Ég fór út né gekk heim."
+    check_sentence(s, [(3, 3, "P_NT_Né")])
+    s = "Ég hvorki fór út né gekk heim."
+    check_sentence(s, [])
+    s = "Við keyptum brauð né ost."
+    check_sentence(s, [(3, 3, "P_NT_Né")])
+    s = "Við keyptum annaðhvort brauð né ost."
+    check_sentence(s, [(4, 4, "P_NT_Né")])
 
 
 if __name__ == "__main__":
