@@ -58,14 +58,15 @@ from typing_extensions import TypedDict
 from tokenizer import detokenize, normalized_text_from_tokens
 from tokenizer.definitions import AmountTuple, NumberTuple
 
-from .errtokenizer import TOK, CorrectToken, Error, tokenize
+from .errtokenizer import TOK, CorrectToken, Error
+from .errtokenizer import tokenize as errtokenize
 from .annotation import Annotation
 from .checker import check_tokens
 
 
 class AnnTokenDict(TypedDict, total=False):
 
-    """ Type of the token dictionaries returned from check_grammar() """
+    """Type of the token dictionaries returned from check_grammar()"""
 
     # Token kind
     k: int
@@ -79,7 +80,7 @@ class AnnTokenDict(TypedDict, total=False):
 
 class AnnDict(TypedDict):
 
-    """ A single annotation, as returned by the Yfirlestur.is API """
+    """A single annotation, as returned by the Yfirlestur.is API"""
 
     start: int
     end: int
@@ -93,7 +94,7 @@ class AnnDict(TypedDict):
 
 class AnnResultDict(TypedDict):
 
-    """ The annotation result for a sentence """
+    """The annotation result for a sentence"""
 
     original: str
     corrected: str
@@ -126,6 +127,7 @@ parser.add_argument(
     default=sys.stdout,
     help="UTF-8 output text file",
 )
+parser.add_argument("--text", help="Output corrected text only", action="store_true")
 
 group = parser.add_mutually_exclusive_group()
 group.add_argument(
@@ -142,20 +144,21 @@ group.add_argument(
 )
 
 parser.add_argument(
-    "suppress_suggestions",
-    "--sss",
+    "--suppress_suggestions",
+    "-sss",
     action="store_true",
     help="Suppress more agressive error suggestions",
 )
 
+
 def gen(f: Iterator[str]) -> Iterable[str]:
-    """ Generate the lines of text in the input file """
+    """Generate the lines of text in the input file"""
     yield from f
 
 
 def quote(s: str) -> str:
-    """ Return the string s within double quotes, and with any contained
-        backslashes and double quotes escaped with a backslash """
+    """Return the string s within double quotes, and with any contained
+    backslashes and double quotes escaped with a backslash"""
     if not s:
         return '""'
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
@@ -164,7 +167,7 @@ def quote(s: str) -> str:
 def val(
     t: CorrectToken, quote_word: bool = False
 ) -> Union[None, str, float, Tuple[Any, ...], Sequence[Any]]:
-    """ Return the value part of the token t """
+    """Return the value part of the token t"""
     if t.val is None:
         return None
     if t.kind in {TOK.WORD, TOK.PERSON, TOK.ENTITY}:
@@ -212,7 +215,7 @@ def check_spelling(args: argparse.Namespace, **options: Any) -> None:
     else:
         to_text = partial(detokenize, normalize=True)
 
-    for t in tokenize(gen(args.infile), **options):
+    for t in errtokenize(gen(args.infile), **options):
         if args.csv:
             # Output the tokens in CSV format, one line per token
             if t.txt:
@@ -255,15 +258,17 @@ def check_spelling(args: argparse.Namespace, **options: Any) -> None:
 
 
 def check_grammar(args: argparse.Namespace, **options: Any) -> None:
-    """ Do a full spelling and grammar check of the source text """
+    """Do a full spelling and grammar check of the source text"""
 
     def sentence_stream() -> Iterator[List[CorrectToken]]:
-        """ Yield a stream of sentence token lists from the source text """
+        """Yield a stream of sentence token lists from the source text"""
         # Initialize sentence accumulator list
         curr_sent: List[CorrectToken] = []
-        for t in tokenize(gen(args.infile), **options):
+        for t in errtokenize(gen(args.infile), **options):
             # Normal shallow parse, one line per sentence,
             # tokens separated by spaces
+            # Note this uses the tokenize function in errtokenizer.py
+            # instead of the one in Tokenizer
             curr_sent.append(t)
             if t.kind in TOK.END:
                 # End of sentence/paragraph
@@ -274,12 +279,10 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
 
     offset = 0
     for toklist in sentence_stream():
-
         len_tokens = len(toklist)
-
         # Invoke the spelling and grammar checker on the token list
         sent = check_tokens(toklist)
-
+        print(sent)
         if sent is None:
             # Should not happen?
             continue
@@ -312,7 +315,6 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
 
         # Create a normalized form of the sentence
         cleaned = detokenize(toklist, normalize=True)
-
         # Extract the annotation list (defensive programming here)
         a: List[Annotation] = getattr(sent, "annotations", cast(List[Annotation], []))
         # Sort in ascending order by token start index, and then by end index
@@ -341,17 +343,42 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
             )
             for ann in a
         ]
+        if args.text:
+            arev = sorted(a, key=lambda ann: (ann.start, ann.end), reverse=True)
+            if sent.tree is None:
+                # No need to do more, no grammar errors have been checked
+                print(cleaned, file=args.outfile)
+            else:
+                # We know we have a sentence tree, can use that
+                cleantoklist: List[CorrectToken] = toklist[:]
+                for xann in arev:
+                    if xann.suggest is None:
+                        # Nothing to correct with, nothing we can do
+                        continue
+                    cleantoklist[xann.start + 1].txt = xann.suggest
+                    if xann.end > xann.start:
+                        # Annotation spans many tokens
+                        # "Okkur börnunum langar í fisk"
+                        # Only case is one ann, many toks in toklist
+                        # Give the first token the correct value
+                        # Delete the other tokens
+                        del cleantoklist[xann.start + 2 : xann.end + 2]
+                doubleclean = detokenize(cleantoklist, normalize=True)
+                print(doubleclean, file=args.outfile)
+        else:
+            # Create final dictionary for JSON encoding
+            ard = AnnResultDict(
+                original=cleaned,
+                corrected=sent.tidy_text,
+                tokens=tokens,
+                annotations=annotations,
+            )
 
-        # Create final dictionary for JSON encoding
-        ard = AnnResultDict(
-            original=cleaned, corrected=sent.tidy_text, tokens=tokens, annotations=annotations,
-        )
-
-        print(json_dumps(ard), file=args.outfile)
+            print(json_dumps(ard), file=args.outfile)
 
 
 def main() -> None:
-    """ Main function, called when the 'correct' command is invoked """
+    """Main function, called when the 'correct' command is invoked"""
 
     args = parser.parse_args()
 
@@ -362,7 +389,7 @@ def main() -> None:
         # apply most suggestions to the text
         options["apply_suggestions"] = True
     if args.grammar:
-        # Check grammar, output a JSON object for each sentence
+        # Check grammar, output a text or JSON object for each sentence
         check_grammar(args, **options)
     else:
         # Check spelling, output text or token objects in JSON or CSV form
