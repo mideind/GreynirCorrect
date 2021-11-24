@@ -2604,18 +2604,13 @@ class CorrectionPipeline(DefaultPipeline):
         ct_stream = fix_capitalization(ct_stream, self._db, token_ctor, only_ci)
         # Fix single-word errors
         ct_stream = lookup_unknown_words(
-            self._corrector,
-            token_ctor,
-            ct_stream,
-            only_ci,
-            self._apply_suggestions,
-            self._suggestion_list,
             ct_stream,
             token_ctor,
             self._corrector,
             only_ci,
             self._apply_suggestions,
             self._suppress_suggestions,
+            self._suggestion_list,
         )
         # Check taboo words
         if not only_ci:
