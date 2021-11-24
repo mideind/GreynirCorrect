@@ -35,6 +35,7 @@
 """
 
 from typing import (
+    Callable,
     Mapping,
     Sequence,
     cast,
@@ -73,6 +74,7 @@ from reynir.bintokenizer import (
 )
 from reynir.bindb import GreynirBin
 from reynir.binparser import BIN_Token, VariantHandler
+from islenska.basics import Ksnid
 
 from .settings import (
     AllowedMultiples,
@@ -175,6 +177,23 @@ WRONG_ABBREVS: Mapping[str, str] = {
     "Ca": "Ca.",
 }
 
+# Style mark from BÍN:
+# NID = Niðrandi / disparaging
+# OVID = Óviðeigandi / inappropriate
+# URE = Úrelt / obsolete
+# SJALD = Sjaldgæft / rare
+# VILLA = Villa / error
+# GAM = Gamalt / old
+STYLE_WARNINGS: Mapping[str, str] = {
+    "NID": "niðrandi",
+    "OVID": "óviðeigandi",
+    "URE": "úrelt",
+    "SJALD": "sjaldgæft",
+    "VILLA": "villa",
+    "GAM": "gamalt",
+}
+
+
 # A dictionary of token error classes, used in serialization
 ErrorType = Type["Error"]
 ERROR_CLASS_REGISTRY: Dict[str, ErrorType] = dict()
@@ -204,6 +223,15 @@ def is_cap(word: str) -> bool:
     """Return True if the word is capitalized, i.e. starts with an
     uppercase character and is otherwise lowercase"""
     return word[0].isupper() and (len(word) == 1 or word[1:].islower())
+
+
+def style_warning(k: Ksnid) -> str:
+    """Return a style warning for the given Ksnid tuple, if any"""
+    if k.malsnid in STYLE_WARNINGS:
+        return k.malsnid
+    if k.bmalsnid in STYLE_WARNINGS:
+        return k.bmalsnid
+    return ""
 
 
 class CorrectToken(Tok):
@@ -314,7 +342,8 @@ class CorrectToken(Tok):
             )
         )
 
-    __str__ = __repr__
+    # Pylance currently needs a cast for this to work
+    __str__ = cast(Callable[[object], str], __repr__)
 
     def concatenate(
         self, other: Tok, *, separator: str = "", metadata_from_other: bool = False
@@ -397,6 +426,11 @@ class CorrectToken(Tok):
         """Return the error object associated with this token, if any"""
         # Note that self._err may be a bool
         return self._err
+
+    @property
+    def has_error(self) -> bool:
+        """Return True if this token has an associated error"""
+        return self._err is not None
 
     @property
     def error_description(self) -> str:
@@ -675,6 +709,43 @@ class TabooWarning(Error):
         # Taboo word warnings start with "T"
         super().__init__(
             "T" + code, is_warning=True, original=original, suggest=suggest
+        )
+        self._txt = txt
+        self._detail = detail
+
+    @property
+    def description(self) -> str:
+        return self._txt
+
+    @property
+    def detail(self) -> Optional[str]:
+        return self._detail
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = super().to_dict()
+        d["detail"] = self.detail
+        return d
+
+
+@register_error_class
+class StyleWarning(Error):
+
+    """A StyleWarning marks a word that is annotated with a
+    style comment in BÍN (malsnid/bmalsnid properties in Ksnid)."""
+
+    # Y001: Style warning for word
+
+    def __init__(
+        self,
+        code: str,
+        txt: str,
+        detail: Optional[str],
+        original: str,
+        suggest: Optional[str],
+    ) -> None:
+        # Style warnings start with "Y"
+        super().__init__(
+            "Y" + code, is_warning=True, original=original, suggest=suggest
         )
         self._txt = txt
         self._detail = detail
@@ -1574,12 +1645,13 @@ def fix_compound_words(
 
 
 def lookup_unknown_words(
-    corrector: Corrector,
-    token_ctor: TokenCtor,
     token_stream: Iterable[CorrectToken],
+    token_ctor: TokenCtor,
+    corrector: Corrector,
     only_ci: bool,
     apply_suggestions: bool,
     suggestion_list: bool,
+    suppress_suggestions: bool,
 ) -> Iterator[CorrectToken]:
 
     """Try to identify unknown words in the token stream, for instance
@@ -1614,7 +1686,6 @@ def lookup_unknown_words(
         """Return a token for a corrected version of token_txt,
         marked with a SpellingError if corrected_display is
         a string containing the corrected word to be displayed"""
-
         _, m = db.lookup_g(corrected, at_sentence_start)
         ct = token_ctor.Word(corrected, m, token=token if corrected_display else None)
         if corrected_display:
@@ -1691,6 +1762,7 @@ def lookup_unknown_words(
         return (not m) or "-" in m[0].stofn
 
     for token in token_stream:
+
         if token.kind == TOK.S_BEGIN:
             yield token
             # A new sentence is starting
@@ -1698,12 +1770,14 @@ def lookup_unknown_words(
             context = tuple()
             parenthesis_stack = []
             continue
+
         # Store the previous context in case we need to construct
         # a new current context (after token substitution)
         prev_context = context
         if token.txt:
             # Maintain a context trigram, ending with the current token
             context = (prev_context + tuple(token.txt.split()))[-3:]
+
         if token.kind == TOK.PUNCTUATION or token.kind == TOK.ORDINAL:
             # Manage the parenthesis stack
             if token.txt in PARENS:
@@ -1837,7 +1911,11 @@ def lookup_unknown_words(
                 # ):
                 #    # Only allow single-letter corrections of a->á and i->í
                 #    pass
-                elif not apply_suggestions and only_suggest(token, m):
+                elif (
+                    not apply_suggestions
+                    and not suppress_suggestions
+                    and only_suggest(token, m)
+                ):
                     # We have a candidate correction but the original word does
                     # exist in BÍN, so we're not super confident: yield a suggestion
                     if Settings.DEBUG:
@@ -2286,6 +2364,50 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
         yield token
 
 
+def check_style(
+    token_stream: Iterable[CorrectToken], db: GreynirBin
+) -> Iterator[CorrectToken]:
+    """Annotate context-independent, word-level style errors"""
+
+    for token in token_stream:
+        # Check style
+        if token.has_meanings and not token.has_error:
+            # Check whether the token meanings are all marked with
+            # style warnings in BÍN
+            _, k_meanings = db.lookup_ksnid(token.txt)
+            if k_meanings and all(style_warning(k) for k in k_meanings):
+                # Every meaning has a style warning in BÍN: Annotate it.
+                # We use the first meaning only, but theoretically there could
+                # be different annotations for different meanings.
+                k = k_meanings[0]
+                warning = STYLE_WARNINGS[style_warning(k)]
+                # Check whether we have a suggestion in BÍN
+                suggestion = None
+                suffix = ""
+                if k.millivisun:
+                    # Cross-reference to another word
+                    k_suggestions = db.lookup_id(k.millivisun)
+                    # Find the same inflection form as the original word, if available
+                    k_sugg = next((s for s in k_suggestions if s.mark == k.mark), None)
+                    if k_sugg is not None:
+                        # Found a suggestion: emulate its case
+                        suggestion = emulate_case(k_sugg.bmynd, template=token.txt)
+                        suffix = f", en '{suggestion}' er lagt til í staðinn"
+                token.set_error(
+                    StyleWarning(
+                        code="001",
+                        txt=f"Orðið gæti verið {warning}",
+                        detail=(
+                            f"'{token.txt}' er merkt sem '{warning}' "
+                            f"í Beygingarlýsingu íslensks nútímamáls{suffix}"
+                        ),
+                        original=token.txt,
+                        suggest=suggestion,
+                    )
+                )
+        yield token
+
+
 class Correct_TOK(Bin_TOK):
 
     """A derived class to override token construction methods
@@ -2455,6 +2577,8 @@ class CorrectionPipeline(DefaultPipeline):
         # If suggestion_list is True, we get a list of suggestions from
         # the spelling suggestion module
         self._suggestion_list = options.pop("suggestion_list", False)
+        # Skip spelling suggestions
+        self._suppress_suggestions = options.pop("suppress_suggestions", False)
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """Add a correction pass just before BÍN annotation"""
@@ -2486,10 +2610,18 @@ class CorrectionPipeline(DefaultPipeline):
             only_ci,
             self._apply_suggestions,
             self._suggestion_list,
+            ct_stream,
+            token_ctor,
+            self._corrector,
+            only_ci,
+            self._apply_suggestions,
+            self._suppress_suggestions,
         )
         # Check taboo words
         if not only_ci:
             ct_stream = check_taboo_words(ct_stream)
+        # Check context-independent style errors, indicated in BÍN
+        ct_stream = check_style(ct_stream, self._db)
         return ct_stream
 
     def final_correct(self, stream: TokenIterator) -> TokenIterator:

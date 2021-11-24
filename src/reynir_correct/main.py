@@ -143,6 +143,13 @@ group.add_argument(
     action="store_true",
 )
 
+parser.add_argument(
+    "--suppress_suggestions",
+    "-sss",
+    action="store_true",
+    help="Suppress more agressive error suggestions",
+)
+
 
 def gen(f: Iterator[str]) -> Iterable[str]:
     """Generate the lines of text in the input file"""
@@ -275,7 +282,7 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
         len_tokens = len(toklist)
         # Invoke the spelling and grammar checker on the token list
         sent = check_tokens(toklist)
-
+        print(sent)
         if sent is None:
             # Should not happen?
             continue
@@ -337,14 +344,13 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
             for ann in a
         ]
         if args.text:
-            arev = a
-            arev.sort(key=lambda ann: (ann.start, ann.end), reverse=True)
+            arev = sorted(a, key=lambda ann: (ann.start, ann.end), reverse=True)
             if sent.tree is None:
                 # No need to do more, no grammar errors have been checked
                 print(cleaned, file=args.outfile)
             else:
                 # We know we have a sentence tree, can use that
-                cleantoklist: List[CorrectToken] = toklist
+                cleantoklist: List[CorrectToken] = toklist[:]
                 for xann in arev:
                     if xann.suggest is None:
                         # Nothing to correct with, nothing we can do
@@ -382,7 +388,6 @@ def main() -> None:
         # If executing a plain ('shallow') correct,
         # apply most suggestions to the text
         options["apply_suggestions"] = True
-
     if args.grammar:
         # Check grammar, output a text or JSON object for each sentence
         check_grammar(args, **options)

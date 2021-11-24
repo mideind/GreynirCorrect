@@ -43,14 +43,13 @@ from typing import (
     Tuple,
     List,
     Dict,
-    TypedDict,
     Any,
     Callable,
     Union,
     Optional,
     cast,
 )
-from typing_extensions import Protocol
+from typing_extensions import Protocol, TypedDict
 
 import re
 
@@ -74,7 +73,7 @@ class AnnotationDict(TypedDict):
     start: Optional[int]
     end: Optional[int]
     original: Optional[str]
-    suggest: Union[str, None]
+    suggest: Optional[str]
 
 
 # AnnotationDict = Dict[str, Union[str, int, None]]
@@ -516,7 +515,7 @@ class ErrorFinder(ParseForestNavigator):
             suggest = PatternMatcher.get_wordform(
                 so.text.lower(), so.lemma, so.cat, vars
             )
-            return dict(
+            return AnnotationDict(
                 text=(
                     "Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(
                         so.tidy_text
@@ -552,7 +551,7 @@ class ErrorFinder(ParseForestNavigator):
         suggestion = PatternMatcher.get_wordform(
             verb.text.lower(), verb.lemma, verb.cat, vars
         )
-        return dict(
+        return AnnotationDict(
             text=f"Sögnin '{verb.tidy_text}' á sennilega að vera í eintölu eins og frumlagið '{subjtext}'",
             detail=f"Orðið '{self.node_text(ch1)}' stjórnar tölu sagnarinnar svo hún á að vera í eintölu.",
             start=start,
@@ -767,7 +766,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def AðvörunSvigaInnihaldNl(
         self, txt: str, variants: str, node: Node
-    ) -> AnnotationReturn:
+    ) -> AnnotationDict:
         """Explanatory noun phrase in a different case than the noun phrase
         that it explains"""
         np = self._simple_tree(node)

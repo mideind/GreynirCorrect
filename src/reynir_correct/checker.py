@@ -47,11 +47,23 @@
 
 """
 
-from typing import Any, cast, Iterable, Iterator, List, Tuple, Dict, Type, Optional
+from typing import (
+    Any,
+    Mapping,
+    cast,
+    Iterable,
+    Iterator,
+    List,
+    Tuple,
+    Dict,
+    Type,
+    Optional,
+)
 from typing_extensions import TypedDict
 
 from threading import Lock
 from typing_extensions import TypedDict
+from islenska.basics import Ksnid
 
 from reynir import (
     Greynir,
@@ -87,6 +99,32 @@ class CheckResult(TypedDict):
     num_tokens: int
     ambiguity: float
     parse_time: float
+
+
+# Style mark from BÍN:
+# NID = Niðrandi / disparaging
+# OVID = Óviðeigandi / inappropriate
+# URE = Úrelt / obsolete
+# SJALD = Sjaldgæft / rare
+# VILLA = Villa / error
+# GAM = Gamalt / old
+STYLE_WARNINGS: Mapping[str, str] = {
+    "NID": "niðrandi",
+    "OVID": "óviðeigandi",
+    "URE": "úrelt",
+    "SJALD": "sjaldgæft",
+    "VILLA": "villa",
+    "GAM": "gamalt",
+}
+
+
+def style_warning(k: Ksnid) -> str:
+    """ Return a style warning for the given Ksnid tuple, if any """
+    if k.malsnid in STYLE_WARNINGS:
+        return k.malsnid
+    if k.bmalsnid in STYLE_WARNINGS:
+        return k.bmalsnid
+    return ""
 
 
 class ErrorDetectingGrammar(BIN_Grammar):
@@ -202,8 +240,6 @@ class GreynirCorrect(Greynir):
         """ Returns a list of annotations for a sentence object, containing
             spelling and grammar annotations of that sentence """
         ann: List[Annotation] = []
-        words_in_bin = 0
-        words_not_in_bin = 0
         parsed = sent.deep_tree is not None
         # Create a mapping from token indices to terminal indices.
         # This is necessary because not all tokens are included in
@@ -217,10 +253,12 @@ class GreynirCorrect(Greynir):
                 if tnode.index is not None
             }
         grammar = self.parser.grammar
-        # First, add token-level annotations
+        # First, add token-level annotations and count words that occur in BÍN
+        words_in_bin = 0
+        words_not_in_bin = 0
         for ix, t in enumerate(sent.tokens):
             if t.kind == TOK.WORD:
-                if t.val:
+                if t.has_meanings:
                     # The word has at least one meaning
                     words_in_bin += 1
                 else:
@@ -236,13 +274,14 @@ class GreynirCorrect(Greynir):
             # Note: these tokens and indices are the original tokens from
             # the submitted text, including ones that are not understood
             # by the parser, such as quotation marks and exotic punctuation
+            annotate = False
             if getattr(t, "error_code", None):
                 # This is a CorrectToken instance (or a duck typing equivalent)
                 assert isinstance(t, CorrectToken)  # Satisfy Mypy
                 annotate = True
                 if parsed and ix in token_to_terminal:
                     # For the call to suggestion_does_not_match(), we need a
-                    # BIN_Token instance, which we can obtain in a bit of a hacky
+                    # BIN_Token instance, which we obtain in a bit of a hacky
                     # way by creating it on the fly
                     bin_token = BIN_Parser.wrap_token(t, ix)
                     # Obtain the original BIN_Terminal instance from the grammar
