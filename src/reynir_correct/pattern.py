@@ -1470,7 +1470,7 @@ class PatternMatcher:
         fn = match.first_match("fn")
         if fn is None:
             return
-        comma = match.first_match("@\",\"")
+        comma = match.first_match('@","')
         if comma is not None:
             return
         fn_lemma = fn.lemma
@@ -1616,6 +1616,26 @@ class PatternMatcher:
                 detail=detail,
                 original=so.text,
                 suggest=emulate_case(suggest, template=so.text),
+            )
+        )
+
+    def né(self, match: SimpleTree) -> None:
+        c = match.first_match("'né'")
+        if c is None:
+            return
+        start, end = c.span[0], c.span[1]
+        correction = "eða"
+        text = "'né' gæti átt að vera 'eða'"
+        detail = "'né' er hluti af margorða samtengingunni 'hvorki né' en getur ekki staðið eitt og sér sem aukatenging."
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_NT_Né",
+                text=text,
+                detail=detail,
+                original="né",
+                suggest=correction,
             )
         )
 
@@ -2823,6 +2843,15 @@ class PatternMatcher:
                 "Skagi",  # Trigger lemma for this pattern
                 "VP > { VP > { 'vera' } PP >> { PP > { ADVP > { 'upp' } P > { 'á' } NP > { 'Skagi' } } } }",
                 lambda self, match: self.dir_loc(match),
+                None,
+            )
+        )
+
+        cls.add_pattern(
+            (
+                "né",  # Trigger lemma for this pattern
+                "VP > { NP > { C > 'né' } }",
+                lambda self, match: self.né(match),
                 None,
             )
         )
