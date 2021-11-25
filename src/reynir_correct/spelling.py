@@ -71,41 +71,41 @@ LOG_LAMBDA = math.log(0.4)
 
 @lru_cache(maxsize=2048)
 def _splits(word: str) -> Tuple[Tuple[str, str], ...]:
-    """ Return a list of all possible (first, rest) pairs that comprise word. """
+    """Return a list of all possible (first, rest) pairs that comprise word."""
     return tuple((word[:i], word[i:]) for i in range(len(word) + 1))
 
 
 def levenshtein_distance(s1: str, s2: str) -> int:
-    """ Return the Levenshtein distance between two strings,
-        using the Wagner-Fischer iterative algorithm.
+    """Return the Levenshtein distance between two strings,
+    using the Wagner-Fischer iterative algorithm.
 
-        This function is based on code from https://github.com/toastdriven/pylev:
+    This function is based on code from https://github.com/toastdriven/pylev:
 
-        Copyright (c) 2012, Daniel Lindsley
-        All rights reserved.
+    Copyright (c) 2012, Daniel Lindsley
+    All rights reserved.
 
-        Redistribution and use in source and binary forms, with or without
-        modification, are permitted provided that the following conditions are met:
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
 
-            * Redistributions of source code must retain the above copyright
-            notice, this list of conditions and the following disclaimer.
-            * Redistributions in binary form must reproduce the above copyright
-            notice, this list of conditions and the following disclaimer in the
-            documentation and/or other materials provided with the distribution.
-            * Neither the name of the pylev nor the
-            names of its contributors may be used to endorse or promote products
-            derived from this software without specific prior written permission.
+        * Redistributions of source code must retain the above copyright
+        notice, this list of conditions and the following disclaimer.
+        * Redistributions in binary form must reproduce the above copyright
+        notice, this list of conditions and the following disclaimer in the
+        documentation and/or other materials provided with the distribution.
+        * Neither the name of the pylev nor the
+        names of its contributors may be used to endorse or promote products
+        derived from this software without specific prior written permission.
 
-        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-        ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-        WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-        DISCLAIMED. IN NO EVENT SHALL pylev BE LIABLE FOR ANY
-        DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-        (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-        LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-        ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-        (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-        SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL pylev BE LIABLE FOR ANY
+    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+    ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     """
     if s1 == s2:
         return 0
@@ -157,7 +157,7 @@ def levenshtein_distance(s1: str, s2: str) -> int:
 
 class Corrector:
 
-    """ A spelling corrector class using a word frequency dictionary """
+    """A spelling corrector class using a word frequency dictionary"""
 
     # The characters used to form variants of words by insertion
     _ALPHABET = "aábcdðeéfghiíjklmnoópqrstuúvwxyýzþæö"
@@ -411,7 +411,7 @@ class Corrector:
 
     @property
     def db(self) -> GreynirBin:
-        """ Return the associated word database """
+        """Return the associated word database"""
         return self._db
 
     def lookup_word(
@@ -421,11 +421,11 @@ class Corrector:
         at_sentence_start: bool = False,
         auto_uppercase: bool = False
     ) -> ResultTuple:
-        """ Look up the given word in the associated word database """
+        """Look up the given word in the associated word database"""
         return self._db.lookup_g(word, at_sentence_start, auto_uppercase)
 
     def subs(self, word: str) -> Iterable[str]:
-        """ Return all combinations of potential substitutions into the word. """
+        """Return all combinations of potential substitutions into the word."""
         # The following yields a list of tuples, for instance
         # [('gl', 'gl'), ('er', 'r'), ('aug', 'g')] for the word "gleraugu"
         fragments: List[Tuple[str, str]] = re.findall(self._SUBSTITUTE_REGEX, word)
@@ -474,7 +474,9 @@ class Corrector:
         context: Tuple[str, ...],
         at_sentence_start: bool,
     ) -> str:
-        candidates = self._best_candidates(original_word, word, context, at_sentence_start)
+        candidates = self._best_candidates(
+            original_word, word, context, at_sentence_start
+        )
         if not candidates:
             # No good candidates
             return word
@@ -496,10 +498,10 @@ class Corrector:
         context: Tuple[str, ...],
         at_sentence_start: bool,
     ) -> List[Tuple[str, float]]:
-        """ Find the best candidates for spelling correction for this word.
-            Credits for parts of this elegant code are due to Peter Norvig,
-            cf. http://nbviewer.jupyter.org/url/norvig.com/ipython/
-            How%20to%20Do%20Things%20with%20Words.ipynb """
+        """Find the best candidates for spelling correction for this word.
+        Credits for parts of this elegant code are due to Peter Norvig,
+        cf. http://nbviewer.jupyter.org/url/norvig.com/ipython/
+        How%20to%20Do%20Things%20with%20Words.ipynb"""
 
         # Note: word is assumed to be in lowercase, while
         # original_word has the original case from the source text
@@ -507,9 +509,9 @@ class Corrector:
         alphabet = self._ALPHABET
 
         def in_dictionary(w: str) -> bool:
-            """ Consider a word to be in-dictionary if it occurs in
-                BÍN (potentially also in title case) or
-                frequently enough in the trigrams database """
+            """Consider a word to be in-dictionary if it occurs in
+            BÍN (potentially also in title case) or
+            frequently enough in the trigrams database"""
             if w in self._db or self.freq(w) >= self._KNOWN_WORD_MIN_FREQUENCY:
                 return True
             wt = w.title()
@@ -520,17 +522,17 @@ class Corrector:
             )
 
         def known(words: Iterable[str]) -> Iterable[str]:
-            """ Return a generator of words that are actually in the dictionary. """
+            """Return a generator of words that are actually in the dictionary."""
             # A word is known if its lower case form is in the dictionary or
             # if its title form is in the dictionary (for example 'Ísland')
             return (w for w in words if in_dictionary(w))
 
         def edits0(word: str) -> Set[str]:
-            """ Return all strings that are zero edits away from word (i.e., just word itself). """
+            """Return all strings that are zero edits away from word (i.e., just word itself)."""
             return {word}
 
         def edits1(pairs: Iterable[Tuple[str, str]]) -> Set[str]:
-            """ Return all strings that are one edit away from this word. """
+            """Return all strings that are one edit away from this word."""
             # Deletes
             result = {a + b[1:] for (a, b) in pairs if b}
             # Transposes
@@ -543,29 +545,29 @@ class Corrector:
 
         # def edits2(pairs: Iterable[Tuple[str, str]]) -> Set[str]:
         #     """ Return all strings that are two edits away from this word. """
-        # 
+        #
         #     def sub_edits1(word: str) -> Set[str]:
         #         pairs = _splits(word)
         #         return edits1(pairs)
-        # 
+        #
         #     return {e2 for e1 in edits1(pairs) for e2 in sub_edits1(e1)}
 
         def gen_candidates(
             original_word: str, word: str
         ) -> Iterable[Tuple[str, float]]:
-            """ Generate candidates in order of generally decreasing likelihood """
+            """Generate candidates in order of generally decreasing likelihood"""
 
             def logprob_title(*args: str) -> float:
-                """ Return the log probability of an n-gram as a maximum of
-                    the log probability of the lower case n-gram and the title case
-                    n-gram, respectively """
+                """Return the log probability of an n-gram as a maximum of
+                the log probability of the lower case n-gram and the title case
+                n-gram, respectively"""
                 ctx, w = args[:-1], args[-1]
                 return max(self.logprob(*ctx, w), self.logprob(*ctx, w.title()))
 
             def freq_title(*args: str) -> int:
-                """ Return the frequency of an n-gram as a maximum of
-                    the frequency of the lower case n-gram and the title case
-                    n-gram, respectively """
+                """Return the frequency of an n-gram as a maximum of
+                the frequency of the lower case n-gram and the title case
+                n-gram, respectively"""
                 ctx, w = args[:-1], args[-1]
                 return max(self.freq(*ctx, w), self.freq(*ctx, w.title()))
 
@@ -658,19 +660,22 @@ class Corrector:
                     )
                 )
         # Skip very unlikely candidates
-        best_candidates = list([x for x in candidates if not (
-            x[1] < self._MIN_LOG_PROBABILITY 
-            and (
-                word in self.ngrams 
-                or original_word in self.ngrams
-            )
-        )])
-        candsort = sorted(best_candidates, key=lambda t: t[1], reverse=True)
+        best_candidates = list(
+            [
+                x
+                for x in candidates
+                if not (
+                    x[1] < self._MIN_LOG_PROBABILITY
+                    and (word in self.ngrams or original_word in self.ngrams)
+                )
+            ]
+        )
+        candsort = sorted(best_candidates, key=lambda t: t[1], reverse=True)[0:5]
         return candsort
 
     @staticmethod
     def _case_of(text: str) -> Callable[[str], str]:
-        """ Return the case-function appropriate for text: upper, lower, title, or just str. """
+        """Return the case-function appropriate for text: upper, lower, title, or just str."""
         if text.isupper():
             return str.upper
         if text[0].isupper():
@@ -680,7 +685,7 @@ class Corrector:
         return str
 
     def _cast(self, word: str) -> str:
-        """ Cast the word to lowercase and correct accents """
+        """Cast the word to lowercase and correct accents"""
         return re.sub(
             self._TRANSLATE_REGEX,
             lambda match: self._TRANSLATE[match.group()],
@@ -688,7 +693,7 @@ class Corrector:
         )
 
     def is_rare(self, word: str, *, sentence_is_uppercase: bool = False) -> bool:
-        """ Return True if the word is so rare as to be suspicious """
+        """Return True if the word is so rare as to be suspicious"""
         wl = word.lower()
         if wl != word:
             # The word is at least partially in uppercase in the text
@@ -712,39 +717,39 @@ class Corrector:
         context: Tuple[str, ...] = (),
         at_sentence_start: bool = False
     ) -> str:
-        """ Correct a single word, keeping its case (lower/upper/title) intact.
-            The optional context parameter contains a tuple of preceding
-            words, used to enable a more accurate probability prediction. """
+        """Correct a single word, keeping its case (lower/upper/title) intact.
+        The optional context parameter contains a tuple of preceding
+        words, used to enable a more accurate probability prediction."""
         return self._case_of(word)(
             self._correct(word, self._cast(word), context, at_sentence_start)
         )
 
     def suggest_list(
-        self, 
-        word: str, 
-        *, 
-        context: Tuple[str, ...] = (), 
+        self,
+        word: str,
+        *,
+        context: Tuple[str, ...] = (),
         at_sentence_start: bool = False
     ) -> List[Tuple[str, float]]:
-        """ Return a list of suggestions for a single word, keeping its case
-        (lower/upper/title) intact. The optional context parameter contains 
-        a tuple of preceding words, used to enable a more accurate probability 
-        prediction. """
+        """Return a list of suggestions for a single word, keeping its case
+        (lower/upper/title) intact. The optional context parameter contains
+        a tuple of preceding words, used to enable a more accurate probability
+        prediction."""
         x = self._best_candidates(word, self._cast(word), context, at_sentence_start)
         return list([(self._case_of(word)(y[0]), y[1]) for y in x])
 
     def __getitem__(self, word: str) -> str:
-        """ For the fun of it, support corrector["myword"] syntax """
+        """For the fun of it, support corrector["myword"] syntax"""
         return self.correct(word)
 
     def __contains__(self, word: str) -> bool:
-        """ Support "word" in corrector """
+        """Support "word" in corrector"""
         return self._db.__contains__(word)
 
     # pylint: disable=used-before-assignment
     def correct_text(self, text: StringIterable, *, only_rare: bool = False) -> str:
-        """ Attempt to correct all words within a text, returning the corrected text.
-            If only_rare is True, correction is only attempted on rare words. """
+        """Attempt to correct all words within a text, returning the corrected text.
+        If only_rare is True, correction is only attempted on rare words."""
         result: List[str] = []
         look_back = -MAX_ORDER + 1
         for token in tokenize(text):
@@ -814,11 +819,11 @@ def test() -> None:
         ]
 
         def linebreak(txt: str, margin: int = 80, left_margin: int = 0) -> str:
-            """ Return a nicely column-formatted string representation of the given text,
-                where each line is not longer than the given margin (if possible).
-                A left margin can be optionally added, as a sequence of spaces.
-                The lines are joined by newlines ('\n') but there is no trailing
-                newline. """
+            """Return a nicely column-formatted string representation of the given text,
+            where each line is not longer than the given margin (if possible).
+            A left margin can be optionally added, as a sequence of spaces.
+            The lines are joined by newlines ('\n') but there is no trailing
+            newline."""
             result: List[str] = []
             line: List[str] = []
             len_line = 0

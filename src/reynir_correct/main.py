@@ -282,7 +282,6 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> None:
         len_tokens = len(toklist)
         # Invoke the spelling and grammar checker on the token list
         sent = check_tokens(toklist)
-        print(sent)
         if sent is None:
             # Should not happen?
             continue

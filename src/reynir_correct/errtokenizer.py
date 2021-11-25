@@ -794,7 +794,7 @@ class SpellingSuggestion(Error):
     a word might be misspelled."""
 
     # W001: Replacement suggested
-    # W002: A list of suggestions are suggested
+    # W002: A list of suggestions is given
 
     def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
         # Spelling suggestion codes start with "W"
@@ -1761,6 +1761,53 @@ def lookup_unknown_words(
         # too (or if no meaning is found for it in BÍN, which is an unlikely case)
         return (not m) or "-" in m[0].stofn
 
+    def is_rare(token: CorrectToken) -> bool:
+        """Returns True if token is low in frequency or marked as rare in corpora"""
+        # TODO Use information from BÍN as well
+        return corrector.is_rare(token.txt)
+
+    def is_valid_suggestion(
+        token: CorrectToken, m: Sequence[BIN_Tuple], corrected_txt: str
+    ) -> bool:
+        # TODO Consider limiting to words under 15 characters
+        if Settings.DEBUG:
+            print("Checking rare word '{0}'".format(token.txt))
+        # We have a candidate correction: take a closer look at it
+        if corrected_txt == token.txt:
+            # No need to 'correct' the word with itself
+            return False
+        if len(corrected_txt) < 2:
+            return False
+        if len(token.txt) < 2:
+            return False
+        if (token.txt[0].lower() == "ó" and corrected_txt == token.txt[1:]) or (
+            corrected_txt[0].lower() == "ó" and token.txt == corrected_txt[1:]
+        ):
+            # The correction simply removed or added "ó" at the start of the
+            # word: probably not a good idea
+            return False
+        elif token.txt[0] == "-" and corrected_txt == token.txt[1:]:
+            # The correction simply removed "-" from the start of the
+            # word: probably not a good idea
+            return False
+        elif not m and token.txt[0].isupper():
+            # Don't correct uppercase words if the suggested correction
+            # is not in BÍN
+            return False
+        elif "-" in token.txt and (
+            token.txt.lower() == corrected_txt.lower() or " " in token.txt
+        ):
+            # Don't correct PCR-próf to Pcr-próf,
+            # or félags- og barnamálaráðherra to félags- og varnamálaráðherra
+            return False
+        # elif len(token.txt) == 1 and (
+        #    corrected_txt
+        #    != SINGLE_LETTER_CORRECTIONS.get((at_sentence_start, token.txt))
+        # ):
+        #    # Only allow single-letter corrections of a->á and i->í
+        #    return False
+        return True
+
     for token in token_stream:
 
         if token.kind == TOK.S_BEGIN:
@@ -1852,7 +1899,7 @@ def lookup_unknown_words(
             pass
 
         # Check rare (or nonexistent) words and see if we have a potential correction
-        elif not token.val or corrector.is_rare(token.txt):
+        elif not token.val or is_rare(token):
             # Yes, this is a rare word that needs further attention
             if only_ci and token.txt[0].islower():
                 # Don't want to correct
@@ -1868,63 +1915,60 @@ def lookup_unknown_words(
                 yield token
                 at_sentence_start = False
                 continue
-            # TODO Consider limiting to words under 15 characters
-            if Settings.DEBUG:
-                print("Checking rare word '{0}'".format(token.txt))
             # We use context[-3:-1] since the current token is the last item
             # in the context tuple, and we want the bigram preceding it.
+            if suggestion_list:
+                # The user wants to pick a correction so tokens should not be corrected automatically
+                # except from wordlist candidates. No need to check apply_suggestions suppress_suggestions
+                # as they should be mutually exclusive. Same logic goes for not checking only_suggest
+                suggestions = corrector.suggest_list(
+                    token.txt,
+                    context=tuple(context[-3:-1]),
+                    at_sentence_start=at_sentence_start,
+                )
+                final_sugg_list: List = []
+                for sugg, _ in suggestions:
+                    _, m = db.lookup_g(sugg, at_sentence_start=at_sentence_start)
+                    if is_valid_suggestion(token, m, sugg):
+                        final_sugg_list.append(sugg)
+                        print("Adding {}".format(sugg))
+                        # NOTE: We add each meaning. When the user picks a suggestion,
+                        # the other suggestions and meanings need to be deleted
+                        # if the parser hasn't already done so, and the sentence possibly reparsed.
+                        token.add_corrected_meanings(m)
+                    # Check if we got any hits:
+                    if final_sugg_list:
+                        print(final_sugg_list)
+                        text = f"Eftirfarandi orð koma til greina: {final_sugg_list}"
+                        # We add an error for each entry in the suggestion list
+                        token.set_error(
+                            SpellingSuggestion("002", text, token.txt, final_sugg_list)
+                        )
+                    at_sentence_start = False
+                    yield token
+
             corrected_txt = corrector.correct(
                 token.txt,
                 context=tuple(context[-3:-1]),
                 at_sentence_start=at_sentence_start,
             )
-            if (
-                corrected_txt != token.txt
-                and len(corrected_txt) > 1
-                and len(token.txt) > 1
-            ):
+            _, m = db.lookup_g(corrected_txt, at_sentence_start=at_sentence_start)
+            if is_valid_suggestion(token, m, corrected_txt) and not suggestion_list:
                 # We have a candidate correction: take a closer look at it
-                _, m = db.lookup_g(corrected_txt, at_sentence_start=at_sentence_start)
-                if (token.txt[0].lower() == "ó" and corrected_txt == token.txt[1:]) or (
-                    corrected_txt[0].lower() == "ó" and token.txt == corrected_txt[1:]
-                ):
-                    # The correction simply removed or added "ó" at the start of the
-                    # word: probably not a good idea
-                    pass
-                elif token.txt[0] == "-" and corrected_txt == token.txt[1:]:
-                    # The correction simply removed "-" from the start of the
-                    # word: probably not a good idea
-                    pass
-                elif not m and token.txt[0].isupper():
-                    # Don't correct uppercase words if the suggested correction
-                    # is not in BÍN
-                    pass
-                elif "-" in token.txt and (
-                    token.txt.lower() == corrected_txt.lower() or " " in token.txt
-                ):
-                    # Don't correct PCR-próf to Pcr-próf,
-                    # or félags- og barnamálaráðherra to félags- og varnamálaráðherra
-                    pass
-                # elif len(token.txt) == 1 and (
-                #    corrected_txt
-                #    != SINGLE_LETTER_CORRECTIONS.get((at_sentence_start, token.txt))
-                # ):
-                #    # Only allow single-letter corrections of a->á and i->í
-                #    pass
-                elif (
-                    not apply_suggestions
-                    and not suppress_suggestions
-                    and only_suggest(token, m)
-                ):
+                if not apply_suggestions and only_suggest(token, m):
                     # We have a candidate correction but the original word does
                     # exist in BÍN, so we're not super confident: yield a suggestion
-                    if Settings.DEBUG:
-                        print(
-                            "Suggested '{1}' instead of '{0}'".format(
-                                token.txt, corrected_txt
+                    # or no annotation if suppress_suggestions is True
+                    if suppress_suggestions:
+                        yield token
+                    else:
+                        if Settings.DEBUG:
+                            print(
+                                "Suggested '{1}' instead of '{0}'".format(
+                                    token.txt, corrected_txt
+                                )
                             )
-                        )
-                    yield suggest_word(1, token, corrected_txt, m)
+                        yield suggest_word(1, token, corrected_txt, m)
                     # We do not update the context in this case
                     at_sentence_start = False
                     continue
