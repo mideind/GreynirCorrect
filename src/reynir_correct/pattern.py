@@ -1626,7 +1626,7 @@ class PatternMatcher:
         start, end = c.span[0], c.span[1]
         correction = "eða"
         text = "'né' gæti átt að vera 'eða'"
-        detail = "'né' er hluti af margorða samtengingunni 'hvorki né' en getur ekki staðið ein og sér sem aukatenging."
+        detail = "'né' er hluti af margorða samtengingunni 'hvorki né' en getur ekki staðið eitt og sér sem aukatenging."
         self._ann.append(
             Annotation(
                 start=start,
@@ -2850,7 +2850,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "né",  # Trigger lemma for this pattern
-                "VP > [ .* NP > [ .* C > 'né' .* ] .* ]",
+                "VP > { NP > { C > 'né' } }",
                 lambda self, match: self.né(match),
                 None,
             )
