@@ -202,16 +202,16 @@ _ErrorClass = TypeVar("_ErrorClass", bound=ErrorType)
 
 
 def register_error_class(cls: _ErrorClass) -> _ErrorClass:
-    """ A decorator that populates the registry of all error classes,
-        to aid in serialization """
+    """A decorator that populates the registry of all error classes,
+    to aid in serialization"""
     global ERROR_CLASS_REGISTRY
     ERROR_CLASS_REGISTRY[cast(Any, cls).__name__] = cast(ErrorType, cls)
     return cls
 
 
 def emulate_case(s: str, *, template: str) -> str:
-    """ Return the string s but emulating the case of the template
-        (lower/upper/capitalized) """
+    """Return the string s but emulating the case of the template
+    (lower/upper/capitalized)"""
     if template.isupper():
         return s.upper()
     if template and template[0].isupper():
@@ -220,13 +220,13 @@ def emulate_case(s: str, *, template: str) -> str:
 
 
 def is_cap(word: str) -> bool:
-    """ Return True if the word is capitalized, i.e. starts with an
-        uppercase character and is otherwise lowercase """
+    """Return True if the word is capitalized, i.e. starts with an
+    uppercase character and is otherwise lowercase"""
     return word[0].isupper() and (len(word) == 1 or word[1:].islower())
 
 
 def style_warning(k: Ksnid) -> str:
-    """ Return a style warning for the given Ksnid tuple, if any """
+    """Return a style warning for the given Ksnid tuple, if any"""
     if k.malsnid in STYLE_WARNINGS:
         return k.malsnid
     if k.bmalsnid in STYLE_WARNINGS:
@@ -236,13 +236,13 @@ def style_warning(k: Ksnid) -> str:
 
 class CorrectToken(Tok):
 
-    """ Instances of this class, which is derived from tokenizer.Tok,
-        replace tokenizer.Tok instances in the tokenization pipeline.
-        When applying a CorrectionPipeline (instead of a DefaultPipeline,
-        as defined in binparser.py in GreynirPackage), tokens get translated to
-        instances of this class in the correct() phase. It adds an _err attribute
-        to hold information about spelling and grammar errors, and some
-        higher level functions to aid in error reporting and correction. """
+    """Instances of this class, which is derived from tokenizer.Tok,
+    replace tokenizer.Tok instances in the tokenization pipeline.
+    When applying a CorrectionPipeline (instead of a DefaultPipeline,
+    as defined in binparser.py in GreynirPackage), tokens get translated to
+    instances of this class in the correct() phase. It adds an _err attribute
+    to hold information about spelling and grammar errors, and some
+    higher level functions to aid in error reporting and correction."""
 
     def __init__(
         self,
@@ -263,7 +263,7 @@ class CorrectToken(Tok):
         self._cap: Optional[str] = None
 
     def __eq__(self, o: Any) -> bool:
-        """ Comparison between two CorrectToken instances """
+        """Comparison between two CorrectToken instances"""
         if not isinstance(o, CorrectToken):
             return False
         return (
@@ -274,12 +274,12 @@ class CorrectToken(Tok):
         )
 
     def __ne__(self, o: Any) -> bool:
-        """ Comparison between two CorrectToken instances """
+        """Comparison between two CorrectToken instances"""
         return not self.__eq__(o)
 
     @staticmethod
     def dump(tok: Tok) -> Tuple[Any, ...]:
-        """ Returns a JSON-dumpable object corresponding to a CorrectToken """
+        """Returns a JSON-dumpable object corresponding to a CorrectToken"""
         if not hasattr(tok, "_err"):
             # We assume this is a "plain" token, i.e. (kind, txt, val)
             assert isinstance(tok, Tok)
@@ -298,7 +298,7 @@ class CorrectToken(Tok):
 
     @staticmethod
     def load(*args: Any) -> "CorrectToken":
-        """ Loads a CorrectToken instance from a JSON dump """
+        """Loads a CorrectToken instance from a JSON dump"""
         largs = len(args)
         assert largs > 3
         ct = CorrectToken(*load_token(*args))
@@ -322,7 +322,7 @@ class CorrectToken(Tok):
 
     @classmethod
     def from_token(cls, t: Tok) -> "CorrectToken":
-        """ Wrap a raw token in a CorrectToken """
+        """Wrap a raw token in a CorrectToken"""
         return cls(t.kind, t.txt, t.val, t.original, t.origin_spans)
 
     @classmethod
@@ -332,12 +332,14 @@ class CorrectToken(Tok):
         val: Optional[BIN_TupleList] = None,
         original: Optional[str] = None,
     ) -> "CorrectToken":
-        """ Create a wrapped word token """
+        """Create a wrapped word token"""
         return cls(TOK.WORD, txt, val, original)
 
     def __repr__(self) -> str:
-        return "<CorrectToken(kind: {0}, txt: '{1}', val: {2}, original: '{3}')>".format(
-            TOK.descr[self.kind], self.txt, self.val, self.original
+        return (
+            "<CorrectToken(kind: {0}, txt: '{1}', val: {2}, original: '{3}')>".format(
+                TOK.descr[self.kind], self.txt, self.val, self.original
+            )
         )
 
     # Pylance currently needs a cast for this to work
@@ -360,11 +362,11 @@ class CorrectToken(Tok):
         return new_ent
 
     def set_capitalization(self, cap: str) -> None:
-        """ Set the capitalization state for this token """
+        """Set the capitalization state for this token"""
         self._cap = cap
 
     def copy_capitalization(self, other: Union[Tok, Sequence[Tok]]) -> None:
-        """ Copy the capitalization state from another CorrectToken instance """
+        """Copy the capitalization state from another CorrectToken instance"""
         if isinstance(other, CorrectToken):
             self._cap = other._cap
         elif isinstance(other, Tok):
@@ -375,26 +377,26 @@ class CorrectToken(Tok):
 
     @property
     def cap_sentence_start(self) -> bool:
-        """ True if this token appears at sentence start """
+        """True if this token appears at sentence start"""
         return self._cap == "sentence_start"
 
     @property
     def cap_after_ordinal(self) -> bool:
-        """ True if this token appears after an ordinal at sentence start """
+        """True if this token appears after an ordinal at sentence start"""
         return self._cap == "after_ordinal"
 
     @property
     def cap_in_sentence(self) -> bool:
-        """ True if this token appears within a sentence """
+        """True if this token appears within a sentence"""
         return self._cap == "in_sentence"
 
     def set_error(self, err: Union[None, "Error", bool]) -> None:
-        """ Associate an Error class instance with this token """
+        """Associate an Error class instance with this token"""
         self._err = err
 
     def copy(self, other: Union[Tok, Sequence[Tok]], coalesce: bool = False) -> bool:
-        """ Copy the error field and origin informatipon
-            from another CorrectToken instance """
+        """Copy the error field and origin informatipon
+        from another CorrectToken instance"""
         if isinstance(other, CorrectToken):
             self._err = other._err
             self.original = other.original
@@ -421,48 +423,48 @@ class CorrectToken(Tok):
 
     @property
     def error(self) -> Union[None, "Error", bool]:
-        """ Return the error object associated with this token, if any """
+        """Return the error object associated with this token, if any"""
         # Note that self._err may be a bool
         return self._err
 
     @property
     def has_error(self) -> bool:
-        """ Return True if this token has an associated error """
+        """Return True if this token has an associated error"""
         return self._err is not None
 
     @property
     def error_description(self) -> str:
-        """ Return the description of an error associated with this token, if any """
+        """Return the description of an error associated with this token, if any"""
         return getattr(self._err, "description", "")
 
     @property
     def error_code(self) -> str:
-        """ Return the code of an error associated with this token, if any """
+        """Return the code of an error associated with this token, if any"""
         return getattr(self._err, "code", "")
 
     @property
     def error_original(self) -> str:
-        """ Return the original text of the token """
+        """Return the original text of the token"""
         return getattr(self._err, "original", "")
 
     @property
     def error_suggest(self) -> str:
-        """ Return the text of a suggested replacement of this token, if any """
+        """Return the text of a suggested replacement of this token, if any"""
         return getattr(self._err, "suggest", "")
 
     @property
     def error_span(self) -> int:
-        """ Return the number of tokens affected by this error """
+        """Return the number of tokens affected by this error"""
         return getattr(self._err, "span", 1)
 
     @property
     def error_detail(self) -> Optional[str]:
-        """ Return the detailed description of this error, if any """
+        """Return the detailed description of this error, if any"""
         return getattr(self._err, "detail", None)
 
     def add_corrected_meanings(self, m: Sequence[BIN_Tuple]) -> None:
-        """ Add alternative BÍN meanings for this token, based on a
-            suggested spelling correction """
+        """Add alternative BÍN meanings for this token, based on a
+        suggested spelling correction"""
         assert self.kind == TOK.WORD
         # We assume that the token has already been marked
         # with a SpellingError or SpellingSuggestion error
@@ -478,9 +480,9 @@ class CorrectToken(Tok):
     def suggestion_does_not_match(
         self, terminal: VariantHandler, token: BIN_Token
     ) -> bool:
-        """ Return True if this token has an associated spelling
-            suggestion and that suggestion doesn't work grammatically
-            within the sentence, as parsed """
+        """Return True if this token has an associated spelling
+        suggestion and that suggestion doesn't work grammatically
+        within the sentence, as parsed"""
         if not hasattr(self._err, "does_not_match"):
             return False
         return cast(Any, self._err).does_not_match(terminal, token)
@@ -488,11 +490,11 @@ class CorrectToken(Tok):
 
 class Error(ABC):
 
-    """ Base class for spelling and grammar errors, warnings and recommendations.
-        An Error has a code and can provide a description of itself.
-        Note that Error instances (including subclass instances) are
-        serialized to JSON and must therefore only contain serializable
-        attributes, in a plain __dict__. """
+    """Base class for spelling and grammar errors, warnings and recommendations.
+    An Error has a code and can provide a description of itself.
+    Note that Error instances (including subclass instances) are
+    serialized to JSON and must therefore only contain serializable
+    attributes, in a plain __dict__."""
 
     def __init__(
         self,
@@ -524,26 +526,26 @@ class Error(ABC):
     @property
     @abstractmethod
     def description(self) -> str:
-        """ Should be overridden """
+        """Should be overridden"""
         ...
 
     def set_span(self, span: int) -> None:
-        """ Set the number of tokens spanned by this error """
+        """Set the number of tokens spanned by this error"""
         self._span = span
 
     @property
     def span(self) -> int:
-        """ Return the number of tokens spanned by this error """
+        """Return the number of tokens spanned by this error"""
         return self._span
 
     @property
     def original(self) -> Optional[str]:
-        """ Return the original text to which the error applies """
+        """Return the original text to which the error applies"""
         return self._original
 
     @property
     def suggest(self) -> Optional[str]:
-        """ Return a suggestion for correction, if available """
+        """Return a suggestion for correction, if available"""
         return self._suggest
 
     def __str__(self) -> str:
@@ -568,7 +570,7 @@ class Error(ABC):
 @register_error_class
 class PunctuationError(Error):
 
-    """ A PunctuationError is an error where punctuation is wrong """
+    """A PunctuationError is an error where punctuation is wrong"""
 
     # N001: Wrong quotation marks
     # N002: Three periods should be an ellipsis
@@ -589,8 +591,8 @@ class PunctuationError(Error):
 @register_error_class
 class CompoundError(Error):
 
-    """ A CompoundError is an error where words are duplicated, split or not
-        split correctly. """
+    """A CompoundError is an error where words are duplicated, split or not
+    split correctly."""
 
     # C001: Duplicated word removed. Should be corrected.
     # C002: Wrongly compounded words split up. Should be corrected.
@@ -624,9 +626,9 @@ class CompoundError(Error):
 @register_error_class
 class UnknownWordError(Error):
 
-    """ An UnknownWordError is an error where the given word form does not
-        exist in BÍN or additional vocabularies, and cannot be explained as
-        a compound word. """
+    """An UnknownWordError is an error where the given word form does not
+    exist in BÍN or additional vocabularies, and cannot be explained as
+    a compound word."""
 
     # U001: Unknown word. Nothing more is known. Cannot be corrected, only pointed out.
 
@@ -647,10 +649,10 @@ class UnknownWordError(Error):
 @register_error_class
 class CapitalizationError(Error):
 
-    """ A CapitalizationError is an error where a word is capitalized
-        incorrectly, i.e. should be lower case but occurs in upper case
-        except at the beginning of a sentence, or should be upper case
-        but occurs in lower case. """
+    """A CapitalizationError is an error where a word is capitalized
+    incorrectly, i.e. should be lower case but occurs in upper case
+    except at the beginning of a sentence, or should be upper case
+    but occurs in lower case."""
 
     # Z001: Word should begin with lowercase letter
     # Z002: Word should begin with uppercase letter
@@ -676,8 +678,8 @@ class CapitalizationError(Error):
 @register_error_class
 class AbbreviationError(Error):
 
-    """ An AbbreviationError is an error where an abbreviation
-        is not spelled out, punctuated or spaced correctly. """
+    """An AbbreviationError is an error where an abbreviation
+    is not spelled out, punctuated or spaced correctly."""
 
     # A001: Abbreviation corrected
     # A002: Token found in Abbreviations.WRONGDOTS and no
@@ -696,8 +698,8 @@ class AbbreviationError(Error):
 @register_error_class
 class TabooWarning(Error):
 
-    """ A TabooWarning marks a word that is vulgar or not appropriate
-        in formal text. """
+    """A TabooWarning marks a word that is vulgar or not appropriate
+    in formal text."""
 
     # T001: Taboo word usage warning, with suggested replacement
 
@@ -728,8 +730,8 @@ class TabooWarning(Error):
 @register_error_class
 class StyleWarning(Error):
 
-    """ A StyleWarning marks a word that is annotated with a
-        style comment in BÍN (malsnid/bmalsnid properties in Ksnid). """
+    """A StyleWarning marks a word that is annotated with a
+    style comment in BÍN (malsnid/bmalsnid properties in Ksnid)."""
 
     # Y001: Style warning for word
 
@@ -765,8 +767,8 @@ class StyleWarning(Error):
 @register_error_class
 class SpellingError(Error):
 
-    """ A SpellingError is an erroneous word that was replaced
-        by a much more likely word that exists in the dictionary. """
+    """A SpellingError is an erroneous word that was replaced
+    by a much more likely word that exists in the dictionary."""
 
     # S001: Common errors picked up by unique_errors. Should be corrected
     # S002: Errors handled by spelling.py. Corrections should possibly
@@ -788,8 +790,8 @@ class SpellingError(Error):
 @register_error_class
 class SpellingSuggestion(Error):
 
-    """ A SpellingSuggestion is an annotation suggesting that
-        a word might be misspelled. """
+    """A SpellingSuggestion is an annotation suggesting that
+    a word might be misspelled."""
 
     # W001: Replacement suggested
 
@@ -810,9 +812,9 @@ class SpellingSuggestion(Error):
         return d
 
     def does_not_match(self, terminal: VariantHandler, token: BIN_Token) -> bool:
-        """ Return True if this suggestion would not work
-            grammatically within the parsed sentence and should
-            therefore be discarded """
+        """Return True if this suggestion would not work
+        grammatically within the parsed sentence and should
+        therefore be discarded"""
         if not token.is_word:
             # We only perform this check for word tokens
             return False
@@ -845,8 +847,8 @@ class SpellingSuggestion(Error):
 @register_error_class
 class PhraseError(Error):
 
-    """ A PhraseError is a wrong multiword phrase, where a word is out
-        of place in its context. """
+    """A PhraseError is a wrong multiword phrase, where a word is out
+    of place in its context."""
 
     # P_xxx: Phrase error codes
 
@@ -879,13 +881,13 @@ def parse_errors(
     token_stream: Iterator[Tok], db: GreynirBin, only_ci: bool
 ) -> Iterator[CorrectToken]:
 
-    """ This tokenization phase is done before BÍN annotation
-        and before static phrases are identified. It finds duplicated words,
-        and words that have been incorrectly split or should be split. """
+    """This tokenization phase is done before BÍN annotation
+    and before static phrases are identified. It finds duplicated words,
+    and words that have been incorrectly split or should be split."""
 
     def get() -> CorrectToken:
-        """ Get the next token in the underlying stream and wrap it
-            in a CorrectToken instance """
+        """Get the next token in the underlying stream and wrap it
+        in a CorrectToken instance"""
         return CorrectToken.from_token(next(token_stream))
 
     # def is_split_compound(token: Tok, next_token: Tok) -> bool:
@@ -1349,9 +1351,9 @@ def parse_errors(
 
 class MultiwordErrorStream(MatchingStream):
 
-    """ Class that filters a token stream looking for multi-word
-        matches with the MultiwordErrors phrase dictionary,
-        and inserting replacement phrases when matches are found """
+    """Class that filters a token stream looking for multi-word
+    matches with the MultiwordErrors phrase dictionary,
+    and inserting replacement phrases when matches are found"""
 
     def __init__(self, db: GreynirBin, token_ctor: TokenCtor) -> None:
         super().__init__(MultiwordErrors.DICT)
@@ -1359,13 +1361,13 @@ class MultiwordErrorStream(MatchingStream):
         self._db = db
 
     def length(self, ix: int) -> int:
-        """ Return the length (word count) of the original phrase
-            that is being replaced """
+        """Return the length (word count) of the original phrase
+        that is being replaced"""
         return MultiwordErrors.get_phrase_length(ix)
 
     def match(self, tq: List[Tok], ix: int) -> Iterable[Tok]:
-        """ This is a complete match of an error phrase;
-            yield the replacement phrase """
+        """This is a complete match of an error phrase;
+        yield the replacement phrase"""
         replacement = MultiwordErrors.get_replacement(ix)
         db = self._db
         token_ctor = self._token_ctor
@@ -1413,10 +1415,10 @@ def handle_multiword_errors(
     token_stream: Iterator[CorrectToken], db: GreynirBin, token_ctor: TokenCtor
 ) -> Iterator[CorrectToken]:
 
-    """ Parse a stream of tokens looking for multiword phrases
-        containing errors.
-        The algorithm implements N-token lookahead where N is the
-        length of the longest phrase.
+    """Parse a stream of tokens looking for multiword phrases
+    containing errors.
+    The algorithm implements N-token lookahead where N is the
+    length of the longest phrase.
     """
 
     mwes = MultiwordErrorStream(db, token_ctor)
@@ -1473,7 +1475,7 @@ def fix_compound_words(
     only_ci: bool,
 ) -> Iterator[CorrectToken]:
 
-    """ Fix incorrectly compounded words """
+    """Fix incorrectly compounded words"""
 
     at_sentence_start = False
 
@@ -1650,8 +1652,8 @@ def lookup_unknown_words(
     suppress_suggestions: bool,
 ) -> Iterator[CorrectToken]:
 
-    """ Try to identify unknown words in the token stream, for instance
-        as spelling errors (character juxtaposition, deletion, insertion...) """
+    """Try to identify unknown words in the token stream, for instance
+    as spelling errors (character juxtaposition, deletion, insertion...)"""
 
     at_sentence_start = False
     context: Tuple[str, ...] = tuple()
@@ -1664,8 +1666,8 @@ def lookup_unknown_words(
     parenthesis_stack: List[Dict[str, str]] = []
 
     def is_immune(token: CorrectToken) -> bool:
-        """ Return True if the token should definitely not be
-            corrected """
+        """Return True if the token should definitely not be
+        corrected"""
         if len(token.meanings) == 1 and token.meanings[0].beyging == "-":
             # This is probably an abbreviation, having a single meaning
             # and no declension information
@@ -1678,9 +1680,10 @@ def lookup_unknown_words(
     def replace_word(
         code: int, token: CorrectToken, corrected: str, corrected_display: Optional[str]
     ) -> CorrectToken:
-        """ Return a token for a corrected version of token_txt,
-            marked with a SpellingError if corrected_display is
-            a string containing the corrected word to be displayed """
+
+        """Return a token for a corrected version of token_txt,
+        marked with a SpellingError if corrected_display is
+        a string containing the corrected word to be displayed"""
         _, m = db.lookup_g(corrected, at_sentence_start)
         ct = token_ctor.Word(corrected, m, token=token if corrected_display else None)
         if corrected_display:
@@ -1705,9 +1708,9 @@ def lookup_unknown_words(
     def correct_word(
         code: int, token: CorrectToken, corrected: str, m: Sequence[BIN_Tuple]
     ) -> CorrectToken:
-        """ Return a token for a corrected version of token_txt,
-            marked with a SpellingError if corrected_display is
-            a string containing the corrected word to be displayed """
+        """Return a token for a corrected version of token_txt,
+        marked with a SpellingError if corrected_display is
+        a string containing the corrected word to be displayed"""
         ct = token_ctor.Word(corrected, m, token=token)
         if "." in corrected:
             text = f"Skammstöfunin '{token.txt}' var leiðrétt í '{corrected}'"
@@ -1723,8 +1726,8 @@ def lookup_unknown_words(
     def suggest_word(
         code: int, token: CorrectToken, corrected: str, m: Sequence[BIN_Tuple]
     ) -> CorrectToken:
-        """ Mark the current token with an annotation but don't correct
-            it, as we are not confident enough of the correction """
+        """Mark the current token with an annotation but don't correct
+        it, as we are not confident enough of the correction"""
         text = f"Orðið '{token.txt}' gæti átt að vera '{corrected}'"
         token.set_error(
             SpellingSuggestion("{0:03}".format(code), text, token.txt, corrected)
@@ -1734,8 +1737,8 @@ def lookup_unknown_words(
         return token
 
     def only_suggest(token: CorrectToken, m: Sequence[BIN_Tuple]) -> bool:
-        """ Return True if we don't have high confidence in the proposed
-            correction, so it will be suggested instead of applied """
+        """Return True if we don't have high confidence in the proposed
+        correction, so it will be suggested instead of applied"""
         if 2 <= len(token.txt) <= 4 and token.txt.isupper():
             # This is a 2 to 4-letter all-uppercase word:
             # it may be an unknown abbreviation, which we should not force-correct
@@ -1969,7 +1972,7 @@ def fix_capitalization(
     only_ci: bool,
 ) -> Iterator[CorrectToken]:
 
-    """ Annotate tokens with errors if they are capitalized incorrectly """
+    """Annotate tokens with errors if they are capitalized incorrectly"""
 
     stems = CapitalizationErrors.SET_REV
     wrong_stems = CapitalizationErrors.SET
@@ -1980,7 +1983,7 @@ def fix_capitalization(
     state = "sentence_start"
 
     def is_wrong(token: CorrectToken) -> bool:
-        """ Return True if the token's text is wrongly capitalized """
+        """Return True if the token's text is wrongly capitalized"""
         word = token.txt
         lower = True
         if is_cap(word):
@@ -2187,13 +2190,13 @@ def late_fix_capitalization(
     only_ci: bool,
 ) -> Iterator[CorrectToken]:
 
-    """ Annotate final, coalesced tokens with errors
-        if they are capitalized incorrectly """
+    """Annotate final, coalesced tokens with errors
+    if they are capitalized incorrectly"""
 
     def number_error(
         token: CorrectToken, replace: str, code: str, instruction_txt: str
     ) -> CorrectToken:
-        """ Mark a number token with a capitalization error """
+        """Mark a number token with a capitalization error"""
         original_txt = token.txt
         num, cases, genders = cast(NumberTuple, token.val)
         ct = token_ctor.Number(replace, num, cases, genders)
@@ -2306,7 +2309,7 @@ def late_fix_capitalization(
 
 
 def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectToken]:
-    """ Annotate taboo words with warnings """
+    """Annotate taboo words with warnings"""
 
     tdict = TabooWords.DICT
 
@@ -2362,7 +2365,7 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
 def check_style(
     token_stream: Iterable[CorrectToken], db: GreynirBin
 ) -> Iterator[CorrectToken]:
-    """ Annotate context-independent, word-level style errors """
+    """Annotate context-independent, word-level style errors"""
 
     for token in token_stream:
         # Check style
@@ -2405,9 +2408,9 @@ def check_style(
 
 class Correct_TOK(Bin_TOK):
 
-    """ A derived class to override token construction methods
-        as required to generate CorrectToken instances instead of
-        tokenizer.TOK instances """
+    """A derived class to override token construction methods
+    as required to generate CorrectToken instances instead of
+    tokenizer.TOK instances"""
 
     @staticmethod
     def Word(
@@ -2415,7 +2418,7 @@ class Correct_TOK(Bin_TOK):
         m: Optional[BIN_TupleList] = None,
         token: Union[None, Tok, Sequence[Tok]] = None,
     ) -> CorrectToken:
-        """ Override the TOK.Word constructor to create a CorrectToken instance """
+        """Override the TOK.Word constructor to create a CorrectToken instance"""
         assert isinstance(t, str)
         ct = CorrectToken.word(t, m)
         if token is not None:
@@ -2434,7 +2437,7 @@ class Correct_TOK(Bin_TOK):
         genders: Optional[List[str]] = None,
         token: Optional[Tok] = None,
     ) -> CorrectToken:
-        """ Override the TOK.Number constructor to create a CorrectToken instance """
+        """Override the TOK.Number constructor to create a CorrectToken instance"""
         assert isinstance(t, str)
         ct = CorrectToken(TOK.NUMBER, t, (n, cases, genders))
         if token is not None:
@@ -2453,7 +2456,7 @@ class Correct_TOK(Bin_TOK):
         genders: Optional[List[str]] = None,
         token: Optional[Tok] = None,
     ) -> CorrectToken:
-        """ Override the TOK.Amount constructor to create a CorrectToken instance """
+        """Override the TOK.Amount constructor to create a CorrectToken instance"""
         assert isinstance(t, str)
         ct = CorrectToken(TOK.AMOUNT, t, (n, iso, cases, genders))
         if token is not None:
@@ -2471,7 +2474,7 @@ class Correct_TOK(Bin_TOK):
         genders: Optional[List[str]] = None,
         token: Optional[CorrectToken] = None,
     ) -> CorrectToken:
-        """ Override the TOK.Currency constructor to create a CorrectToken instance """
+        """Override the TOK.Currency constructor to create a CorrectToken instance"""
         assert isinstance(t, str)
         ct = CorrectToken(TOK.CURRENCY, t, (iso, cases, genders))
         if token is not None:
@@ -2487,7 +2490,7 @@ class Correct_TOK(Bin_TOK):
         m: Optional[PersonNameList] = None,
         token: Optional[Tok] = None,
     ) -> CorrectToken:
-        """ Override the TOK.Person constructor to create a CorrectToken instance """
+        """Override the TOK.Person constructor to create a CorrectToken instance"""
         assert isinstance(t, str)
         ct = CorrectToken(TOK.PERSON, t, m)
         if token is not None:
@@ -2499,7 +2502,7 @@ class Correct_TOK(Bin_TOK):
 
     @staticmethod
     def Entity(t: Union[Tok, str], token: Optional[Tok] = None) -> CorrectToken:
-        """ Override the TOK.Entity constructor to create a CorrectToken instance """
+        """Override the TOK.Entity constructor to create a CorrectToken instance"""
         assert isinstance(t, str)
         ct = CorrectToken(TOK.ENTITY, t, None)
         if token is not None:
@@ -2513,7 +2516,7 @@ class Correct_TOK(Bin_TOK):
     def Dateabs(
         t: Union[Tok, str], y: int, m: int, d: int, token: Optional[Tok] = None
     ) -> CorrectToken:
-        """ Override the TOK.Dateabs constructor to create a CorrectToken instance """
+        """Override the TOK.Dateabs constructor to create a CorrectToken instance"""
         assert isinstance(t, str)
         ct = CorrectToken(TOK.DATEABS, t, (y, m, d))
         if token is not None:
@@ -2527,7 +2530,7 @@ class Correct_TOK(Bin_TOK):
     def Daterel(
         t: Union[Tok, str], y: int, m: int, d: int, token: Optional[Tok] = None
     ) -> CorrectToken:
-        """ Override the TOK.Daterel constructor to create a CorrectToken instance """
+        """Override the TOK.Daterel constructor to create a CorrectToken instance"""
         assert isinstance(t, str)
         ct = CorrectToken(TOK.DATEREL, t, (y, m, d))
         if token is not None:
@@ -2539,9 +2542,9 @@ class Correct_TOK(Bin_TOK):
 
     @classmethod
     def before_composition(cls, tq: List[Tok]) -> None:
-        """ Overridable function to look at and eventually
-            modify a token queue before it is amalgamated
-            into a composite word """
+        """Overridable function to look at and eventually
+        modify a token queue before it is amalgamated
+        into a composite word"""
         # We roll back any spelling corrections up to the
         # last word in the token sequence
         for ix, t in enumerate(tq[0:-1]):
@@ -2554,8 +2557,8 @@ class Correct_TOK(Bin_TOK):
 
 class CorrectionPipeline(DefaultPipeline):
 
-    """ Override the default tokenization pipeline defined in bintokenizer.py
-        in GreynirPackage, adding a correction phase """
+    """Override the default tokenization pipeline defined in bintokenizer.py
+    in GreynirPackage, adding a correction phase"""
 
     # Use the Correct_TOK class to construct tokens, instead of
     # TOK (tokenizer.py) or Bin_TOK (bintokenizer.py)
@@ -2573,12 +2576,12 @@ class CorrectionPipeline(DefaultPipeline):
         self._suppress_suggestions = options.pop("suppress_suggestions", False)
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
-        """ Add a correction pass just before BÍN annotation """
+        """Add a correction pass just before BÍN annotation"""
         assert self._db is not None
         return parse_errors(stream, self._db, self._only_ci)
 
     def check_spelling(self, stream: TokenIterator) -> TokenIterator:
-        """ Attempt to resolve unknown words """
+        """Attempt to resolve unknown words"""
         # Create a Corrector on the first invocation
         assert self._db is not None
         if self._corrector is None:
@@ -2611,7 +2614,7 @@ class CorrectionPipeline(DefaultPipeline):
         return ct_stream
 
     def final_correct(self, stream: TokenIterator) -> TokenIterator:
-        """ Final correction pass """
+        """Final correction pass"""
         assert self._db is not None
         # Fix capitalization of final, coalesced tokens, such
         # as numbers ('24 Milljónir') and amounts ('3 Þúsund Dollarar')
@@ -2624,7 +2627,7 @@ class CorrectionPipeline(DefaultPipeline):
 
 
 def tokenize(text_or_gen: StringIterable, **options: Any) -> Iterator[CorrectToken]:
-    """ Tokenize text using the correction pipeline,
-        overriding a part of the default tokenization pipeline """
+    """Tokenize text using the correction pipeline,
+    overriding a part of the default tokenization pipeline"""
     pipeline = CorrectionPipeline(text_or_gen, **options)
     return cast(Iterator[CorrectToken], pipeline.tokenize())
