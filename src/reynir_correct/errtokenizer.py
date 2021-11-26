@@ -796,11 +796,22 @@ class SpellingSuggestion(Error):
     # W001: Replacement suggested
     # W002: A list of suggestions is given
 
-    def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
+    def __init__(
+        self,
+        code: str,
+        txt: str,
+        original: str,
+        suggest: str,
+        suggestlist: Optional[List[str]],
+    ) -> None:
         # Spelling suggestion codes start with "W"
         super().__init__(
-            "W" + code, is_warning=True, original=original, suggest=suggest
+            "W" + code,
+            is_warning=True,
+            original=original,
+            suggest=suggest,
         )
+        self._suggestlist = suggestlist
         self._txt = txt
 
     @property
@@ -810,7 +821,13 @@ class SpellingSuggestion(Error):
     def to_dict(self) -> Dict[str, Any]:
         d = super().to_dict()
         d["suggest"] = self.suggest
+        d["suggestlist"] = self._suggestlist
         return d
+
+    @property
+    def suggestlist(self) -> Optional[List[str]]:
+        """Return a list of suggestions for correction, if available"""
+        return self._suggestlist
 
     def does_not_match(self, terminal: VariantHandler, token: BIN_Token) -> bool:
         """Return True if this suggestion would not work
@@ -826,6 +843,7 @@ class SpellingSuggestion(Error):
         token_ref = token.lower
         has_hyphen = "-" in token_ref
         assert self.suggest is not None
+
         suggestion_ref = self.suggest.lower()
         for m in cast(Iterable[BIN_Tuple], token.t2):
             if terminal.matches_token(token, m):
@@ -840,6 +858,12 @@ class SpellingSuggestion(Error):
                 elif meaning_ref == suggestion_ref:
                     # This is the suggestion
                     matches_suggestion = True
+                if self.suggestlist:
+                    # Have a list of suggestions, meanings for each
+                    suggestion_refs = set([x.lower() for x in self.suggestlist])
+                    if meaning_ref in suggestion_refs:
+                        matches_suggestion = True
+
         # If the terminal matches the original word and not the
         # suggested one, return True to discard the suggestion
         return matches_original and not matches_suggestion
@@ -1919,7 +1943,7 @@ def lookup_unknown_words(
             # in the context tuple, and we want the bigram preceding it.
             if suggestion_list:
                 # The user wants to pick a correction so tokens should not be corrected automatically
-                # except from wordlist candidates. No need to check apply_suggestions suppress_suggestions
+                # except with wordlist candidates. No need to check apply_suggestions or suppress_suggestions
                 # as they should be mutually exclusive. Same logic goes for not checking only_suggest
                 suggestions = corrector.suggest_list(
                     token.txt,
@@ -1927,23 +1951,31 @@ def lookup_unknown_words(
                     at_sentence_start=at_sentence_start,
                 )
                 final_sugg_list: List = []
+                m_list = List = []
                 for sugg, _ in suggestions:
                     _, m = db.lookup_g(sugg, at_sentence_start=at_sentence_start)
                     if is_valid_suggestion(token, m, sugg):
                         final_sugg_list.append(sugg)
-                        print("Adding {}".format(sugg))
+                        m_list.append(m)
+                    # Check if we got any hits:
+                    if final_sugg_list:
+                        best_cand = final_sugg_list[0]
+                        text = f"Orðið '{token.txt}' gæti átt að vera '{best_cand}'"
+                        # We add the most likely candidate as the suggest value
+                        token.set_error(
+                            SpellingSuggestion(
+                                "002",
+                                text,
+                                token.txt,
+                                best_cand,
+                                final_sugg_list,
+                            )
+                        )
                         # NOTE: We add each meaning. When the user picks a suggestion,
                         # the other suggestions and meanings need to be deleted
                         # if the parser hasn't already done so, and the sentence possibly reparsed.
-                        token.add_corrected_meanings(m)
-                    # Check if we got any hits:
-                    if final_sugg_list:
-                        print(final_sugg_list)
-                        text = f"Eftirfarandi orð koma til greina: {final_sugg_list}"
-                        # We add an error for each entry in the suggestion list
-                        token.set_error(
-                            SpellingSuggestion("002", text, token.txt, final_sugg_list)
-                        )
+                        for mx in m_list:
+                            token.add_corrected_meanings(mx)
                     at_sentence_start = False
                     yield token
 
