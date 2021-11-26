@@ -1756,7 +1756,7 @@ def lookup_unknown_words(
         it, as we are not confident enough of the correction"""
         text = f"Orðið '{token.txt}' gæti átt að vera '{corrected}'"
         token.set_error(
-            SpellingSuggestion("{0:03}".format(code), text, token.txt, corrected)
+            SpellingSuggestion("{0:03}".format(code), text, token.txt, corrected, None)
         )
         # Add the meanings of the potential correction to the token
         token.add_corrected_meanings(m)
@@ -1951,10 +1951,13 @@ def lookup_unknown_words(
                     at_sentence_start=at_sentence_start,
                 )
                 final_sugg_list: List = []
-                m_list = List = []
+                m_list: List = []
                 for sugg, _ in suggestions:
                     _, m = db.lookup_g(sugg, at_sentence_start=at_sentence_start)
                     if is_valid_suggestion(token, m, sugg):
+                        if sugg in final_sugg_list:
+                            # Sometimes we get the same value twice as a candidate
+                            continue
                         final_sugg_list.append(sugg)
                         m_list.append(m)
                     # Check if we got any hits:
@@ -1977,8 +1980,7 @@ def lookup_unknown_words(
                         for mx in m_list:
                             token.add_corrected_meanings(mx)
                     at_sentence_start = False
-                    yield token
-
+                    continue
             corrected_txt = corrector.correct(
                 token.txt,
                 context=tuple(context[-3:-1]),
