@@ -1676,6 +1676,7 @@ def lookup_unknown_words(
     apply_suggestions: bool,
     suggestion_list: bool,
     suppress_suggestions: bool,
+    suggest_not_correct: bool,
 ) -> Iterator[CorrectToken]:
 
     """Try to identify unknown words in the token stream, for instance
@@ -1841,7 +1842,6 @@ def lookup_unknown_words(
             context = tuple()
             parenthesis_stack = []
             continue
-
         # Store the previous context in case we need to construct
         # a new current context (after token substitution)
         prev_context = context
@@ -2013,7 +2013,11 @@ def lookup_unknown_words(
                         print(
                             "Corrected '{0}' to '{1}'".format(token.txt, corrected_txt)
                         )
-                    ctok = correct_word(4, token, corrected_txt, m)
+                    if suggest_not_correct:
+                        # Only suggest_word, not correct
+                        ctok = suggest_word(1, token, corrected_txt, m)
+                    else:
+                        ctok = correct_word(4, token, corrected_txt, m)
                     yield ctok
                     # Update the context with the corrected token
                     context = (prev_context + tuple(ctok.txt.split()))[-3:]
@@ -2657,6 +2661,8 @@ class CorrectionPipeline(DefaultPipeline):
         self._suggestion_list = options.pop("suggestion_list", False)
         # Skip spelling suggestions
         self._suppress_suggestions = options.pop("suppress_suggestions", False)
+        # Only give suggestions, don't correct anything
+        self._suggest_not_correct = options.pop("suggest_not_correct", False)
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """Add a correction pass just before BÍN annotation"""
@@ -2689,6 +2695,7 @@ class CorrectionPipeline(DefaultPipeline):
             self._apply_suggestions,
             self._suppress_suggestions,
             self._suggestion_list,
+            self._suggest_not_correct,
         )
         # Check taboo words
         if not only_ci:
