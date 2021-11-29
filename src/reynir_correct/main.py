@@ -83,7 +83,7 @@ parser.add_argument(
     nargs="?",
     type=str,
     default="text",
-    help="Determine output format.\ntext: Corrected text only\ncsv: One token per line in CSV format\njson: One token per line in JSON format\nm2: M2 format, GEC standard",
+    help="Determine output format.\ntext: Corrected text only.\ncsv: One token per line in CSV format.\njson: One token per line in JSON format.\nm2: M2 format, GEC standard.",
 )
 
 # Determines whether we supply only token-level annotations or also sentence-level annotations
@@ -99,13 +99,18 @@ def main() -> None:
     """Main function, called when the 'correct' command is invoked"""
 
     args = parser.parse_args()
-
-    # By default, no options apply
+    # Fill options with information from args
     options: Dict[str, bool] = {}
+    options["infile"] = args.infile
+    if args.suppress_suggestions:
+        options["suppress_suggestions"] = args.suppress_suggestions
+    options["format"] = args.format
+    options["spaced"] = args.spaced
+    options["all_errors"] = args.all_errors
     if args.all_errors:
         # Needed to get the correct original form for token-level annotations
         options["suggest_everything"] = True
-    print(check_errors(args, **options), file=args.outfile)
+    print(check_errors(**options), file=args.outfile)
 
 
 if __name__ == "__main__":

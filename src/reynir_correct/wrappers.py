@@ -107,45 +107,6 @@ json_dumps = partial(json.dumps, ensure_ascii=False, separators=(",", ":"))
 
 # Define the command line arguments
 
-parser = argparse.ArgumentParser(description="Corrects Icelandic text")
-
-parser.add_argument(
-    "infile",
-    nargs="?",
-    type=ReadFile,
-    default=sys.stdin,
-    help="UTF-8 text file to correct",
-)
-parser.add_argument(
-    "outfile",
-    nargs="?",
-    type=WriteFile,
-    default=sys.stdout,
-    help="UTF-8 output text file",
-)
-parser.add_argument(
-    "--suppress_suggestions",
-    "-sss",
-    action="store_true",
-    help="Suppress more agressive error suggestions",
-)
-parser.add_argument("--spaced", help="Separate tokens with spaces", action="store_true")
-# Determines the output format
-parser.add_argument(
-    "--format",
-    nargs="?",
-    type=str,
-    default="text",
-    help="Determine output format.\ntext: Corrected text only\ncsv: One token per line in CSV format\njson: One token per line in JSON format\nspace: Separate tokens with spaces\nm2: M2 format, GEC standard",
-)
-# Determines whether we supply only token-level annotations or also sentence-level annotations
-parser.add_argument(
-    "--all_errors",
-    "-a",
-    help="Annotate both grammar and spelling errors",
-    action="store_true",
-)
-
 
 def gen(f: Iterator[str]) -> Iterable[str]:
     """Generate the lines of text in the input file"""
@@ -201,26 +162,30 @@ def val(
     return t.val
 
 
-def check_errors(args: argparse.Namespace, **options: Any) -> Optional[str]:
+def check_errors(**options: Any) -> Optional[str]:
     """Return a string in the chosen format and correction level using the spelling and grammar checker"""
-    if args.all_errors:
-        return check_grammar(args, **options)
+    if options["infile"] == sys.stdin and sys.stdin.isatty():
+        # terminal input is empty, most likely no value was given for infile:
+        # Nothing we can do
+        print("No input has been given, nothing can be returned")
+        raise ValueError
+    if options["all_errors"]:
+        return check_grammar(**options)
     else:
-        return check_spelling(args, **options)
+        return check_spelling(**options)
 
 
-def check_spelling(args: argparse.Namespace, **options: Any) -> str:
+def check_spelling(**options: Any) -> str:
     # Initialize sentence accumulator list
     curr_sent: List[CorrectToken] = []
     accumul: List[str] = []
     # Function to convert a token list to output text
-    if args.spaced:
+    if options["spaced"]:
         to_text = normalized_text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
-
-    for t in errtokenize(gen(args.infile), **options):
-        if args.format == "csv":
+    for t in errtokenize(gen(options["infile"]), **options):
+        if options["format"] == "csv":
             # Output the tokens in CSV format, one line per token
             if t.txt:
                 accumul.append(
@@ -234,7 +199,7 @@ def check_spelling(args: argparse.Namespace, **options: Any) -> str:
             elif t.kind == TOK.S_END:
                 # Indicate end of sentence
                 accumul.append('0,"",""')
-        elif args.format == "json":
+        elif options["format"] == "json":
             # Output the tokens in JSON format, one line per token
             d: Dict[str, Any] = dict(k=TOK.descr[t.kind])
             if t.txt is not None:
@@ -261,23 +226,27 @@ def check_spelling(args: argparse.Namespace, **options: Any) -> str:
     return "\n".join(accumul)
 
 
-def check_grammar(args: argparse.Namespace, **options: Any) -> str:
+def check_grammar(**options: Any) -> str:
     """Do a full spelling and grammar check of the source text"""
 
     def sentence_stream() -> Iterator[List[CorrectToken]]:
         """Yield a stream of sentence token lists from the source text"""
         # Initialize sentence accumulator list
         curr_sent: List[CorrectToken] = []
-        for t in errtokenize(gen(args.infile), **options):
-            # Normal shallow parse, one line per sentence,
-            # tokens separated by spaces
-            # Note this uses the tokenize function in errtokenizer.py
-            # instead of the one in Tokenizer
-            curr_sent.append(t)
-            if t.kind in TOK.END:
-                # End of sentence/paragraph
-                yield curr_sent
-                curr_sent = []
+        if options["one_sent"] == True:
+            # Input only contains one sentence
+            curr_sent = list(errtokenize(options["infile"], **options))
+        else:
+            for t in errtokenize(gen(options["infile"]), **options):
+                # Normal shallow parse, one line per sentence,
+                # tokens separated by spaces
+                # Note this uses the tokenize function in errtokenizer.py
+                # instead of the one in Tokenizer
+                curr_sent.append(t)
+                if t.kind in TOK.END:
+                    # End of sentence/paragraph
+                    yield curr_sent
+                    curr_sent = []
         if curr_sent:
             yield curr_sent
 
@@ -347,7 +316,7 @@ def check_grammar(args: argparse.Namespace, **options: Any) -> str:
             )
             for ann in a
         ]
-        if args.format == "text":
+        if options["format"] == "text":
             arev = sorted(a, key=lambda ann: (ann.start, ann.end), reverse=True)
             if sent.tree is None:
                 # No need to do more, no grammar errors have been checked
