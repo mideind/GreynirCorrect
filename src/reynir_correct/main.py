@@ -37,78 +37,17 @@
 """
 
 from typing import (
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Iterator,
-    Iterable,
     Dict,
-    Any,
-    Union,
-    cast,
 )
 
 import sys
 import argparse
-import json
-from functools import partial
-from typing_extensions import TypedDict
-
-from tokenizer import detokenize, normalized_text_from_tokens
-from tokenizer.definitions import AmountTuple, NumberTuple
-
-from .errtokenizer import TOK, CorrectToken, Error
-from .errtokenizer import tokenize as errtokenize
-from .annotation import Annotation
-from .checker import check_tokens
 from .wrappers import check_errors
-
-
-class AnnTokenDict(TypedDict, total=False):
-
-    """Type of the token dictionaries returned from check_grammar()"""
-
-    # Token kind
-    k: int
-    # Token text
-    x: str
-    # Original text of token
-    o: str
-    # Character offset of token, indexed from the start of the checked text
-    i: int
-
-
-class AnnDict(TypedDict):
-
-    """A single annotation, as returned by the Yfirlestur.is API"""
-
-    start: int
-    end: int
-    start_char: int
-    end_char: int
-    code: str
-    text: str
-    detail: Optional[str]
-    suggest: Optional[str]
-
-
-class AnnResultDict(TypedDict):
-
-    """The annotation result for a sentence"""
-
-    original: str
-    corrected: str
-    annotations: List[AnnDict]
-    tokens: List[AnnTokenDict]
 
 
 # File types for UTF-8 encoded text files
 ReadFile = argparse.FileType("r", encoding="utf-8")
 WriteFile = argparse.FileType("w", encoding="utf-8")
-
-# Configure our JSON dump function
-json_dumps = partial(json.dumps, ensure_ascii=False, separators=(",", ":"))
 
 # Define the command line arguments
 
@@ -154,60 +93,6 @@ parser.add_argument(
     help="Annotate both grammar and spelling errors",
     action="store_true",
 )
-
-
-def gen(f: Iterator[str]) -> Iterable[str]:
-    """Generate the lines of text in the input file"""
-    yield from f
-
-
-def quote(s: str) -> str:
-    """Return the string s within double quotes, and with any contained
-    backslashes and double quotes escaped with a backslash"""
-    if not s:
-        return '""'
-    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
-
-
-def val(
-    t: CorrectToken, quote_word: bool = False
-) -> Union[None, str, float, Tuple[Any, ...], Sequence[Any]]:
-    """Return the value part of the token t"""
-    if t.val is None:
-        return None
-    if t.kind in {TOK.WORD, TOK.PERSON, TOK.ENTITY}:
-        # No need to return list of meanings
-        return None
-    if t.kind in {TOK.PERCENT, TOK.NUMBER, TOK.CURRENCY}:
-        return cast(NumberTuple, t.val)[0]
-    if t.kind == TOK.AMOUNT:
-        num, iso, _, _ = cast(AmountTuple, t.val)
-        if quote_word:
-            # Format as "1234.56|USD"
-            return '"{0}|{1}"'.format(num, iso)
-        return num, iso
-    if t.kind == TOK.S_BEGIN:
-        return None
-    if t.kind == TOK.PUNCTUATION:
-        punct = t.punctuation
-        return quote(punct) if quote_word else punct
-    if quote_word and t.kind in {
-        TOK.DATE,
-        TOK.TIME,
-        TOK.DATEABS,
-        TOK.DATEREL,
-        TOK.TIMESTAMP,
-        TOK.TIMESTAMPABS,
-        TOK.TIMESTAMPREL,
-        TOK.TELNO,
-        TOK.NUMWLETTER,
-        TOK.MEASUREMENT,
-    }:
-        # Return a |-delimited list of numbers
-        return quote("|".join(str(v) for v in cast(Iterable[Any], t.val)))
-    if quote_word and isinstance(t.val, str):
-        return quote(t.val)
-    return t.val
 
 
 def main() -> None:
