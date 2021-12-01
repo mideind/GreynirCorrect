@@ -343,7 +343,10 @@ def check_grammar(**options: Any) -> str:
                         # Delete the other tokens
                         del cleantoklist[xann.start + 2 : xann.end + 2]
                 accumul.append(detokenize(cleantoklist, normalize=True))
-        else:
+                if options["annotations"] == True:
+                    for aann in a:
+                        accumul.append(str(aann))
+        elif options["format"] == "json":
             # Create final dictionary for JSON encoding
             ard = AnnResultDict(
                 original=cleaned,
@@ -353,4 +356,24 @@ def check_grammar(**options: Any) -> str:
             )
 
             accumul.append(json_dumps(ard))
+        elif options["format"] == "csv":
+            for cann in a:
+                accumul.append(
+                    "{},{},{},{},{}".format(
+                        cann.code, cann.original, cann.suggest, cann.start, cann.end
+                    )
+                )
+        elif options["format"] == "m2":
+            # M2 format: https://github.com/nusnlp/m2scorer
+            # S <tokenized system output for sentence 1>
+            # A <token start offset> <token end offset>|||<error type>|||<correction1>||<correction2||..||correctionN|||<required>|||<comment>|||<annotator id>
+            accumul.append("S {0}".format(cleaned))
+            for mann in a:
+                accumul.append(
+                    "A {0} {1}|||{2}|||{3}||REQUIRED|||-NONE||0".format(
+                        mann.start, mann.end, mann.code, mann.suggest
+                    )
+                )
+            accumul.append("")
+
     return "\n".join(accumul)

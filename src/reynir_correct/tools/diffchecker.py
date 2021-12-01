@@ -43,11 +43,12 @@ def main():
     options: Dict[str, Union[str, bool]] = {}
     # Hægt að biðja um annað til að fá frekari upplýsingar!
     options["format"] = "text"
+    options["annotations"] = True
     options["all_errors"] = True
 
     # options["infile"] = open("prufa.txt", "r")
     options["one_sent"] = True
-    options["generate_suggestion_list"] = True
+    # options["generate_suggestion_list"] = True
 
     args = parser.parse_args()
     inputfile = args.inputfile
