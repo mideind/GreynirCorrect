@@ -1709,6 +1709,9 @@ def lookup_unknown_words(
             return True
         if token.txt.isupper():
             # Should not correct all uppercase words
+            if token.error_code and token.error_code in {"Z002"} and at_sentence_start:
+                # We have fixed capitalization, doesn't mean word is correct
+                return False
             return True
         return False
 
@@ -1907,10 +1910,13 @@ def lookup_unknown_words(
         if token.error_code:
             # This token already has an associated error and eventual correction:
             # let it be
-            yield token
-            # We're now within a sentence
-            at_sentence_start = False
-            continue
+            if token.error_code in {"Z001", "Z002"}:
+                pass
+            else:
+                yield token
+                # We're now within a sentence
+                at_sentence_start = False
+                continue
 
         # Check wrong word forms, i.e. those that do not exist in BÍN
         # !!! TODO: Some error forms are present in BÍN but in a different
@@ -1926,7 +1932,7 @@ def lookup_unknown_words(
             yield rtok
             continue
 
-        if is_immune(token) or token.error:
+        if is_immune(token):
             # Nothing more to do
             pass
 
