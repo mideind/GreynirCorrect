@@ -141,6 +141,6 @@ class Annotation:
 
     @property
     def suggestlist(self) -> Optional[List[str]]:
-        """A list of suggested corrections for the token span, as a text string
-        containing tokens delimited by spaces"""
+        """A list of suggested corrections for the token span, as a list
+        of text strings containing tokens delimited by spaces"""
         return self._suggestlist

@@ -474,7 +474,8 @@ class Corrector:
         context: Tuple[str, ...],
         at_sentence_start: bool,
     ) -> str:
-        candidates = self._best_candidates(
+        """Return best candidate or the original word if none are found"""
+        candidates = self.gen_candidates(
             original_word, word, context, at_sentence_start
         )
         if not candidates:
@@ -491,7 +492,7 @@ class Corrector:
         # Return the most likely word
         return m[0]
 
-    def _best_candidates(
+    def gen_candidates(
         self,
         original_word: str,
         word: str,
@@ -552,7 +553,7 @@ class Corrector:
         #
         #     return {e2 for e1 in edits1(pairs) for e2 in sub_edits1(e1)}
 
-        def gen_candidates(
+        def _gen_candidates(
             original_word: str, word: str
         ) -> Iterable[Tuple[str, float]]:
             """Generate candidates in order of generally decreasing likelihood"""
@@ -644,10 +645,22 @@ class Corrector:
             # print(f"The original word {word} is above the threshold, returning it")
             return []
         # Otherwise, generate replacement candidates
-        candidates = list(gen_candidates(original_word, word))
+        return list(_gen_candidates(original_word, word))
+
+    def _best_list(
+        self,
+        original_word: str,
+        word: str,
+        context: Tuple[str, ...],
+        at_sentence_start: bool,
+    ) -> List[Tuple[str, float]]:
+        """Remove unlikely candidates from list"""
+        candidates = self.gen_candidates(
+            original_word, word, context, at_sentence_start
+        )
         if not candidates:
-            # No candidates beside the word itself: return it
-            # print(f"Candidate {word} is only candidate, returning it")
+            # No candidates beside the word itself: return an empty list
+            # print(f"Candidate {word} is only candidate, returned list is empty")
             return []
         # Return the highest probability candidate
         if Settings.DEBUG:
@@ -659,18 +672,14 @@ class Corrector:
                         i + 1, word, c, log_prob
                     )
                 )
-        # Skip very unlikely candidates
-        best_candidates = list(
-            [
-                x
-                for x in candidates
-                if not (
-                    x[1] < self._MIN_LOG_PROBABILITY
-                    and (word in self.ngrams or original_word in self.ngrams)
-                )
-            ]
-        )
-        candsort = sorted(best_candidates, key=lambda t: t[1], reverse=True)[0:5]
+        m = max(candidates, key=lambda t: t[1])
+        if m[1] < self._MIN_LOG_PROBABILITY and (
+            word in self.ngrams or original_word in self.ngrams
+        ):
+            # Best candidate is very unlikely: return an empty list of suggestions
+            # print(f"Best candidate {m[0]} is highly unlikely, returning an empty list")
+            return []
+        candsort = sorted(candidates, key=lambda t: t[1], reverse=True)[0:5]
         return candsort
 
     @staticmethod
@@ -735,8 +744,12 @@ class Corrector:
         (lower/upper/title) intact. The optional context parameter contains
         a tuple of preceding words, used to enable a more accurate probability
         prediction."""
-        x = self._best_candidates(word, self._cast(word), context, at_sentence_start)
-        return list([(self._case_of(word)(y[0]), y[1]) for y in x])
+        return list(
+            (self._case_of(word)(cased_cand[0]), cased_cand[1])
+            for cased_cand in self._best_list(
+                word, self._cast(word), context, at_sentence_start
+            )
+        )
 
     def __getitem__(self, word: str) -> str:
         """For the fun of it, support corrector["myword"] syntax"""
