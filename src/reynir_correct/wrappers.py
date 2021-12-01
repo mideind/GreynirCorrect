@@ -177,18 +177,18 @@ def check_errors(**options: Any) -> Optional[str]:
 
 def check_spelling(**options: Any) -> str:
     # Initialize sentence accumulator list
-    curr_sent: List[CorrectToken] = []
-    accumul: List[str] = []
     # Function to convert a token list to output text
     if options["spaced"]:
         to_text = normalized_text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
-    for t in errtokenize(gen(options["infile"]), **options):
-        if options["format"] == "csv":
-            # Output the tokens in CSV format, one line per token
+    options["generate_suggestion_list"] = True
+    if options["format"] == "csv":
+        # Output the tokens in CSV format, one line per token
+        csvsum: List[str] = []
+        for t in errtokenize(gen(options["infile"]), **options):
             if t.txt:
-                accumul.append(
+                csvsum.append(
                     "{0},{1},{2},{3}".format(
                         t.kind,
                         quote(t.txt),
@@ -198,8 +198,11 @@ def check_spelling(**options: Any) -> str:
                 )
             elif t.kind == TOK.S_END:
                 # Indicate end of sentence
-                accumul.append('0,"",""')
-        elif options["format"] == "json":
+                csvsum.append('0,"",""')
+        return "\n".join(csvsum)
+    elif options["format"] == "json":
+        jsonsum: List[str] = []
+        for t in errtokenize(gen(options["infile"]), **options):
             # Output the tokens in JSON format, one line per token
             d: Dict[str, Any] = dict(k=TOK.descr[t.kind])
             if t.txt is not None:
@@ -209,21 +212,24 @@ def check_spelling(**options: Any) -> str:
                 d["v"] = v
             if isinstance(t.error, Error):
                 d["e"] = t.error.to_dict()
-            return json_dumps(d)
-        else:
+            jsonsum.append(json_dumps(d))
+        return "\n".join(jsonsum)
+    else:
+        curr_sent: List[CorrectToken] = []
+        textsum: List[str] = []
+        for t in errtokenize(gen(options["infile"]), **options):
             # Normal shallow parse, one line per sentence,
             # tokens separated by spaces
             if t.kind in TOK.END:
                 # End of sentence/paragraph
                 if curr_sent:
-                    accumul.append(to_text(curr_sent))
+                    textsum.append(to_text(curr_sent))
                     curr_sent = []
             else:
                 curr_sent.append(t)
-
-    if curr_sent:
-        accumul.append(to_text(curr_sent))
-    return "\n".join(accumul)
+        if curr_sent:
+            textsum.append(to_text(curr_sent))
+        return "\n".join(textsum)
 
 
 def check_grammar(**options: Any) -> str:
@@ -233,7 +239,7 @@ def check_grammar(**options: Any) -> str:
         """Yield a stream of sentence token lists from the source text"""
         # Initialize sentence accumulator list
         curr_sent: List[CorrectToken] = []
-        if options["one_sent"] == True:
+        if "one_sent" in options and options["one_sent"] == True:
             # Input only contains one sentence
             curr_sent = list(errtokenize(options["infile"], **options))
         else:
