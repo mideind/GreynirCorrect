@@ -42,13 +42,15 @@ def main():
 
     options: Dict[str, Union[str, bool]] = {}
     # Hægt að biðja um annað til að fá frekari upplýsingar!
-    options["format"] = "text"
+    options["format"] = "text"  # text, json, csv, m2
     options["annotations"] = True
+
     options["all_errors"] = True
 
     # options["infile"] = open("prufa.txt", "r")
     options["one_sent"] = True
     # options["generate_suggestion_list"] = True
+    options["ignore_comments"] = True
 
     args = parser.parse_args()
     inputfile = args.inputfile
@@ -63,7 +65,8 @@ def main():
         print("=================================")
         if sent.startswith("#"):
             # Comment string, want to show it with the examples
-            print(sent.strip())
+            if not options["ignore_comments"]:
+                print(sent.strip())
             sent = next(itering)
         options["infile"] = sent
         x = check_errors(**options)

@@ -359,8 +359,13 @@ def check_grammar(**options: Any) -> str:
         elif options["format"] == "csv":
             for cann in a:
                 accumul.append(
-                    "{},{},{},{},{}".format(
-                        cann.code, cann.original, cann.suggest, cann.start, cann.end
+                    "{},{},{},{},{},{}".format(
+                        cann.code,
+                        cann.original,
+                        cann.suggest,
+                        cann.start,
+                        cann.end,
+                        cann.suggestlist,
                     )
                 )
         elif options["format"] == "m2":
