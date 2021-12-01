@@ -824,6 +824,15 @@ class SpellingSuggestion(Error):
         d["suggestlist"] = self._suggestlist
         return d
 
+    def __str__(self) -> str:
+        return "{0}: {1} | {2}->{3} | {4}".format(
+            self.code,
+            self.description,
+            self._original,
+            self._suggest,
+            self._suggestlist,
+        )
+
     @property
     def suggestlist(self) -> Optional[List[str]]:
         """Return a list of suggestions for correction, if available"""
@@ -1674,14 +1683,13 @@ def lookup_unknown_words(
     corrector: Corrector,
     only_ci: bool,
     apply_suggestions: bool,
-    generate_suggestion_list: bool,
     suppress_suggestions: bool,
+    generate_suggestion_list: bool,
     suggest_not_correct: bool,
 ) -> Iterator[CorrectToken]:
 
     """Try to identify unknown words in the token stream, for instance
     as spelling errors (character juxtaposition, deletion, insertion...)"""
-
     at_sentence_start = False
     context: Tuple[str, ...] = tuple()
     db = corrector.db
@@ -1960,25 +1968,27 @@ def lookup_unknown_words(
                             continue
                         final_sugg_list.append(sugg)
                         m_list.append(m)
-                    # Check if we got any hits:
-                    if final_sugg_list:
-                        best_cand = final_sugg_list[0]
-                        text = f"Orðið '{token.txt}' gæti átt að vera '{best_cand}'"
-                        # We add the most likely candidate as the suggest value
-                        token.set_error(
-                            SpellingSuggestion(
-                                "002",
-                                text,
-                                token.txt,
-                                best_cand,
-                                final_sugg_list,
-                            )
+                    continue
+                # Check if we got any hits:
+                if final_sugg_list:
+                    best_cand = final_sugg_list[0]
+                    text = f"Orðið '{token.txt}' gæti átt að vera '{best_cand}'"
+                    # We add the most likely candidate as the suggest value
+                    token.set_error(
+                        SpellingSuggestion(
+                            "002",
+                            text,
+                            token.txt,
+                            best_cand,
+                            final_sugg_list,
                         )
-                        # NOTE: We add each meaning. When the user picks a suggestion,
-                        # the other suggestions and meanings need to be deleted
-                        # if the parser hasn't already done so, and the sentence possibly reparsed.
-                        for mx in m_list:
-                            token.add_corrected_meanings(mx)
+                    )
+                    # NOTE: We add each meaning. When the user picks a suggestion,
+                    # the other suggestions and meanings need to be deleted
+                    # if the parser hasn't already done so, and the sentence possibly reparsed.
+                    for mx in m_list:
+                        token.add_corrected_meanings(mx)
+                    yield token
                     at_sentence_start = False
                     continue
             corrected_txt = corrector.correct(
