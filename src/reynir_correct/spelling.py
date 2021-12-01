@@ -646,8 +646,8 @@ class Corrector:
         # Otherwise, generate replacement candidates
         candidates = list(gen_candidates(original_word, word))
         if not candidates:
-            # No candidates beside the word itself: return it
-            # print(f"Candidate {word} is only candidate, returning it")
+            # No candidates beside the word itself: return an empty list
+            # print(f"Candidate {word} is only candidate, returned list is empty")
             return []
         # Return the highest probability candidate
         if Settings.DEBUG:
@@ -661,14 +661,12 @@ class Corrector:
                 )
         # Skip very unlikely candidates
         best_candidates = list(
-            [
-                x
-                for x in candidates
-                if not (
-                    x[1] < self._MIN_LOG_PROBABILITY
-                    and (word in self.ngrams or original_word in self.ngrams)
-                )
-            ]
+            x
+            for x in candidates
+            if not (
+                x[1] < self._MIN_LOG_PROBABILITY
+                and (word in self.ngrams or original_word in self.ngrams)
+            )
         )
         candsort = sorted(best_candidates, key=lambda t: t[1], reverse=True)[0:5]
         return candsort
@@ -735,8 +733,15 @@ class Corrector:
         (lower/upper/title) intact. The optional context parameter contains
         a tuple of preceding words, used to enable a more accurate probability
         prediction."""
-        x = self._best_candidates(word, self._cast(word), context, at_sentence_start)
-        return list([(self._case_of(word)(y[0]), y[1]) for y in x])
+        cased_candidates = self._best_candidates(
+            word, self._cast(word), context, at_sentence_start
+        )
+        return list(
+            [
+                (self._case_of(word)(cased_cand[0]), cased_cand[1])
+                for cased_cand in cased_candidates
+            ]
+        )
 
     def __getitem__(self, word: str) -> str:
         """For the fun of it, support corrector["myword"] syntax"""

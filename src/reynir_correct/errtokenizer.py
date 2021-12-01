@@ -801,8 +801,8 @@ class SpellingSuggestion(Error):
         code: str,
         txt: str,
         original: str,
-        suggest: str,
-        suggestlist: Optional[List[str]],
+        suggest: Optional[str],
+        suggestlist: Optional[List[str]] = None,
     ) -> None:
         # Spelling suggestion codes start with "W"
         super().__init__(
@@ -858,11 +858,11 @@ class SpellingSuggestion(Error):
                 elif meaning_ref == suggestion_ref:
                     # This is the suggestion
                     matches_suggestion = True
-                if self.suggestlist:
+                if not matches_suggestion and self.suggestlist:
                     # Have a list of suggestions, meanings for each
-                    suggestion_refs = set([x.lower() for x in self.suggestlist])
-                    if meaning_ref in suggestion_refs:
-                        matches_suggestion = True
+                    matches_suggestion = any(
+                        w.lower() == meaning_ref for w in self.suggestlist
+                    )
 
         # If the terminal matches the original word and not the
         # suggested one, return True to discard the suggestion
@@ -1674,7 +1674,7 @@ def lookup_unknown_words(
     corrector: Corrector,
     only_ci: bool,
     apply_suggestions: bool,
-    suggestion_list: bool,
+    generate_suggestion_list: bool,
     suppress_suggestions: bool,
     suggest_not_correct: bool,
 ) -> Iterator[CorrectToken]:
@@ -1757,7 +1757,7 @@ def lookup_unknown_words(
         it, as we are not confident enough of the correction"""
         text = f"Orðið '{token.txt}' gæti átt að vera '{corrected}'"
         token.set_error(
-            SpellingSuggestion("{0:03}".format(code), text, token.txt, corrected, None)
+            SpellingSuggestion("{0:03}".format(code), text, token.txt, corrected)
         )
         # Add the meanings of the potential correction to the token
         token.add_corrected_meanings(m)
@@ -1941,7 +1941,7 @@ def lookup_unknown_words(
                 continue
             # We use context[-3:-1] since the current token is the last item
             # in the context tuple, and we want the bigram preceding it.
-            if suggestion_list:
+            if generate_suggestion_list:
                 # The user wants to pick a correction so tokens should not be corrected automatically
                 # except with wordlist candidates. No need to check apply_suggestions or suppress_suggestions
                 # as they should be mutually exclusive. Same logic goes for not checking only_suggest
@@ -1950,8 +1950,8 @@ def lookup_unknown_words(
                     context=tuple(context[-3:-1]),
                     at_sentence_start=at_sentence_start,
                 )
-                final_sugg_list: List = []
-                m_list: List = []
+                final_sugg_list: List[str] = []
+                m_list: List[List[BIN_Tuple]] = []
                 for sugg, _ in suggestions:
                     _, m = db.lookup_g(sugg, at_sentence_start=at_sentence_start)
                     if is_valid_suggestion(token, m, sugg):
@@ -1987,7 +1987,7 @@ def lookup_unknown_words(
                 at_sentence_start=at_sentence_start,
             )
             _, m = db.lookup_g(corrected_txt, at_sentence_start=at_sentence_start)
-            if is_valid_suggestion(token, m, corrected_txt) and not suggestion_list:
+            if is_valid_suggestion(token, m, corrected_txt):
                 # We have a candidate correction: take a closer look at it
                 if not apply_suggestions and only_suggest(token, m):
                     # We have a candidate correction but the original word does
@@ -2656,9 +2656,9 @@ class CorrectionPipeline(DefaultPipeline):
         # If apply_suggestions is True, we are aggressive in modifying
         # tokens with suggested corrections, i.e. not just suggesting them
         self._apply_suggestions = options.pop("apply_suggestions", False)
-        # If suggestion_list is True, we get a list of suggestions from
+        # If generate_suggestion_list is True, we get a list of suggestions from
         # the spelling suggestion module
-        self._suggestion_list = options.pop("suggestion_list", False)
+        self._generate_suggestion_list = options.pop("generate_suggestion_list", False)
         # Skip spelling suggestions
         self._suppress_suggestions = options.pop("suppress_suggestions", False)
         # Only give suggestions, don't correct anything
@@ -2694,7 +2694,7 @@ class CorrectionPipeline(DefaultPipeline):
             only_ci,
             self._apply_suggestions,
             self._suppress_suggestions,
-            self._suggestion_list,
+            self._generate_suggestion_list,
             self._suggest_not_correct,
         )
         # Check taboo words
