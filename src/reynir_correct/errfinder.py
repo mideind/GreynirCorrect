@@ -1256,8 +1256,8 @@ class ErrorFinder(ParseForestNavigator):
                         AnnotationTuple6, ann
                     )
             else:
-                if len(ann) == 0:
-                    # Empty dict: this means that upon closer inspection,
+                if not ann or len(ann) == 0:
+                    # Empty or no dict: this means that upon closer inspection,
                     # there was no need to annotate
                     return None
                 ann_text = cast(str, ann.get("text"))

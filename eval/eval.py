@@ -324,6 +324,7 @@ GCtoIEC = {
     "C004/w": ["repeat-word"],
     "C005": ["split-compound", "split-word", "split-words"],
     "C005/w": ["split-compound", "split-word", "split-words"],
+    "Y001/w": ["style", "wording", "context"],
     "C006": ["compound-nonword"],
     "P_NT_Að/w": ["extra-conjunction"],
     "P_NT_AnnaðHvort": ["conjunction"],
