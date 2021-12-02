@@ -63,6 +63,8 @@ def main():
         raise ValueError
     itering = gen(inputfile)
     for sent in itering:
+        if not sent.strip():
+            continue
         print("=================================")
         if sent.startswith("#"):
             # Comment string, want to show it with the examples
@@ -74,7 +76,9 @@ def main():
         # Hér væri auðvelt að bæta við einhverjum samanburði við gull, skila bara T/F hvort sé eins
         # Þyrfti þá að zippa  saman setningar úr testskjali og gullskjali til að nota í forlykkju
         print(sent.strip())
-        print(x)
+        if x:
+            print(x)
+    print("=================================")
 
 
 if __name__ == "__main__":

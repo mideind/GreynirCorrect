@@ -119,7 +119,7 @@ STYLE_WARNINGS: Mapping[str, str] = {
 
 
 def style_warning(k: Ksnid) -> str:
-    """ Return a style warning for the given Ksnid tuple, if any """
+    """Return a style warning for the given Ksnid tuple, if any"""
     if k.malsnid in STYLE_WARNINGS:
         return k.malsnid
     if k.bmalsnid in STYLE_WARNINGS:
@@ -129,10 +129,10 @@ def style_warning(k: Ksnid) -> str:
 
 class ErrorDetectingGrammar(BIN_Grammar):
 
-    """ A subclass of BIN_Grammar that causes conditional sections in the
-        Greynir.grammar file, demarcated using
-        $if(include_errors)...$endif(include_errors),
-        to be included in the grammar as it is read and parsed """
+    """A subclass of BIN_Grammar that causes conditional sections in the
+    Greynir.grammar file, demarcated using
+    $if(include_errors)...$endif(include_errors),
+    to be included in the grammar as it is read and parsed"""
 
     def __init__(self) -> None:
         super().__init__()
@@ -142,7 +142,7 @@ class ErrorDetectingGrammar(BIN_Grammar):
 
 class AnnotatedSentence(Sentence):
 
-    """ A subclass that adds a list of Annotation instances to a Sentence object """
+    """A subclass that adds a list of Annotation instances to a Sentence object"""
 
     def __init__(self, job: Job, s: TokenList) -> None:
         super().__init__(job, s)
@@ -151,8 +151,8 @@ class AnnotatedSentence(Sentence):
 
 class ErrorDetectingParser(Fast_Parser):
 
-    """ A subclass of Fast_Parser that modifies its behavior to
-        include grammar error detection rules in the parsing process """
+    """A subclass of Fast_Parser that modifies its behavior to
+    include grammar error detection rules in the parsing process"""
 
     _GRAMMAR_BINARY_FILE = Fast_Parser._GRAMMAR_FILE + ".error.bin"
 
@@ -169,14 +169,14 @@ class ErrorDetectingParser(Fast_Parser):
 
     @staticmethod
     def wrap_token(t: Tok, ix: int) -> ErrorDetectionToken:
-        """ Create an instance of a wrapped token """
+        """Create an instance of a wrapped token"""
         return ErrorDetectionToken(t, ix)
 
 
 class GreynirCorrect(Greynir):
 
-    """ Parser augmented with the ability to add spelling and grammar
-        annotations to the returned sentences """
+    """Parser augmented with the ability to add spelling and grammar
+    annotations to the returned sentences"""
 
     # GreynirCorrect has its own class instances of a parser and a reducer,
     # separate from the Greynir class, as they use different settings and
@@ -194,20 +194,20 @@ class GreynirCorrect(Greynir):
             raise ValueError(f"Unknown option(s) for GreynirCorrect: {options}")
 
     def tokenize(self, text: StringIterable) -> Iterator[Tok]:
-        """ Use the correcting tokenizer instead of the normal one """
+        """Use the correcting tokenizer instead of the normal one"""
         # The CorrectToken class is a duck-typing implementation of Tok
         return tokenize_and_correct(text)
 
     @classmethod
     def _dump_token(cls, tok: Tok) -> Tuple[Any, ...]:
-        """ Override token dumping function from Greynir,
-            providing a JSON-dumpable object """
+        """Override token dumping function from Greynir,
+        providing a JSON-dumpable object"""
         assert isinstance(tok, CorrectToken)
         return CorrectToken.dump(tok)
 
     @classmethod
     def _load_token(cls, *args: Any) -> CorrectToken:
-        """ Load token from serialized data """
+        """Load token from serialized data"""
         largs = len(args)
         if largs == 3:
             # Plain ol' token
@@ -217,7 +217,7 @@ class GreynirCorrect(Greynir):
 
     @property
     def parser(self) -> Fast_Parser:
-        """ Override the parent class' construction of a parser instance """
+        """Override the parent class' construction of a parser instance"""
         with self._lock:
             if (
                 GreynirCorrect._parser is None
@@ -231,14 +231,14 @@ class GreynirCorrect(Greynir):
 
     @property
     def reducer(self) -> Reducer:
-        """ Return the reducer instance to be used """
+        """Return the reducer instance to be used"""
         # Should always retrieve the parser attribute first
         assert GreynirCorrect._reducer is not None
         return GreynirCorrect._reducer
 
     def annotate(self, sent: Sentence) -> List[Annotation]:
-        """ Returns a list of annotations for a sentence object, containing
-            spelling and grammar annotations of that sentence """
+        """Returns a list of annotations for a sentence object, containing
+        spelling and grammar annotations of that sentence"""
         ann: List[Annotation] = []
         parsed = sent.deep_tree is not None
         # Create a mapping from token indices to terminal indices.
@@ -372,8 +372,8 @@ class GreynirCorrect(Greynir):
         return ann
 
     def create_sentence(self, job: Job, s: TokenList) -> Sentence:
-        """ Create a fresh sentence object and annotate it
-            before returning it to the client """
+        """Create a fresh sentence object and annotate it
+        before returning it to the client"""
         sent = AnnotatedSentence(job, s)
         # Add spelling and grammar annotations to the sentence
         sent.annotations = self.annotate(sent)
@@ -381,7 +381,7 @@ class GreynirCorrect(Greynir):
 
 
 def check_single(sentence_text: str, **options: Any) -> Optional[Sentence]:
-    """ Check and annotate a single sentence, given in plain text """
+    """Check and annotate a single sentence, given in plain text"""
     # Returns None if no sentence was parsed
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
     rc = GreynirCorrect(**options)
@@ -389,7 +389,7 @@ def check_single(sentence_text: str, **options: Any) -> Optional[Sentence]:
 
 
 def check_tokens(tokens: Iterable[CorrectToken], **options: Any) -> Optional[Sentence]:
-    """ Check and annotate a single sentence, given as a token list """
+    """Check and annotate a single sentence, given as a token list"""
     # Returns None if no sentence was parsed
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
     rc = GreynirCorrect(**options)
@@ -397,9 +397,9 @@ def check_tokens(tokens: Iterable[CorrectToken], **options: Any) -> Optional[Sen
 
 
 def check(text: str, **options: Any) -> Iterable[Paragraph]:
-    """ Return a generator of checked paragraphs of text,
-        each being a generator of checked sentences with
-        annotations """
+    """Return a generator of checked paragraphs of text,
+    each being a generator of checked sentences with
+    annotations"""
     split_paragraphs = options.pop("split_paragraphs", False)
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
     rc = GreynirCorrect(**options)
@@ -421,9 +421,9 @@ def check_with_custom_parser(
     split_paragraphs: bool = False,
     annotate_unparsed_sentences: bool = True,
 ) -> CheckResult:
-    """ Return a dict containing parsed paragraphs as well as statistics,
-        using the given correction/parser class. This is a low-level
-        function; normally check_with_stats() should be used. """
+    """Return a dict containing parsed paragraphs as well as statistics,
+    using the given correction/parser class. This is a low-level
+    function; normally check_with_stats() should be used."""
     rc = parser_class(annotate_unparsed_sentences=annotate_unparsed_sentences)
     job = rc.submit(
         text,
@@ -451,11 +451,10 @@ def check_with_stats(
     progress_func: ProgressFunc = None,
     annotate_unparsed_sentences: bool = True,
 ) -> CheckResult:
-    """ Return a dict containing parsed paragraphs as well as statistics """
+    """Return a dict containing parsed paragraphs as well as statistics"""
     return check_with_custom_parser(
         text,
         split_paragraphs=split_paragraphs,
         progress_func=progress_func,
         annotate_unparsed_sentences=annotate_unparsed_sentences,
     )
-
