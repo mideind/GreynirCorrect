@@ -633,7 +633,12 @@ class UnknownWordError(Error):
     # U001: Unknown word. Nothing more is known. Cannot be corrected, only pointed out.
 
     def __init__(
-        self, code: str, txt: str, original: str, suggest: str, is_warning: bool = False
+        self,
+        code: str,
+        txt: str,
+        original: str,
+        suggest: Optional[str],
+        is_warning: bool = False,
     ) -> None:
         # Unknown word error codes start with "U"
         super().__init__(
