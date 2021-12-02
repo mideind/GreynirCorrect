@@ -1947,7 +1947,7 @@ def lookup_unknown_words(
                         code="001",
                         txt="Óþekkt orð: '{0}'".format(token.txt),
                         original=token.txt,
-                        suggest="",
+                        suggest=None,  # No suggest value available
                     )
                 )
                 yield token
@@ -2009,7 +2009,9 @@ def lookup_unknown_words(
                     # We have a candidate correction but the original word does
                     # exist in BÍN, so we're not super confident: yield a suggestion
                     # or no annotation if suppress_suggestions is True
-                    if suppress_suggestions:
+                    if suppress_suggestions or token.error_code:
+                        # If the token already contains an error and we're not so certain
+                        # about this new one, we yield no annotation
                         yield token
                     else:
                         if Settings.DEBUG:
@@ -2041,7 +2043,7 @@ def lookup_unknown_words(
                     continue
 
         # Check for completely unknown and uncorrectable words
-        if not token.val:
+        if not token.val and not token.error_code:
             # No annotation and not able to correct:
             # mark the token as an unknown word
             # (but only as a warning if it is an uppercase word or
@@ -2052,7 +2054,7 @@ def lookup_unknown_words(
                         code="001",
                         txt=f"Óþekkt orð: '{token.txt}'",
                         original=token.txt,
-                        suggest="",
+                        suggest=None,  # No suggest value available
                     )
                 )
 

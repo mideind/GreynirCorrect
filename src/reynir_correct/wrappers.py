@@ -263,9 +263,9 @@ def check_grammar(**options: Any) -> str:
         # Invoke the spelling and grammar checker on the token list
         inneroptions: Dict[str, Union[str, bool]] = {}
         # Only contains options relevant to the grammar check
-        inneroptions["annotate_unparsed_sentences"] = options[
-            "annotate_unparsed_sentences"
-        ]
+        inneroptions["annotate_unparsed_sentences"] = options.get(
+            "annotate_unparsed_sentences", True
+        )
         sent = check_tokens(toklist, **inneroptions)
         if sent is None:
             # Should not happen?
