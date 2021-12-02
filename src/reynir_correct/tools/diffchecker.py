@@ -50,7 +50,7 @@ def main():
     # options["infile"] = open("prufa.txt", "r")
     options["one_sent"] = True
     # options["generate_suggestion_list"] = True
-    options["ignore_comments"] = True
+    options["ignore_comments"] = False
     # options["annotate_unparsed_sentences"] = False
 
     args = parser.parse_args()
@@ -65,12 +65,12 @@ def main():
     for sent in itering:
         if not sent.strip():
             continue
-        print("=================================")
         if sent.startswith("#"):
             # Comment string, want to show it with the examples
             if not options["ignore_comments"]:
                 print(sent.strip())
-            sent = next(itering)
+            # sent = next(itering)
+            continue
         options["infile"] = sent
         x = check_errors(**options)
         # Hér væri auðvelt að bæta við einhverjum samanburði við gull, skila bara T/F hvort sé eins
@@ -78,7 +78,7 @@ def main():
         print(sent.strip())
         if x:
             print(x)
-    print("=================================")
+        print("=================================")
 
 
 if __name__ == "__main__":

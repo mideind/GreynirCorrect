@@ -709,7 +709,13 @@ class TabooWarning(Error):
     # T001: Taboo word usage warning, with suggested replacement
 
     def __init__(
-        self, code: str, txt: str, detail: Optional[str], original: str, suggest: str
+        self,
+        code: str,
+        txt: str,
+        detail: Optional[str],
+        original: str,
+        suggest: Optional[str],
+        suggestlist: Optional[List[str]] = None,
     ) -> None:
         # Taboo word warnings start with "T"
         super().__init__(
@@ -717,6 +723,7 @@ class TabooWarning(Error):
         )
         self._txt = txt
         self._detail = detail
+        self._suggestlist = suggestlist
 
     @property
     def description(self) -> str:
@@ -729,6 +736,8 @@ class TabooWarning(Error):
     def to_dict(self) -> Dict[str, Any]:
         d = super().to_dict()
         d["detail"] = self.detail
+        d["suggest"] = self.suggest
+        d["suggestlist"] = self._suggestlist
         return d
 
 
@@ -2440,6 +2449,8 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                     # for instance 'þungunarrof_hk/meðgöngurof_hk'
                     sw = replacement.split("/")
                     suggestion = ""
+                    suggest = None
+                    sugglist = []
                     if len(sw) == 1 and sw[0].split("_")[0] == key:
                         # We have a single suggested word, which is the same as the
                         # taboo word: there is no suggestion, only a notification
@@ -2454,13 +2465,16 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                             f"Óheppilegt eða óviðurkvæmilegt orð, "
                             f"skárra væri t.d. {suggestion}"
                         )
+                        suggest = sw[0].split("_")[0]
+                        sugglist = list(w.split("_")[0] for w in sw)
                     token.set_error(
                         TabooWarning(
                             "001",
                             explanation,
                             detail or None,
                             token.txt,
-                            ", ".join(f"'{w.split('_')[0]}'" for w in sw),
+                            suggest,
+                            sugglist,
                         )
                     )
                     # !!! TODO: Add correctly inflected suggestion here
