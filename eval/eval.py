@@ -405,6 +405,7 @@ GCtoIEC = {
     "S002": ["nonword"],
     "S003": ["nonword"],
     "S004": ["nonword"],
+    "S005": ["nonword"],  # No better information available, most likely this
     "T001": ["taboo-word"],
     "T001/w": ["taboo-word"],
     "U001": ["fw"],
@@ -453,7 +454,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-r", "--randomize", action="store_true", help="process a random subset of files",
+    "-r",
+    "--randomize",
+    action="store_true",
+    help="process a random subset of files",
 )
 
 parser.add_argument(
@@ -473,7 +477,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-x", "--exclude", action="store_true", help="Exclude sentences marked exclude",
+    "-x",
+    "--exclude",
+    action="store_true",
+    help="Exclude sentences marked exclude",
 )
 
 parser.add_argument(
@@ -512,17 +519,17 @@ ANALYSIS = False
 
 
 def element_text(element: ET.Element) -> str:
-    """ Return the text of the given element,
-        including all its subelements, if any """
+    """Return the text of the given element,
+    including all its subelements, if any"""
     return "".join(element.itertext())
 
 
 class Stats:
 
-    """ A container for key statistics on processed files and sentences """
+    """A container for key statistics on processed files and sentences"""
 
     def __init__(self) -> None:
-        """ Initialize empty defaults for the stats collection """
+        """Initialize empty defaults for the stats collection"""
         self._starttime = datetime.utcnow()
         self._files: Dict[str, int] = defaultdict(int)
         # We employ a trick to make the defaultdicts picklable between processes:
@@ -545,7 +552,7 @@ class Stats:
         self._tp_unparsables: DefaultDict[str, int] = defaultdict(int)
 
     def add_file(self, category: str) -> None:
-        """ Add a processed file in a given content category """
+        """Add a processed file in a given content category"""
         self._files[category] += 1
 
     def add_result(
@@ -557,7 +564,7 @@ class Stats:
         ups: Dict[str, int],
         errtypefreqs: ErrTypeStatsDict,
     ) -> None:
-        """ Add the result of a process() call to the statistics collection """
+        """Add the result of a process() call to the statistics collection"""
         for sent_result in stats:
             self.add_sentence(*sent_result)
         for k, v in true_positives.items():
@@ -586,7 +593,7 @@ class Stats:
         right_span: int,
         wrong_span: int,
     ) -> None:
-        """ Add a processed sentence in a given content category """
+        """Add a processed sentence in a given content category"""
         d = self._sentences[category]
         d["count"] += 1
         d["num_tokens"] += num_tokens
@@ -620,7 +627,7 @@ class Stats:
         # Causes of unparsable sentences
 
     def output(self, cores: int) -> None:
-        """ Write the statistics to stdout """
+        """Write the statistics to stdout"""
 
         # Accumulate standard output in a buffer, for writing in one fell
         # swoop at the end (after acquiring the output lock)
@@ -632,7 +639,7 @@ class Stats:
         )
 
         def output_duration() -> None:  # type: ignore
-            """ Calculate the duration of the processing """
+            """Calculate the duration of the processing"""
             dur = int((datetime.utcnow() - self._starttime).total_seconds())
             h = dur // 3600
             m = (dur % 3600) // 60
@@ -658,7 +665,7 @@ class Stats:
                 bprint(f"   {c:<13}:           {self._sentences[c]['count']:6}")
 
         def perc(n: int, whole: int) -> str:
-            """ Return a percentage of total sentences, formatted as 3.2f """
+            """Return a percentage of total sentences, formatted as 3.2f"""
             if whole == 0:
                 return "N/A"
             return f"{100.0*n/whole:3.2f}"
@@ -666,7 +673,7 @@ class Stats:
         def write_basic_value(
             val: int, bv: str, whole: int, errwhole: Optional[int] = None
         ) -> None:
-            """ Write basic values for sentences and their freqs to stdout """
+            """Write basic values for sentences and their freqs to stdout"""
             if errwhole:
                 bprint(
                     f"\n{NAMES[bv]+':':<20}        {val:6} {perc(val, whole):>6}% / {perc(val, errwhole):>6}%"
@@ -688,7 +695,7 @@ class Stats:
             recs: str,
             precs: str,
         ) -> None:
-            """ Calculate precision, recall and F0.5-score """
+            """Calculate precision, recall and F0.5-score"""
             # Recall
             if tp + fn == 0:
                 result = "N/A"
@@ -746,7 +753,7 @@ class Stats:
         def calc_recall(
             right: int, wrong: int, rights: str, wrongs: str, recs: str
         ) -> None:
-            """ Calculate precision for binary classification """
+            """Calculate precision for binary classification"""
             # Recall
             if right + wrong == 0:
                 result = "N/A"
@@ -765,15 +772,15 @@ class Stats:
                     bprint(f"   {c:<13}:           {rc:1.4f}")
 
         def calc_error_category_metrics(cat: str) -> CatResultDict:
-            """ Calculates precision, recall and f0.5-score for a single error code
-                N = Number of errors in category z in reference corpus, 
-                Nall =  number of tokens
-                TP = Errors correctly classified as category z
-                FP = Errors (or non-errors) incorrectly classified as category z
-                FN = Errors in category z in reference but not hypothesis
-                Recall = TPz/(TPz+FPz)
-                Precision = TPz/(TPz+FNz)
-                F0.5-score = 1.25*(P*R)/(0.25*P+R)
+            """Calculates precision, recall and f0.5-score for a single error code
+            N = Number of errors in category z in reference corpus,
+            Nall =  number of tokens
+            TP = Errors correctly classified as category z
+            FP = Errors (or non-errors) incorrectly classified as category z
+            FN = Errors in category z in reference but not hypothesis
+            Recall = TPz/(TPz+FPz)
+            Precision = TPz/(TPz+FNz)
+            F0.5-score = 1.25*(P*R)/(0.25*P+R)
             """
             catdict: CatResultDict = {k: v for k, v in self._errtypes[cat].items()}
             tp = cast(int, catdict.get("tp", 0))
@@ -819,7 +826,7 @@ class Stats:
             return catdict
 
         def output_sentence_scores() -> None:  # type: ignore
-            """ Calculate and write sentence scores to stdout """
+            """Calculate and write sentence scores to stdout"""
 
             # Total number of true negatives found
             bprint(f"\nResults for error detection for whole sentences")
@@ -902,7 +909,7 @@ class Stats:
             #        bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
 
         def output_token_scores() -> None:  # type: ignore
-            """ Calculate and write token scores to stdout """
+            """Calculate and write token scores to stdout"""
 
             bprint(f"\n\nResults for error detection within sentences")
 
@@ -972,7 +979,7 @@ class Stats:
             )
 
         def output_error_cat_scores() -> None:
-            """ Calculate and write scores for each error category to stdout """
+            """Calculate and write scores for each error category to stdout"""
             bprint(f"\n\nResults for each error category in order by frequency")
             freqdict: Dict[str, int] = dict()
             microf05: float = 0.0
@@ -1002,7 +1009,9 @@ class Stats:
                 bprint("{} (in_scope={})".format(k, k not in OUT_OF_SCOPE))
                 bprint(
                     "\tTP, FP, FN: {}, {}, {}".format(
-                        rk.get("tp", 0), rk.get("fp", 0), rk.get("fn", 0),
+                        rk.get("tp", 0),
+                        rk.get("fp", 0),
+                        rk.get("fn", 0),
                     )
                 )
                 bprint(
@@ -1028,13 +1037,17 @@ class Stats:
             # Micro F0.5-score
             # Results for in-scope categories and all categories
             if nfreqs != 0:
-                bprint("F0.5-score: {:3.2f}".format(microf05 / nfreqs * 100.0,))
+                bprint(
+                    "F0.5-score: {:3.2f}".format(
+                        microf05 / nfreqs * 100.0,
+                    )
+                )
             else:
                 bprint(f"F0.5-score: N/A")
 
         def output_supercategory_scores():
-            """ Results for each supercategory in iEC given in SUPERCATEGORIES,
-                each subcategory, and error code """
+            """Results for each supercategory in iEC given in SUPERCATEGORIES,
+            each subcategory, and error code"""
             bprint("Supercategory: frequency, F-score")
             bprint("\tSubcategory: frequency, F-score")
             bprint(
@@ -1061,25 +1074,22 @@ class Stats:
                             freq = cast(int, et["freq"])
                             fscore = cast(float, et["f05score"])
                             # codework
-                            subblob = (
-                                subblob
-                                + "\t\t{} {}  ({:3.2f}, {:3.2f}, {:3.2f}) ({},{},{})| {}\n".format(
-                                    code,
-                                    freq,
-                                    cast(float, et["recall"]) * 100.0
-                                    if "recall" in et
-                                    else 0.0,
-                                    cast(float, et["precision"]) * 100.0
-                                    if "precision" in et
-                                    else 0.0,
-                                    fscore * 100.0,
-                                    cast(int, et["tp"]) if "tp" in et else 0,
-                                    cast(int, et["fn"]) if "fn" in et else 0,
-                                    cast(int, et["fp"]) if "fp" in et else 0,
-                                    cast(float, et["corr_rec"])
-                                    if "corr_rec" in et
-                                    else 0.0,
-                                )
+                            subblob = subblob + "\t\t{} {}  ({:3.2f}, {:3.2f}, {:3.2f}) ({},{},{})| {}\n".format(
+                                code,
+                                freq,
+                                cast(float, et["recall"]) * 100.0
+                                if "recall" in et
+                                else 0.0,
+                                cast(float, et["precision"]) * 100.0
+                                if "precision" in et
+                                else 0.0,
+                                fscore * 100.0,
+                                cast(int, et["tp"]) if "tp" in et else 0,
+                                cast(int, et["fn"]) if "fn" in et else 0,
+                                cast(int, et["fp"]) if "fp" in et else 0,
+                                cast(float, et["corr_rec"])
+                                if "corr_rec" in et
+                                else 0.0,
                             )
                             # subwork
                             subfreq += freq
@@ -1131,8 +1141,8 @@ class Stats:
 
 
 def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
-    """ Returns a string with a reasonably correct concatenation
-        of the tokens, where each token is a (tag, text) tuple. """
+    """Returns a string with a reasonably correct concatenation
+    of the tokens, where each token is a (tag, text) tuple."""
     return detokenize(
         Tok(TOK.PUNCTUATION if tag == "c" else TOK.WORD, txt, None)
         for tag, txt in tokens
@@ -1145,18 +1155,18 @@ buffer: List[str] = []
 
 
 def bprint(s: str):
-    """ Buffered print: accumulate output for printing at the end """
+    """Buffered print: accumulate output for printing at the end"""
     buffer.append(s)
 
 
 def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
 
-    """ Process a single error corpus file in TEI XML format.
-        This function is called within a multiprocessing pool
-        and therefore usually executes in a child process, separate
-        from the parent process. It should thus not modify any
-        global state, and arguments and return values should be
-        picklable. """
+    """Process a single error corpus file in TEI XML format.
+    This function is called within a multiprocessing pool
+    and therefore usually executes in a child process, separate
+    from the parent process. It should thus not modify any
+    global state, and arguments and return values should be
+    picklable."""
 
     # Unpack arguments
     fpath, category = fpath_and_category
@@ -1301,6 +1311,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             if not text:
                 # Nothing to do: drop this and go to the next sentence
                 continue
+            # print(text)
             # Pass it to GreynirCorrect
             pg = [list(p) for p in gc_check(text)]
             s: Optional[_Sentence] = None
@@ -1385,7 +1396,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 hyp_annotations: Iterable[Annotation],
                 ref_annotations: Iterable[ErrorDict],
             ) -> Tuple[int, int, int, int, int, int, int]:
-                """ Calculate statistics on annotations at the token span level """
+                """Calculate statistics on annotations at the token span level"""
                 tp, fp, fn = 0, 0, 0  # tn comes from len(tokens)-(tp+fp+fn) later on
                 right_corr, wrong_corr = 0, 0
                 right_span, wrong_span = 0, 0
@@ -1660,7 +1671,7 @@ def initialize_cats(catfile: str) -> None:
 
 
 def main() -> None:
-    """ Main program """
+    """Main program"""
     # Parse the command line arguments
     args = parser.parse_args()
 
@@ -1701,8 +1712,8 @@ def main() -> None:
         path = _TEST_PATH if args.measure else _DEV_PATH
 
     def gen_files() -> Iterable[Tuple[str, str]]:
-        """ Generate tuples with the file paths and categories
-            to be processed by the multiprocessing pool """
+        """Generate tuples with the file paths and categories
+        to be processed by the multiprocessing pool"""
         count = 0
         it: Iterable[str]
         if args.randomize and max_count > 0:
