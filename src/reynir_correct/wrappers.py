@@ -183,7 +183,7 @@ def check_spelling(**options: Any) -> str:
     else:
         to_text = partial(detokenize, normalize=True)
     options["generate_suggestion_list"] = True
-    if options["format"] == "csv":
+    if options.get("format", "") == "csv":
         # Output the tokens in CSV format, one line per token
         csvsum: List[str] = []
         for t in errtokenize(gen(options["infile"]), **options):
@@ -200,7 +200,7 @@ def check_spelling(**options: Any) -> str:
                 # Indicate end of sentence
                 csvsum.append('0,"",""')
         return "\n".join(csvsum)
-    elif options["format"] == "json":
+    elif options.get("format", "") == "json":
         jsonsum: List[str] = []
         for t in errtokenize(gen(options["infile"]), **options):
             # Output the tokens in JSON format, one line per token
@@ -239,7 +239,7 @@ def check_grammar(**options: Any) -> str:
         """Yield a stream of sentence token lists from the source text"""
         # Initialize sentence accumulator list
         curr_sent: List[CorrectToken] = []
-        if "one_sent" in options and options["one_sent"] == True:
+        if options.get("one_sent", False):
             # Input only contains one sentence
             curr_sent = list(errtokenize(options["infile"], **options))
         else:
@@ -343,10 +343,10 @@ def check_grammar(**options: Any) -> str:
                         # Delete the other tokens
                         del cleantoklist[xann.start + 2 : xann.end + 2]
                 accumul.append(detokenize(cleantoklist, normalize=True))
-                if options["annotations"] == True:
+                if options.get("annotations", False):
                     for aann in a:
                         accumul.append(str(aann))
-        elif options["format"] == "json":
+        elif options.get("format", "") == "json":
             # Create final dictionary for JSON encoding
             ard = AnnResultDict(
                 original=cleaned,
@@ -356,14 +356,14 @@ def check_grammar(**options: Any) -> str:
             )
 
             accumul.append(json_dumps(ard))
-        elif options["format"] == "csv":
+        elif options.get("format", "") == "csv":
             for cann in a:
                 accumul.append(
                     "{},{},{},{},{}".format(
                         cann.code, cann.original, cann.suggest, cann.start, cann.end
                     )
                 )
-        elif options["format"] == "m2":
+        elif options.get("format", "") == "m2":
             # M2 format: https://github.com/nusnlp/m2scorer
             # S <tokenized system output for sentence 1>
             # A <token start offset> <token end offset>|||<error type>|||<correction1>||<correction2||..||correctionN|||<required>|||<comment>|||<annotator id>
