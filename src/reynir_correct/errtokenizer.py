@@ -395,7 +395,7 @@ class CorrectToken(Tok):
         self._err = err
 
     def copy(self, other: Union[Tok, Sequence[Tok]], coalesce: bool = False) -> bool:
-        """Copy the error field and origin informatipon
+        """Copy the error field and origin information
         from another CorrectToken instance"""
         if isinstance(other, CorrectToken):
             self._err = other._err
@@ -790,6 +790,8 @@ class SpellingError(Error):
     # S003: Erroneously formed word forms picked up by ErrorForms.
     #       Should be corrected.
     # S004: Rare word, a more common one has been substituted.
+    # S005: Error has been corrected but annotation was lost in merging,
+    #       a more generic one is applied.
 
     def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
         # Spelling error codes start with "S"
@@ -979,7 +981,6 @@ def parse_errors(
         token = get()
 
         while True:
-
             next_token = get()
 
             if token.kind == TOK.S_BEGIN:
@@ -2424,6 +2425,31 @@ def late_fix_capitalization(
             at_sentence_start = False
 
 
+def late_fix_merges(
+    token_stream: Iterable[CorrectToken],
+    db: GreynirBin,
+    token_ctor: TokenCtor,
+    only_ci: bool,
+) -> Iterator[CorrectToken]:
+    """Annotate tokens where error annotation
+    has disappeared due to token merging"""
+    for token in token_stream:
+        if (
+            token.original
+            and token.txt.strip() != token.original.strip()
+            and not token.error
+        ):
+            token.set_error(
+                SpellingError(
+                    "005",
+                    "Skrifa á '{}' sem '{}'".format(token.original.strip(), token.txt),
+                    original=token.original,
+                    suggest=token.txt,
+                ),
+            )
+        yield token
+
+
 def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectToken]:
     """Annotate taboo words with warnings"""
 
@@ -2748,10 +2774,12 @@ class CorrectionPipeline(DefaultPipeline):
         # as numbers ('24 Milljónir') and amounts ('3 Þúsund Dollarar')
         ct_stream = cast(Iterator[CorrectToken], stream)
         token_ctor = cast(TokenCtor, self._token_ctor)
-        return cast(
-            TokenIterator,
-            late_fix_capitalization(ct_stream, self._db, token_ctor, self._only_ci),
+        ct_stream = late_fix_capitalization(
+            ct_stream, self._db, token_ctor, self._only_ci
         )
+
+        ct_stream = late_fix_merges(ct_stream, self._db, token_ctor, self._only_ci)
+        return ct_stream
 
 
 def tokenize(text_or_gen: StringIterable, **options: Any) -> Iterator[CorrectToken]:
