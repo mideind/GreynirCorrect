@@ -736,7 +736,7 @@ class ErrorFinder(ParseForestNavigator):
         if obj:
             assert pp is not None
             preposition = pp.P.text
-            suggestion = preposition + " " + self.cast_to_case(variants, obj)
+            suggestion = self.cast_to_case(variants, obj)
             correct_np = correct_spaces(suggestion)
             if correct_np == pp.text:
                 # Avoid suggesting the original text
@@ -752,7 +752,7 @@ class ErrorFinder(ParseForestNavigator):
                 ),
                 start=start,
                 end=end,
-                original=preposition,
+                original=obj.text,
                 suggest=suggestion,
             )
         # In this case, there's no suggested correction
