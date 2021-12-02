@@ -42,7 +42,7 @@ def main():
 
     options: Dict[str, Union[str, bool]] = {}
     # Hægt að biðja um annað til að fá frekari upplýsingar!
-    options["format"] = "text"  # text, json, csv, m2
+    options["format"] = "csv"  # text, json, csv, m2
     options["annotations"] = True
 
     options["all_errors"] = True
@@ -51,6 +51,7 @@ def main():
     options["one_sent"] = True
     # options["generate_suggestion_list"] = True
     options["ignore_comments"] = True
+    options["annotate_unparsed_sentences"] = False
 
     args = parser.parse_args()
     inputfile = args.inputfile
