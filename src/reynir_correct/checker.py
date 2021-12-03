@@ -288,6 +288,11 @@ class GreynirCorrect(Greynir):
                     terminal_index = token_to_terminal[ix]
                     terminal_node = sent.terminal_nodes[terminal_index]
                     original_terminal = terminal_node.original_terminal
+                    if original_terminal not in grammar.terminals:
+                        # At least one case, finna→Finna, gets the terminal "person_kvk"
+                        # which isn't found in grammar.terminals!
+                        annotate = False
+                        continue
                     assert original_terminal is not None
                     terminal = grammar.terminals[original_terminal]
                     assert isinstance(terminal, VariantHandler)

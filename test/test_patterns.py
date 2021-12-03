@@ -151,7 +151,7 @@ def test_verb_af(rc):
     check_sentence(rc, s, [(1, 5, "P_WRONG_PREP_AF")])
 
     s = "Jón varð vitni af þessu."
-    check_sentence(rc, s, [(1, 3, "P_afað")])
+    check_sentence(rc, s, [(1, 3, "P_afað"), (3, 3, "S005")])
 
 
 def test_noun_af(rc):
@@ -201,11 +201,11 @@ def test_verb_að(rc):
     s = "Ég vildi vera hluti að heildinni að mestu leyti."
     check_sentence(rc, s, [(3, 5, "P_WRONG_PREP_AÐ")])
     s = "Þar að leiðandi virkar þetta."
-    check_sentence(rc, s, [(0, 2, "P_aðaf")])
+    check_sentence(rc, s, [(0, 2, "P_aðaf"), (1, 1, "S005")])
     s = "Þar að leiðandi virkar þetta að mestu leyti."
-    check_sentence(rc, s, [(0, 2, "P_aðaf")])
+    check_sentence(rc, s, [(0, 2, "P_aðaf"), (1, 1, "S005")])
     s = "Þetta virkar þar að leiðandi."
-    check_sentence(rc, s, [(2, 4, "P_aðaf")])
+    check_sentence(rc, s, [(2, 4, "P_aðaf"), (3, 3, "S005")])
     s = "Ég hef ekki áhyggjur að honum."
     check_sentence(rc, s, [(2, 5, "P_WRONG_PREP_AÐ")])
     s = "Ég hef áhyggjur að því að honum líði illa."

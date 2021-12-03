@@ -2437,6 +2437,7 @@ def late_fix_merges(
         if (
             token.original
             and token.txt.strip() != token.original.strip()
+            and isinstance(token, CorrectToken)
             and not token.error
         ):
             token.set_error(
