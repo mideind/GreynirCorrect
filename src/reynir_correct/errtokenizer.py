@@ -2476,7 +2476,7 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                     sw = replacement.split("/")
                     suggestion = ""
                     suggest = None
-                    sugglist: list[str] = []
+                    sugglist: List[str] = []
                     if len(sw) == 1 and sw[0].split("_")[0] == key:
                         # We have a single suggested word, which is the same as the
                         # taboo word: there is no suggestion, only a notification
