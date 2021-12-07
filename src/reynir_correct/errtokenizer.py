@@ -1724,7 +1724,7 @@ def lookup_unknown_words(
             return True
         if token.txt.isupper():
             # Should not correct all uppercase words
-            if token.error_code and token.error_code in {"Z002"} and at_sentence_start:
+            if token.error_code and token.error_code == "Z002" and at_sentence_start:
                 # We have fixed capitalization, doesn't mean word is correct
                 return False
             return True
@@ -2427,9 +2427,6 @@ def late_fix_capitalization(
 
 def late_fix_merges(
     token_stream: Iterable[CorrectToken],
-    db: GreynirBin,
-    token_ctor: TokenCtor,
-    only_ci: bool,
 ) -> Iterator[CorrectToken]:
     """Annotate tokens where error annotation
     has disappeared due to token merging"""
@@ -2438,12 +2435,14 @@ def late_fix_merges(
             token.original
             and token.txt.strip() != token.original.strip()
             and isinstance(token, CorrectToken)
-            and not token.error
+            and not hasattr(token, "error")
         ):
             token.set_error(
                 SpellingError(
                     "005",
-                    "Skrifa á '{}' sem '{}'".format(token.original.strip(), token.txt),
+                    "Rita á '{}' sem '{}'".format(
+                        token.original.strip(), token.txt
+                    ).strip(),
                     original=token.original,
                     suggest=token.txt,
                 ),
@@ -2477,7 +2476,7 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                     sw = replacement.split("/")
                     suggestion = ""
                     suggest = None
-                    sugglist = []
+                    sugglist: list[str] = []
                     if len(sw) == 1 and sw[0].split("_")[0] == key:
                         # We have a single suggested word, which is the same as the
                         # taboo word: there is no suggestion, only a notification
@@ -2779,7 +2778,7 @@ class CorrectionPipeline(DefaultPipeline):
             ct_stream, self._db, token_ctor, self._only_ci
         )
 
-        ct_stream = late_fix_merges(ct_stream, self._db, token_ctor, self._only_ci)
+        ct_stream = late_fix_merges(ct_stream)
         return ct_stream
 
 

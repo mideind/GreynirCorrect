@@ -69,12 +69,11 @@ def main():
             # Comment string, want to show it with the examples
             if not options["ignore_comments"]:
                 print(sent.strip())
-            # sent = next(itering)
             continue
         options["infile"] = sent
         x = check_errors(**options)
-        # Hér væri auðvelt að bæta við einhverjum samanburði við gull, skila bara T/F hvort sé eins
-        # Þyrfti þá að zippa  saman setningar úr testskjali og gullskjali til að nota í forlykkju
+        # Here we can compare x to gold by zipping sentences
+        # from output and gold together and iterating in a for loop
         print(sent.strip())
         if x:
             print(x)

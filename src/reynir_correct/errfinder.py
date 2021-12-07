@@ -738,7 +738,7 @@ class ErrorFinder(ParseForestNavigator):
             preposition = pp.P.text
             suggestion = self.cast_to_case(variants, obj)
             correct_np = correct_spaces(suggestion)
-            if correct_np == pp.text:
+            if correct_np == obj.text:
                 # Avoid suggesting the original text
                 return None
             start, end = obj.span
@@ -1256,7 +1256,7 @@ class ErrorFinder(ParseForestNavigator):
                         AnnotationTuple6, ann
                     )
             else:
-                if not ann or len(ann) == 0:
+                if not ann:
                     # Empty or no dict: this means that upon closer inspection,
                     # there was no need to annotate
                     return None

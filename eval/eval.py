@@ -480,7 +480,7 @@ parser.add_argument(
     "-x",
     "--exclude",
     action="store_true",
-    help="Exclude sentences marked exclude",
+    help="Exclude sentences marked for exclusion",
 )
 
 parser.add_argument(
