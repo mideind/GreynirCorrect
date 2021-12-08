@@ -395,7 +395,7 @@ class CorrectToken(Tok):
         self._err = err
 
     def copy(self, other: Union[Tok, Sequence[Tok]], coalesce: bool = False) -> bool:
-        """Copy the error field and origin informatipon
+        """Copy the error field and origin information
         from another CorrectToken instance"""
         if isinstance(other, CorrectToken):
             self._err = other._err
@@ -633,7 +633,12 @@ class UnknownWordError(Error):
     # U001: Unknown word. Nothing more is known. Cannot be corrected, only pointed out.
 
     def __init__(
-        self, code: str, txt: str, original: str, suggest: str, is_warning: bool = False
+        self,
+        code: str,
+        txt: str,
+        original: str,
+        suggest: Optional[str],
+        is_warning: bool = False,
     ) -> None:
         # Unknown word error codes start with "U"
         super().__init__(
@@ -704,7 +709,13 @@ class TabooWarning(Error):
     # T001: Taboo word usage warning, with suggested replacement
 
     def __init__(
-        self, code: str, txt: str, detail: Optional[str], original: str, suggest: str
+        self,
+        code: str,
+        txt: str,
+        detail: Optional[str],
+        original: str,
+        suggest: Optional[str],
+        suggestlist: Optional[List[str]] = None,
     ) -> None:
         # Taboo word warnings start with "T"
         super().__init__(
@@ -712,6 +723,7 @@ class TabooWarning(Error):
         )
         self._txt = txt
         self._detail = detail
+        self._suggestlist = suggestlist
 
     @property
     def description(self) -> str:
@@ -724,6 +736,8 @@ class TabooWarning(Error):
     def to_dict(self) -> Dict[str, Any]:
         d = super().to_dict()
         d["detail"] = self.detail
+        d["suggest"] = self.suggest
+        d["suggestlist"] = self._suggestlist
         return d
 
 
@@ -776,6 +790,8 @@ class SpellingError(Error):
     # S003: Erroneously formed word forms picked up by ErrorForms.
     #       Should be corrected.
     # S004: Rare word, a more common one has been substituted.
+    # S005: Error has been corrected but annotation was lost in merging,
+    #       a more generic one is applied.
 
     def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
         # Spelling error codes start with "S"
@@ -965,7 +981,6 @@ def parse_errors(
         token = get()
 
         while True:
-
             next_token = get()
 
             if token.kind == TOK.S_BEGIN:
@@ -1709,6 +1724,9 @@ def lookup_unknown_words(
             return True
         if token.txt.isupper():
             # Should not correct all uppercase words
+            if token.error_code and token.error_code == "Z002" and at_sentence_start:
+                # We have fixed capitalization, doesn't mean word is correct
+                return False
             return True
         return False
 
@@ -1907,10 +1925,13 @@ def lookup_unknown_words(
         if token.error_code:
             # This token already has an associated error and eventual correction:
             # let it be
-            yield token
-            # We're now within a sentence
-            at_sentence_start = False
-            continue
+            if token.error_code in {"Z001", "Z002"}:
+                pass
+            else:
+                yield token
+                # We're now within a sentence
+                at_sentence_start = False
+                continue
 
         # Check wrong word forms, i.e. those that do not exist in BÍN
         # !!! TODO: Some error forms are present in BÍN but in a different
@@ -1926,7 +1947,7 @@ def lookup_unknown_words(
             yield rtok
             continue
 
-        if is_immune(token) or token.error:
+        if is_immune(token):
             # Nothing more to do
             pass
 
@@ -1941,7 +1962,7 @@ def lookup_unknown_words(
                         code="001",
                         txt="Óþekkt orð: '{0}'".format(token.txt),
                         original=token.txt,
-                        suggest="",
+                        suggest=None,  # No suggest value available
                     )
                 )
                 yield token
@@ -2003,7 +2024,9 @@ def lookup_unknown_words(
                     # We have a candidate correction but the original word does
                     # exist in BÍN, so we're not super confident: yield a suggestion
                     # or no annotation if suppress_suggestions is True
-                    if suppress_suggestions:
+                    if suppress_suggestions or token.error_code:
+                        # If the token already contains an error and we're not so certain
+                        # about this new one, we yield no annotation
                         yield token
                     else:
                         if Settings.DEBUG:
@@ -2035,7 +2058,7 @@ def lookup_unknown_words(
                     continue
 
         # Check for completely unknown and uncorrectable words
-        if not token.val:
+        if not token.val and not token.error_code:
             # No annotation and not able to correct:
             # mark the token as an unknown word
             # (but only as a warning if it is an uppercase word or
@@ -2046,7 +2069,7 @@ def lookup_unknown_words(
                         code="001",
                         txt=f"Óþekkt orð: '{token.txt}'",
                         original=token.txt,
-                        suggest="",
+                        suggest=None,  # No suggest value available
                     )
                 )
 
@@ -2402,6 +2425,31 @@ def late_fix_capitalization(
             at_sentence_start = False
 
 
+def late_fix_merges(
+    token_stream: Iterable[CorrectToken],
+) -> Iterator[CorrectToken]:
+    """Annotate tokens where error annotation
+    has disappeared due to token merging"""
+    for token in token_stream:
+        if (
+            token.original
+            and token.txt.strip() != token.original.strip()
+            and isinstance(token, CorrectToken)
+            and not token.error
+        ):
+            token.set_error(
+                SpellingError(
+                    "005",
+                    "Rita á '{}' sem '{}'".format(
+                        token.original.strip(), token.txt
+                    ).strip(),
+                    original=token.original,
+                    suggest=token.txt,
+                ),
+            )
+        yield token
+
+
 def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectToken]:
     """Annotate taboo words with warnings"""
 
@@ -2427,6 +2475,8 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                     # for instance 'þungunarrof_hk/meðgöngurof_hk'
                     sw = replacement.split("/")
                     suggestion = ""
+                    suggest = None
+                    sugglist: List[str] = []
                     if len(sw) == 1 and sw[0].split("_")[0] == key:
                         # We have a single suggested word, which is the same as the
                         # taboo word: there is no suggestion, only a notification
@@ -2441,13 +2491,16 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                             f"Óheppilegt eða óviðurkvæmilegt orð, "
                             f"skárra væri t.d. {suggestion}"
                         )
+                        suggest = sw[0].split("_")[0]
+                        sugglist = list(w.split("_")[0] for w in sw)
                     token.set_error(
                         TabooWarning(
                             "001",
                             explanation,
                             detail or None,
                             token.txt,
-                            ", ".join(f"'{w.split('_')[0]}'" for w in sw),
+                            suggest,
+                            sugglist,
                         )
                     )
                     # !!! TODO: Add correctly inflected suggestion here
@@ -2721,10 +2774,12 @@ class CorrectionPipeline(DefaultPipeline):
         # as numbers ('24 Milljónir') and amounts ('3 Þúsund Dollarar')
         ct_stream = cast(Iterator[CorrectToken], stream)
         token_ctor = cast(TokenCtor, self._token_ctor)
-        return cast(
-            TokenIterator,
-            late_fix_capitalization(ct_stream, self._db, token_ctor, self._only_ci),
+        ct_stream = late_fix_capitalization(
+            ct_stream, self._db, token_ctor, self._only_ci
         )
+
+        ct_stream = late_fix_merges(ct_stream)
+        return ct_stream
 
 
 def tokenize(text_or_gen: StringIterable, **options: Any) -> Iterator[CorrectToken]:
