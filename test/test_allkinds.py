@@ -685,7 +685,7 @@ def test_capitalization(verbose=False):
     assert g[14].error_code == "Z001"  # sjíti
 
     g = rc.tokenize(
-        "Á íslandi búa íslendingar og í danmörku búa Danskir danir í Nóvember."
+        "Á íslandi búa íslendingar og í danmörku búa Danskir danir í Nóvember en ekki fríslendingar."
     )
     g = list(g)
     if verbose:
@@ -698,12 +698,14 @@ def test_capitalization(verbose=False):
     assert "Danir" in s
     assert "nóvember" in s
     assert "Nóvember" not in s
+    assert "Fríslendingar" in s
     assert g[2].error_code == "Z002"  # Íslandi
     assert g[4].error_code == "Z002"  # Íslendingar
     assert g[7].error_code == "Z002"  # Danmörku
     assert g[9].error_code == "Z001"  # danskir
     assert g[10].error_code == "Z002"  # Danir
     assert g[12].error_code == "Z003"  # nóvember
+    assert g[15].error_code == "Z002"  # Fríslendingar
 
     g = rc.tokenize(
         "Í norður-belfast og norður-Belfast er rigning en ekki í suður-afríku hjá suður-afríkumönnum."
@@ -781,13 +783,54 @@ def test_capitalization(verbose=False):
     assert "Mið-Austurlönd" in s
     assert "Litla-Hraun" in s
 
-    g = rc.tokenize("Þjóðin tók þátt í vetrarólympíuleikunum en líbanar ekki.")
+    g = rc.tokenize(
+        "Þjóðin tók þátt í vetrarólympíuleikunum og sumarólympíuleikunum en líbanar ekki."
+    )
     g = list(g)
     if verbose:
         dump(g)
     s = normalize(g)
     assert "Vetrarólympíuleikunum" in s
+    assert "Sumarólympíuleikunum" in s
     assert "Líbanar" in s
+
+    g = rc.tokenize(
+        "Nýr Loftslagsráðherra, Innviðaráðherra og Umhverfisráðherra er Afróasískur, talar Dravídamál, fylgir Lútherstrú og er miðflokksmaður."
+    )
+    g = list(g)
+    if verbose:
+        dump(g)
+    s = normalize(g)
+    assert "loftslagsráðherra" in s
+    assert "innviðaráðherra" in s
+    assert "umhverfisráðherra" in s
+    assert "afróasískur" in s
+    assert "dravídamál" in s
+    assert "lútherstrú" in s
+    assert "Miðflokksmaður" in s
+    assert g[2].error_code == "Z001"  # loftslagsráðherra
+    assert g[4].error_code == "Z001"  # innviðaráðherra
+    assert g[6].error_code == "Z001"  # umhverfisráðherra
+    assert g[8].error_code == "Z002"  # afróasískur
+    assert g[11].error_code == "Z002"  # dravídamál
+    assert g[14].error_code == "Z002"  # lútherstrú
+    assert g[17].error_code == "Z001"  # Miðflokksmaður
+
+    g = rc.tokenize(
+        "Hann er Suðurkákasískur, tínir Unnarfald, býr í neðra-breiðholti og elskar Múmínálfa."
+    )
+    g = list(g)
+    if verbose:
+        dump(g)
+    s = normalize(g)
+    assert "suðurkákasískur" in s
+    assert "unnarfald" in s
+    assert "Neðra-Breiðholti" in s
+    assert "múmínálfa" in s
+    assert g[3].error_code == "Z001"  # suðurkákasískur
+    assert g[6].error_code == "Z001"  # unnarfald
+    assert g[10].error_code == "Z002"  # Neðra-Breiðholti
+    assert g[13].error_code == "Z001"  # múmínálfa
 
 
 def test_acronyms(verbose=False):
@@ -888,7 +931,7 @@ def test_acronyms(verbose=False):
     assert g[11].error_code == "Z001"  # bóndadag
 
     g = rc.tokenize(
-        "Talað var við Dómsmálaráðherra, Ríkissaksóknara, Biskupinn og Doktorinn "
+        "Talað var við Dómsmálaráðherra, Ríkissaksóknara og Doktorinn "
         "á Mánudögum og Þriðjudögum."
     )
     g = list(g)
@@ -897,16 +940,14 @@ def test_acronyms(verbose=False):
     s = normalize(g)
     assert "dómsmálaráðherra" in s
     # assert "ríkissaksóknara" in s
-    assert "biskupinn" in s
     assert "doktorinn" in s
     assert "mánudögum" in s
     assert "þriðjudögum" in s
     assert g[4].error_code == "Z001"  # dómsmálaráðherra
     # assert g[6].error_code == "Z001"    #ríkissaksóknara
-    assert g[8].error_code == "Z001"  # biskupinn
-    assert g[10].error_code == "Z001"  # doktorinn
-    assert g[12].error_code == "Z001"  # mánudögum
-    assert g[14].error_code == "Z001"  # þriðjudögum
+    assert g[8].error_code == "Z001"  # doktorinn
+    assert g[10].error_code == "Z001"  # mánudögum
+    assert g[12].error_code == "Z001"  # þriðjudögum
 
     g = rc.tokenize(
         "Þau læra Íslensku og Landafræði með Allsherjarþinginu og Öryggisráðinu en líka um Indóevrópsk mál og Óðinshana."
