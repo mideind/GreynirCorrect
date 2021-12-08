@@ -687,7 +687,7 @@ class ErrorFinder(ParseForestNavigator):
         # Annotate the verb phrase
         assert ch1 is not None
         start, end = self.node_span(ch1)
-        detail: str = f"Nafnliðurinn '{subject}' er í eintölu og með honum á því að vera sögn í eintölu."
+        detail: str = f"Nafnliðurinn '{subject}' er í {number} og með honum á því að vera sögn í {number}."
         origin = subject
         if so is None:
             return AnnotationDict(

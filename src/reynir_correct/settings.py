@@ -53,7 +53,8 @@ from reynir.bintokenizer import StateDict
 
 
 ErrorFormTuple = Tuple[str, str, int, str, str]
-
+# (lemma, id, cat, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg)
+RitmyndirTuple = Tuple[str, int, str, str, str, int, str, str, str, str]
 # A set of all strings that should be interpreted as True
 TRUE = frozenset(("true", "True", "1", "yes", "Yes"))
 
@@ -153,22 +154,22 @@ class MultiwordErrors:
 
     @staticmethod
     def get_phrase(ix: int) -> Tuple[str, ...]:
-        """ Return the original phrase with index ix """
+        """Return the original phrase with index ix"""
         return MultiwordErrors.LIST[ix][0]
 
     @staticmethod
     def get_phrase_length(ix: int) -> int:
-        """ Return the count of words in the original phrase with index ix """
+        """Return the count of words in the original phrase with index ix"""
         return len(MultiwordErrors.LIST[ix][0])
 
     @staticmethod
     def get_code(ix: int) -> str:
-        """ Return the error code with index ix """
+        """Return the error code with index ix"""
         return MultiwordErrors.LIST[ix][1]
 
     @staticmethod
     def get_replacement(ix: int) -> List[str]:
-        """ Return the replacement phrase with index ix """
+        """Return the replacement phrase with index ix"""
         return MultiwordErrors.LIST[ix][2]
 
 
@@ -187,9 +188,7 @@ class TabooWords:
         a = word.split("_")
         _, m = db.lookup_g(a[0])
         if not m or (len(a) >= 2 and all(mm.ordfl != a[1] for mm in m)):
-            raise ConfigError(
-                "The taboo word '{0}' is not found in BÍN".format(word)
-            )
+            raise ConfigError("The taboo word '{0}' is not found in BÍN".format(word))
         TabooWords.DICT[word] = (replacement, explanation)
 
 
@@ -216,8 +215,8 @@ class CapitalizationErrors:
 
     @staticmethod
     def emulate_case(s: str, template: str) -> str:
-        """ Return the string s but emulating the case of the template
-            (lower/upper/capitalized) """
+        """Return the string s but emulating the case of the template
+        (lower/upper/capitalized)"""
         if template.isupper():
             return s.upper()
         if template and template[0].isupper():
@@ -226,7 +225,7 @@ class CapitalizationErrors:
 
     @staticmethod
     def reverse_capitalization(word: str, *, split_on_hyphen: bool = False) -> str:
-        """ Return a word with its capitalization reversed (lower <-> upper case) """
+        """Return a word with its capitalization reversed (lower <-> upper case)"""
         if split_on_hyphen and "-" in word:
             # 'norður-kórea' -> 'Norður-Kórea'
             return "-".join(
@@ -248,7 +247,7 @@ class CapitalizationErrors:
 
     @staticmethod
     def add(word: str) -> None:
-        """ Add the given (wrongly capitalized) word stem to the stem set """
+        """Add the given (wrongly capitalized) word stem to the stem set"""
         # We support compound words such as 'félags- og barnamálaráðherra' here
         split_on_hyphen = False
         if " " in word:
@@ -303,8 +302,8 @@ class OwForms:
 
     @staticmethod
     def contains(word: str) -> bool:
-        """ Check whether the word form is in the error forms dictionary,
-            either in its original casing or in a lower case form """
+        """Check whether the word form is in the error forms dictionary,
+        either in its original casing or in a lower case form"""
         d = OwForms.DICT
         if word.islower():
             return word in d
@@ -320,8 +319,8 @@ class OwForms:
 
     @staticmethod
     def get_correct_form(wrong_form: str) -> str:
-        """ Return a corrected form of the given word, attempting
-            to emulate the lower/upper/title case of the word """
+        """Return a corrected form of the given word, attempting
+        to emulate the lower/upper/title case of the word"""
         # First, try the original casing of the wrong form
         c = OwForms.DICT.get(wrong_form)
         if c is not None:
@@ -359,8 +358,8 @@ class CIDErrorForms:
 
     @staticmethod
     def contains(word: str) -> bool:
-        """ Check whether the word form is in the error forms dictionary,
-            either in its original casing or in a lower case form """
+        """Check whether the word form is in the error forms dictionary,
+        either in its original casing or in a lower case form"""
         d = CIDErrorForms.DICT
         return word in d or word.lower() in d
 
@@ -374,8 +373,8 @@ class CIDErrorForms:
 
     @staticmethod
     def get_correct_form(wrong_form: str) -> str:
-        """ Return a corrected form of the given word, attempting
-            to emulate the lower/upper/title case of the word """
+        """Return a corrected form of the given word, attempting
+        to emulate the lower/upper/title case of the word"""
         # First, try the original casing of the wrong form
         c = CIDErrorForms.DICT.get(wrong_form)
         if c is not None:
@@ -413,8 +412,8 @@ class CDErrorForms:
 
     @staticmethod
     def contains(word: str) -> bool:
-        """ Check whether the word form is in the error forms dictionary,
-            either in its original casing or in a lower case form """
+        """Check whether the word form is in the error forms dictionary,
+        either in its original casing or in a lower case form"""
         d = CDErrorForms.DICT
         if word.islower():
             return word in d
@@ -430,8 +429,8 @@ class CDErrorForms:
 
     @staticmethod
     def get_correct_form(wrong_form: str) -> str:
-        """ Return a corrected form of the given word, attempting
-            to emulate the lower/upper/title case of the word """
+        """Return a corrected form of the given word, attempting
+        to emulate the lower/upper/title case of the word"""
         # First, try the original casing of the wrong form
         c = CDErrorForms.DICT.get(wrong_form)
         if c is not None:
@@ -478,9 +477,67 @@ class Morphemes:
         Morphemes.FREE_DICT[morph] = freelist
 
 
+class Ritmyndir:
+
+    # dict { wrong_word_form : (lemma, id, cat, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg) }
+    # þurrð;10963;kvk;þurðar;þurrðar;EFET;0;URE;;;;1745-1745;KLIM
+    # þurrka;425063;so;þurkaði;þurrkaði;;4;VILLA;R4RR;;;;SKOLAVERK
+    DICT: Dict[str, RitmyndirTuple] = dict()
+
+    @staticmethod
+    def contains(word, str) -> bool:
+        """Check whether the word form is in the Ritmyndir dictionary"""
+        d = Ritmyndir.DICT
+        return word in d or word.lower() in d
+
+    @staticmethod
+    def get_lemma(wrong_form: str) -> str:
+        return Ritmyndir.DICT[wrong_form][0]
+
+    @staticmethod
+    def get_id(wrong_form: str) -> int:
+        return Ritmyndir.DICT[wrong_form][1]
+
+    @staticmethod
+    def get_cat(wrong_form: str) -> str:
+        return Ritmyndir.DICT[wrong_form][2]
+
+    @staticmethod
+    def get_correct_form(wrong_form: str) -> str:
+        return Ritmyndir.DICT[wrong_form][3]
+
+    @staticmethod
+    def get_tag(wrong_form: str) -> str:
+        return Ritmyndir.DICT[wrong_form][4]
+
+    @staticmethod
+    def get_eink(wrong_form: str) -> int:
+        return Ritmyndir.DICT[wrong_form][5]
+
+    @staticmethod
+    def get_malsnid(wrong_form: str) -> str:
+        return Ritmyndir.DICT[wrong_form][6]
+
+    @staticmethod
+    def get_stafs(wrong_form: str) -> str:
+        return Ritmyndir.DICT[wrong_form][7]
+
+    @staticmethod
+    def get_aslatt(wrong_form: str) -> str:
+        return Ritmyndir.DICT[wrong_form][8]
+
+    @staticmethod
+    def get_beyg(wrong_form: str) -> str:
+        return Ritmyndir.DICT[wrong_form][9]
+
+    @staticmethod
+    def add(wrong_form: str, details: RitmyndirTuple) -> None:
+        Ritmyndir.DICT[wrong_form] = details
+
+
 class Settings:
 
-    """ Global settings """
+    """Global settings"""
 
     _lock = threading.Lock()
     loaded = False
@@ -490,7 +547,7 @@ class Settings:
 
     @staticmethod
     def _handle_settings(s: str) -> None:
-        """ Handle config parameters in the settings section """
+        """Handle config parameters in the settings section"""
         a: List[str] = s.lower().split("=", maxsplit=1)
         par = a[0].strip().lower()
         val = a[1].strip()
@@ -504,7 +561,7 @@ class Settings:
 
     @staticmethod
     def _handle_allowed_multiples(s: str) -> None:
-        """ Handle config parameters in the allowed_multiples section """
+        """Handle config parameters in the allowed_multiples section"""
         assert s
         if len(s.split()) != 1:
             raise ConfigError(
@@ -518,7 +575,7 @@ class Settings:
 
     @staticmethod
     def _handle_wrong_compounds(s: str) -> None:
-        """ Handle config parameters in the wrong_compounds section """
+        """Handle config parameters in the wrong_compounds section"""
         a = s.lower().split(",", maxsplit=1)
         if len(a) != 2:
             raise ConfigError("Expected comma between compound word and its parts")
@@ -538,7 +595,7 @@ class Settings:
 
     @staticmethod
     def _handle_split_compounds(s: str) -> None:
-        """ Handle config parameters in the split_compounds section """
+        """Handle config parameters in the split_compounds section"""
         parts = s.split()
         if len(parts) != 2:
             raise ConfigError("Missing word part(s) in split_compounds section")
@@ -546,7 +603,7 @@ class Settings:
 
     @staticmethod
     def _handle_unique_errors(s: str) -> None:
-        """ Handle config parameters in the unique_errors section """
+        """Handle config parameters in the unique_errors section"""
         a = s.lower().split(",", maxsplit=1)
         if len(a) != 2:
             raise ConfigError("Expected comma between error word and its correction")
@@ -579,20 +636,22 @@ class Settings:
 
     @staticmethod
     def _handle_capitalization_errors(s: str) -> None:
-        """ Handle config parameters in the capitalization_errors section """
+        """Handle config parameters in the capitalization_errors section"""
         CapitalizationErrors.add(s)
 
     @staticmethod
     def _handle_taboo_words(s: str) -> None:
-        """ Handle config parameters in the taboo_words section """
+        """Handle config parameters in the taboo_words section"""
         # Start by parsing explanation string off the end (right hand side), if present
-        lquote = s.find("\"")
-        rquote = s.rfind("\"")
+        lquote = s.find('"')
+        rquote = s.rfind('"')
         if (lquote >= 0) != (rquote >= 0):
-            raise ConfigError("Explanation string for taboo word should be enclosed in double quotes")
+            raise ConfigError(
+                "Explanation string for taboo word should be enclosed in double quotes"
+            )
         if lquote >= 0:
             # Obtain explanation from within quotes
-            explanation = s[lquote + 1:rquote].strip()
+            explanation = s[lquote + 1 : rquote].strip()
             s = s[:lquote].rstrip()
         else:
             # No explanation
@@ -616,7 +675,7 @@ class Settings:
 
     @staticmethod
     def _handle_suggestions(s: str) -> None:
-        """ Handle config parameters in the suggestions section """
+        """Handle config parameters in the suggestions section"""
         a = s.lower().split()
         if len(a) < 2:
             raise ConfigError(
@@ -630,7 +689,7 @@ class Settings:
 
     @staticmethod
     def _handle_multiword_errors(s: str) -> None:
-        """ Handle config parameters in the multiword_errors section """
+        """Handle config parameters in the multiword_errors section"""
         a = s.lower().split("$error", maxsplit=1)
         if len(a) != 2:
             raise ConfigError("Expected phrase followed by $error(...)")
@@ -646,7 +705,7 @@ class Settings:
 
     @staticmethod
     def _handle_ow_forms(s: str) -> None:
-        """ Handle config parameters in the ow_forms section """
+        """Handle config parameters in the ow_forms section"""
         split = s.strip().split(";")
         if len(split) != 6:
             raise ConfigError("Expected wrong form;lemma;correct form;id;category;tag")
@@ -669,7 +728,7 @@ class Settings:
 
     @staticmethod
     def _handle_error_forms(s: str) -> None:
-        """ Handle config parameters in the error_forms section """
+        """Handle config parameters in the error_forms section"""
         split = s.strip().split(";")
         if len(split) != 7:
             raise ConfigError(
@@ -678,7 +737,6 @@ class Settings:
         wrong_form = split[0].strip()
         correct_form = split[2].strip()
         if wrong_form == correct_form:
-            print(s)
             raise ConfigError(
                 "Wrong form identical to correct form for '{0}'".format(wrong_form)
             )
@@ -699,7 +757,7 @@ class Settings:
 
     @staticmethod
     def _handle_morphemes(s: str) -> None:
-        """ Process the contents of the [morphemes] section """
+        """Process the contents of the [morphemes] section"""
         freelist: List[str] = []
         boundlist: List[str] = []
         spl = s.split()
@@ -721,8 +779,35 @@ class Settings:
         Morphemes.add(m, boundlist, freelist)
 
     @staticmethod
+    def _handle_ritm(s: str) -> None:
+        """Handle data from Ritmyndir in Stórasnið in BÍN/DIM"""
+        split = s.strip().split(";")
+        if len(split) != 13:
+            raise ConfigError(
+                "Expected lemma, id, cat, wrong_word_form, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg, age, ref"
+            )
+        wrong_form = split[3].strip()
+        correct_form = split[4].strip()
+        if wrong_form == correct_form:
+            return
+        # (lemma, id, cat, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg)
+        meaning: RitmyndirTuple = (
+            split[0].strip(),  # Lemma
+            int(split[1].strip()),  # id
+            split[2].strip(),  # cat
+            correct_form,  # correct_word_form
+            split[5].strip(),  # tag
+            int(split[6].strip()),  # eink
+            split[7].strip(),  # malsnid
+            split[8].strip(),  # stafs
+            split[9].strip(),  # aslatt
+            split[10].strip(),  # beyg
+        )
+        Ritmyndir.add(wrong_form, meaning)
+
+    @staticmethod
     def read(fname: str) -> None:
-        """ Read configuration file """
+        """Read configuration file"""
 
         with Settings._lock:
 
@@ -768,6 +853,52 @@ class Settings:
                         raise ConfigError("Unknown section name '{0}'".format(section))
                     if handler is None:
                         raise ConfigError("No handler for config line '{0}'".format(s))
+                    # Call the correct handler depending on the section
+                    try:
+                        handler(s)
+                    except ConfigError as e:
+                        # Add file name and line number information to the exception
+                        # if it's not already there
+                        e.set_pos(rdr.fname(), rdr.line())
+                        raise e
+
+            except ConfigError as e:
+                # Add file name and line number information to the exception
+                # if it's not already there
+                if rdr:
+                    e.set_pos(rdr.fname(), rdr.line())
+                raise e
+
+            Settings.loaded = True
+
+    @staticmethod
+    def read_csv(fname: str) -> None:
+        """Read (3rd party) csv configuration file"""
+        with Settings._lock:
+            if Ritmyndir.DICT:
+                return
+            CSV_HANDLERS = {
+                "config/Storasnid_ritm.csv": Settings._handle_ritm,
+            }
+            handler = None  # Current section handler
+            rdr = None
+            try:
+                if fname.strip() in CSV_HANDLERS:
+                    handler = CSV_HANDLERS[fname]
+                else:
+                    raise ConfigError(
+                        "No handler for csv config file '{0}'".format(fname)
+                    )
+                rdr = LineReader(fname, package_name=__name__)
+                for s in rdr.lines():
+                    # Ignore comments
+                    ix = s.find("#")
+                    if ix >= 0:
+                        s = s[0:ix]
+                    s = s.strip()
+                    if not s:
+                        # Blank line: ignore
+                        continue
                     # Call the correct handler depending on the section
                     try:
                         handler(s)
