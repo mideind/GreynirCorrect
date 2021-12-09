@@ -406,6 +406,7 @@ GCtoIEC = {
     "S003": ["nonword"],
     "S004": ["nonword"],
     "S005": ["nonword"],  # No better information available, most likely this
+    "S006": ["nonword"],
     "T001": ["taboo-word"],
     "T001/w": ["taboo-word"],
     "U001": ["fw"],

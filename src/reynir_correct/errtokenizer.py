@@ -86,6 +86,7 @@ from .settings import (
     TabooWords,
     CIDErrorForms,
     Morphemes,
+    Ritmyndir,
     Settings,
 )
 from .spelling import Corrector
@@ -191,6 +192,12 @@ STYLE_WARNINGS: Mapping[str, str] = {
     "SJALD": "sjaldgæft",
     "VILLA": "villa",
     "GAM": "gamalt",
+}
+
+# The following categories are retrieved from the Ritmyndir data,
+# see https://bin.arnastofnun.is/gogn/storasnid/ritmyndir/
+RITMYNDIR_DETAILS: Mapping[str, str] = {
+    "": "",
 }
 
 
@@ -791,7 +798,8 @@ class SpellingError(Error):
     #       Should be corrected.
     # S004: Rare word, a more common one has been substituted.
     # S005: Error has been corrected but annotation was lost in merging,
-    #       a more generic one is applied.
+    #       a more generic message is given.
+    # S006: Errors picked up by Ritmyndir. Should be corrected.
 
     def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
         # Spelling error codes start with "S"
@@ -1422,12 +1430,14 @@ class MultiwordErrorStream(MatchingStream):
         token_ctor = self._token_ctor
         len_tq = len(tq)
         len_replacement = len(replacement)
+        capfirst = False
         for i, replacement_word in enumerate(replacement):
             # !!! TODO: at_sentence_start
             _, m = db.lookup_g(replacement_word, False, False)
             if i == 0 and is_cap(tq[0].txt):
                 # Fix capitalization of the first word
                 # !!! TODO: handle all-uppercase
+                capfirst = True
                 replacement_word = replacement_word.capitalize()
             ct = token_ctor.Word(replacement_word, m)
             if i >= len_tq:
@@ -1440,16 +1450,20 @@ class MultiwordErrorStream(MatchingStream):
             else:
                 # Copy original text from corresponding phrase token
                 ct.original = tq[i].original
+            repstring = " ".join(replacement)
+            if capfirst:
+                repstring = repstring.capitalize()
+                capfirst = False
             if i == 0:
                 ct.set_error(
                     PhraseError(
                         MultiwordErrors.get_code(ix),
                         "Orðasambandið '{0}' var leiðrétt í '{1}'".format(
-                            " ".join(t.txt for t in tq), " ".join(replacement)
+                            " ".join(t.txt for t in tq), repstring
                         ),
                         span=len(replacement),
                         original=" ".join(t.txt for t in tq),
-                        suggest=" ".join(replacement),
+                        suggest=repstring,
                     )
                 )
             else:
@@ -1789,6 +1803,21 @@ def lookup_unknown_words(
         token.add_corrected_meanings(m)
         return token
 
+    def add_ritmyndir_error(token: CorrectToken) -> CorrectToken:
+        """Add an error with corresponding correct value and details given info in Ritmyndir"""
+        # TODO At the moment the code assumes only one correct value is available in data
+        # TODO Give more detailed error description from data
+        print(Ritmyndir.DICT[token.txt])
+        text = "Þetta er villa úr Ritmyndum"
+        code = 6
+        corrected = Ritmyndir.get_correct_form((token.txt))
+        token.set_error(
+            SpellingError("{0:03}".format(code), text, token.txt, corrected)
+        )
+        _, m = db.lookup_g(corrected, at_sentence_start=at_sentence_start)
+        token.add_corrected_meanings(m)
+        return token
+
     def only_suggest(token: CorrectToken, m: Sequence[BIN_Tuple]) -> bool:
         """Return True if we don't have high confidence in the proposed
         correction, so it will be suggested instead of applied"""
@@ -1899,6 +1928,16 @@ def lookup_unknown_words(
             continue
 
         # The token is a word
+
+        # Wrong word forms in Ritmyndir, more information than
+        # in UniqueErrors
+        if Ritmyndir.contains(token.txt):
+            rtok = add_ritmyndir_error(token)
+            at_sentence_start = False
+            # Update the context with the replaced token
+            context = (prev_context + tuple(rtok.txt.split()))[-3:]
+            yield rtok
+            continue
 
         # Check unique errors - some of those may have
         # BÍN annotations via the compounder

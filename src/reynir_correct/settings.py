@@ -485,14 +485,20 @@ class Ritmyndir:
     DICT: Dict[str, RitmyndirTuple] = dict()
 
     @staticmethod
-    def contains(word, str) -> bool:
+    def contains(word: str) -> bool:
         """Check whether the word form is in the Ritmyndir dictionary"""
         d = Ritmyndir.DICT
         return word in d or word.lower() in d
 
     @staticmethod
     def get_lemma(wrong_form: str) -> str:
-        return Ritmyndir.DICT[wrong_form][0]
+        d = Ritmyndir.DICT
+        if wrong_form in d:
+            return Ritmyndir.DICT[wrong_form][0]
+        elif wrong_form.lower() in d:
+            return Ritmyndir.DICT[wrong_form.lower()][0]
+        else:
+            return ""
 
     @staticmethod
     def get_id(wrong_form: str) -> int:
@@ -532,6 +538,9 @@ class Ritmyndir:
 
     @staticmethod
     def add(wrong_form: str, details: RitmyndirTuple) -> None:
+        # TODO Same ritmynd can occur multiple times in the data from different references, how to handle?
+        # TODO Also check if the same ritmynd has many different corrections in the data,
+        # so we don't just overwrite former values
         Ritmyndir.DICT[wrong_form] = details
 
 
@@ -786,6 +795,7 @@ class Settings:
             raise ConfigError(
                 "Expected lemma, id, cat, wrong_word_form, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg, age, ref"
             )
+        # TODO Should errors from certain references be excluded?
         wrong_form = split[3].strip()
         correct_form = split[4].strip()
         if wrong_form == correct_form:
