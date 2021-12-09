@@ -258,10 +258,15 @@ def check_grammar(**options: Any) -> str:
 
     accumul: List[str] = []
     offset = 0
+    inneroptions: Dict[str, Union[str, bool]] = {}
+    inneroptions["annotate_unparsed_sentences"] = options.get(
+        "annotate_unparsed_sentences", True
+    )
     for toklist in sentence_stream():
         len_tokens = len(toklist)
         # Invoke the spelling and grammar checker on the token list
-        sent = check_tokens(toklist)
+        # Only contains options relevant to the grammar check
+        sent = check_tokens(toklist, **inneroptions)
         if sent is None:
             # Should not happen?
             continue
@@ -359,8 +364,13 @@ def check_grammar(**options: Any) -> str:
         elif options.get("format", "") == "csv":
             for cann in a:
                 accumul.append(
-                    "{},{},{},{},{}".format(
-                        cann.code, cann.original, cann.suggest, cann.start, cann.end
+                    "{},{},{},{},{},{}".format(
+                        cann.code,
+                        cann.original,
+                        cann.suggest,
+                        cann.start,
+                        cann.end,
+                        cann.suggestlist,
                     )
                 )
         elif options.get("format", "") == "m2":

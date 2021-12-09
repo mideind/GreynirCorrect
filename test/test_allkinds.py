@@ -1555,14 +1555,16 @@ def test_hvor_annar(verbose=False):
 def test_phrasing(verbose=False):
     s = "Ég vill ekki gera mál úr þessu."
     # TODO þetta virkar, en skoða lengdina.
-    check_sentence(s, [(0, 1, "P_wrong_person")])
+    check_sentence(
+        s, [(0, 1, "P_wrong_person"), (1, 1, "S005")]
+    )  # TODO breyta aftur í 0, 1, P_wrong_person ef ætlunin er að merkja aðeins eina villu.
     s = "Konur vilja í auknu mæli koma að sjúkraflutningum."
     # TODO á kannski að greina þetta öðruvísi? Fastur frasi? Skoða líka lengdina.
-    check_sentence(s, [(2, 4, "P_wrong_gender")])
+    check_sentence(s, [(2, 4, "P_wrong_gender"), (3, 3, "S005")])
     s = "Ég veit ekki hvort að ég komi í kvöld."
     check_sentence(s, [(4, 4, "P_NT_Að/w")])
     s = "Meðan veislunni stendur verður frítt áfengi í boði."
-    # check_sentence(s, [(0, 3, "P_NT_MeðanStendur")])      # TODO engin villa finnst
+    # check_sentence(s, [(0, 3, "P_NT_MeðanStendur")])      # TODO engin villa finnst; hér þarf merkingargreiningu!
 
 
 def test_munu(verbose=False):
@@ -1782,7 +1784,7 @@ def test_corrected_sentences(verbose=False):
 
 def test_compounds():
     s = "Ég hitti fjármála-og efnahagsráðherra."
-    check_sentence(s, [])
+    check_sentence(s, [(2, 2, "S005")])
 
 
 def test_styles():

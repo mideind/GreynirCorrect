@@ -42,13 +42,16 @@ def main():
 
     options: Dict[str, Union[str, bool]] = {}
     # Hægt að biðja um annað til að fá frekari upplýsingar!
-    options["format"] = "text"
+    options["format"] = "text"  # text, json, csv, m2
     options["annotations"] = True
+
     options["all_errors"] = True
 
     # options["infile"] = open("prufa.txt", "r")
     options["one_sent"] = True
     # options["generate_suggestion_list"] = True
+    options["ignore_comments"] = False
+    # options["annotate_unparsed_sentences"] = False
 
     args = parser.parse_args()
     inputfile = args.inputfile
@@ -60,17 +63,21 @@ def main():
         raise ValueError
     itering = gen(inputfile)
     for sent in itering:
-        print("=================================")
+        if not sent.strip():
+            continue
         if sent.startswith("#"):
             # Comment string, want to show it with the examples
-            print(sent.strip())
-            sent = next(itering)
+            if not options["ignore_comments"]:
+                print(sent.strip())
+            continue
         options["infile"] = sent
         x = check_errors(**options)
-        # Hér væri auðvelt að bæta við einhverjum samanburði við gull, skila bara T/F hvort sé eins
-        # Þyrfti þá að zippa  saman setningar úr testskjali og gullskjali til að nota í forlykkju
+        # Here we can compare x to gold by zipping sentences
+        # from output and gold together and iterating in a for loop
         print(sent.strip())
-        print(x)
+        if x:
+            print(x)
+        print("=================================")
 
 
 if __name__ == "__main__":
