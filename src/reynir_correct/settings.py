@@ -502,39 +502,94 @@ class Ritmyndir:
 
     @staticmethod
     def get_id(wrong_form: str) -> int:
+        d = Ritmyndir.DICT
+        if wrong_form in d:
+            return Ritmyndir.DICT[wrong_form][1]
+        elif wrong_form.lower() in d:
+            return Ritmyndir.DICT[wrong_form.lower()][1]
+        else:
+            return 0
         return Ritmyndir.DICT[wrong_form][1]
 
     @staticmethod
     def get_cat(wrong_form: str) -> str:
-        return Ritmyndir.DICT[wrong_form][2]
+        d = Ritmyndir.DICT
+        if wrong_form in d:
+            return Ritmyndir.DICT[wrong_form][2]
+        elif wrong_form.lower() in d:
+            return Ritmyndir.DICT[wrong_form.lower()][2]
+        else:
+            return ""
 
     @staticmethod
     def get_correct_form(wrong_form: str) -> str:
-        return Ritmyndir.DICT[wrong_form][3]
+        d = Ritmyndir.DICT
+        if wrong_form in d:
+            return Ritmyndir.DICT[wrong_form][3]
+        elif wrong_form.lower() in d:
+            return Ritmyndir.DICT[wrong_form.lower()][3]
+        else:
+            return ""
 
     @staticmethod
     def get_tag(wrong_form: str) -> str:
-        return Ritmyndir.DICT[wrong_form][4]
+        d = Ritmyndir.DICT
+        if wrong_form in d:
+            return Ritmyndir.DICT[wrong_form][4]
+        elif wrong_form.lower() in d:
+            return Ritmyndir.DICT[wrong_form.lower()][4]
+        else:
+            return ""
 
     @staticmethod
     def get_eink(wrong_form: str) -> int:
-        return Ritmyndir.DICT[wrong_form][5]
+        d = Ritmyndir.DICT
+        if wrong_form in d:
+            return Ritmyndir.DICT[wrong_form][5]
+        elif wrong_form.lower() in d:
+            return Ritmyndir.DICT[wrong_form.lower()][5]
+        else:
+            return 1
 
     @staticmethod
     def get_malsnid(wrong_form: str) -> str:
-        return Ritmyndir.DICT[wrong_form][6]
+        d = Ritmyndir.DICT
+        if wrong_form in d:
+            return Ritmyndir.DICT[wrong_form][6]
+        elif wrong_form.lower() in d:
+            return Ritmyndir.DICT[wrong_form.lower()][6]
+        else:
+            return ""
 
     @staticmethod
     def get_stafs(wrong_form: str) -> str:
-        return Ritmyndir.DICT[wrong_form][7]
+        d = Ritmyndir.DICT
+        if wrong_form in d:
+            return Ritmyndir.DICT[wrong_form][7]
+        elif wrong_form.lower() in d:
+            return Ritmyndir.DICT[wrong_form.lower()][7]
+        else:
+            return ""
 
     @staticmethod
     def get_aslatt(wrong_form: str) -> str:
-        return Ritmyndir.DICT[wrong_form][8]
+        d = Ritmyndir.DICT
+        if wrong_form in d:
+            return Ritmyndir.DICT[wrong_form][8]
+        elif wrong_form.lower() in d:
+            return Ritmyndir.DICT[wrong_form.lower()][8]
+        else:
+            return ""
 
     @staticmethod
     def get_beyg(wrong_form: str) -> str:
-        return Ritmyndir.DICT[wrong_form][9]
+        d = Ritmyndir.DICT
+        if wrong_form in d:
+            return Ritmyndir.DICT[wrong_form][9]
+        elif wrong_form.lower() in d:
+            return Ritmyndir.DICT[wrong_form.lower()][9]
+        else:
+            return ""
 
     @staticmethod
     def add(wrong_form: str, details: RitmyndirTuple) -> None:

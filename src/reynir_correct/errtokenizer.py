@@ -1807,7 +1807,6 @@ def lookup_unknown_words(
         """Add an error with corresponding correct value and details given info in Ritmyndir"""
         # TODO At the moment the code assumes only one correct value is available in data
         # TODO Give more detailed error description from data
-        print(Ritmyndir.DICT[token.txt])
         text = "Þetta er villa úr Ritmyndum"
         code = 6
         corrected = Ritmyndir.get_correct_form((token.txt))
@@ -2469,6 +2468,9 @@ def late_fix_merges(
 ) -> Iterator[CorrectToken]:
     """Annotate tokens where error annotation
     has disappeared due to token merging"""
+    # TODO Double annotations for MW errors such as 'Ég vill' -> 'Ég vil'
+    # Where the error is placed by default on the first word instead of
+    # the word that changes (also could be many changes!)
     for token in token_stream:
         if (
             token.original
