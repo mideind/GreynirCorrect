@@ -178,6 +178,7 @@ WRONG_ABBREVS: Mapping[str, str] = {
     "Ca": "Ca.",
 }
 
+
 # Style mark from BÍN:
 # NID = Niðrandi / disparaging
 # OVID = Óviðeigandi / inappropriate
@@ -475,8 +476,10 @@ class CorrectToken(Tok):
         assert self.kind == TOK.WORD
         # We assume that the token has already been marked
         # with a SpellingError or SpellingSuggestion error
-        assert isinstance(self._err, SpellingSuggestion) or isinstance(
-            self._err, SpellingError
+        assert (
+            isinstance(self._err, SpellingSuggestion)
+            or isinstance(self._err, SpellingError)
+            or isinstance(self._err, RitmyndirError)
         )
         if self.val is None:
             self.val = list(m)
@@ -799,11 +802,26 @@ class SpellingError(Error):
     # S004: Rare word, a more common one has been substituted.
     # S005: Error has been corrected but annotation was lost in merging,
     #       a more generic message is given.
-    # S006: Errors picked up by Ritmyndir. Should be corrected.
+    # XXX: Errors picked up by Ritmyndir. Should be corrected. Various error codes.
 
     def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
         # Spelling error codes start with "S"
         super().__init__("S" + code, original=original, suggest=suggest)
+        self._txt = txt
+
+    @property
+    def description(self) -> str:
+        return self._txt
+
+
+@register_error_class
+class RitmyndirError(Error):
+    """A RitmyndirError is a context-independent error from Ritmyndir data"""
+
+    # Miscellaneous error codes, detailed here: https://bin.arnastofnun.is/gogn/storasnid/ritmyndir/
+
+    def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
+        super().__init__(code, original=original, suggest=suggest)
         self._txt = txt
 
     @property
@@ -1806,13 +1824,20 @@ def lookup_unknown_words(
     def add_ritmyndir_error(token: CorrectToken) -> CorrectToken:
         """Add an error with corresponding correct value and details given info in Ritmyndir"""
         # TODO At the moment the code assumes only one correct value is available in data
-        # TODO Give more detailed error description from data
+        # TODO Give more detailed error description from data, tengja við ritreglur
         text = "Þetta er villa úr Ritmyndum"
-        code = 6
+        code = Ritmyndir.get_code(token.txt)
+        if code == "R001":
+            # Not an error
+            return token
+        if code == "SO-ÞGF4ÞF":
+            # Impersonal verbs that can have wrong subject case, not implicitly an error
+            return token
         corrected = Ritmyndir.get_correct_form((token.txt))
-        token.set_error(
-            SpellingError("{0:03}".format(code), text, token.txt, corrected)
-        )
+        if not corrected:
+            # No correct value available
+            return token
+        token.set_error(RitmyndirError(code, text, token.txt, corrected))
         _, m = db.lookup_g(corrected, at_sentence_start=at_sentence_start)
         token.add_corrected_meanings(m)
         return token

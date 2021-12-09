@@ -41,7 +41,7 @@
 
 """
 
-from typing import Dict, Set, List, Tuple
+from typing import Dict, Set, List, Tuple, Mapping
 import os
 import threading
 
@@ -57,6 +57,15 @@ ErrorFormTuple = Tuple[str, str, int, str, str]
 RitmyndirTuple = Tuple[str, int, str, str, str, int, str, str, str, str]
 # A set of all strings that should be interpreted as True
 TRUE = frozenset(("true", "True", "1", "yes", "Yes"))
+# Einkunn value from Ritmyndir mapped to error code
+R_EINKUNN: Mapping[int, str] = {
+    0: "R000",
+    1: "R001",  # Not an error
+    2: "R002",
+    3: "R003",
+    4: "R004",
+    5: "R005",
+}
 
 
 class AllowedMultiples:
@@ -544,20 +553,20 @@ class Ritmyndir:
     @staticmethod
     def get_eink(wrong_form: str) -> int:
         d = Ritmyndir.DICT
+        eink = 1
         if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][5]
+            eink = Ritmyndir.DICT[wrong_form][5]
         elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][5]
-        else:
-            return 1
+            eink = Ritmyndir.DICT[wrong_form.lower()][5]
+        return eink
 
     @staticmethod
     def get_malsnid(wrong_form: str) -> str:
         d = Ritmyndir.DICT
         if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][6]
+            return Ritmyndir.DICT[wrong_form][6].split(",")[0]
         elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][6]
+            return Ritmyndir.DICT[wrong_form.lower()][6].split(",")[0]
         else:
             return ""
 
@@ -565,9 +574,9 @@ class Ritmyndir:
     def get_stafs(wrong_form: str) -> str:
         d = Ritmyndir.DICT
         if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][7]
+            return Ritmyndir.DICT[wrong_form][7].split(",")[0]
         elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][7]
+            return Ritmyndir.DICT[wrong_form.lower()][7].split(",")[0]
         else:
             return ""
 
@@ -575,9 +584,9 @@ class Ritmyndir:
     def get_aslatt(wrong_form: str) -> str:
         d = Ritmyndir.DICT
         if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][8]
+            return Ritmyndir.DICT[wrong_form][8].split(",")[0]
         elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][8]
+            return Ritmyndir.DICT[wrong_form.lower()][8].split(",")[0]
         else:
             return ""
 
@@ -585,11 +594,31 @@ class Ritmyndir:
     def get_beyg(wrong_form: str) -> str:
         d = Ritmyndir.DICT
         if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][9]
+            return Ritmyndir.DICT[wrong_form][9].split(",")[0]
         elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][9]
+            return Ritmyndir.DICT[wrong_form.lower()][9].split(",")[0]
         else:
             return ""
+
+    @staticmethod
+    def get_code(wrong_form: str) -> str:
+        code = ""
+        w = wrong_form
+        if wrong_form not in Ritmyndir.DICT:
+            if wrong_form.lower() in Ritmyndir.DICT:
+                w = wrong_form.lower()
+            else:
+                return "R001"
+        code = Ritmyndir.get_stafs(wrong_form)
+        if not code:
+            code = Ritmyndir.get_aslatt(wrong_form)
+        if not code:
+            code = Ritmyndir.get_beyg(wrong_form)
+        if not code:
+            code = Ritmyndir.get_malsnid(wrong_form)
+        if not code:
+            code = R_EINKUNN[Ritmyndir.get_eink(wrong_form)]
+        return code
 
     @staticmethod
     def add(wrong_form: str, details: RitmyndirTuple) -> None:
