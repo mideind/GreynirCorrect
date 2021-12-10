@@ -44,6 +44,7 @@ from typing import (
     Type,
     Union,
     Tuple,
+    Set,
     List,
     Dict,
     Iterable,
@@ -401,6 +402,9 @@ class CorrectToken(Tok):
     def set_error(self, err: Union[None, "Error", bool]) -> None:
         """Associate an Error class instance with this token"""
         self._err = err
+
+    def remove_error(self) -> None:
+        self._err = None
 
     def copy(self, other: Union[Tok, Sequence[Tok]], coalesce: bool = False) -> bool:
         """Copy the error field and origin information
@@ -820,7 +824,9 @@ class RitmyndirError(Error):
 
     # Miscellaneous error codes, detailed here: https://bin.arnastofnun.is/gogn/storasnid/ritmyndir/
 
-    def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
+    def __init__(
+        self, code: str, txt: str, detail: Optional[str], original: str, suggest: str
+    ) -> None:
         super().__init__(code, original=original, suggest=suggest)
         self._txt = txt
 
@@ -1837,10 +1843,18 @@ def lookup_unknown_words(
         if not corrected:
             # No correct value available
             return token
-        token.set_error(RitmyndirError(code, text, token.txt, corrected))
+        details = get_details(code, token.txt, corrected)
+        token.set_error(RitmyndirError(code, text, details, token.txt, corrected))
         _, m = db.lookup_g(corrected, at_sentence_start=at_sentence_start)
         token.add_corrected_meanings(m)
         return token
+
+    def get_details(code: str, txt: str, correct: str) -> str:
+        """Return a detailed description for the error category plus a link to grammar references where possible"""
+        # Ná í bæði úr töflu
+        # Nota til að mynda streng
+
+        return ""
 
     def only_suggest(token: CorrectToken, m: Sequence[BIN_Tuple]) -> bool:
         """Return True if we don't have high confidence in the proposed
@@ -2490,13 +2504,16 @@ def late_fix_capitalization(
 
 def late_fix_merges(
     token_stream: Iterable[CorrectToken],
+    ignore_wordlist: Set[str],
 ) -> Iterator[CorrectToken]:
-    """Annotate tokens where error annotation
-    has disappeared due to token merging"""
+    """Annotate tokens where error annotation has disappeared due to token
+    merging and delete annotations for tokens in ignore wordlist"""
     # TODO Double annotations for MW errors such as 'Ég vill' -> 'Ég vil'
     # Where the error is placed by default on the first word instead of
     # the word that changes (also could be many changes!)
+    print(ignore_wordlist)
     for token in token_stream:
+        # Add annotations if annotation has disappeared
         if (
             token.original
             and token.txt.strip() != token.original.strip()
@@ -2513,6 +2530,12 @@ def late_fix_merges(
                     suggest=token.txt,
                 ),
             )
+
+        # Remove all annotations and revert corrections for tokens in wordlist
+        if token.original and token.original.strip() in ignore_wordlist:
+            token.txt = token.original.strip()
+            token.remove_error()
+
         yield token
 
 
@@ -2792,6 +2815,8 @@ class CorrectionPipeline(DefaultPipeline):
         self._suppress_suggestions = options.pop("suppress_suggestions", False)
         # Only give suggestions, don't correct anything
         self._suggest_not_correct = options.pop("suggest_not_correct", False)
+        # Wordlist for words that should not be marked as errors or corrected
+        self._ignore_wordlist = options.pop("ignore_wordlist", set())
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """Add a correction pass just before BÍN annotation"""
@@ -2844,7 +2869,7 @@ class CorrectionPipeline(DefaultPipeline):
             ct_stream, self._db, token_ctor, self._only_ci
         )
 
-        ct_stream = late_fix_merges(ct_stream)
+        ct_stream = late_fix_merges(ct_stream, self._ignore_wordlist)
         return ct_stream
 
 

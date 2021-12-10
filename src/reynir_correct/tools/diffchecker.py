@@ -52,7 +52,7 @@ def main():
     # options["generate_suggestion_list"] = True
     options["ignore_comments"] = False
     # options["annotate_unparsed_sentences"] = False
-
+    options["ignore_wordlist"] = set(["flargor"])
     args = parser.parse_args()
     inputfile = args.inputfile
     if inputfile == sys.stdin and sys.stdin.isatty():
