@@ -44,9 +44,7 @@ def main():
     # Hægt að biðja um annað til að fá frekari upplýsingar!
     options["format"] = "text"  # text, json, csv, m2
     options["annotations"] = True
-
     options["all_errors"] = True
-
     # options["infile"] = open("prufa.txt", "r")
     options["one_sent"] = True
     # options["generate_suggestion_list"] = True

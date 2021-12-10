@@ -29,8 +29,28 @@
 
 
     This module exposes functions to return corrected strings given an input text.
+    The following options are defined:
 
+    infile: Defines the input. Can be a ReadFile object or an Iterable object such 
+            as a generator. Default value is sys.stdin
+    format: Defines the output format. String. 
+            text: Output is returned as text.
+            json: Output is returned as a JSON object.
+            csv:  Output is returned in a csv format.
+            m2:   Output is returned in the M" format, see https://github.com/nusnlp/m2scorer
+                  The output is as follows:
+                  S <tokenized system output for sentence 1>
+                  A <token start offset> <token end offset>|||<error type>|||<correction1>||<correction2||..||correctionN|||<required>|||<comment>|||<annotator id>
+    all_errors: Defines the level of correction. If False, only token-level annotation is carried out. 
+                If True, sentence-level annotation is carried out.
+    annotate_unparsed_sentences: If True, unparsed sentences are annotated as errors as a whole.
+    annotations: If True, can all error annotations are returned at the end of the output. Works with format text.
+    generate_suggestion_list: If True, the annotation can in certain cases contain a list of possible corrections, for the user to pick from.
+    suppress_suggestions: If True, more farfetched automatically retrieved corrections are rejected and no error is added.
+    ignore_wordlist: The value is a set of strings. Each string is a word that should not be marked as an error or corrected.
 """
+
+
 from typing import (
     List,
     Optional,
@@ -41,7 +61,6 @@ from typing import (
     Dict,
     Any,
     Union,
-    Callable,
     cast,
 )
 
@@ -374,9 +393,6 @@ def check_grammar(**options: Any) -> str:
                     )
                 )
         elif options.get("format", "") == "m2":
-            # M2 format: https://github.com/nusnlp/m2scorer
-            # S <tokenized system output for sentence 1>
-            # A <token start offset> <token end offset>|||<error type>|||<correction1>||<correction2||..||correctionN|||<required>|||<comment>|||<annotator id>
             accumul.append("S {0}".format(cleaned))
             for mann in a:
                 accumul.append(
