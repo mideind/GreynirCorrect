@@ -70,7 +70,9 @@ def check(p):
     options["all_errors"] = False  # Only token-level annotation performed
     options["infile"] = [p]
     options["one_sent"] = False
-    options["print_all"] = True  # If input is many sentences, return all in one return
+    options[
+        "print_all"
+    ] = True  # If input is many sentences, one string (and token list) for all
     return check_errors(**options)
 
 

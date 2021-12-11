@@ -206,36 +206,28 @@ def check_spelling(**options: Any) -> Union[str, Tuple]:
     toks = sentence_stream(**options)
     format = options.get("format", "")
     unisum: List[str] = []
-    toksum: List[List[CorrectToken]] = []
+    toksum: List[Union[List[CorrectToken], CorrectToken]] = []
     allsum: List[str] = []
-
-    def addlist(
-        first: List[Any],
-        second: List[Any],
-    ) -> None:
-        if options.get("print_all", False):
-            first.extend(second)
-        else:
-            first.append(second)
-
+    annlist: List[str] = []
     for toklist in toks:
         if format == "text":
             txt = to_text(toklist)
             if options.get("annotations", False):
-                annlist: List[str] = []
                 for t in toklist:
                     if t.error:
                         annlist.append(str(t.error))
-                if annlist:
+                if annlist and not options.get("print_all", False):
                     txt = txt + "\n" + "\n".join(annlist)
-            if options.get("print_all", False):
-                unisum.extend
+                    annlist = []
             unisum.append(txt)
 
             continue
         elif format == "textplustoks":
             unisum.append(to_text(toklist))
-            toksum.append(toklist)
+            if options.get("print_all", False):
+                toksum.extend(toklist)
+            else:
+                toksum.append(toklist)
             continue
         for t in toklist:
             if format == "csv":
@@ -265,9 +257,16 @@ def check_spelling(**options: Any) -> Union[str, Tuple]:
         if allsum:
             unisum.extend(allsum)
             allsum = []
+    if options.get("print_all", False):
+        # We want the annotations at the bottom
+        unistr = " ".join(unisum)
+        if annlist:
+            unistr = unistr + "\n" + "\n".join(annlist)
+    else:
+        unistr = "\n".join(unisum)
     if toksum:
-        return "\n".join(unisum), toksum
-    return "\n".join(unisum)
+        return unistr, toksum
+    return unistr
 
 
 def sentence_stream(**options) -> Iterator[List[CorrectToken]]:
@@ -296,7 +295,8 @@ def check_grammar(**options: Any) -> Union[str, Tuple]:
         "annotate_unparsed_sentences", True
     )
     alltoks: List[CorrectToken] = []
-    for toklist in sentence_stream():
+    annlist: List[str] = []
+    for toklist in sentence_stream(**options):
         len_tokens = len(toklist)
         # Invoke the spelling and grammar checker on the token list
         # Only contains options relevant to the grammar check
@@ -357,10 +357,15 @@ def check_grammar(**options: Any) -> Union[str, Tuple]:
                     # Give the first token the correct value
                     # Delete the other tokens
                     del cleantoklist[xann.start + 2 : xann.end + 2]
-            accumul.append(detokenize(cleantoklist, normalize=True))
+            txt = detokenize(cleantoklist, normalize=True)
             if options.get("annotations", False):
                 for aann in a:
-                    accumul.append(str(aann))
+                    annlist.append(str(aann))
+                if annlist and not options.get("print_all", False):
+                    txt = txt + "\n" + "\n".join(annlist)
+                    annlist = []
+            accumul.append(txt)
+
         elif format == "json":
             # Create final dictionary for JSON encoding
             # Convert the annotations to a standard format before encoding in JSON
@@ -416,6 +421,14 @@ def check_grammar(**options: Any) -> Union[str, Tuple]:
                     )
                 )
             accumul.append("")
+    if options.get("print_all", True):
+        accumstr = " ".join(accumul)
+        if annlist:
+            # We want the annotations at the bottom
+            accumstr = accumstr + "\n" + "\n".join(annlist)
+    else:
+        accumstr = "\n".join(accumul)
+
     if format == "textplustoks":
-        return ("\n".join(accumul), alltoks)
-    return "\n".join(accumul)
+        return (accumstr, alltoks)
+    return accumstr
