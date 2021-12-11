@@ -352,6 +352,7 @@ def check_grammar(**options: Any) -> Union[str, Tuple]:
                     # Annotation spans many tokens
                     # "Okkur börnunum langar í fisk"
                     # "Leita að kílómeter af féinu" → leita að kílómetri af fénu → leita að kílómetra af fénu
+                    # "dást af þeim" → "dást að þeim"
                     # Single-token annotations for this span have already been handled
                     # Only case is one ann, many toks in toklist
                     # Give the first token the correct value

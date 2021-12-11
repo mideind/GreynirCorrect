@@ -879,7 +879,11 @@ class Settings:
             raise ConfigError(
                 "Expected lemma, id, cat, wrong_word_form, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg, age, ref"
             )
-        # TODO Should errors from certain references be excluded?
+        ref = split[12].strip()
+        if "SAGA" in ref or ref in {"MILTON", "HALLGP-4", "KLIM", "ONP"}:
+            # Skipping errors from very old references, don't represent errors in Modern Icelandic
+            # NOTE: Not done, causes many common errors to be skipped, since they are first found there
+            return
         wrong_form = split[3].strip()
         correct_form = split[4].strip()
         if wrong_form == correct_form:

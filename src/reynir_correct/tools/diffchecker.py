@@ -52,7 +52,7 @@ def main():
     options["annotate_unparsed_sentences"] = True
     options["ignore_wordlist"] = set(["flargor"])
     options["spaced"] = False
-    options["print_all"] = False
+    options["print_all"] = True
     args = parser.parse_args()
     inputfile = args.inputfile
     if inputfile == sys.stdin and sys.stdin.isatty():

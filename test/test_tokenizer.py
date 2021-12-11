@@ -103,7 +103,7 @@ def test_correct(verbose=False):
 
     assert len(g) == 13
     # assert g[1].error_code == "U001/w"  # Müller
-    assert g[6].error_code == "S004"  # ýtrekað -> ítrekað
+    assert g[6].error_code in {"S004", "Ý4Í"}  # ýtrekað -> ítrekað
     assert g[10].error_code == "U001"  # cyclotroninn
 
     assert "Müller" in s
@@ -231,12 +231,6 @@ def test_error_forms(verbose=False):
     """Check error_forms"""
 
     s, g = check("Fellibylir og jafvel HVIRFILBYLIR gengu yfir hús bróðurs míns.")
-
-    g = list(g)
-    if verbose:
-        dump(g)
-
-    s = gen_to_string(g)
     assert "Fellibylir" not in s
     assert "Fellibyljir" in s
     assert "jafvel" not in s
@@ -434,9 +428,6 @@ def test_taboo_words(verbose=False):
         "Jón sagði að hún væri múhameðstrúarmaður en hún svaraði að "
         "hann væri hommatittur og negri með lítinn typpaling."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
     assert len(g) == 21
     errors = {6, 13, 15, 18}
     for ix, _ in enumerate(g):
@@ -452,10 +443,6 @@ def test_multiword_errors(verbose=False):
         og að mestu leiti en hún helti úr skálum reiði sinnar.
     """
     s, g = check(sent)
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = gen_to_string(g)
 
     assert "Af gefnu" not in s
     assert "Að gefnu" in s
@@ -482,10 +469,6 @@ def test_complex(verbose=False):
         einnig a borði - sömu rettindi og raðandi helmingurinn
     """
     s, g = check(s)
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = gen_to_string(g)
     assert "malefnis" not in s
     assert "málefnis" in s
     assert "attu" not in s

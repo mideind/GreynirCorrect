@@ -1844,6 +1844,9 @@ def lookup_unknown_words(
             # No correct value available
             return token
         details = get_details(code, token.txt, corrected)
+        if corrected not in {"in", "the", "for", "at"}:
+            # Exclude most common foreign stop words
+            token.txt = emulate_case(corrected, template=token.txt)
         token.set_error(RitmyndirError(code, text, details, token.txt, corrected))
         _, m = db.lookup_g(corrected, at_sentence_start=at_sentence_start)
         token.add_corrected_meanings(m)

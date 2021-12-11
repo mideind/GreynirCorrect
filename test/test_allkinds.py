@@ -752,11 +752,11 @@ def test_inflectional_errors(verbose=False):
         "Frumkvöðullinn aldist upp í litlu sjávarþorpi án föðurs og ýmsra þæginda."
     )
     assert "ólst upp" in s
-    assert "föður" in s  # TODO not yet
-    # assert "ýmissa" in s
+    assert "föður" in s
+    assert "ýmissa" in s
     assert g[2].error_code == "S002"  # ólst
     assert g[8].error_code == "BEYGVILLA"  # föður
-    assert g[10].error_code == "URE"  # ýmissa, TODO ýmsa given, not ýmissa
+    assert g[10].error_code == "S002"  # ýmissa
 
     s, g = check(
         "Friðsælari leið hefði verið að hundruðir leituðu í geiminum að kílómeter "
