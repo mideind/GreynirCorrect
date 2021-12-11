@@ -2511,7 +2511,6 @@ def late_fix_merges(
     # TODO Double annotations for MW errors such as 'Ég vill' -> 'Ég vil'
     # Where the error is placed by default on the first word instead of
     # the word that changes (also could be many changes!)
-    print(ignore_wordlist)
     for token in token_stream:
         # Add annotations if annotation has disappeared
         if (
@@ -2530,7 +2529,6 @@ def late_fix_merges(
                     suggest=token.txt,
                 ),
             )
-
         # Remove all annotations and revert corrections for tokens in wordlist
         if token.original and token.original.strip() in ignore_wordlist:
             token.txt = token.original.strip()

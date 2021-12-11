@@ -34,8 +34,9 @@
     infile: Defines the input. Can be a ReadFile object or an Iterable object such 
             as a generator. Default value is sys.stdin
     format: Defines the output format. String. 
-            text: Output is returned as text.
-            json: Output is returned as a JSON object.
+            text: Output is returned as a corrected version of the input.
+            textplustoks: Output is returned as a tuple of the output text and tokens.
+            json: Output is returned as a JSON string.
             csv:  Output is returned in a csv format.
             m2:   Output is returned in the M" format, see https://github.com/nusnlp/m2scorer
                   The output is as follows:
@@ -48,6 +49,7 @@
     generate_suggestion_list: If True, the annotation can in certain cases contain a list of possible corrections, for the user to pick from.
     suppress_suggestions: If True, more farfetched automatically retrieved corrections are rejected and no error is added.
     ignore_wordlist: The value is a set of strings. Each string is a word that should not be marked as an error or corrected.
+    one_sent: Defines input as containing only one sentence.
 """
 
 
@@ -181,7 +183,7 @@ def val(
     return t.val
 
 
-def check_errors(**options: Any) -> Optional[str]:
+def check_errors(**options: Any) -> Optional[Union[str, Tuple]]:
     """Return a string in the chosen format and correction level using the spelling and grammar checker"""
     if options["infile"] == sys.stdin and sys.stdin.isatty():
         # terminal input is empty, most likely no value was given for infile:
@@ -194,86 +196,98 @@ def check_errors(**options: Any) -> Optional[str]:
         return check_spelling(**options)
 
 
-def check_spelling(**options: Any) -> str:
+def check_spelling(**options: Any) -> Union[str, Tuple]:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
     if options["spaced"]:
         to_text = normalized_text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
-    options["generate_suggestion_list"] = True
-    if options.get("format", "") == "csv":
-        # Output the tokens in CSV format, one line per token
-        csvsum: List[str] = []
-        for t in errtokenize(gen(options["infile"]), **options):
-            if t.txt:
-                csvsum.append(
-                    "{0},{1},{2},{3}".format(
-                        t.kind,
-                        quote(t.txt),
-                        val(t, quote_word=True) or '""',
-                        quote(str(t.error) if t.error else ""),
-                    )
-                )
-            elif t.kind == TOK.S_END:
-                # Indicate end of sentence
-                csvsum.append('0,"",""')
-        return "\n".join(csvsum)
-    elif options.get("format", "") == "json":
-        jsonsum: List[str] = []
-        for t in errtokenize(gen(options["infile"]), **options):
-            # Output the tokens in JSON format, one line per token
-            d: Dict[str, Any] = dict(k=TOK.descr[t.kind])
-            if t.txt is not None:
-                d["t"] = t.txt
-            v = val(t)
-            if t.kind not in {TOK.WORD, TOK.PERSON, TOK.ENTITY} and v is not None:
-                d["v"] = v
-            if isinstance(t.error, Error):
-                d["e"] = t.error.to_dict()
-            jsonsum.append(json_dumps(d))
-        return "\n".join(jsonsum)
-    else:
-        curr_sent: List[CorrectToken] = []
-        textsum: List[str] = []
-        for t in errtokenize(gen(options["infile"]), **options):
-            # Normal shallow parse, one line per sentence,
-            # tokens separated by spaces
-            if t.kind in TOK.END:
-                # End of sentence/paragraph
-                if curr_sent:
-                    textsum.append(to_text(curr_sent))
-                    curr_sent = []
-            else:
-                curr_sent.append(t)
-        if curr_sent:
-            textsum.append(to_text(curr_sent))
-        return "\n".join(textsum)
+    toks = sentence_stream(**options)
+    format = options.get("format", "")
+    unisum: List[str] = []
+    toksum: List[List[CorrectToken]] = []
+    allsum: List[str] = []
 
-
-def check_grammar(**options: Any) -> str:
-    """Do a full spelling and grammar check of the source text"""
-
-    def sentence_stream() -> Iterator[List[CorrectToken]]:
-        """Yield a stream of sentence token lists from the source text"""
-        # Initialize sentence accumulator list
-        curr_sent: List[CorrectToken] = []
-        if options.get("one_sent", False):
-            # Input only contains one sentence
-            curr_sent = list(errtokenize(options["infile"], **options))
+    def addlist(
+        first: List[Any],
+        second: List[Any],
+    ) -> None:
+        if options.get("print_all", False):
+            first.extend(second)
         else:
-            for t in errtokenize(gen(options["infile"]), **options):
-                # Normal shallow parse, one line per sentence,
-                # tokens separated by spaces
-                # Note this uses the tokenize function in errtokenizer.py
-                # instead of the one in Tokenizer
-                curr_sent.append(t)
-                if t.kind in TOK.END:
-                    # End of sentence/paragraph
-                    yield curr_sent
-                    curr_sent = []
-        if curr_sent:
+            first.append(second)
+
+    for toklist in toks:
+        if format == "text":
+            txt = to_text(toklist)
+            if options.get("annotations", False):
+                annlist: List[str] = []
+                for t in toklist:
+                    if t.error:
+                        annlist.append(str(t.error))
+                if annlist:
+                    txt = txt + "\n" + "\n".join(annlist)
+            if options.get("print_all", False):
+                unisum.extend
+            unisum.append(txt)
+
+            continue
+        elif format == "textplustoks":
+            unisum.append(to_text(toklist))
+            toksum.append(toklist)
+            continue
+        for t in toklist:
+            if format == "csv":
+                if t.txt:
+                    allsum.append(
+                        "{0},{1},{2},{3}".format(
+                            t.kind,
+                            quote(t.txt),
+                            val(t, quote_word=True) or '""',
+                            quote(str(t.error) if t.error else ""),
+                        )
+                    )
+                elif t.kind == TOK.S_END:
+                    # Indicate end of sentence
+                    allsum.append('0,"",""')
+            elif format == "json":
+                # Output the tokens in JSON format, one line per token
+                d: Dict[str, Any] = dict(k=TOK.descr[t.kind])
+                if t.txt is not None:
+                    d["t"] = t.txt
+                v = val(t)
+                if t.kind not in {TOK.WORD, TOK.PERSON, TOK.ENTITY} and v is not None:
+                    d["v"] = v
+                if isinstance(t.error, Error):
+                    d["e"] = t.error.to_dict()
+                allsum.append(json_dumps(d))
+        if allsum:
+            unisum.extend(allsum)
+            allsum = []
+    if toksum:
+        return "\n".join(unisum), toksum
+    return "\n".join(unisum)
+
+
+def sentence_stream(**options) -> Iterator[List[CorrectToken]]:
+    """Yield a stream of sentence token lists from the source text"""
+    # Initialize sentence accumulator list
+    curr_sent: List[CorrectToken] = []
+    for t in errtokenize(options["infile"], **options):
+        # Normal shallow parse, one line per sentence,
+        # tokens separated by spaces
+        curr_sent.append(t)
+        if t.kind in TOK.END:
+            # End of sentence/paragraph
             yield curr_sent
+            curr_sent = []
+    if curr_sent:
+        yield curr_sent
+
+
+def check_grammar(**options: Any) -> Union[str, Tuple]:
+    """Do a full spelling and grammar check of the source text"""
 
     accumul: List[str] = []
     offset = 0
@@ -281,6 +295,7 @@ def check_grammar(**options: Any) -> str:
     inneroptions["annotate_unparsed_sentences"] = options.get(
         "annotate_unparsed_sentences", True
     )
+    alltoks: List[CorrectToken] = []
     for toklist in sentence_stream():
         len_tokens = len(toklist)
         # Invoke the spelling and grammar checker on the token list
@@ -309,7 +324,6 @@ def check_grammar(**options: Any) -> str:
                 )
                 for ix, d in enumerate(sent.tokens)
             ]
-
         # Maintain token character offsets, accumulated over the entire source text
         token_offsets: Dict[int, int] = dict()
         for ix, t in enumerate(toklist):
@@ -324,54 +338,55 @@ def check_grammar(**options: Any) -> str:
         # (more narrow/specific annotations before broader ones)
         a.sort(key=lambda ann: (ann.start, ann.end))
 
-        # Convert the annotations to a standard format before encoding in JSON
-        annotations: List[AnnDict] = [
-            AnnDict(
-                # Start token index of this annotation
-                start=ann.start,
-                # End token index (inclusive)
-                end=ann.end,
-                # Character offset of the start of the annotation in the original text
-                start_char=token_offsets[ann.start],
-                # Character offset of the end of the annotation in the original text
-                # (inclusive, i.e. the offset of the last character)
-                end_char=(
-                    token_offsets[ann.end + 1] if ann.end + 1 < len_tokens else offset
-                )
-                - 1,
-                code=ann.code,
-                text=ann.text,
-                detail=ann.detail or "",
-                suggest=ann.suggest or "",
-            )
-            for ann in a
-        ]
-        if options["format"] == "text":
+        format = options.get("format", "")
+        if format == "text" or format == "textplustoks":
             arev = sorted(a, key=lambda ann: (ann.start, ann.end), reverse=True)
-            if sent.tree is None:
-                # No need to do more, no grammar errors have been checked
-                accumul.append(cleaned)
-            else:
-                # We know we have a sentence tree, can use that
-                cleantoklist: List[CorrectToken] = toklist[:]
-                for xann in arev:
-                    if xann.suggest is None:
-                        # Nothing to correct with, nothing we can do
-                        continue
-                    cleantoklist[xann.start + 1].txt = xann.suggest
-                    if xann.end > xann.start:
-                        # Annotation spans many tokens
-                        # "Okkur börnunum langar í fisk"
-                        # Only case is one ann, many toks in toklist
-                        # Give the first token the correct value
-                        # Delete the other tokens
-                        del cleantoklist[xann.start + 2 : xann.end + 2]
-                accumul.append(detokenize(cleantoklist, normalize=True))
-                if options.get("annotations", False):
-                    for aann in a:
-                        accumul.append(str(aann))
-        elif options.get("format", "") == "json":
+            cleantoklist: List[CorrectToken] = toklist[:]
+            alltoks.extend(cleantoklist)
+            for xann in arev:
+                if xann.suggest is None:
+                    # Nothing to correct with, nothing we can do
+                    continue
+                cleantoklist[xann.start + 1].txt = xann.suggest
+                if xann.end > xann.start:
+                    # Annotation spans many tokens
+                    # "Okkur börnunum langar í fisk"
+                    # "Leita að kílómeter af féinu" → leita að kílómetri af fénu → leita að kílómetra af fénu
+                    # Single-token annotations for this span have already been handled
+                    # Only case is one ann, many toks in toklist
+                    # Give the first token the correct value
+                    # Delete the other tokens
+                    del cleantoklist[xann.start + 2 : xann.end + 2]
+            accumul.append(detokenize(cleantoklist, normalize=True))
+            if options.get("annotations", False):
+                for aann in a:
+                    accumul.append(str(aann))
+        elif format == "json":
             # Create final dictionary for JSON encoding
+            # Convert the annotations to a standard format before encoding in JSON
+            annotations: List[AnnDict] = [
+                AnnDict(
+                    # Start token index of this annotation
+                    start=ann.start,
+                    # End token index (inclusive)
+                    end=ann.end,
+                    # Character offset of the start of the annotation in the original text
+                    start_char=token_offsets[ann.start],
+                    # Character offset of the end of the annotation in the original text
+                    # (inclusive, i.e. the offset of the last character)
+                    end_char=(
+                        token_offsets[ann.end + 1]
+                        if ann.end + 1 < len_tokens
+                        else offset
+                    )
+                    - 1,
+                    code=ann.code,
+                    text=ann.text,
+                    detail=ann.detail or "",
+                    suggest=ann.suggest or "",
+                )
+                for ann in a
+            ]
             ard = AnnResultDict(
                 original=cleaned,
                 corrected=sent.tidy_text,
@@ -380,7 +395,7 @@ def check_grammar(**options: Any) -> str:
             )
 
             accumul.append(json_dumps(ard))
-        elif options.get("format", "") == "csv":
+        elif format == "csv":
             for cann in a:
                 accumul.append(
                     "{},{},{},{},{},{}".format(
@@ -392,14 +407,15 @@ def check_grammar(**options: Any) -> str:
                         cann.suggestlist,
                     )
                 )
-        elif options.get("format", "") == "m2":
+        elif format == "m2":
             accumul.append("S {0}".format(cleaned))
             for mann in a:
                 accumul.append(
-                    "A {0} {1}|||{2}|||{3}||REQUIRED|||-NONE||0".format(
+                    "A {0} {1}|||{2}|||{3}||REQUIRED|||-NONE-||0".format(
                         mann.start, mann.end, mann.code, mann.suggest
                     )
                 )
             accumul.append("")
-
+    if format == "textplustoks":
+        return ("\n".join(accumul), alltoks)
     return "\n".join(accumul)

@@ -884,6 +884,9 @@ class Settings:
         correct_form = split[4].strip()
         if wrong_form == correct_form:
             return
+        if wrong_form.lower() == correct_form.lower():
+            # TODO Skipping capitalization errors for now
+            return
         # (lemma, id, cat, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg)
         meaning: RitmyndirTuple = (
             split[0].strip(),  # Lemma
