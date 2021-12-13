@@ -871,9 +871,31 @@ def test_capitalization(verbose=False):
     assert g[3].error_code == "Z001"  # heimsstyrjöldinni
     assert g[9].error_code == "Z001"  # stríðinu
 
+    g = rc.tokenize(
+        "Ég tala Víetnömsku, Indónesísku, er Afrísk-amerísk, karíbi, Karíbskur, austur-evrópubúi og vestur-evrópubúi"
+    )
+    g = list(g)
+    if verbose:
+        dump(g)
+    s = normalize(g)
+    assert "víetnömsku" in s
+    assert "indónesísku" in s
+    assert "afrísk-amerísk" in s
+    assert "Karíbi" in s
+    assert "karíbskur" in s
+    assert "Austur-Evrópubúi" in s
+    assert "Vestur-Evrópubúi" in s
+    assert g[3].error_code == "Z001"  # heimsstyrjöldinni
+    assert g[5].error_code == "Z001"  # indónesísku
+    assert g[8].error_code == "Z001"  # afrísk-amerísk
+    assert g[10].error_code == "Z002"  # Karíbi
+    assert g[12].error_code == "Z001"  # karíbskur
+    assert g[14].error_code == "Z002"  # Austur-Evrópubúi
+    assert g[16].error_code == "Z002"  # Vestur-Evrópubúi
+
 
 def test_acronyms(verbose=False):
-    
+
     g = rc.tokenize("Hún skrifar fyrir Dv og Rúv.")
     g = list(g)
     if verbose:
