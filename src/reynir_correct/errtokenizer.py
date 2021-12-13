@@ -2116,7 +2116,7 @@ def fix_capitalization(
                 # The token has a proper BÍN meaning as-is, i.e. upper case:
                 # it's probably correct
                 return False
-            # Danskur -> danskur
+            # Sænskur -> sænskur
             rev_word = word.lower()
             lower = False
         elif word.islower():
