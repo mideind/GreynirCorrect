@@ -763,10 +763,8 @@ def test_capitalization(verbose=False):
     if verbose:
         dump(g)
     s = normalize(g)
-    assert "Internetinu" in s
     assert "súnnítar" in s
     # assert "upplýsingar" in s
-    assert g[2].error_code == "Z002"  # Internetinu
     assert g[4].error_code == "Z001"  # súnnítar
 
     g = rc.tokenize(
@@ -842,7 +840,7 @@ def test_capitalization(verbose=False):
     assert g[17].error_code == "Z002"  # Miðflokksmaður
 
     g = rc.tokenize(
-        "Hann er Suðurkákasískur, tínir Unnarfald, býr í neðra-breiðholti og elskar Múmínálfa, internetið og óskarsverðlaunin."
+        "Hann er Suðurkákasískur, tínir Unnarfald, býr í neðra-breiðholti og elskar Múmínálfa og óskarsverðlaunin."
     )
     g = list(g)
     if verbose:
@@ -852,14 +850,12 @@ def test_capitalization(verbose=False):
     assert "unnarfald" in s
     assert "Neðra-Breiðholti" in s
     assert "múmínálfa" in s
-    assert "Internetið" in s
     assert "Óskarsverðlaunin" in s
     assert g[3].error_code == "Z001"  # suðurkákasískur
     assert g[6].error_code == "Z001"  # unnarfald
     assert g[10].error_code == "Z002"  # Neðra-Breiðholti
     assert g[13].error_code == "Z001"  # múmínálfa
-    assert g[15].error_code == "Z002"  # Internetið
-    assert g[17].error_code == "Z002"  # Óskarsverðlaunin
+    assert g[15].error_code == "Z002"  # Óskarsverðlaunin
 
     g = rc.tokenize("Í Seinni Heimsstyrjöldinni gerðist meira en í Kalda Stríðinu.")
     g = list(g)
