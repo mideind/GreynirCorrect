@@ -55,6 +55,8 @@ from reynir.bintokenizer import StateDict
 ErrorFormTuple = Tuple[str, str, int, str, str]
 # (lemma, id, cat, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg)
 RitmyndirTuple = Tuple[str, int, str, str, str, int, str, str, str, str]
+# (ritregla/spelling rule, category, other detail ) }
+DetailsTuple = Tuple[str, str, str]
 # A set of all strings that should be interpreted as True
 TRUE = frozenset(("true", "True", "1", "yes", "Yes"))
 # Einkunn value from Ritmyndir mapped to error code
@@ -628,6 +630,15 @@ class Ritmyndir:
         Ritmyndir.DICT[wrong_form] = details
 
 
+class RitmyndirDetails:
+    # "Ritmyndir error code" : ("ritregla/spelling rule", "category", "other detail" ) }
+    DICT: Dict[str, DetailsTuple] = dict()
+
+    @staticmethod
+    def add(code: str, details: DetailsTuple) -> None:
+        RitmyndirDetails.DICT[code] = details
+
+
 class Settings:
 
     """Global settings"""
@@ -872,7 +883,7 @@ class Settings:
         Morphemes.add(m, boundlist, freelist)
 
     @staticmethod
-    def _handle_ritm(s: str) -> None:
+    def _handle_ritmyndir(s: str) -> None:
         """Handle data from Ritmyndir in Stórasnið in BÍN/DIM"""
         split = s.strip().split(";")
         if len(split) != 13:
@@ -882,7 +893,7 @@ class Settings:
         ref = split[12].strip()
         if "SAGA" in ref or ref in {"MILTON", "HALLGP-4", "KLIM", "ONP"}:
             # Skipping errors from very old references, don't represent errors in Modern Icelandic
-            # NOTE: Not done, causes many common errors to be skipped, since they are first found there
+            # NOTE: Causes many common errors to be skipped, since they are first found there
             return
         wrong_form = split[3].strip()
         correct_form = split[4].strip()
@@ -905,6 +916,18 @@ class Settings:
             split[10].strip(),  # beyg
         )
         Ritmyndir.add(wrong_form, meaning)
+
+    @staticmethod
+    def _handle_ritmyndir_details(s: str) -> None:
+        """Handle data on Ritmyndir categories, including references to the Icelandic Standards"""
+        # "Ritmyndir error code" : ("ritregla/spelling rule", "category", "other detail" )
+        split = s.split(":", maxsplit=1)
+        code = split[0].strip().strip('"')
+        dsplit = split[1].split('", "')
+        rule = dsplit[0].strip().strip('"')
+        cat = dsplit[1].strip().strip('"')
+        det = dsplit[2].strip().strip('"')
+        RitmyndirDetails.DICT[code] = (rule, cat, det)
 
     @staticmethod
     def read(fname: str) -> None:
@@ -930,6 +953,8 @@ class Settings:
                 "error_forms": Settings._handle_error_forms,
                 "auto_ow": Settings._handle_ow_forms,
                 "auto_error": Settings._handle_error_forms,
+                "ritmyndir": Settings._handle_ritmyndir,
+                "ritmyndir_details": Settings._handle_ritmyndir_details,
             }
             handler = None  # Current section handler
 
@@ -954,52 +979,6 @@ class Settings:
                         raise ConfigError("Unknown section name '{0}'".format(section))
                     if handler is None:
                         raise ConfigError("No handler for config line '{0}'".format(s))
-                    # Call the correct handler depending on the section
-                    try:
-                        handler(s)
-                    except ConfigError as e:
-                        # Add file name and line number information to the exception
-                        # if it's not already there
-                        e.set_pos(rdr.fname(), rdr.line())
-                        raise e
-
-            except ConfigError as e:
-                # Add file name and line number information to the exception
-                # if it's not already there
-                if rdr:
-                    e.set_pos(rdr.fname(), rdr.line())
-                raise e
-
-            Settings.loaded = True
-
-    @staticmethod
-    def read_csv(fname: str) -> None:
-        """Read (3rd party) csv configuration file"""
-        with Settings._lock:
-            if Ritmyndir.DICT:
-                return
-            CSV_HANDLERS = {
-                "config/Storasnid_ritm.csv": Settings._handle_ritm,
-            }
-            handler = None  # Current section handler
-            rdr = None
-            try:
-                if fname.strip() in CSV_HANDLERS:
-                    handler = CSV_HANDLERS[fname]
-                else:
-                    raise ConfigError(
-                        "No handler for csv config file '{0}'".format(fname)
-                    )
-                rdr = LineReader(fname, package_name=__name__)
-                for s in rdr.lines():
-                    # Ignore comments
-                    ix = s.find("#")
-                    if ix >= 0:
-                        s = s[0:ix]
-                    s = s.strip()
-                    if not s:
-                        # Blank line: ignore
-                        continue
                     # Call the correct handler depending on the section
                     try:
                         handler(s)

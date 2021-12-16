@@ -88,6 +88,7 @@ from .settings import (
     CIDErrorForms,
     Morphemes,
     Ritmyndir,
+    RitmyndirDetails,
     Settings,
 )
 from .spelling import Corrector
@@ -194,12 +195,6 @@ STYLE_WARNINGS: Mapping[str, str] = {
     "SJALD": "sjaldgæft",
     "VILLA": "villa",
     "GAM": "gamalt",
-}
-
-# The following categories are retrieved from the Ritmyndir data,
-# see https://bin.arnastofnun.is/gogn/storasnid/ritmyndir/
-RITMYNDIR_DETAILS: Mapping[str, str] = {
-    "": "",
 }
 
 
@@ -806,7 +801,6 @@ class SpellingError(Error):
     # S004: Rare word, a more common one has been substituted.
     # S005: Error has been corrected but annotation was lost in merging,
     #       a more generic message is given.
-    # XXX: Errors picked up by Ritmyndir. Should be corrected. Various error codes.
 
     def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
         # Spelling error codes start with "S"
@@ -829,10 +823,20 @@ class RitmyndirError(Error):
     ) -> None:
         super().__init__(code, original=original, suggest=suggest)
         self._txt = txt
+        self._detail = detail
 
     @property
     def description(self) -> str:
         return self._txt
+
+    @property
+    def detail(self) -> Optional[str]:
+        return self._detail
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = super().to_dict()
+        d["detail"] = self.detail
+        return d
 
 
 @register_error_class
@@ -1830,8 +1834,6 @@ def lookup_unknown_words(
     def add_ritmyndir_error(token: CorrectToken) -> CorrectToken:
         """Add an error with corresponding correct value and details given info in Ritmyndir"""
         # TODO At the moment the code assumes only one correct value is available in data
-        # TODO Give more detailed error description from data, tengja við ritreglur
-        text = "Þetta er villa úr Ritmyndum"
         code = Ritmyndir.get_code(token.txt)
         if code == "R001":
             # Not an error
@@ -1843,21 +1845,39 @@ def lookup_unknown_words(
         if not corrected:
             # No correct value available
             return token
-        details = get_details(code, token.txt, corrected)
+        text, details = get_details(code, token.txt, corrected)
+        token.set_error(RitmyndirError(code, text, details, token.txt, corrected))
         if corrected not in {"in", "the", "for", "at"}:
             # Exclude most common foreign stop words
             token.txt = emulate_case(corrected, template=token.txt)
-        token.set_error(RitmyndirError(code, text, details, token.txt, corrected))
         _, m = db.lookup_g(corrected, at_sentence_start=at_sentence_start)
         token.add_corrected_meanings(m)
         return token
 
-    def get_details(code: str, txt: str, correct: str) -> str:
-        """Return a detailed description for the error category plus a link to grammar references where possible"""
-        # Ná í bæði úr töflu
-        # Nota til að mynda streng
+    def get_details(code: str, txt: str, correct: str) -> Tuple[str, str]:
+        """Return short and detailed descriptions for the error category plus a link to grammar references where possible"""
+        # text is the short version, about the category and the error.
+        # details is the long version with references.
+        standref, cat, det = RitmyndirDetails.DICT[code]
+        text = "{}: {} -> {}".format(cat, txt, correct)
+        details = det
+        if "{" in details:
+            # Chance for inserting the original and correct values
+            details = details.format(orig=txt, correct=correct)
+        if standref:
+            for ref in standref:
+                details = details + get_reference(ref) + "\n"
+        return text, details
 
-        return ""
+    def get_reference(ref: str) -> str:
+        urltxt = "https://rettritun.arnastofnun.is/kafli/"
+        if not "." in ref:
+            # Whole chapter
+            urltxt = urltxt + ref
+        if "." in ref:
+            # Section of a chapter
+            urltxt = urltxt + ref.strip(".")
+        return '<a href="' + urltxt + '">Réttritun</a>'
 
     def only_suggest(token: CorrectToken, m: Sequence[BIN_Tuple]) -> bool:
         """Return True if we don't have high confidence in the proposed

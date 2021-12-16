@@ -83,4 +83,3 @@ __all__ = (
 )
 
 Settings.read("config/GreynirCorrect.conf")
-Settings.read_csv("config/Storasnid_ritm.csv")
