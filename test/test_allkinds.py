@@ -550,12 +550,14 @@ def test_capitalization(verbose=False):
     assert "Danir" in s
     assert "nóvember" in s
     assert "Nóvember" not in s
+    assert "Fríslendingar" in s
     assert g[2].error_code == "Z002"  # Íslandi
     assert g[4].error_code == "Z002"  # Íslendingar
     assert g[7].error_code == "Z002"  # Danmörku
     assert g[9].error_code == "Z001"  # danskir
     assert g[10].error_code == "Z002"  # Danir
     assert g[12].error_code == "Z003"  # nóvember
+    assert g[15].error_code == "Z002"  # Fríslendingar
 
     s, g = check(
         "Í norður-belfast og norður-Belfast er rigning en ekki í suður-afríku hjá suður-afríkumönnum."
@@ -563,6 +565,10 @@ def test_capitalization(verbose=False):
     # assert "Norður-Belfast" in s
     assert "Suður-Afríku" in s
     assert "Suður-Afríkumönnum" in s
+    # assert g[2].error_code == "Z002"  # Norður-Belfast
+    # assert g[4].error_code == "Z002"  # Norður-Belfast
+    assert g[10].error_code == "Z002"  # Suður-Afríku
+    assert g[12].error_code == "Z002"  # Suður-Afríkumönnum
 
     s, g = check(
         "Þau gengu frá suður-kóreu og þaðan á norður-hliðina og norður- og suðurhlutann."
@@ -570,6 +576,7 @@ def test_capitalization(verbose=False):
     assert "Suður-Kóreu" in s
     assert "norðurhliðina" in s
     assert "norður-" in s
+    assert g[4].error_code == "Z002"  # Suður-Kóreu
 
     s, g = check(
         "Í norður-kóreu er menningin önnur en í suður-kóreu og allt önnur á nýja-sjálandi."
@@ -577,15 +584,21 @@ def test_capitalization(verbose=False):
     assert "Norður-Kóreu" in s
     assert "Suður-Kóreu" in s
     assert "Nýja-Sjálandi" in s
+    assert g[2].error_code == "Z002"  # Norður-Kóreu
+    assert g[8].error_code == "Z002"  # Suður-Kóreu
+    assert g[13].error_code == "Z002"  # Nýja-Sjálandi
 
     s, g = check("Í karíbahafi eru Karabísk mál töluð.")
     assert "Karíbahafi" in s
     assert "karabísk" in s
+    assert g[2].error_code == "Z002"  # Karíbahafi
+    assert g[4].error_code == "Z001"  # karabísk
 
     s, g = check("Á internetinu finna Súnnítar ýmsar Upplýsingar.")
     assert "Internetinu" in s
     assert "súnnítar" in s
     # assert "upplýsingar" in s
+    assert g[4].error_code == "Z001"  # súnnítar
 
     s, g = check(
         "Ég er með Alzheimers-sjúkdóm en Félags- og Barnamálaráðherra ekki og heldur ekki Ferðamála-, iðnaðar- og nýsköpunarráðherra."
@@ -593,6 +606,9 @@ def test_capitalization(verbose=False):
     assert "alzheimers-sjúkdóm" in s
     assert "félags- og barnamálaráðherra" in s
     assert "ferðamála-, iðnaðar- og nýsköpunarráðherra" in s
+    assert g[4].error_code == "Z001"  # alzheimers-sjúkdóm
+    assert g[6].error_code == "Z001"  # félags- og barnamálaráðherra
+    assert g[11].error_code == "Z001"  # ferðamála-, iðnaðar- og nýsköpunarráðherra
 
     s, g = check(
         "Þau gengu laugaveg í sumar og fóru á þingvelli, heimsóttu austur-evrópu, vestur-evrópu, Austurevrópskt fólk, mið-austurlönd og litla-hraun."
@@ -604,10 +620,93 @@ def test_capitalization(verbose=False):
     assert "austurevrópskt" in s
     assert "Mið-Austurlönd" in s
     assert "Litla-Hraun" in s
+    assert g[3].error_code == "Z002"  # Laugaveg
+    assert g[9].error_code == "Z002"  # Þingvelli
+    assert g[12].error_code == "Z002"  # Austur-Evrópu
+    assert g[14].error_code == "Z002"  # Vestur-Evrópu
+    assert g[16].error_code == "Z001"  # austurevrópskt
+    assert g[19].error_code == "Z002"  # Mið-Austurlönd
+    assert g[21].error_code == "Z002"  # Litla-Hraun
 
-    s, g = check("Þjóðin tók þátt í vetrarólympíuleikunum en líbanar ekki.")
+    s, g = check("Þjóðin tók þátt í vetrarólympíuleikunum og sumarólympíuleikunum en líbanar ekki.")
     assert "Vetrarólympíuleikunum" in s
+    assert "Sumarólympíuleikunum" in s
     assert "Líbanar" in s
+    assert g[5].error_code == "Z002"  # Vetrarólympíuleikunum
+    assert g[7].error_code == "Z002"  # Sumarólympíuleikunum
+    assert g[9].error_code == "Z002"  # Líbanar
+
+    g = rc.tokenize(
+        "Nýr Loftslagsráðherra, Innviðaráðherra og Umhverfisráðherra er Afróasískur, talar Dravídamál, fylgir Lútherstrú og er miðflokksmaður."
+    )
+    g = list(g)
+    if verbose:
+        dump(g)
+    s = normalize(g)
+    assert "loftslagsráðherra" in s
+    assert "innviðaráðherra" in s
+    assert "umhverfisráðherra" in s
+    assert "afróasískur" in s
+    assert "dravídamál" in s
+    assert "lútherstrú" in s
+    assert "Miðflokksmaður" in s
+    assert g[2].error_code == "Z001"  # loftslagsráðherra
+    assert g[4].error_code == "Z001"  # innviðaráðherra
+    assert g[6].error_code == "Z001"  # umhverfisráðherra
+    assert g[8].error_code == "Z001"  # afróasískur
+    assert g[11].error_code == "Z001"  # dravídamál
+    assert g[14].error_code == "Z001"  # lútherstrú
+    assert g[17].error_code == "Z002"  # Miðflokksmaður
+
+    g = rc.tokenize(
+        "Hann er Suðurkákasískur, tínir Unnarfald, býr í neðra-breiðholti og elskar Múmínálfa og óskarsverðlaunin."
+    )
+    g = list(g)
+    if verbose:
+        dump(g)
+    s = normalize(g)
+    assert "suðurkákasískur" in s
+    assert "unnarfald" in s
+    assert "Neðra-Breiðholti" in s
+    assert "múmínálfa" in s
+    assert "Óskarsverðlaunin" in s
+    assert g[3].error_code == "Z001"  # suðurkákasískur
+    assert g[6].error_code == "Z001"  # unnarfald
+    assert g[10].error_code == "Z002"  # Neðra-Breiðholti
+    assert g[13].error_code == "Z001"  # múmínálfa
+    assert g[15].error_code == "Z002"  # Óskarsverðlaunin
+
+    g = rc.tokenize("Í Seinni Heimsstyrjöldinni gerðist meira en í Kalda Stríðinu.")
+    g = list(g)
+    if verbose:
+        dump(g)
+    s = normalize(g)
+    assert "heimsstyrjöldinni" in s
+    assert "stríðinu" in s
+    assert g[3].error_code == "Z001"  # heimsstyrjöldinni
+    assert g[9].error_code == "Z001"  # stríðinu
+
+    g = rc.tokenize(
+        "Ég tala Víetnömsku, Indónesísku, er Afrísk-amerísk, karíbi, Karíbskur, austur-evrópubúi og vestur-evrópubúi"
+    )
+    g = list(g)
+    if verbose:
+        dump(g)
+    s = normalize(g)
+    assert "víetnömsku" in s
+    assert "indónesísku" in s
+    assert "afrísk-amerísk" in s
+    assert "Karíbi" in s
+    assert "karíbskur" in s
+    assert "Austur-Evrópubúi" in s
+    assert "Vestur-Evrópubúi" in s
+    assert g[3].error_code == "Z001"  # heimsstyrjöldinni
+    assert g[5].error_code == "Z001"  # indónesísku
+    assert g[8].error_code == "Z001"  # afrísk-amerísk
+    assert g[10].error_code == "Z002"  # Karíbi
+    assert g[12].error_code == "Z001"  # karíbskur
+    assert g[14].error_code == "Z002"  # Austur-Evrópubúi
+    assert g[16].error_code == "Z002"  # Vestur-Evrópubúi
 
 
 def test_acronyms(verbose=False):
@@ -671,16 +770,14 @@ def test_acronyms(verbose=False):
     )
     assert "dómsmálaráðherra" in s
     # assert "ríkissaksóknara" in s
-    assert "biskupinn" in s
     assert "doktorinn" in s
     assert "mánudögum" in s
     assert "þriðjudögum" in s
     assert g[4].error_code == "Z001"  # dómsmálaráðherra
     # assert g[6].error_code == "Z001"    #ríkissaksóknara
-    assert g[8].error_code == "Z001"  # biskupinn
-    assert g[10].error_code == "Z001"  # doktorinn
-    assert g[12].error_code == "Z001"  # mánudögum
-    assert g[14].error_code == "Z001"  # þriðjudögum
+    assert g[8].error_code == "Z001"  # doktorinn
+    assert g[10].error_code == "Z001"  # mánudögum
+    assert g[12].error_code == "Z001"  # þriðjudögum
 
     s, g = check(
         "Þau læra Íslensku og Landafræði með Allsherjarþinginu og Öryggisráðinu en líka um Indóevrópsk mál og Óðinshana."
