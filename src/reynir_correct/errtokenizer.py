@@ -1841,20 +1841,24 @@ def lookup_unknown_words(
         if code == "SO-ÞGF4ÞF":
             # Impersonal verbs that can have wrong subject case, not implicitly an error
             return token
+        if code == "SN-TALA-GR":
+            # Unusual word forms, such as names with an article in the plural ('Jónarnir')
+            # Should not be marked as an error
+            return token
         corrected = Ritmyndir.get_correct_form((token.txt))
         if not corrected:
             # No correct value available
             return token
-        text, details = get_details(code, token.txt, corrected)
+        _, m = db.lookup_g(corrected, at_sentence_start=at_sentence_start)
+        text, details = get_details(code, token.txt, corrected, m[0].stofn)
         token.set_error(RitmyndirError(code, text, details, token.txt, corrected))
         if corrected not in {"in", "the", "for", "at"}:
             # Exclude most common foreign stop words
             token.txt = emulate_case(corrected, template=token.txt)
-        _, m = db.lookup_g(corrected, at_sentence_start=at_sentence_start)
         token.add_corrected_meanings(m)
         return token
 
-    def get_details(code: str, txt: str, correct: str) -> Tuple[str, str]:
+    def get_details(code: str, txt: str, correct: str, lemma: str) -> Tuple[str, str]:
         """Return short and detailed descriptions for the error category plus a link to grammar references where possible"""
         # text is the short version, about the category and the error.
         # details is the long version with references.
@@ -1863,21 +1867,26 @@ def lookup_unknown_words(
         details = det
         if "{" in details:
             # Chance for inserting the original and correct values
-            details = details.format(orig=txt, correct=correct)
+            details = details.format(original=txt, correct=correct, lemma=lemma)
+        # Adding references to Ritreglur
         if standref:
             for ref in standref:
-                details = details + get_reference(ref) + "\n"
+                text = text + get_reference(ref) + "\n"
         return text, details
 
     def get_reference(ref: str) -> str:
-        urltxt = "https://rettritun.arnastofnun.is/kafli/"
+        # We get references to ritreglur.arnastofnun.is from ritmyndir_details in GreynirCorrect.conf
+        # TODO references to rettritun.arnastofnun.is
+        # Skoða ritreglur.arnastofnun.is og rettritun.arnastofnun.is
+        # "<span>👻🧚🦄🛎🌈⚡🎱👛🔔💎🔍🔎💡📖🔗🔬❓❔ℹ🇮🇸</span> "
+        urltxt = "https://ritreglur.arnastofnun.is/"
         if not "." in ref:
             # Whole chapter
             urltxt = urltxt + ref
         if "." in ref:
             # Section of a chapter
             urltxt = urltxt + ref.strip(".")
-        return '<a href="' + urltxt + '">Réttritun</a>'
+        return '<a href="' + urltxt + '">💡</a>'
 
     def only_suggest(token: CorrectToken, m: Sequence[BIN_Tuple]) -> bool:
         """Return True if we don't have high confidence in the proposed
