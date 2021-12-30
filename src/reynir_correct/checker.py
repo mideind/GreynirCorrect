@@ -307,6 +307,7 @@ class GreynirCorrect(Greynir):
                         code=t.error_code,
                         text=t.error_description,
                         detail=t.error_detail,
+                        references=t.error_references,
                         original=t.error_original,
                         suggest=t.error_suggest,
                     )
