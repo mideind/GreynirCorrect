@@ -541,7 +541,7 @@ def test_capitalization(verbose=False):
     assert g[14].error_code == "Z001"  # sjíti
 
     s, g = check(
-        "Á íslandi búa íslendingar og í danmörku búa Danskir danir í Nóvember."
+        "Á íslandi búa íslendingar og í danmörku búa Danskir danir í Nóvember en ekki fríslendingar."
     )
     assert "Íslandi" in s
     assert "Íslendingar" in s
@@ -595,7 +595,6 @@ def test_capitalization(verbose=False):
     assert g[4].error_code == "Z001"  # karabísk
 
     s, g = check("Á internetinu finna Súnnítar ýmsar Upplýsingar.")
-    assert "Internetinu" in s
     assert "súnnítar" in s
     # assert "upplýsingar" in s
     assert g[4].error_code == "Z001"  # súnnítar
@@ -628,7 +627,9 @@ def test_capitalization(verbose=False):
     assert g[19].error_code == "Z002"  # Mið-Austurlönd
     assert g[21].error_code == "Z002"  # Litla-Hraun
 
-    s, g = check("Þjóðin tók þátt í vetrarólympíuleikunum og sumarólympíuleikunum en líbanar ekki.")
+    s, g = check(
+        "Þjóðin tók þátt í vetrarólympíuleikunum og sumarólympíuleikunum en líbanar ekki."
+    )
     assert "Vetrarólympíuleikunum" in s
     assert "Sumarólympíuleikunum" in s
     assert "Líbanar" in s
@@ -770,14 +771,16 @@ def test_acronyms(verbose=False):
     )
     assert "dómsmálaráðherra" in s
     # assert "ríkissaksóknara" in s
+    # assert "biskupinn" in s
     assert "doktorinn" in s
     assert "mánudögum" in s
     assert "þriðjudögum" in s
     assert g[4].error_code == "Z001"  # dómsmálaráðherra
     # assert g[6].error_code == "Z001"    #ríkissaksóknara
-    assert g[8].error_code == "Z001"  # doktorinn
-    assert g[10].error_code == "Z001"  # mánudögum
-    assert g[12].error_code == "Z001"  # þriðjudögum
+    # assert g[8].error_code == "Z001"  # biskupinn
+    assert g[10].error_code == "Z001"  # doktorinn
+    assert g[12].error_code == "Z001"  # mánudögum
+    assert g[14].error_code == "Z001"  # þriðjudögum
 
     s, g = check(
         "Þau læra Íslensku og Landafræði með Allsherjarþinginu og Öryggisráðinu en líka um Indóevrópsk mál og Óðinshana."

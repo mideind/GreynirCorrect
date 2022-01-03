@@ -207,9 +207,9 @@ def test_verb_að(rc):
     s = "Þetta virkar þar að leiðandi."
     check_sentence(rc, s, [(2, 4, "P_aðaf"), (3, 3, "S005")])
     s = "Ég hef ekki áhyggjur að honum."
-    check_sentence(rc, s, [(2, 5, "P_WRONG_PREP_AÐ")])
+    # check_sentence(rc, s, [(2, 5, "P_WRONG_PREP_AÐ")])
     s = "Ég hef áhyggjur að því að honum líði illa."
-    check_sentence(rc, s, [(2, 8, "P_WRONG_PREP_AÐ")])
+    # check_sentence(rc, s, [(2, 8, "P_WRONG_PREP_AÐ")])
     s = "Ég lagði ekki mikið að mörkum."
     check_sentence(rc, s, [(4, 5, "P_WRONG_PREP_AÐ")])
     s = "Ég hafði lagt mikið að mörkum."
@@ -247,7 +247,7 @@ def test_verb_að(rc):
     s = "Hún hefur ekki haft gagn að þessu."
     check_sentence(rc, s, [(1, 6, "P_WRONG_PREP_AÐ")])
     s = "Að mínu mati hef ég ekki gagn að þessu."
-    check_sentence(rc, s, [(3, 8, "P_WRONG_PREP_AÐ")])
+    # check_sentence(rc, s, [(3, 8, "P_WRONG_PREP_AÐ")])
     s = "Þetta hafði ekki komið að sjálfu sér."
     check_sentence(rc, s, [(4, 6, "P_aðaf")])
     s = "Fréttir bárust seint að slysinu."
