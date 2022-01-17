@@ -197,6 +197,17 @@ STYLE_WARNINGS: Mapping[str, str] = {
     "GAM": "gamalt",
 }
 
+NEUTRAL_RITMYNDIR_CODES = frozenset(
+    (
+        "R001",  # Not an error
+        "SO-ÞGF4ÞF",  # Impersonal verbs that can have a wrong subject case, not implicitly an error
+        "SN-TALA-GR",  # Unusual word forms, such as plural names with an article ('Jónarnir'), not an error
+    )
+)
+
+STOP_WORDS = frozenset(("in", "the", "for", "at"))
+
+RITREGLUR_URL = "https://ritreglur.arnastofnun.is/#"
 
 # A dictionary of token error classes, used in serialization
 ErrorType = Type["Error"]
@@ -398,8 +409,9 @@ class CorrectToken(Tok):
         """Associate an Error class instance with this token"""
         self._err = err
 
-    def remove_error(self) -> None:
+    def remove_error(self, txt: str) -> None:
         self._err = None
+        self.txt = txt
 
     def copy(self, other: Union[Tok, Sequence[Tok]], coalesce: bool = False) -> bool:
         """Copy the error field and origin information
@@ -470,9 +482,9 @@ class CorrectToken(Tok):
         return getattr(self._err, "detail", None)
 
     @property
-    def error_references(self) -> Optional[List[str]]:
+    def error_references(self) -> List[str]:
         """Return references to Icelandic Standards, if any"""
-        return getattr(self._err, "references", None)
+        return getattr(self._err, "references", [])
 
     def add_corrected_meanings(self, m: Sequence[BIN_Tuple]) -> None:
         """Add alternative BÍN meanings for this token, based on a
@@ -480,10 +492,8 @@ class CorrectToken(Tok):
         assert self.kind == TOK.WORD
         # We assume that the token has already been marked
         # with a SpellingError or SpellingSuggestion error
-        assert (
-            isinstance(self._err, SpellingSuggestion)
-            or isinstance(self._err, SpellingError)
-            or isinstance(self._err, RitmyndirError)
+        assert isinstance(
+            self._err, (SpellingSuggestion, SpellingError, RitmyndirError)
         )
         if self.val is None:
             self.val = list(m)
@@ -828,7 +838,7 @@ class RitmyndirError(Error):
         code: str,
         txt: str,
         detail: Optional[str],
-        references: Optional[List[str]],
+        references: List[str],
         original: str,
         suggest: str,
     ) -> None:
@@ -846,12 +856,13 @@ class RitmyndirError(Error):
         return self._detail
 
     @property
-    def references(self) -> Optional[List[str]]:
+    def references(self) -> List[str]:
         return self._references
 
     def to_dict(self) -> Dict[str, Any]:
         d = super().to_dict()
-        d["detail"] = self.detail
+        d["detail"] = self._detail
+        d["references"] = self._references
         return d
 
 
@@ -1851,24 +1862,17 @@ def lookup_unknown_words(
         """Add an error with corresponding correct value and details given info in Ritmyndir"""
         # TODO At the moment the code assumes only one correct value is available in data
         code = Ritmyndir.get_code(token.txt)
-        if code == "R001":
+        if code in NEUTRAL_RITMYNDIR_CODES:
             # Not an error
             return token
-        if code == "SO-ÞGF4ÞF":
-            # Impersonal verbs that can have wrong subject case, not implicitly an error
-            return token
-        if code == "SN-TALA-GR":
-            # Unusual word forms, such as names with an article in the plural ('Jónarnir')
-            # Should not be marked as an error
-            return token
-        corrected = Ritmyndir.get_correct_form((token.txt))
+        corrected = Ritmyndir.get_correct_form(token.txt)
         if not corrected:
             # No correct value available
             return token
         _, m = db.lookup_g(corrected, at_sentence_start=at_sentence_start)
         text, details, refs = get_details(code, token.txt, corrected, m[0].stofn)
         token.set_error(RitmyndirError(code, text, details, refs, token.txt, corrected))
-        if corrected not in {"in", "the", "for", "at"}:
+        if corrected not in STOP_WORDS:
             # Exclude most common foreign stop words
             token.txt = emulate_case(corrected, template=token.txt)
         token.add_corrected_meanings(m)
@@ -1884,26 +1888,23 @@ def lookup_unknown_words(
         references: List[str] = []
         text = "{}: '{}' -> '{}'".format(cat, txt, correct)
         details = det
-        if "{" in details:
-            # Chance for inserting the original and correct values
-            details = details.format(original=txt, correct=correct, lemma=lemma)
+        details = details.format(original=txt, correct=correct, lemma=lemma)
         # Adding references to Ritreglur
         if standref:
-            for ref in standref.split(","):
-                references.append(get_reference(ref.strip()))
+            references = [get_reference(ref.strip()) for ref in standref.split(",")]
         return text, details, references
 
     def get_reference(ref: str) -> str:
         # We get references to ritreglur.arnastofnun.is from ritmyndir_details in GreynirCorrect.conf
         # TODO references to rettritun.arnastofnun.is
         # Skoða ritreglur.arnastofnun.is og rettritun.arnastofnun.is
-        urltxt = "https://ritreglur.arnastofnun.is/#"
-        if not "." in ref:
-            # Whole chapter
-            urltxt = urltxt + ref + "."
+        urltxt = RITREGLUR_URL
         if "." in ref:
             # Section of a chapter
             urltxt = urltxt + ref.strip(".")
+        else:
+            # Whole chapter
+            urltxt = urltxt + ref + "."
         return urltxt
 
     def only_suggest(token: CorrectToken, m: Sequence[BIN_Tuple]) -> bool:
@@ -2579,11 +2580,10 @@ def late_fix_merges(
                     suggest=token.txt,
                 ),
             )
-        # Remove all annotations and revert corrections for tokens in wordlist
+        # Remove all annotations and revert corrections for tokens in whitelist/wordlist
+        # NOTE: Only checks for the case present in the whitelist
         if token.original and token.original.strip() in ignore_wordlist:
-            token.txt = token.original.strip()
-            token.remove_error()
-
+            token.remove_error(token.original.strip())
         yield token
 
 

@@ -49,7 +49,7 @@ class Annotation:
         code: str,
         text: str,
         detail: Optional[str] = None,
-        references: Optional[List[str]] = [],
+        references: List[str] = [],
         original: Optional[str] = None,
         suggest: Optional[str] = None,
         suggestlist: Optional[List[str]] = None,
@@ -149,6 +149,6 @@ class Annotation:
         return self._suggestlist
 
     @property
-    def references(self) -> Optional[List[str]]:
+    def references(self) -> List[str]:
         """A list of references to the Icelandic Standards"""
         return self._references

@@ -41,7 +41,7 @@
 
 """
 
-from typing import Dict, Set, List, Tuple, Mapping
+from typing import Dict, Set, List, Tuple, Mapping, Union, Optional, Any
 import os
 import threading
 
@@ -502,115 +502,50 @@ class Ritmyndir:
         return word in d or word.lower() in d
 
     @staticmethod
-    def get_lemma(wrong_form: str) -> str:
-        d = Ritmyndir.DICT
-        if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][0]
-        elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][0]
-        else:
-            return ""
+    def get_lemma(wrong_form: str) -> Optional[str]:
+        return Ritmyndir.get_entry(wrong_form, 0)
 
     @staticmethod
-    def get_id(wrong_form: str) -> int:
-        d = Ritmyndir.DICT
-        if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][1]
-        elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][1]
-        else:
-            return 0
-        return Ritmyndir.DICT[wrong_form][1]
+    def get_id(wrong_form: str) -> Optional[int]:
+        return Ritmyndir.get_entry(wrong_form, 1)
 
     @staticmethod
     def get_cat(wrong_form: str) -> str:
-        d = Ritmyndir.DICT
-        if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][2]
-        elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][2]
-        else:
-            return ""
+        return Ritmyndir.get_entry(wrong_form, 2)
 
     @staticmethod
     def get_correct_form(wrong_form: str) -> str:
-        d = Ritmyndir.DICT
-        if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][3]
-        elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][3]
-        else:
-            return ""
+        return Ritmyndir.get_entry(wrong_form, 3)
 
     @staticmethod
     def get_tag(wrong_form: str) -> str:
-        d = Ritmyndir.DICT
-        if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][4]
-        elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][4]
-        else:
-            return ""
+        return Ritmyndir.get_entry(wrong_form, 4)
 
     @staticmethod
     def get_eink(wrong_form: str) -> int:
-        d = Ritmyndir.DICT
-        eink = 1
-        if wrong_form in d:
-            eink = Ritmyndir.DICT[wrong_form][5]
-        elif wrong_form.lower() in d:
-            eink = Ritmyndir.DICT[wrong_form.lower()][5]
+        eink = Ritmyndir.get_entry(wrong_form, 3)
+        if not eink:
+            eink = 1
         return eink
 
     @staticmethod
     def get_malsnid(wrong_form: str) -> str:
-        d = Ritmyndir.DICT
-        if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][6].split(",")[0]
-        elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][6].split(",")[0]
-        else:
-            return ""
+        return Ritmyndir.get_entry(wrong_form, 6).split(",")[0]
 
     @staticmethod
     def get_stafs(wrong_form: str) -> str:
-        d = Ritmyndir.DICT
-        if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][7].split(",")[0]
-        elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][7].split(",")[0]
-        else:
-            return ""
+        return Ritmyndir.get_entry(wrong_form, 7).split(",")[0]
 
     @staticmethod
     def get_aslatt(wrong_form: str) -> str:
-        d = Ritmyndir.DICT
-        if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][8].split(",")[0]
-        elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][8].split(",")[0]
-        else:
-            return ""
+        return Ritmyndir.get_entry(wrong_form, 8).split(",")[0]
 
     @staticmethod
     def get_beyg(wrong_form: str) -> str:
-        d = Ritmyndir.DICT
-        if wrong_form in d:
-            return Ritmyndir.DICT[wrong_form][9].split(",")[0]
-        elif wrong_form.lower() in d:
-            return Ritmyndir.DICT[wrong_form.lower()][9].split(",")[0]
-        else:
-            return ""
+        return Ritmyndir.get_entry(wrong_form, 9).split(",")[0]
 
     @staticmethod
     def get_code(wrong_form: str) -> str:
-        code = ""
-        w = wrong_form
-        if wrong_form not in Ritmyndir.DICT:
-            if wrong_form.lower() in Ritmyndir.DICT:
-                w = wrong_form.lower()
-            else:
-                return "R001"
         code = Ritmyndir.get_stafs(wrong_form)
         if not code:
             code = Ritmyndir.get_aslatt(wrong_form)
@@ -620,13 +555,22 @@ class Ritmyndir:
             code = Ritmyndir.get_malsnid(wrong_form)
         if not code:
             code = R_EINKUNN[Ritmyndir.get_eink(wrong_form)]
+        if not code:
+            code = "R001"
         return code
+
+    @staticmethod
+    def get_entry(wrong_form: str, index: int) -> Any:
+        entry = Ritmyndir.DICT.get(
+            wrong_form, Ritmyndir.DICT.get(wrong_form.lower(), None)
+        )
+        return entry[index] if entry else None
 
     @staticmethod
     def add(wrong_form: str, details: RitmyndirTuple) -> None:
         # TODO Same ritmynd can occur multiple times in the data from different references, how to handle?
         # TODO Also check if the same ritmynd has many different corrections in the data,
-        # so we don't just overwrite former values
+        # so we don't just overwrite former values. The DICT entries can be a list of correction, using defaultdict()
         Ritmyndir.DICT[wrong_form] = details
 
 
@@ -893,7 +837,6 @@ class Settings:
         ref = split[12].strip()
         if "SAGA" in ref or ref in {"MILTON", "HALLGP-4", "KLIM", "ONP"}:
             # Skipping errors from very old references, don't represent errors in Modern Icelandic
-            # NOTE: Causes many common errors to be skipped, since they are first found there
             return
         wrong_form = split[3].strip()
         correct_form = split[4].strip()

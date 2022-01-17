@@ -38,13 +38,13 @@
             textplustoks: Output is returned as a tuple of the output text and tokens.
             json: Output is returned as a JSON string.
             csv:  Output is returned in a csv format.
-            m2:   Output is returned in the M" format, see https://github.com/nusnlp/m2scorer
+            m2:   Output is returned in the M2 format, see https://github.com/nusnlp/m2scorer
                   The output is as follows:
                   S <tokenized system output for sentence 1>
                   A <token start offset> <token end offset>|||<error type>|||<correction1>||<correction2||..||correctionN|||<required>|||<comment>|||<annotator id>
     all_errors: Defines the level of correction. If False, only token-level annotation is carried out. 
                 If True, sentence-level annotation is carried out.
-    annotate_unparsed_sentences: If True, unparsed sentences are annotated as errors as a whole.
+    annotate_unparsed_sentences: If True, sentences that cannot be parsed are annotated as errors as a whole.
     annotations: If True, can all error annotations are returned at the end of the output. Works with format text.
     generate_suggestion_list: If True, the annotation can in certain cases contain a list of possible corrections, for the user to pick from.
     suppress_suggestions: If True, more farfetched automatically retrieved corrections are rejected and no error is added.
@@ -220,7 +220,6 @@ def check_spelling(**options: Any) -> Union[str, Tuple]:
                     txt = txt + "\n" + "\n".join(annlist)
                     annlist = []
             unisum.append(txt)
-
             continue
         elif format == "textplustoks":
             unisum.append(to_text(toklist))
