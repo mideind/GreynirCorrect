@@ -542,6 +542,8 @@ GCtoIEC = {
     "SST4ST": ["nonword", "pronun-writing"],
     "ST4RST": ["nonword", "pronun-writing"],
     "ST4SKT": ["nonword", "pronun-writing"],
+    "S4AR-EF": ["nonword", "nominal-inflection"],
+    "S-EFGR": ["nonword", "nominal-inflection"],
     "STAFAGERD": ["nonword"],  # No corresponding category in iEC?
     "STAFS-ERL": ["nonword", "fw4ice"],
     "STAFSVVIXL": ["nonword", "swapped-letters"],

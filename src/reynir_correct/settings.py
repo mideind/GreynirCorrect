@@ -583,6 +583,36 @@ class RitmyndirDetails:
         RitmyndirDetails.DICT[code] = details
 
 
+class IecNonwords:
+    # Dictionary structure: dict { wrong_word : (tuple of right words) }
+    DICT: Dict[str, Tuple[str, ...]] = dict()
+
+    @staticmethod
+    def add(word: str, corr: Tuple[str, ...]) -> None:
+        if word in IecNonwords.DICT:
+            # Happens in the data, just skip it
+            # raise ConfigError(
+            #    "Multiple definition of '{0}' in IEC nonwords data".format(word)
+            # )
+            return
+        IecNonwords.DICT[word] = corr
+
+
+class Icesquer:
+    # Dictionary structure: dict { wrong_word : (tuple of right words) }
+    DICT: Dict[str, Tuple[str, ...]] = dict()
+
+    @staticmethod
+    def add(word: str, corr: Tuple[str, ...]) -> None:
+        if word in Icesquer.DICT:
+            # Happens in the data, just skip it
+            # raise ConfigError(
+            #    "Multiple definition of '{0}' in IEC nonwords data".format(word)
+            # )
+            return
+        Icesquer.DICT[word] = corr
+
+
 class Settings:
 
     """Global settings"""
@@ -873,6 +903,64 @@ class Settings:
         RitmyndirDetails.DICT[code] = (rule, cat, det)
 
     @staticmethod
+    def _handle_iec_nonwords(s: str) -> None:
+        """Handle config parameters in the Icelandic Error Corpus Nonwords"""
+        a = s.lower().split("\t")
+        if len(a) != 2:
+            # Happens in the data, just skip it
+            # raise ConfigError("Expected tab between error word and its correction")
+            return
+        word = a[0].strip()
+        if len(word) < 1:
+            raise ConfigError(
+                "Expected nonempty word before comma in unique_errors section"
+            )
+        corr = a[1].strip()
+        if len(corr) < 1:
+            raise ConfigError(
+                "Expected nonempty word after comma in unique_errors section"
+            )
+        corr_t = tuple(corr.split())
+        if not word:
+            raise ConfigError("Expected word before the comma in unique_errors section")
+        if len(word.split()) != 1:
+            # Happens in the data, just skip it
+            return
+            # raise ConfigError(
+            #    "Multiple words not allowed before the comma in unique_errors section"
+            # )
+        IecNonwords.add(word, corr_t)
+
+    @staticmethod
+    def _handle_icesquer(s: str) -> None:
+        """Handle config parameters in the Icelandic Error Corpus Nonwords"""
+        a = s.lower().split("\t")
+        if len(a) != 2:
+            # Happens in the data, just skip it
+            # raise ConfigError("Expected tab between error word and its correction")
+            return
+        word = a[0].strip()
+        if len(word) < 1:
+            raise ConfigError(
+                "Expected nonempty word before comma in unique_errors section"
+            )
+        corr = a[1].split(";")[0].strip()  # TODO Only the first value for now
+        if len(corr) < 1:
+            raise ConfigError(
+                "Expected nonempty word after comma in unique_errors section"
+            )
+        corr_t = tuple(corr.split())
+        if not word:
+            raise ConfigError("Expected word before the comma in unique_errors section")
+        if len(word.split()) != 1:
+            # Happens in the data, just skip it
+            return
+            # raise ConfigError(
+            #    "Multiple words not allowed before the comma in unique_errors section"
+            # )
+        Icesquer.add(word, corr_t)
+
+    @staticmethod
     def read(fname: str) -> None:
         """Read configuration file"""
 
@@ -896,6 +984,8 @@ class Settings:
                 "error_forms": Settings._handle_error_forms,
                 "auto_ow": Settings._handle_ow_forms,
                 "auto_error": Settings._handle_error_forms,
+                "iec_nonwords": Settings._handle_iec_nonwords,
+                "icesquer": Settings._handle_icesquer,
                 "ritmyndir": Settings._handle_ritmyndir,
                 "ritmyndir_details": Settings._handle_ritmyndir_details,
             }

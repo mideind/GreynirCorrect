@@ -89,6 +89,8 @@ from .settings import (
     Morphemes,
     Ritmyndir,
     RitmyndirDetails,
+    IecNonwords,
+    Icesquer,
     Settings,
 )
 from .spelling import Corrector
@@ -2049,6 +2051,45 @@ def lookup_unknown_words(
                 context = (prev_context + tuple(rtok.txt.split()))[-3:]
                 prev_context = context
             continue
+
+        # Similarly, check Icelandic Error Corpus Nonwords
+        if token.txt in IecNonwords.DICT:
+            # Note: corrected is a tuple
+            corrected = IecNonwords.DICT[token.txt]
+            assert isinstance(corrected, tuple)
+            corrected_display = " ".join(corrected)
+            for ix, corrected_word in enumerate(corrected):
+                if ix == 0:
+                    rtok = replace_word(1, token, corrected_word, corrected_display)
+                    at_sentence_start = False
+                else:
+                    # In a multi-word sequence, we only mark the first
+                    # token with a SpellingError
+                    rtok = replace_word(1, token, corrected_word, None)
+                yield rtok
+                context = (prev_context + tuple(rtok.txt.split()))[-3:]
+                prev_context = context
+            continue
+
+        # And Icelandic Search Query Errors
+        # NOTE removed due to worsened outcomes, look into further
+        # if token.txt in Icesquer.DICT:
+        #    # Note: corrected is a tuple
+        #    corrected = Icesquer.DICT[token.txt]
+        #    assert isinstance(corrected, tuple)
+        #    corrected_display = " ".join(corrected)
+        #    for ix, corrected_word in enumerate(corrected):
+        #        if ix == 0:
+        #            rtok = replace_word(1, token, corrected_word, corrected_display)
+        #            at_sentence_start = False
+        #        else:
+        #            # In a multi-word sequence, we only mark the first
+        #            # token with a SpellingError
+        #            rtok = replace_word(1, token, corrected_word, None)
+        #        yield rtok
+        #        context = (prev_context + tuple(rtok.txt.split()))[-3:]
+        #        prev_context = context
+        #    continue
 
         if token.error_code:
             # This token already has an associated error and eventual correction:
