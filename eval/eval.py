@@ -571,6 +571,9 @@ GCtoIEC = {
     "R004": ["style"],
     "R005": ["style"],
 }
+# Value given to float metrics when there is none available
+# to avoid magic numbers
+NO_RESULTS = -1.0
 
 GCSKIPCODES = frozenset(("E001", "C005", "Z002", "W001"))
 
@@ -958,21 +961,21 @@ class Stats:
             tp = cast(int, catdict.get("tp", 0))
             fn = cast(int, catdict.get("fn", 0))
             fp = cast(int, catdict.get("fp", 0))
-            recall: float = 0.0
-            precision: float = 0.0
+            recall: float = NO_RESULTS
+            precision: float = NO_RESULTS
             ctp = cast(int, catdict.get("ctp", 0))
             cfn = cast(int, catdict.get("cfn", 0))
             cfp = cast(int, catdict.get("cfp", 0))
-            crecall: float = 0.0
-            cprecision: float = 0.0
+            crecall: float = NO_RESULTS
+            cprecision: float = NO_RESULTS
             catdict["freq"] = tp + fn
             if tp + fn + fp == 0:  # No values in category
-                catdict["recall"] = "N/A"
-                catdict["precision"] = "N/A"
-                catdict["f05score"] = "N/A"
-                catdict["crecall"] = "N/A"
-                catdict["cprecision"] = "N/A"
-                catdict["cf05score"] = "N/A"
+                catdict["recall"] = NO_RESULTS
+                catdict["precision"] = NO_RESULTS
+                catdict["f05score"] = NO_RESULTS
+                catdict["crecall"] = NO_RESULTS
+                catdict["cprecision"] = NO_RESULTS
+                catdict["cf05score"] = NO_RESULTS
             else:
                 # Error detection metrics
                 # Recall
@@ -987,7 +990,7 @@ class Stats:
                         1.25 * (precision * recall) / (0.25 * precision + recall)
                     )
                 else:
-                    catdict["f05score"] = 0.0
+                    catdict["f05score"] = NO_RESULTS
                 # Error correction metrics
                 # Recall
                 if ctp + cfn != 0:
@@ -1001,7 +1004,7 @@ class Stats:
                         1.25 * (cprecision * crecall) / (0.25 * cprecision + crecall)
                     )
                 else:
-                    catdict["cf05score"] = 0.0
+                    catdict["cf05score"] = NO_RESULTS
 
                 # Correction recall (not used)
                 right_corr = cast(int, catdict.get("right_corr", 0))
@@ -1010,7 +1013,7 @@ class Stats:
                         right_corr + cast(int, catdict.get("wrong_corr", 0))
                     )
                 else:
-                    catdict["corr_rec"] = "N/A"
+                    catdict["corr_rec"] = -1.0
                 # Span recall
                 right_span = cast(int, catdict.get("right_span", 0))
                 if right_span > 0:
@@ -1018,7 +1021,7 @@ class Stats:
                         right_span + cast(int, catdict.get("wrong_span", 0))
                     )
                 else:
-                    catdict["span_rec"] = "N/A"
+                    catdict["span_rec"] = NO_RESULTS
             return catdict
 
         def output_sentence_scores() -> None:  # type: ignore
@@ -1387,27 +1390,22 @@ class Stats:
                                 cast(int, et["fn"]) if "fn" in et else 0,
                                 cast(int, et["fp"]) if "fp" in et else 0,
                                 cast(float, et["recall"]) * 100.0
-                                if ("recall" in et and type(et["recall"]) == float)
-                                else -1,  # Or "N/A", but that messes with the f-string formatting
+                                if ("recall" in et and et["recall"] > 0.0)
+                                else NO_RESULTS,  # Or "N/A", but that messes with the f-string formatting
                                 cast(float, et["precision"]) * 100.0
-                                if (
-                                    "precision" in et and type(et["precision"]) == float
-                                )
-                                else -1,
-                                fscore * 100.0 if type(fscore) == int else -1,
+                                if ("precision" in et and et["precision"] > 0.0)
+                                else NO_RESULTS,
+                                fscore * 100.0 if fscore > 0.0 else NO_RESULTS,
                                 cast(int, et["ctp"]) if "ctp" in et else 0,
                                 cast(int, et["cfn"]) if "cfn" in et else 0,
                                 cast(int, et["cfp"]) if "cfp" in et else 0,
                                 cast(float, et["crecall"]) * 100.0
-                                if ("crecall" in et and type(et["crecall"]) == float)
-                                else -1,
+                                if ("crecall" in et and et["crecall"] > 0.0)
+                                else NO_RESULTS,
                                 cast(float, et["cprecision"]) * 100.0
-                                if (
-                                    "cprecision" in et
-                                    and type(et["cprecision"]) == float
-                                )
-                                else -1,
-                                cfscore * 100.0 if type(cfscore) == int else -1,
+                                if ("cprecision" in et and et["cprecision"] > 0.0)
+                                else NO_RESULTS,
+                                cfscore * 100.0 if cfscore > 0.0 else NO_RESULTS,
                             )
                             # subwork
                             subfreq += freq
@@ -1416,38 +1414,29 @@ class Stats:
                             subfp += cast(int, et["fp"]) if "fp" in et else 0
                             subrecall += (
                                 cast(float, et["recall"]) * freq * 100.0
-                                if ("recall" in et and type(et["recall"]) == float)
+                                if ("recall" in et and et["recall"] > 0.0)
                                 else 0.0
                             )
                             subprecision += (
                                 cast(float, et["precision"]) * freq * 100.0
-                                if (
-                                    "precision" in et and type(et["precision"]) == float
-                                )
+                                if ("precision" in et and et["precision"] > 0.0)
                                 else 0.0
                             )
-                            subf += (
-                                fscore * freq * 100.0 if type(fscore) == int else 0.0
-                            )
+                            subf += fscore * freq * 100.0 if fscore > 0.0 else 0.0
                             subctp += cast(int, et["ctp"]) if "ctp" in et else 0
                             subcfn += cast(int, et["cfn"]) if "cfn" in et else 0
                             subcfp += cast(int, et["cfp"]) if "cfp" in et else 0
                             subcrecall += (
                                 cast(float, et["crecall"]) * freq * 100.0
-                                if ("crecall" in et and type(et["crecall"]) == float)
+                                if ("crecall" in et and et["crecall"] > 0.0)
                                 else 0.0
                             )
                             subcprecision += (
                                 cast(float, et["cprecision"]) * freq * 100.0
-                                if (
-                                    "cprecision" in et
-                                    and type(et["cprecision"]) == float
-                                )
+                                if ("cprecision" in et and et["cprecision"] > 0.0)
                                 else 0.0
                             )
-                            subcf += (
-                                cfscore * freq * 100.0 if type(cfscore) == int else 0.0
-                            )
+                            subcf += cfscore * freq * 100.0 if cfscore > 0.0 else 0.0
 
                     if subfreq != 0:
                         subblob = (
@@ -1477,15 +1466,15 @@ class Stats:
                                 subtp,
                                 subfn,
                                 subfp,
-                                "N/A",
-                                "N/A",
-                                "N/A",
+                                NO_RESULTS,
+                                NO_RESULTS,
+                                NO_RESULTS,
                                 subctp,
                                 subcfn,
                                 subcfp,
-                                "N/A",
-                                "N/A",
-                                "N/A",
+                                NO_RESULTS,
+                                NO_RESULTS,
+                                NO_RESULTS,
                             )
                             + subblob
                         )
@@ -1533,15 +1522,15 @@ class Stats:
                             supertp,
                             superfn,
                             superfp,
-                            "N/A",
-                            "N/A",
-                            "N/A",
+                            NO_RESULTS,
+                            NO_RESULTS,
+                            NO_RESULTS,
                             superctp,
                             supercfn,
                             supercfp,
-                            "N/A",
-                            "N/A",
-                            "N/A",
+                            NO_RESULTS,
+                            NO_RESULTS,
+                            NO_RESULTS,
                         )
                         + superblob
                     )
