@@ -560,7 +560,7 @@ class Ritmyndir:
         return code
 
     @staticmethod
-    def get_entry(wrong_form: str, index: int) -> Union[str, int, None]:
+    def get_entry(wrong_form: str, index: int) -> Any:
         entry = Ritmyndir.DICT.get(wrong_form, Ritmyndir.DICT.get(wrong_form.lower()))
         return entry[index] if entry else None
 
