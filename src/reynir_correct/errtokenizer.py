@@ -1868,6 +1868,7 @@ def lookup_unknown_words(
             # Not an error
             return token
         corrected = Ritmyndir.get_correct_form(token.txt)
+        corrected = emulate_case(corrected, template=token.txt)
         if not corrected:
             # No correct value available
             return token
