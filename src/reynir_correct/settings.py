@@ -560,17 +560,15 @@ class Ritmyndir:
         return code
 
     @staticmethod
-    def get_entry(wrong_form: str, index: int) -> Any:
-        entry = Ritmyndir.DICT.get(
-            wrong_form, Ritmyndir.DICT.get(wrong_form.lower(), None)
-        )
+    def get_entry(wrong_form: str, index: int) -> Union[str, int, None]:
+        entry = Ritmyndir.DICT.get(wrong_form, Ritmyndir.DICT.get(wrong_form.lower()))
         return entry[index] if entry else None
 
     @staticmethod
     def add(wrong_form: str, details: RitmyndirTuple) -> None:
         # TODO Same ritmynd can occur multiple times in the data from different references, how to handle?
         # TODO Also check if the same ritmynd has many different corrections in the data,
-        # so we don't just overwrite former values. The DICT entries can be a list of correction, using defaultdict()
+        # so we don't just overwrite former values. The DICT entries can be a list of corrections, using defaultdict()
         Ritmyndir.DICT[wrong_form] = details
 
 
