@@ -296,11 +296,11 @@ def test_unique_context_independent_errors(verbose=False):
     assert "liltu" not in s
     assert "anddyri" in s
     assert "andyri" not in s
-    assert g[1].error_code == "S004"  # TODO Á að vera S001?
-    assert g[4].error_code == "S001"
-    assert g[5].error_code == "S001"
-    assert g[7].error_code == "S001"
-    assert g[8].error_code == "S001" or g[8].error_code == "EKKIORD"
+    assert g[1].error_code in frozenset(["S004", "ASLSTAFVANTAR"])  # Fomaður
+    assert g[4].error_code in frozenset(["S001", "ASLAUKASTAF"])  # fljúgjandi
+    assert g[5].error_code in frozenset(["S001", "ASLSTAFVANTAR"])  # augnæknis
+    assert g[7].error_code in frozenset(["S001", "ASLVIXL"])  # liltu
+    assert g[8].error_code in frozenset(["S001", "EKKIORD"])  # andyri
 
     s, g = check("Mér tóskt að fá áfarm ókeipis ríkistjórn.")
     assert "tókst" in s
@@ -311,16 +311,16 @@ def test_unique_context_independent_errors(verbose=False):
     assert "ókeipis" not in s
     assert "ríkisstjórn" in s
     assert "ríkistjórn" not in s
-    assert g[2].error_code == "S001"
-    assert g[5].error_code == "S001"
-    assert g[6].error_code == "S001"
-    assert g[7].error_code == "S001"
+    assert g[2].error_code in frozenset(["S001", "ASLVIXL"])  # tóskt
+    assert g[5].error_code in frozenset(["S001", "ASLVIXL"])  # áfarm
+    assert g[6].error_code in frozenset(["S001", "EI4EY"])  # ókeipis
+    assert g[7].error_code in frozenset(["S001", "EKKIORD"])  # ríkistjórn
 
     s, g = check(
         "Þar sat Gunan og fyldist með framistöðu liðisins í framlenginunni mikklu."
     )
-    # assert "sat Gunna og" in s              # TODO Virkar ekki eins og er út af hástaf í unique_errors
-    # assert "sat Gunan og" not in s          # TODO Virkar ekki eins og er út af hástaf í unique_errors
+    assert "sat Gunna og" in s
+    assert "sat Gunan og" not in s
     assert " Gunna " in s
     assert " Gunan " not in s
     assert " fylgdist " in s
@@ -333,13 +333,12 @@ def test_unique_context_independent_errors(verbose=False):
     assert " framlenginunni " not in s
     assert " miklu." in s
     assert " mikklu." not in s
-    # assert g[3].error_code == "S001"  # TODO virkar ekki út af hástaf í unique_errors, setja inn þegar það er lagað
-    assert g[5].error_code == "S004"  # TODO Á að vera S001?
-    assert g[7].error_code == "S001"
-    assert g[8].error_code == "S001"
-    assert g[10].error_code == "S001"
-    assert g[10].error_code == "S001"
-    assert g[11].error_code == "S004"  # TODO Á að vera S001?
+    assert g[3].error_code in frozenset(["S001", "S005"])  # Gunan
+    assert g[5].error_code == "S004"  # fyldist; TODO Á að vera S001?
+    assert g[7].error_code in frozenset(["S001", "M4MM"])  # framistöðu
+    assert g[8].error_code in frozenset(["S001", "ASLAUKASTAF"])  # liðisins
+    assert g[10].error_code in frozenset(["S001", "ASLSTAFVANTAR"])  # framlenginunni
+    assert g[11].error_code == "S004"  # mikklu; TODO Á að vera S001?
 
 
 def test_other_context_independent_spelling_errors(verbose=False):
@@ -826,9 +825,9 @@ def test_inflectional_errors(verbose=False):
     assert "fyndist" in s
     assert "víðfeðmt" in s  # TODO greinir sem so. víð-ferma!
     assert "árvekni" in s
-    assert g[2].error_code in set(["S001", "I4Y"])  # fyndist
+    assert g[2].error_code in frozenset(["S001", "I4Y"])  # fyndist
     assert g[3].error_code == "S004"  # víðfeðmt
-    assert g[5].error_code == "S001"  # árvekni
+    assert g[5].error_code in frozenset(["S001", "EKKIORD"])  # árvekni
 
     s, g = check("Ein kúin kom aldrei til baka vegna eldingunnar.")
     assert "kýrin" in s
@@ -846,7 +845,7 @@ def test_inflectional_errors(verbose=False):
     assert "ársins" in s
     assert "fjórum" in s
     assert g[2].error_code == "S001"  # ársins
-    assert g[5].error_code == "S001"  # fjórum
+    assert g[5].error_code in frozenset(["S001", "ASLSTAFVANTAR"])  # fjórum
 
     s, g = check(
         "Frumkvöðullinn aldist upp í litlu sjávarþorpi án föðurs og ýmsra þæginda."
@@ -854,7 +853,7 @@ def test_inflectional_errors(verbose=False):
     assert "ólst upp" in s
     assert "föður" in s
     assert "ýmissa" in s
-    assert g[2].error_code == "S002"  # ólst
+    assert g[2].error_code in frozenset(["S002", "S001"])  # ólst
     assert g[8].error_code == "BEYGVILLA"  # föður
     assert g[10].error_code == "S002"  # ýmissa
 
@@ -869,8 +868,8 @@ def test_inflectional_errors(verbose=False):
     # assert "fénu" in s # TODO cut out of sentence for now
     assert "ástandsins" in s
     assert g[1].error_code == "S002"  # friðsælli
-    assert g[6].error_code == "S001"  # hundruð
-    assert g[9].error_code == "S001"  # geimnum
+    assert g[6].error_code in frozenset(["S001", "BEYGVILLA"])  # hundruð
+    assert g[9].error_code in frozenset(["S001", "I40-ÞGF"])  # geimnum
     assert g[11].error_code == "S001"  # kílómetra
     assert g[13].error_code == "S002"  # fénu
     assert g[15].error_code == "S002"  # ástandsins
@@ -880,8 +879,8 @@ def test_inflectional_errors(verbose=False):
     assert "tuttugasta" in s
     assert "samningsins" in s
     assert g[5].error_code == "S002"  # Selfoss
-    assert g[6].error_code == "S001"  # tuttugasta
-    assert g[8].error_code == "S001"  # samningsins
+    assert g[6].error_code in frozenset(["S001", "BEYGVILLA"])  # tuttugasta
+    assert g[8].error_code in frozenset(["S001", "S-EFGR"])  # samningsins
 
 
 def test_wrong_first_parts(verbose=False):
@@ -932,7 +931,7 @@ def test_single_first_parts(verbose=False):
     # assert "all kaldur" not in s
     assert "hálfber" in s
     assert "hálf ber" not in s
-    assert g[3].error_code == "C005/w"  # all
+    assert g[3].error_code in frozenset(["C005/w", "S001"])  # all
     assert g[11].error_code == "C003"  # hálfber
 
     s, g = check("Hún setti honum afar kosti í for vinnunni.")
