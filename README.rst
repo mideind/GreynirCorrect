@@ -367,3 +367,19 @@ This software is licensed under the *MIT License*:
    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.*
 
+----
+
+GreynirCorrect indirectly embeds the `Database of Icelandic Morphology <https://bin.arnastofnun.is>`_
+(`Beygingarlýsing íslensks nútímamáls <https://bin.arnastofnun.is>`_), abbreviated BÍN,
+along with directly using `Ritmyndir <https://bin.arnastofnun.is/DMII/LTdata/comp-format/nonstand-form/>`, a collection of non-standard word forms.
+GreynirCorrect does not claim any endorsement by the BÍN authors or copyright holders.
+
+The BÍN source data are publicly available under the
+`CC BY-SA 4.0 license <https://creativecommons.org/licenses/by-sa/4.0/>`_, as further
+detailed `here in English <https://bin.arnastofnun.is/DMII/LTdata/conditions/>`_
+and `here in Icelandic <https://bin.arnastofnun.is/gogn/mimisbrunnur/>`_.
+
+In accordance with the BÍN license terms, credit is hereby given as follows:
+
+*Beygingarlýsing íslensks nútímamáls. Stofnun Árna Magnússonar í íslenskum fræðum.*
+*Höfundur og ritstjóri Kristín Bjarnadóttir.*

@@ -49,6 +49,7 @@ class Annotation:
         code: str,
         text: str,
         detail: Optional[str] = None,
+        references: List[str] = [],
         original: Optional[str] = None,
         suggest: Optional[str] = None,
         suggestlist: Optional[List[str]] = None,
@@ -76,6 +77,7 @@ class Annotation:
         self._suggest = suggest
         self._original = original
         self._suggestlist = suggestlist
+        self._references = references
 
     def __str__(self) -> str:
         """Return a string representation of this annotation"""
@@ -145,3 +147,8 @@ class Annotation:
         """A list of suggested corrections for the token span, as a list
         of text strings containing tokens delimited by spaces"""
         return self._suggestlist
+
+    @property
+    def references(self) -> List[str]:
+        """A list of references to the Icelandic Standards"""
+        return self._references

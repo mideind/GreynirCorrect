@@ -107,9 +107,6 @@ def main() -> None:
     options["format"] = args.format
     options["spaced"] = args.spaced
     options["all_errors"] = args.all_errors
-    if args.all_errors:
-        # Needed to get the correct original form for token-level annotations
-        options["suggest_everything"] = True
     print(check_errors(**options), file=args.outfile)
 
 

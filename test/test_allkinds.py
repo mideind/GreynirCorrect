@@ -38,6 +38,7 @@
 
 import reynir_correct as rc
 from reynir_correct import detokenize
+from reynir_correct.wrappers import check_errors
 
 # Tests for errtokenizer.py
 
@@ -56,33 +57,32 @@ def normalize(g):
     return detokenize(g, normalize=True)
 
 
+def check(p):
+    """Return a corrected, normalized string form of the input along with the tokens"""
+    options: Dict[str, Union[str, bool]] = {}
+    options["format"] = "textplustoks"
+    options["all_errors"] = True
+    options["infile"] = [p]
+    options["one_sent"] = False
+
+    return check_errors(**options)
+
+
 def test_punctuation(verbose=False):
     # Quotation marks
-    g = rc.tokenize('Hann var kallaður ,,pottormur" og var "hrekkjusvín".')
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check('Hann var kallaður ,,pottormur" og var "hrekkjusvín".')
     assert "„pottormur“" in s
     assert "„hrekkjusvín“" in s
 
     # Ellipsis
-    g = rc.tokenize("Ég veit ekki...")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Ég veit ekki...")
     assert "..." not in s
     # Ath. þetta finnst í s, en í viðmótinu birtist þetta ekki í hríslutrénu.
     assert "…" in s
 
 
 def test_multiple_spaces(verbose=False):
-    g = rc.tokenize("Hér         er langt bil.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hér         er langt bil.")
     assert "Hér er" in s
     assert "  " not in s
 
@@ -90,22 +90,14 @@ def test_multiple_spaces(verbose=False):
 def test_doubling(verbose=False):
     """Test words that are erroneously written twice or more often"""
     # Simple instance
-    g = rc.tokenize("Ég hélt mér mér fast í sætið.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Ég hélt mér mér fast í sætið.")
     assert "hélt mér fast" in s
     assert "mér mér" not in s
     assert len(g) == 9
     assert g[3].error_code == "C001"  # mér
 
     # Test many instances in same sentence
-    g = rc.tokenize("Potturinn kom ekki ekki í ljós ljós fyrr en en í dag dag.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Potturinn kom ekki ekki í ljós ljós fyrr en en í dag dag.")
     assert "kom ekki í" in s
     assert "ekki ekki" not in s
     assert "í ljós fyrr" in s
@@ -123,61 +115,39 @@ def test_doubling(verbose=False):
             assert not g[ix].error_code
 
     # Here the first word is just an uppercase version of the following common noun. This should be corrected.
-    g = rc.tokenize("Slysið slysið átti sér stað í gærkvöldi.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Slysið slysið átti sér stað í gærkvöldi.")
     assert g[2].error_code == "C004/w"  # slysið, bara uppástunga, ekki leiðrétt
 
     # Testing multiple words in a row. This should be corrected.
-    g = rc.tokenize(
+    s, g = check(
         "Það er stanslaust fjör fjör fjör fjör fjör fjör fjör fjör í sveitinni."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert len(g) == 9
     assert "stanslaust fjör í" in s
     assert "fjör fjör" not in s
     assert g[4].error_code == "C001"
 
-    # 'á' has different meanings here, 'á á' should be accepted
+    # 'á' has different meanings here, 'á á' should be marked as a possible error
     # 'en en' should not be accepted
-    g = rc.tokenize(
-        "Ég á á sem heitir Lína langsokkur en en en hún kann ekki að jarma."
-    )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
-    assert len(g) == 16
-    assert "á á" in s
-    assert "Ég á sem" not in s
+    s, g = check("Ég á á sem heitir Lína langsokkur en en en hún kann ekki að jarma.")
+    assert len(g) == 16 or len(g) == 15  # á á is corrected but is marked differently
+    # assert "á á" in s  # Now corrected by default, but can be handled differently with a special option
+    # assert "Ég á sem" not in s
     assert "langsokkur en hún" in s
     assert "en en" not in s
     assert g[3].error_code == "C004/w"  # á
-    assert g[8].error_code == "C001"  # en
+    assert g[8].error_code == "C001" or g[7].error_code == "C001"  # en
 
 
 def test_accepted_doubling(verbose=False):
     # Test examples with a comma between. This should be accepted.
-    g = rc.tokenize("Lífið, sem er flokkar, flokkar potta.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Lífið, sem er flokkar, flokkar potta.")
     assert len(g) == 11
     assert "flokkar, flokkar" in s
     assert not g[4].error_code
 
     # Another example with a comma between. This should be accepted.
-    g = rc.tokenize("Lífið er svaka, svaka gaman.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Lífið er svaka, svaka gaman.")
     assert len(g) == 9
     assert "svaka, svaka" in s
     assert not g[3].error_code
@@ -186,68 +156,48 @@ def test_accepted_doubling(verbose=False):
     # First, these are separate words and should be accepted but possible error pointed out.
     # 'í í' should be pointed out but not corrected, as 'í í' can occur,
     # for instance as a particle and then a preposition.
-    g = rc.tokenize("Finnur finnur gull í í Tálknafirði.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
-    assert len(g) == 9
-    assert "Finnur finnur" in s
-    assert not "Finnur gull" in s
-    assert g[5].error_code == "C004/w"  # TODO útfæra
+    s, g = check("Finnur finnur gull í í Tálknafirði.")
+    assert len(g) == 9 or len(g) == 7
+    # assert "Finnur finnur" in s
+    # assert not "Finnur gull" in s
+    assert g[2].error_code == "C004/w"  # Finnur
+    assert g[4].error_code == "C004/w" or g[5].error_code == "C004/w"
 
     # Same example except now the common noun is capitalized in the beginning,
     # followed by the proper noun. This should be accepted.
-    g = rc.tokenize("Finnur Finnur gull í Tálknafirði?")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Finnur Finnur gull í Tálknafirði?")
     # assert len(g) == 8        # TODO útfæra að þetta er ekki leiðrétt
     # assert "Finnur Finnur" in s
 
     # Here are separate words, as Gaukur is a proper noun. This should be accepted.
-    g = rc.tokenize("Gaukur gaukur slasaðist í slysinu.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Gaukur gaukur slasaðist í slysinu.")
     assert len(g) == 8
     # TODO þetta á líklega frekar heima í checker.py, ath. hvort þetta er bæði
     # sérnafn og samnafn og þannig.
-    assert "Gaukur gaukur" in s
-    assert "Gaukur slasaðist" not in s
+    # assert "Gaukur gaukur" in s
+    # assert "Gaukur slasaðist" not in s
+    assert g[2].error_code == "C004/w"  # gaukur
 
     # 'heldur' is allowed to appear more than once in a row. This should be accepted.
-    g = rc.tokenize("Kvikan heldur heldur mikið í jörðina.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Kvikan heldur heldur mikið í jörðina.")
     assert len(g) == 9
-    assert "Kvikan heldur heldur mikið" in s
-    assert "Kvikan heldur mikið" not in s
+    # assert "Kvikan heldur heldur mikið" in s
+    # assert "Kvikan heldur mikið" not in s
+    assert g[3].error_code == "C004/w"  # heldur
 
-    # 'gegn' has different meanings hera, should be accepted
-    g = rc.tokenize("Hún var góð og gegn gegn Svíum í úrslitaleiknum.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
-    assert len(g) == 12
-    assert "og gegn gegn Svíum" in s
-    assert "og gegn Svíum" not in s
+    # 'gegn' has different meanings here, should be accepted
+    s, g = check("Hún var góð og gegn gegn Svíum í úrslitaleiknum.")
+    # assert len(g) == 12
+    # assert "og gegn gegn Svíum" in s
+    # assert "og gegn Svíum" not in s
+    assert g[6].error_code == "C004/w"
 
 
 def test_wrong_compounds(verbose=False):
-    g = rc.tokenize(
+    s, g = check(
         "Fötin koma í margskonar litum og fara afturábak afþvíað annarstaðar "
         "eru fjögurhundruð mikilsháttar hestar."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert len(g) == 23
     assert "margs konar" in s
     assert "aftur á bak" in s
@@ -264,13 +214,9 @@ def test_wrong_compounds(verbose=False):
         else:
             assert not g[ix].error_code
 
-    g = rc.tokenize(
+    s, g = check(
         "Vagninn fór niðrá torg og svo ofan í níuhundruð samskonar seinnihluta."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "niður á" in s
     assert "níu hundruð" in s
     assert "sams konar" in s
@@ -286,11 +232,8 @@ def test_wrong_compounds(verbose=False):
 
 
 def test_split_compounds(verbose=False):
-    g = rc.tokenize("Aðal inngangur að auka herbergi er gagn stæður öðrum gangi.")
+    s, g = check("Aðal inngangur að auka herbergi er gagn stæður öðrum gangi.")
     g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert len(g) == 10
     assert "Aðalinngangur" in s
     assert "Aðal inngangur" not in s
@@ -305,11 +248,7 @@ def test_split_compounds(verbose=False):
         else:
             assert not g[ix].error_code
 
-    g = rc.tokenize("Myndar drengurinn er hálf undarlegur kvenna megin.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Myndar drengurinn er hálf undarlegur kvenna megin.")
     assert len(g) == 7
     assert "Myndardrengurinn" in s
     assert "Myndar drengurinn" not in s
@@ -326,13 +265,9 @@ def test_split_compounds(verbose=False):
         else:
             assert not t.error_code
 
-    g = rc.tokenize(
+    s, g = check(
         "Hann var full fljótur á sér, en það var líka full ástæða til að fá full réttindi."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert len(g) == 20
     assert "fullfljótur" in s
     assert "full fljótur" not in s
@@ -350,11 +285,7 @@ def test_split_compounds(verbose=False):
 
 def test_unique_context_independent_errors(verbose=False):
     # Known, unique, context independent spelling errors - S001
-    g = rc.tokenize("Fomaður fór til fljúgjandi augnæknis í liltu andyri Svíþjóðar.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Fomaður fór til fljúgjandi augnæknis í liltu andyri Svíþjóðar.")
     assert "Formaður" in s
     assert "Fomaður" not in s
     assert "fljúgandi" in s
@@ -369,13 +300,9 @@ def test_unique_context_independent_errors(verbose=False):
     assert g[4].error_code == "S001"
     assert g[5].error_code == "S001"
     assert g[7].error_code == "S001"
-    assert g[8].error_code == "S001"
+    assert g[8].error_code == "S001" or g[8].error_code == "EKKIORD"
 
-    g = rc.tokenize("Mér tóskt að fá áfarm ókeipis ríkistjórn.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Mér tóskt að fá áfarm ókeipis ríkistjórn.")
     assert "tókst" in s
     assert "tóskt" not in s
     assert "áfram" in s
@@ -389,13 +316,9 @@ def test_unique_context_independent_errors(verbose=False):
     assert g[6].error_code == "S001"
     assert g[7].error_code == "S001"
 
-    g = rc.tokenize(
+    s, g = check(
         "Þar sat Gunan og fyldist með framistöðu liðisins í framlenginunni mikklu."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     # assert "sat Gunna og" in s              # TODO Virkar ekki eins og er út af hástaf í unique_errors
     # assert "sat Gunan og" not in s          # TODO Virkar ekki eins og er út af hástaf í unique_errors
     assert " Gunna " in s
@@ -425,11 +348,7 @@ def test_other_context_independent_spelling_errors(verbose=False):
     # S003 ef aðeins uppástunga finnst;
     # U001 ef ekkert finnst
     # TODO Fæ ég einhvern tímann W001??
-    g = rc.tokenize("Ég fyldist með fóboltanum í sjóvvarpinu í gærköldi.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Ég fyldist með fóboltanum í sjóvvarpinu í gærköldi.")
     # TODO breytir þessu í fylgist, er aðeins líklegra út af tíðni. Bæta við þekktar villur/heil beygingardæmi?
     # assert "Ég fylgdist með" in s
     # assert "Ég fyldist með" not in s
@@ -446,13 +365,9 @@ def test_other_context_independent_spelling_errors(verbose=False):
     # assert g[6].error_code == "S002"  # TODO endar sem S004
     # assert g[8].error_code == "S002"  # TODO endar sem S004
 
-    g = rc.tokenize("Ég fór í ljós tisvar í vigu og mædi regullega í lígamsrætt.")
+    s, g = check("Ég fór í ljós tisvar í vigu og mædi regullega í lígamsrætt.")
     # Current output (2020-09-08):
     # 'Ég fór í ljós tvisvar í viku og mæli regullega í lígamsrætt .'
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "ljós tvisvar í" in s
     assert "í viku og" in s
     # assert "og mæti" in s
@@ -469,25 +384,17 @@ def test_other_context_independent_spelling_errors(verbose=False):
 def test_context_dependent_spelling_errors(verbose=False):
     # Context dependent spelling errors - P_xxx
 
-    g = rc.tokenize("Alla sýna lífdaga hljóp hún allt kvað fætur toga af ástæðulausu.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Alla sýna lífdaga hljóp hún allt kvað fætur toga af ástæðulausu.")
     assert "Alla sína lífdaga" in s
     assert "allt hvað fætur" in s
     assert "toga að ástæðulausu" in s
     # TODO fæ villukóðana á fyrsta orðið í fasta frasanum en ætti að fá á villuorðið sjálft.
-    assert g[1].error_code == "P_yyii"  # sína
-    assert g[6].error_code == "P_kvhv"  # hvað
+    assert g[0].error_code == "P_yyii" or g[2].error_code == "S005"  # sína
+    assert g[6].error_code == "P_kvhv" or g[7].error_code == "S005"  # hvað
     assert g[10].error_code == "P_afað"  # að
 
     # Context dependent spelling errors - P_xxx
-    g = rc.tokenize("Kvað sem á bjátar lifir en í glæðunum.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Kvað sem á bjátar lifir en í glæðunum.")
     assert "Hvað sem" in s
     assert "lifir enn í" in s
     # TODO villan kemur í fyrsta orðið í fasta frasanum en ætti að fá á villuorðið sjálft.
@@ -497,31 +404,21 @@ def test_context_dependent_spelling_errors(verbose=False):
 
 def test_homophones(verbose=False):
     # ruglingsmengin
-    g = rc.tokenize("Hann heyrði lágvært kvísl í myrkrinu.")
-    g = list(g)
-    if verbose:
-        dump(g)
+    s, g = check("Hann heyrði lágvært kvísl í myrkrinu.")
     # s = normalize(g)
     # assert "hvísl" in s       # TODO eftir að útfæra
     # assert "kvísl" not in s   # TODO eftir að útfæra
     # assert g[4].error_code == "S006"  # TODO eftir að útfæra villukóða
 
-    g = rc.tokenize("Kirtillinn flæktist fyrir fótum hennar í fermingunni.")
-    g = list(g)
-    if verbose:
-        dump(g)
+    s, g = check("Kirtillinn flæktist fyrir fótum hennar í fermingunni.")
     # s = normalize(g)
     # assert "Kyrtillinn" in s          # TODO eftir að útfæra
     # assert "Kirtillinn" not in s      # TODO eftir að útfæra
     # assert g[0].error_code == "S006"  # TODO eftir að útfæra
 
-    g = rc.tokenize(
+    s, g = check(
         "Tímanum líkur á því að kvatt er til þess að kvika ekki frá sinni stöðu."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    # s = normalize(g)
     # assert "lýkur" in s       # TODO eftir að útfæra
     # assert "líkur" not in s   # TODO eftir að útfæra
     # assert "hvatt" in s       # TODO eftir að útfæra
@@ -532,11 +429,7 @@ def test_homophones(verbose=False):
     # assert g[6].error_code == "S006"
     # assert g[11].error_code == "S006"
 
-    g = rc.tokenize("Við rímum húsið til að leifa eldinum ekki að hvelja fólkið.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    # s = normalize(g)
+    s, g = check("Við rímum húsið til að leifa eldinum ekki að hvelja fólkið.")
     # assert "rýmum" in s       # TODO eftir að útfæra
     # assert "rímum" not in s
     # assert "leyfa" in s       # TODO eftir að útfæra
@@ -551,13 +444,9 @@ def test_homophones(verbose=False):
 def test_paradigm_spelling_errors(verbose=False):
 
     # Unique errors in whole paradigm - S001
-    g = rc.tokenize(
+    s, g = check(
         "Það var leiðilegt en þæginlegt að koma tímalega á áfangastað um fjögurleitið."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     # assert "leiðinlegt" in s   # TODO er þetta ekki í þekktu villunum sem á eftir að koma inn?
     assert "þægilegt" in s  # TODO sama
     # assert "tímanlega" in s     # TODO sama
@@ -567,14 +456,10 @@ def test_paradigm_spelling_errors(verbose=False):
     assert g[8].error_code == "W001/w"
     assert g[12].error_code == "S004"
 
-    g = rc.tokenize(
+    s, g = check(
         "Barnið var fjagra ára þegar það fór janframt til ýmissra annara landa að "
         "leita að síðastu kúinni en það var til einskins."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "fjögurra" in s
     assert "jafnframt" in s
     assert "ýmissa" in s
@@ -594,11 +479,7 @@ def test_paradigm_spelling_errors(verbose=False):
 
 def test_rare_word_errors(verbose=False):
     # S004, spelling.py
-    g = rc.tokenize("Hann finur fyri alls kins verkjum.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hann finur fyri alls kins verkjum.")
     # assert "Hann finnur" in s         # TODO Fæ uppástungu en ekki nógu sterka leiðréttingu
     # assert "fyrir" in s               # TODO Virkar ekki
     assert "kyns" in s
@@ -606,11 +487,7 @@ def test_rare_word_errors(verbose=False):
     # assert g[3].error_code == "S004"  # TODO virkar ekki, fæ W001 virðist vera.
     assert g[5].error_code == "S004"
 
-    g = rc.tokenize("Hann skoðaði arða gluggs en leists ekki vel á neinn.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hann skoðaði arða gluggs en leists ekki vel á neinn.")
     assert g[3].error_code == "W001/w"  # arða
     assert g[4].error_code == "W001/w"  # gluggs
     assert g[6].error_code == "W001/w"  # leists
@@ -618,12 +495,7 @@ def test_rare_word_errors(verbose=False):
 
 def test_wrong_abbreviations(verbose=False):
     # S005
-
-    g = rc.tokenize("Karlinn datt þ.á.m. í amk. fimm polla.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Karlinn datt þ.á.m. í amk. fimm polla.")
     assert "þ. á m." in s
     assert "þ.á.m." not in s
     assert "a.m.k. " in s
@@ -631,46 +503,30 @@ def test_wrong_abbreviations(verbose=False):
     assert g[3].error_code == "A001"
     assert g[5].error_code == "A002"
 
-    g = rc.tokenize("Eftir ca 10 mínútur datt hann í pollinn.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Eftir ca 10 mínútur datt hann í pollinn.")
     assert "ca. " in s
     assert "ca " not in s
     assert g[2].error_code == "A001"
 
-    g = rc.tokenize("Forsetinn ofl. gengu út um dyrnar.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Forsetinn ofl. gengu út um dyrnar.")
     assert "o.fl. " in s  # TODO býr þetta til en setur aukapunkt aftan við!
     assert "ofl. " not in s
     assert g[2].error_code == "A002"
 
-    g = rc.tokenize("Ríkissjóður tók m.a 30 ma lán.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Ríkissjóður tók m.a 30 ma lán.")
     assert "m.a. " in s
     assert "m.a " not in s
     assert g[3].error_code == "A002"
 
 
 def test_capitalization(verbose=False):
-    g = rc.tokenize(
+    s, g = check(
         "Einn Aríi, Búddisti, Eskimói, Gyðingur, sjálfstæðismaður, "
         "Múslími og Sjíti gengu inn á bar í evrópu."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "aríi" in s
     assert "búddisti" in s
-    assert "eskimói" in s
+    assert "eskimói" in s or "inúíti" in s  # both the cap and taboo error are corrected
     # assert "gyðingur" in s
     assert "Sjálfstæðismaður" in s
     assert "múslími" in s
@@ -678,19 +534,15 @@ def test_capitalization(verbose=False):
     assert "Evrópu" in s
     assert g[2].error_code == "Z001"  # aríi
     assert g[4].error_code == "Z001"  # búddisti
-    assert g[6].error_code == "Z001" or g[6].error_code == "T001/w"  # eskimói
+    assert g[6].error_code == "Z001" or g[6].error_code == "T001/w"  # eskimói/inúíti
     # assert g[8].error_code == "Z001"  # gyðingur
     assert g[10].error_code == "Z002"  # Sjálfstæðismaður
     assert g[12].error_code == "Z001"  # múslími
     assert g[14].error_code == "Z001"  # sjíti
 
-    g = rc.tokenize(
+    s, g = check(
         "Á íslandi búa íslendingar og í danmörku búa Danskir danir í Nóvember en ekki fríslendingar."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "Íslandi" in s
     assert "Íslendingar" in s
     assert "Danmörku" in s
@@ -707,13 +559,9 @@ def test_capitalization(verbose=False):
     assert g[12].error_code == "Z003"  # nóvember
     assert g[15].error_code == "Z002"  # Fríslendingar
 
-    g = rc.tokenize(
+    s, g = check(
         "Í norður-belfast og norður-Belfast er rigning en ekki í suður-afríku hjá suður-afríkumönnum."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     # assert "Norður-Belfast" in s
     assert "Suður-Afríku" in s
     assert "Suður-Afríkumönnum" in s
@@ -722,25 +570,17 @@ def test_capitalization(verbose=False):
     assert g[10].error_code == "Z002"  # Suður-Afríku
     assert g[12].error_code == "Z002"  # Suður-Afríkumönnum
 
-    g = rc.tokenize(
+    s, g = check(
         "Þau gengu frá suður-kóreu og þaðan á norður-hliðina og norður- og suðurhlutann."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "Suður-Kóreu" in s
     assert "norðurhliðina" in s
     assert "norður-" in s
     assert g[4].error_code == "Z002"  # Suður-Kóreu
 
-    g = rc.tokenize(
+    s, g = check(
         "Í norður-kóreu er menningin önnur en í suður-kóreu og allt önnur á nýja-sjálandi."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "Norður-Kóreu" in s
     assert "Suður-Kóreu" in s
     assert "Nýja-Sjálandi" in s
@@ -748,32 +588,20 @@ def test_capitalization(verbose=False):
     assert g[8].error_code == "Z002"  # Suður-Kóreu
     assert g[13].error_code == "Z002"  # Nýja-Sjálandi
 
-    g = rc.tokenize("Í karíbahafi eru Karabísk mál töluð.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Í karíbahafi eru Karabísk mál töluð.")
     assert "Karíbahafi" in s
     assert "karabísk" in s
     assert g[2].error_code == "Z002"  # Karíbahafi
     assert g[4].error_code == "Z001"  # karabísk
 
-    g = rc.tokenize("Á internetinu finna Súnnítar ýmsar Upplýsingar.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Á internetinu finna Súnnítar ýmsar Upplýsingar.")
     assert "súnnítar" in s
     # assert "upplýsingar" in s
     assert g[4].error_code == "Z001"  # súnnítar
 
-    g = rc.tokenize(
+    s, g = check(
         "Ég er með Alzheimers-sjúkdóm en Félags- og Barnamálaráðherra ekki og heldur ekki Ferðamála-, iðnaðar- og nýsköpunarráðherra."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "alzheimers-sjúkdóm" in s
     assert "félags- og barnamálaráðherra" in s
     assert "ferðamála-, iðnaðar- og nýsköpunarráðherra" in s
@@ -781,13 +609,9 @@ def test_capitalization(verbose=False):
     assert g[6].error_code == "Z001"  # félags- og barnamálaráðherra
     assert g[11].error_code == "Z001"  # ferðamála-, iðnaðar- og nýsköpunarráðherra
 
-    g = rc.tokenize(
+    s, g = check(
         "Þau gengu laugaveg í sumar og fóru á þingvelli, heimsóttu austur-evrópu, vestur-evrópu, Austurevrópskt fólk, mið-austurlönd og litla-hraun."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "Laugaveg" in s
     assert "Þingvelli" in s
     assert "Austur-Evrópu" in s
@@ -803,13 +627,9 @@ def test_capitalization(verbose=False):
     assert g[19].error_code == "Z002"  # Mið-Austurlönd
     assert g[21].error_code == "Z002"  # Litla-Hraun
 
-    g = rc.tokenize(
+    s, g = check(
         "Þjóðin tók þátt í vetrarólympíuleikunum og sumarólympíuleikunum en líbanar ekki."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "Vetrarólympíuleikunum" in s
     assert "Sumarólympíuleikunum" in s
     assert "Líbanar" in s
@@ -892,92 +712,50 @@ def test_capitalization(verbose=False):
 
 def test_acronyms(verbose=False):
 
-    g = rc.tokenize("Hún skrifar fyrir Dv og Rúv.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hún skrifar fyrir Dv og Rúv.")
     assert "DV" in s
     assert "RÚV" in s
     assert g[4].error_code == "Z006"  # DV
     assert g[6].error_code == "Z006"  # RÚV
 
-    g = rc.tokenize("Guðrún lék hlutverk Ms. Abercrombie í þáttunum")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Guðrún lék hlutverk Ms. Abercrombie í þáttunum")
     assert "Ms." in s
     assert g[4].error_code != "Z006"
 
-    g = rc.tokenize("Sigurður lék hlutverk Mr. Smith í leikritinu")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Sigurður lék hlutverk Mr. Smith í leikritinu")
     assert "Mr." in s
     assert g[4].error_code != "Z006"
 
-    g = rc.tokenize("Hr. Hnetusmjör hélt tónleika í Kópavogi í kvöld")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hr. Hnetusmjör hélt tónleika í Kópavogi í kvöld")
     assert "Hr." in s
     assert g[1].error_code != "Z006"
 
-    g = rc.tokenize("Hann er Suðurkóreskur og er suður-kóreumaður frá suður-kóreu.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hann er Suðurkóreskur og er suður-kóreumaður frá suður-kóreu.")
     assert "suðurkóreskur" in s
     assert "Suður-Kóreumaður" in s
     assert "Suður-Kóreu" in s
 
-    g = rc.tokenize("Hann er Norðurkóreskur og er norður-kóreumaður frá norður-kóreu.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hann er Norðurkóreskur og er norður-kóreumaður frá norður-kóreu.")
     assert "norðurkóreskur" in s
     assert "Norður-Kóreumaður" in s
     assert "Norður-Kóreu" in s
 
-    g = rc.tokenize("Hann er Nýsjálenskur og er nýsjálendingur frá nýja-sjálandi.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hann er Nýsjálenskur og er nýsjálendingur frá nýja-sjálandi.")
     assert "nýsjálenskur" in s
     assert "Nýsjálendingur" in s
     assert "Nýja-Sjálandi" in s
 
-    g = rc.tokenize("Hann er Suðurafrískur og er suður-afríkumaður frá suður-afríku.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hann er Suðurafrískur og er suður-afríkumaður frá suður-afríku.")
     assert "suðurafrískur" in s
     assert "Suður-Afríkumaður" in s
     assert "Suður-Afríku" in s
 
-    g = rc.tokenize("Þau heimsóttu norðurland og hittu norðlendinga í Meistaradeild.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Þau heimsóttu norðurland og hittu norðlendinga í Meistaradeild.")
     assert "Norðurland" in s
     assert "Norðlendinga" in s
     # assert "meistaradeild" in s
 
-    g = rc.tokenize(
-        "Haldið er upp á Páskadag, Verslunarmannahelgina, Jólin og Bóndadag."
-    )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Haldið er upp á Páskadag, Verslunarmannahelgina, Jólin og Bóndadag.")
     assert "páskadag" in s
     assert "verslunarmannahelgina" in s
     assert "jólin" in s
@@ -987,32 +765,26 @@ def test_acronyms(verbose=False):
     assert g[9].error_code == "Z001"  # jólin
     assert g[11].error_code == "Z001"  # bóndadag
 
-    g = rc.tokenize(
-        "Talað var við Dómsmálaráðherra, Ríkissaksóknara og Doktorinn "
+    s, g = check(
+        "Talað var við Dómsmálaráðherra, Ríkissaksóknara, Biskupinn og Doktorinn "
         "á Mánudögum og Þriðjudögum."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "dómsmálaráðherra" in s
     # assert "ríkissaksóknara" in s
+    # assert "biskupinn" in s
     assert "doktorinn" in s
     assert "mánudögum" in s
     assert "þriðjudögum" in s
     assert g[4].error_code == "Z001"  # dómsmálaráðherra
     # assert g[6].error_code == "Z001"    #ríkissaksóknara
-    assert g[8].error_code == "Z001"  # doktorinn
-    assert g[10].error_code == "Z001"  # mánudögum
-    assert g[12].error_code == "Z001"  # þriðjudögum
+    # assert g[8].error_code == "Z001"  # biskupinn
+    assert g[10].error_code == "Z001"  # doktorinn
+    assert g[12].error_code == "Z001"  # mánudögum
+    assert g[14].error_code == "Z001"  # þriðjudögum
 
-    g = rc.tokenize(
+    s, g = check(
         "Þau læra Íslensku og Landafræði með Allsherjarþinginu og Öryggisráðinu en líka um Indóevrópsk mál og Óðinshana."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "íslensku" in s
     assert "landafræði" in s
     assert "allsherjarþinginu" in s
@@ -1025,13 +797,9 @@ def test_acronyms(verbose=False):
     assert g[13].error_code == "Z001"  # indóevrópsk
     assert g[16].error_code == "Z001"  # óðinshana
 
-    g = rc.tokenize(
+    s, g = check(
         "Í Vín má kaupa Vínartertu og Rínarvín en Póstmódernismi og Maríutásur eru vinsælar."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "Vín" in s
     assert "vínartertu" in s
     assert "rínarvín" in s
@@ -1046,116 +814,80 @@ def test_acronyms(verbose=False):
 def test_inflectional_errors(verbose=False):
     # beygingarvillur
     # sama og test_error_forms í test_tokenizer.py
-    g = rc.tokenize("Tréið gekk til rekstar rúmmsins.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Tréið gekk til rekstar rúmmsins.")
     assert "Tréð" in s
     assert "rekstrar" in s
     assert "rúmsins" in s
-    assert g[1].error_code == "S002"  # tréð, TODO eftir að útfæra
-    assert g[4].error_code == "S002"  # rekstrar, TODO eftir að útfæra
-    assert g[5].error_code == "S002"  # rúmsins, TODO eftir að útfæra
+    assert g[1].error_code == "S002"  # tréð
+    assert g[4].error_code == "S002" or g[4].error_code == "ASLSTAFVANTAR"  # rekstrar
+    assert g[5].error_code == "S002"  # rúmsins
 
-    g = rc.tokenize("Þér finndist víðfermt í árverkni.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Þér finndist víðfermt í árverkni.")
     assert "fyndist" in s
     assert "víðfeðmt" in s  # TODO greinir sem so. víð-ferma!
     assert "árvekni" in s
-    assert g[2].error_code == "S001"  # fyndist, TODO eftir að útfæra
-    assert g[3].error_code == "S004"  # víðfeðmt, TODO eftir að útfæra
-    assert g[5].error_code == "S001"  # árvekni, TODO eftir að útfæra
+    assert g[2].error_code in set(["S001", "I4Y"])  # fyndist
+    assert g[3].error_code == "S004"  # víðfeðmt
+    assert g[5].error_code == "S001"  # árvekni
 
-    g = rc.tokenize("Ein kúin kom aldrei til baka vegna eldingunnar.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
-    # assert "kýrin" in s        # TODO eftir að setja inn
-    # assert "eldingarinnar" in s    # TODO eftir að setja inn
-    # assert g[2].error_code == "B001"    # kýrin, TODO eftir að útfæra
-    # assert g[8].error_code == "B001"    # eldingarinnar, TODO eftir að útfæra
+    s, g = check("Ein kúin kom aldrei til baka vegna eldingunnar.")
+    assert "kýrin" in s
+    assert "eldingarinnar" in s
+    assert g[2].error_code == "BEYGVILLA"  # kýrin
+    assert g[7].error_code == "S002"  # eldingarinnar
 
-    g = rc.tokenize("Lítum til áttunda áratugsins til upplýsingu.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Lítum til áttunda áratugsins til upplýsingu.")
     assert "áratugarins" in s
-    # assert "upplýsingar" in s      # TODO eftir að setja inn
-    # assert g[4].error_code == "B001"    # áratugarins, TODO eftir að útfæra
-    # assert g[6].error_code == "B001"    # upplýsingar, TODO eftir að útfæra
+    assert "upplýsingar" in s
+    assert g[4].error_code == "S001"  # áratugarins
+    # assert g[6].error_code == "P_NT_FsMeðFallstjórn"  # TODO Picked up in sentence-level annotation, not available in the tokens
 
-    g = rc.tokenize("Nánar tiltekið árins 1978, fjóru og hálfu ári fyrir byltinguna.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Nánar tiltekið árins 1978, fjóru og hálfu ári fyrir byltinguna.")
     assert "ársins" in s
     assert "fjórum" in s
-    # assert g[3].error_code == "B001"    # ársins, TODO eftir að útfæra
-    # assert g[5].error_code == "B001"    # fjórum, TODO eftir að útfæra
+    assert g[2].error_code == "S001"  # ársins
+    assert g[5].error_code == "S001"  # fjórum
 
-    g = rc.tokenize(
+    s, g = check(
         "Frumkvöðullinn aldist upp í litlu sjávarþorpi án föðurs og ýmsra þæginda."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "ólst upp" in s
     assert "föður" in s
     assert "ýmissa" in s
-    # assert g[2].error_code == "B001"    # ólst, TODO eftir að útfæra
-    # assert g[8].error_code == "B001"    # föður, TODO eftir að útfæra
-    # assert g[10].error_code == "B001"   # ýmissa, TODO eftir að útfæra
+    assert g[2].error_code == "S002"  # ólst
+    assert g[8].error_code == "BEYGVILLA"  # föður
+    assert g[10].error_code == "S002"  # ýmissa
 
-    g = rc.tokenize(
+    s, g = check(
         "Friðsælari leið hefði verið að hundruðir leituðu í geiminum að kílómeter "
         "af féinu vegna ástandins."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
-    # assert "Friðsælli" in s        # TODO eftir að setja inn
+    assert "Friðsælli" in s
     assert "hundruð" in s
     assert "geimnum" in s
-    # assert "kílómetra" in s    # TODO eftir að setja inn
-    assert "fénu" in s
+    # assert "kílómetra" in s # TODO Parsing chooses 'kílómetri'
+    # assert "fénu" in s # TODO cut out of sentence for now
     assert "ástandsins" in s
-    # assert g[1].error_code == "B001"      # friðsælli, TODO eftir að útfæra
-    # assert g[6].error_code == "B001"      # hundruð, TODO eftir að útfæra
-    # assert g[9].error_code == "B001"      # geimnum, TODO eftir að útfæra
-    # assert g[11].error_code == "B001"     # kílómetra, TODO eftir að útfæra
-    # assert g[13].error_code == "B001"     # fénu, TODO eftir að útfæra
-    # assert g[15].error_code == "B001"     # ástandsins, TODO eftir að útfæra
+    assert g[1].error_code == "S002"  # friðsælli
+    assert g[6].error_code == "S001"  # hundruð
+    assert g[9].error_code == "S001"  # geimnum
+    assert g[11].error_code == "S001"  # kílómetra
+    assert g[13].error_code == "S002"  # fénu
+    assert g[15].error_code == "S002"  # ástandsins
 
-    g = rc.tokenize("Loks gekk hann til Selfosss tuttugusta dag samningins.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Loks gekk hann til Selfosss tuttugusta dag samningins.")
     assert "Selfoss" in s
     assert "tuttugasta" in s
     assert "samningsins" in s
-    # assert g[5].error_code == "B001"        # Selfoss, TODO eftir að útfæra
-    # assert g[6].error_code == "B001"        # tuttugasta, TODO eftir að útfæra
-    # assert g[8].error_code == "B001"        # samningsins, TODO eftir að útfæra
+    assert g[5].error_code == "S002"  # Selfoss
+    assert g[6].error_code == "S001"  # tuttugasta
+    assert g[8].error_code == "S001"  # samningsins
 
 
 def test_wrong_first_parts(verbose=False):
     # C004: Rangur fyrri hluti í samsetningu    (heyrna-laus, náms-skrá)
 
-    g = rc.tokenize("Kvenngormar eru feyknaskemmtilegir en ekki fyrnauppteknir.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Kvenngormar eru feyknaskemmtilegir en ekki fyrnauppteknir.")
     assert "Kvengormar" in s
     assert "Kvenngormar" not in s
     # assert "feiknaskemmtilegir" in s      # TODO virkar ekki eins og er
@@ -1167,11 +899,7 @@ def test_wrong_first_parts(verbose=False):
     # assert g[3].error_code == "C004"    # Virkar ekki
     # assert g[6].error_code == "C004"    # TODO fæ C002
 
-    g = rc.tokenize("Ég fékk heyrnatól hjá eyrnarlækninum.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Ég fékk heyrnatól hjá eyrnarlækninum.")
     assert "heyrnartól" in s
     assert "heyrnatól" not in s
     # assert "eyrnalækninum" in s       # TODO Ætti að virka þegar geri ný orðanet
@@ -1179,11 +907,7 @@ def test_wrong_first_parts(verbose=False):
     assert g[3].error_code == "C006"
     # assert g[5].error_code == "C006"  # TODO virkar ekki
 
-    g = rc.tokenize("Lundúnarloftið er næringaríkt í ár.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Lundúnarloftið er næringaríkt í ár.")
     # assert "Lundúnaloftið" in s
     # assert "Lundúnarloftið" not in s
     assert "næringarríkt" in s
@@ -1191,11 +915,7 @@ def test_wrong_first_parts(verbose=False):
     # assert g[1].error_code == "C006"
     assert g[3].error_code == "C006"
 
-    g = rc.tokenize("Öldungardeildarþingmaðurinn keyrði díselbíl á hringveginum.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Öldungardeildarþingmaðurinn keyrði díselbíl á hringveginum.")
     # assert "Öldungadeildarþingmaðurinn" in s      # TODO Ætti að virka þegar ný orðanet
     # assert "Öldungardeildarþingmaðurinn" not in s
     # assert "dísilbíl" in s                        # TODO Ætti að virka þegar ný orðanet
@@ -1207,11 +927,7 @@ def test_wrong_first_parts(verbose=False):
 def test_single_first_parts(verbose=False):
     # C003: Stakir fyrri hlutar í setningu sem alveg viss um      (all kaldur, )
     # C005: Mögulega stakir fyrri hlutar en ekki viss, uppástunga um sameiningu
-    g = rc.tokenize("Hann var all kaldur þegar hann fannst enda var hann hálf ber.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hann var all kaldur þegar hann fannst enda var hann hálf ber.")
     # assert "allkaldur" in s           # Sameina ekki, því 'kaldur' gæti verið no.
     # assert "all kaldur" not in s
     assert "hálfber" in s
@@ -1219,11 +935,7 @@ def test_single_first_parts(verbose=False):
     assert g[3].error_code == "C005/w"  # all
     assert g[11].error_code == "C003"  # hálfber
 
-    g = rc.tokenize("Hún setti honum afar kosti í for vinnunni.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hún setti honum afar kosti í for vinnunni.")
     assert "afarkosti" in s
     assert "afar kosti" not in s
     assert "forvinnunni" in s
@@ -1231,11 +943,7 @@ def test_single_first_parts(verbose=False):
     assert g[4].error_code == "C003"
     assert g[6].error_code == "C003"
 
-    g = rc.tokenize("Hér er afbragðs matur fyrir allsherjar gesti í langtíma gistingu.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Hér er afbragðs matur fyrir allsherjar gesti í langtíma gistingu.")
     assert "afbragðsmatur" in s
     assert "allsherjargesti" in s
     assert "langtímagistingu" in s
@@ -1247,13 +955,9 @@ def test_single_first_parts(verbose=False):
 def test_single_last_parts(verbose=False):
     # M003: Stakir seinni hlutar í setningu     (græn keri, arf beri, barn dómur)
 
-    g = rc.tokenize(
+    s, g = check(
         "Hann gekk í barn dóm þegar hann komst að því að hún var líka í hópi græn kera."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    # s = normalize(g)
     # assert "barndóm" in s                 # TODO Eftir að útfæra
     # assert "barn dóm" not in s
     # assert "grænkeri" in s                # TODO Eftir að útfæra
@@ -1265,11 +969,7 @@ def test_single_last_parts(verbose=False):
 def test_wrong_parts(verbose=False):
     # M004: Rangt orð finnst í samsetningu      (trukkalessa, kúardella)
     # Getur verið tabúorð, röng beygingarmynd, ...
-    g = rc.tokenize("Loftlagsmál eru vandamál skráningastarfsmanna.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Loftlagsmál eru vandamál skráningastarfsmanna.")
     assert "Loftslagsmál" in s
     assert "Loftlagsmál" not in s
     assert "skráningarstarfsmanna" in s
@@ -1277,11 +977,7 @@ def test_wrong_parts(verbose=False):
     # assert g[1].error_code == "M004"      # TODO Eftir að útfæra villukóða, fæ C002
     # assert g[4].error_code == "M004"      # TODO Eftir að útfæra villukóða, fæ C002
 
-    g = rc.tokenize("Trukkalessur þola ekki kúardellu.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Trukkalessur þola ekki kúardellu.")
     # assert "kúadellu" in s            # TODO Virkar ekki eins og er.
     # assert "kúardellu" not in s
     # assert g[1].error_code == "T001"    # TODO Eftir að útfæra. Tabúorð ætti að merkja sem slík.
@@ -1290,13 +986,9 @@ def test_wrong_parts(verbose=False):
 
 def test_non_single_first_parts(verbose=False):
     # C002: Fyrri hluti á að vera stakur        (fjölnotapappír, ótalmargir)
-    g = rc.tokenize(
+    s, g = check(
         "Það er alhliðavandamál hvað ótalmargir fjölnotahestar eru afarleiðinlegir."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert "alhliða vandamál" in s
     assert "alhliðavandamál" not in s
     # assert "ótal margir" in s         # TODO virkar ekki því "ótalmargur" er í BÍN!
@@ -1310,11 +1002,7 @@ def test_non_single_first_parts(verbose=False):
     # assert g[6].error_code == "C002"  # TODO Eftir að útfæra, fæ C002
     # assert g[8].error_code == "C002"  # TODO Virkar ekki
 
-    g = rc.tokenize("Það er betra að vera ofgóður en ofursvalur.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Það er betra að vera ofgóður en ofursvalur.")
     # assert "of góður" in s        # TODO Virkar ekki eins og er
     # assert "ofgóður" not in s
     # assert "ofur svalur" in s       # TODO Reglurnar segja til um að þetta sé réttara en ég er bara ekki sammála!
@@ -1322,11 +1010,7 @@ def test_non_single_first_parts(verbose=False):
     # assert g[6].error_code == "C002"  # TODO
     # assert g[8].error_code == "C002"  # TODO
 
-    g = rc.tokenize("Það er allrabest að eiga ótalhesta í margnotapokanum.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Það er allrabest að eiga ótalhesta í margnotapokanum.")
     assert "allra best" in s
     assert "allrabest" not in s
     assert "ótal hesta" in s
@@ -1337,11 +1021,7 @@ def test_non_single_first_parts(verbose=False):
     # assert g[6].error_code == "C002"  # TODO Ætti að virka...
     # assert g[8].error_code == "C002"
 
-    g = rc.tokenize("Það er lágmarkskurteisi að tebollinn sé velsætur.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
+    s, g = check("Það er lágmarkskurteisi að tebollinn sé velsætur.")
     assert "lágmarkskurteisi" in s
     assert "lágmarks kurteisi" not in s
     # assert "vel sætur" in s           # TODO virkar ekki
@@ -1353,20 +1033,12 @@ def test_non_single_first_parts(verbose=False):
 def test_inquiry_verb_forms(verbose=False):
     # athuga hvort eintöluform séu til staðar?
     # athuga hvort fleirtala sé leiðrétt
-    g = rc.tokenize("Þegar þið hafið hrært deigið setjiði það í ofninn.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    # s = normalize(g)
+    s, g = check("Þegar þið hafið hrært deigið setjiði það í ofninn.")
     # assert "setjið " in s      # TODO eftir að útfæra
     # assert "setjið þið" in s   # TODO eftir að útfæra
     # assert g[6].error_code == "Q001"   # TODO eftir að útfæra villukóða
 
-    g = rc.tokenize("Eftir að kakan kemur úr ofninum náiði í kremið.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    # s = normalize(g)
+    s, g = check("Eftir að kakan kemur úr ofninum náiði í kremið.")
     # assert "náið þið" in s    # TODO eftir að útfæra, spelling.py virðist taka á þessu
     # assert "náiði" not in s     # TODO eftir að útfæra
     # assert g[7].error_code == "Q001"    # TODO eftir að útfæra villukóða
@@ -1374,39 +1046,25 @@ def test_inquiry_verb_forms(verbose=False):
 
 def test_taboo_words(verbose=False):
     # Simple test
-    g = rc.tokenize("Júðarnir og hommatittirnir hoppuðu ásamt halanegrunum.")
-    g = list(g)
-    if verbose:
-        dump(g)
+    s, g = check("Júðarnir og hommatittirnir hoppuðu ásamt halanegrunum.")
     assert g[1].error_code == "T001/w"
     assert g[3].error_code == "T001/w"
     assert g[6].error_code == "T001/w"
 
-    g = rc.tokenize(
+    s, g = check(
         "Jón ætlaði að afhomma Pál en Múhameðstrúarmennirnir komu í veg fyrir það."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
     assert g[4].error_code == "T001/w"
     assert g[7].error_code == "T001/w"
 
     # Should not be allowed in compounds
-    g = rc.tokenize("Merartussan henti mér af kuntubaki.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    # s = normalize(g)
-    # assert g[1].error_code == "T001"    # TODO eftir að útfæra; gæti verið M004
-    # assert g[5].error_code == "T001"    # TODO eftir að útfæra; gæti verið M004
+    s, g = check("Merartussan henti mér af kuntubaki.")
+    assert g[1].error_code == "T001" or g[1].error_code == "Y001/w"
+    # assert g[5].error_code == "T001" or g[5].error_code == "Y001/w" # TODO Finnst ekki
 
 
 def test_wrong_whitespace(verbose=False):
-    g = rc.tokenize("Þetta var gert ti lað vekja hrútinn ein sog til stóð.")
-    g = list(g)
-    if verbose:
-        dump(g)
-    # s = normalize(g)
+    s, g = check("Þetta var gert ti lað vekja hrútinn ein sog til stóð.")
     # assert "til að" in s      # TODO eftir að bæta við
     # assert "ti lað" not in s  # TODO eftir að bæta við
     # assert "eins og" in s
@@ -1417,42 +1075,30 @@ def test_wrong_whitespace(verbose=False):
 
 def test_correct_words(verbose=False):
     # Athuga hvort hér greinist nokkuð villa
-    g = rc.tokenize(
+    s, g = check(
         "Ég fann nokkurs konar skógardverg ofan í skúffunni en David "
         "Schwimmer vissi allt um mannætuapana."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert (
         s == "Ég fann nokkurs konar skógardverg ofan í skúffunni en David "
         "Schwimmer vissi allt um mannætuapana."
     )
     assert not any(w.error_code for w in g)
 
-    g = rc.tokenize(
+    s, g = check(
         "Ökumaður bílaleigubíls komst í hann krappan á Grandanum í Reykjavík skömmu "
         "fyrir klukkan 11 í dag."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert (
         s == "Ökumaður bílaleigubíls komst í hann krappan á Grandanum í "
         "Reykjavík skömmu fyrir klukkan 11 í dag."
     )
     assert not any(w.error_code for w in g)
 
-    g = rc.tokenize(
+    s, g = check(
         "Þá telur hann kjarasamninga stuðla að stöðugleika sem einnig undirbyggi "
         "frekari stýrivaxtalækkanir."
     )
-    g = list(g)
-    if verbose:
-        dump(g)
-    s = normalize(g)
     assert (
         s == "Þá telur hann kjarasamninga stuðla að stöðugleika sem einnig "
         "undirbyggi frekari stýrivaxtalækkanir."
@@ -1667,7 +1313,7 @@ def test_new_passive(verbose=False):
 
 def test_verb_arguments(verbose=False):
     # TODO breyta prófuninni svo falli að mynsturgreininum.
-    g = rc.tokenize("Vefurinn bíður upp á bestu fréttirnar.")
+    s, g = check("Vefurinn bíður upp á bestu fréttirnar.")
     g = list(g)
     if verbose:
         dump(g)

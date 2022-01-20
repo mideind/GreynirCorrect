@@ -44,6 +44,7 @@ from typing import (
     Type,
     Union,
     Tuple,
+    Set,
     List,
     Dict,
     Iterable,
@@ -86,6 +87,8 @@ from .settings import (
     TabooWords,
     CIDErrorForms,
     Morphemes,
+    Ritmyndir,
+    RitmyndirDetails,
     Settings,
 )
 from .spelling import Corrector
@@ -177,6 +180,7 @@ WRONG_ABBREVS: Mapping[str, str] = {
     "Ca": "Ca.",
 }
 
+
 # Style mark from BÍN:
 # NID = Niðrandi / disparaging
 # OVID = Óviðeigandi / inappropriate
@@ -193,6 +197,17 @@ STYLE_WARNINGS: Mapping[str, str] = {
     "GAM": "gamalt",
 }
 
+NEUTRAL_RITMYNDIR_CODES = frozenset(
+    (
+        "R001",  # Not an error
+        "SO-ÞGF4ÞF",  # Impersonal verbs that can have a wrong subject case, not implicitly an error
+        "SN-TALA-GR",  # Unusual word forms, such as plural names with an article ('Jónarnir'), not an error
+    )
+)
+
+STOP_WORDS = frozenset(("in", "the", "for", "at"))
+
+RITREGLUR_URL = "https://ritreglur.arnastofnun.is/#"
 
 # A dictionary of token error classes, used in serialization
 ErrorType = Type["Error"]
@@ -394,6 +409,10 @@ class CorrectToken(Tok):
         """Associate an Error class instance with this token"""
         self._err = err
 
+    def remove_error(self, txt: str) -> None:
+        self._err = None
+        self.txt = txt
+
     def copy(self, other: Union[Tok, Sequence[Tok]], coalesce: bool = False) -> bool:
         """Copy the error field and origin information
         from another CorrectToken instance"""
@@ -462,14 +481,19 @@ class CorrectToken(Tok):
         """Return the detailed description of this error, if any"""
         return getattr(self._err, "detail", None)
 
+    @property
+    def error_references(self) -> List[str]:
+        """Return references to Icelandic Standards, if any"""
+        return getattr(self._err, "references", [])
+
     def add_corrected_meanings(self, m: Sequence[BIN_Tuple]) -> None:
         """Add alternative BÍN meanings for this token, based on a
         suggested spelling correction"""
         assert self.kind == TOK.WORD
         # We assume that the token has already been marked
         # with a SpellingError or SpellingSuggestion error
-        assert isinstance(self._err, SpellingSuggestion) or isinstance(
-            self._err, SpellingError
+        assert isinstance(
+            self._err, (SpellingSuggestion, SpellingError, RitmyndirError)
         )
         if self.val is None:
             self.val = list(m)
@@ -791,7 +815,7 @@ class SpellingError(Error):
     #       Should be corrected.
     # S004: Rare word, a more common one has been substituted.
     # S005: Error has been corrected but annotation was lost in merging,
-    #       a more generic one is applied.
+    #       a more generic message is given.
 
     def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
         # Spelling error codes start with "S"
@@ -801,6 +825,45 @@ class SpellingError(Error):
     @property
     def description(self) -> str:
         return self._txt
+
+
+@register_error_class
+class RitmyndirError(Error):
+    """A RitmyndirError is a context-independent error from Ritmyndir data"""
+
+    # Miscellaneous error codes, detailed here: https://bin.arnastofnun.is/gogn/storasnid/ritmyndir/
+
+    def __init__(
+        self,
+        code: str,
+        txt: str,
+        detail: Optional[str],
+        references: List[str],
+        original: str,
+        suggest: str,
+    ) -> None:
+        super().__init__(code, original=original, suggest=suggest)
+        self._txt = txt
+        self._detail = detail
+        self._references = references
+
+    @property
+    def description(self) -> str:
+        return self._txt
+
+    @property
+    def detail(self) -> Optional[str]:
+        return self._detail
+
+    @property
+    def references(self) -> List[str]:
+        return self._references
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = super().to_dict()
+        d["detail"] = self._detail
+        d["references"] = self._references
+        return d
 
 
 @register_error_class
@@ -1422,12 +1485,14 @@ class MultiwordErrorStream(MatchingStream):
         token_ctor = self._token_ctor
         len_tq = len(tq)
         len_replacement = len(replacement)
+        capfirst = False
         for i, replacement_word in enumerate(replacement):
             # !!! TODO: at_sentence_start
             _, m = db.lookup_g(replacement_word, False, False)
             if i == 0 and is_cap(tq[0].txt):
                 # Fix capitalization of the first word
                 # !!! TODO: handle all-uppercase
+                capfirst = True
                 replacement_word = replacement_word.capitalize()
             ct = token_ctor.Word(replacement_word, m)
             if i >= len_tq:
@@ -1440,16 +1505,20 @@ class MultiwordErrorStream(MatchingStream):
             else:
                 # Copy original text from corresponding phrase token
                 ct.original = tq[i].original
+            repstring = " ".join(replacement)
+            if capfirst:
+                repstring = repstring.capitalize()
+                capfirst = False
             if i == 0:
                 ct.set_error(
                     PhraseError(
                         MultiwordErrors.get_code(ix),
                         "Orðasambandið '{0}' var leiðrétt í '{1}'".format(
-                            " ".join(t.txt for t in tq), " ".join(replacement)
+                            " ".join(t.txt for t in tq), repstring
                         ),
                         span=len(replacement),
                         original=" ".join(t.txt for t in tq),
-                        suggest=" ".join(replacement),
+                        suggest=repstring,
                     )
                 )
             else:
@@ -1789,6 +1858,55 @@ def lookup_unknown_words(
         token.add_corrected_meanings(m)
         return token
 
+    def add_ritmyndir_error(token: CorrectToken) -> CorrectToken:
+        """Add an error with corresponding correct value and details given info in Ritmyndir"""
+        # TODO At the moment the code assumes only one correct value is available in data
+        code = Ritmyndir.get_code(token.txt)
+        if code in NEUTRAL_RITMYNDIR_CODES:
+            # Not an error
+            return token
+        corrected = Ritmyndir.get_correct_form(token.txt)
+        if not corrected:
+            # No correct value available
+            return token
+        _, m = db.lookup_g(corrected, at_sentence_start=at_sentence_start)
+        text, details, refs = get_details(code, token.txt, corrected, m[0].stofn)
+        token.set_error(RitmyndirError(code, text, details, refs, token.txt, corrected))
+        if corrected not in STOP_WORDS:
+            # Exclude most common foreign stop words
+            token.txt = emulate_case(corrected, template=token.txt)
+        token.add_corrected_meanings(m)
+        return token
+
+    def get_details(
+        code: str, txt: str, correct: str, lemma: str
+    ) -> Tuple[str, str, List[str]]:
+        """Return short and detailed descriptions for the error category plus a link to grammar references where possible"""
+        # text is the short version, about the category and the error.
+        # details is the long version with references.
+        standref, cat, det = RitmyndirDetails.DICT[code]
+        references: List[str] = []
+        text = "{}: '{}' -> '{}'".format(cat, txt, correct)
+        details = det
+        details = details.format(original=txt, correct=correct, lemma=lemma)
+        # Adding references to Ritreglur
+        if standref:
+            references = [get_reference(ref.strip()) for ref in standref.split(",")]
+        return text, details, references
+
+    def get_reference(ref: str) -> str:
+        # We get references to ritreglur.arnastofnun.is from ritmyndir_details in GreynirCorrect.conf
+        # TODO references to rettritun.arnastofnun.is
+        # Skoða ritreglur.arnastofnun.is og rettritun.arnastofnun.is
+        urltxt = RITREGLUR_URL
+        if "." in ref:
+            # Section of a chapter
+            urltxt = urltxt + ref.strip(".")
+        else:
+            # Whole chapter
+            urltxt = urltxt + ref + "."
+        return urltxt
+
     def only_suggest(token: CorrectToken, m: Sequence[BIN_Tuple]) -> bool:
         """Return True if we don't have high confidence in the proposed
         correction, so it will be suggested instead of applied"""
@@ -1899,6 +2017,16 @@ def lookup_unknown_words(
             continue
 
         # The token is a word
+
+        # Wrong word forms in Ritmyndir, more information than
+        # in UniqueErrors
+        if Ritmyndir.contains(token.txt):
+            rtok = add_ritmyndir_error(token)
+            at_sentence_start = False
+            # Update the context with the replaced token
+            context = (prev_context + tuple(rtok.txt.split()))[-3:]
+            yield rtok
+            continue
 
         # Check unique errors - some of those may have
         # BÍN annotations via the compounder
@@ -2427,10 +2555,15 @@ def late_fix_capitalization(
 
 def late_fix_merges(
     token_stream: Iterable[CorrectToken],
+    ignore_wordlist: Set[str],
 ) -> Iterator[CorrectToken]:
-    """Annotate tokens where error annotation
-    has disappeared due to token merging"""
+    """Annotate tokens where error annotation has disappeared due to token
+    merging and delete annotations for tokens in ignore wordlist"""
+    # TODO Double annotations for MW errors such as 'Ég vill' -> 'Ég vil'
+    # Where the error is placed by default on the first word instead of
+    # the word that changes (also could be many changes!)
     for token in token_stream:
+        # Add annotations if annotation has disappeared
         if (
             token.original
             and token.txt.strip() != token.original.strip()
@@ -2447,6 +2580,10 @@ def late_fix_merges(
                     suggest=token.txt,
                 ),
             )
+        # Remove all annotations and revert corrections for tokens in whitelist/wordlist
+        # NOTE: Only checks for the case present in the whitelist
+        if token.original and token.original.strip() in ignore_wordlist:
+            token.remove_error(token.original.strip())
         yield token
 
 
@@ -2726,6 +2863,8 @@ class CorrectionPipeline(DefaultPipeline):
         self._suppress_suggestions = options.pop("suppress_suggestions", False)
         # Only give suggestions, don't correct anything
         self._suggest_not_correct = options.pop("suggest_not_correct", False)
+        # Wordlist for words that should not be marked as errors or corrected
+        self._ignore_wordlist = options.pop("ignore_wordlist", set())
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """Add a correction pass just before BÍN annotation"""
@@ -2778,7 +2917,7 @@ class CorrectionPipeline(DefaultPipeline):
             ct_stream, self._db, token_ctor, self._only_ci
         )
 
-        ct_stream = late_fix_merges(ct_stream)
+        ct_stream = late_fix_merges(ct_stream, self._ignore_wordlist)
         return ct_stream
 
 
