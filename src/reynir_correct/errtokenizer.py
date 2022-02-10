@@ -35,7 +35,6 @@
 """
 
 from typing import (
-    Callable,
     Mapping,
     Sequence,
     cast,
@@ -90,7 +89,7 @@ from .settings import (
     Ritmyndir,
     RitmyndirDetails,
     IecNonwords,
-    Icesquer,
+    # Icesquer,
     Settings,
 )
 from .spelling import Corrector
@@ -353,14 +352,11 @@ class CorrectToken(Tok):
         return cls(TOK.WORD, txt, val, original)
 
     def __repr__(self) -> str:
-        return (
-            "<CorrectToken(kind: {0}, txt: '{1}', val: {2}, original: '{3}')>".format(
-                TOK.descr[self.kind], self.txt, self.val, self.original
-            )
+        return "<CorrectToken(kind: {0}, txt: '{1}', val: {2}, original: '{3}')>".format(
+            TOK.descr[self.kind], self.txt, self.val, self.original
         )
 
-    # Pylance currently needs a cast for this to work
-    __str__ = cast(Callable[[object], str], __repr__)
+    __str__ = __repr__
 
     def concatenate(
         self, other: Tok, *, separator: str = "", metadata_from_other: bool = False
@@ -887,10 +883,7 @@ class SpellingSuggestion(Error):
     ) -> None:
         # Spelling suggestion codes start with "W"
         super().__init__(
-            "W" + code,
-            is_warning=True,
-            original=original,
-            suggest=suggest,
+            "W" + code, is_warning=True, original=original, suggest=suggest,
         )
         self._suggestlist = suggestlist
         self._txt = txt
@@ -2167,11 +2160,7 @@ def lookup_unknown_words(
                     # We add the most likely candidate as the suggest value
                     token.set_error(
                         SpellingSuggestion(
-                            "002",
-                            text,
-                            token.txt,
-                            best_cand,
-                            final_sugg_list,
+                            "002", text, token.txt, best_cand, final_sugg_list,
                         )
                     )
                     # NOTE: We add each meaning. When the user picks a suggestion,
@@ -2596,8 +2585,7 @@ def late_fix_capitalization(
 
 
 def late_fix_merges(
-    token_stream: Iterable[CorrectToken],
-    ignore_wordlist: Set[str],
+    token_stream: Iterable[CorrectToken], ignore_wordlist: Set[str],
 ) -> Iterator[CorrectToken]:
     """Annotate tokens where error annotation has disappeared due to token
     merging and delete annotations for tokens in ignore wordlist"""
@@ -2609,7 +2597,7 @@ def late_fix_merges(
         if (
             token.original
             and token.txt.strip() != token.original.strip()
-            and isinstance(token, CorrectToken)
+            and isinstance(token, CorrectToken)  # type: ignore
             and not token.error
         ):
             token.set_error(

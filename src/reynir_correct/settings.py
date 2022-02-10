@@ -41,7 +41,7 @@
 
 """
 
-from typing import Dict, Set, List, Tuple, Mapping, Union, Optional, Any
+from typing import Dict, Set, List, Tuple, Mapping, Optional, Any
 import os
 import threading
 

@@ -2222,7 +2222,7 @@ class PatternMatcher:
                 return False
             return (lemma + "_" + case) in nouns
 
-        NOUNS_01 = {
+        NOUNS_01 = frozenset((
             "ósigur_þf",
             "hnekkir_þf",
             "álitshnekkir_þf",
@@ -2231,7 +2231,7 @@ class PatternMatcher:
             "færi_ef",
             "boð_ef",
             "átekt_ef",
-        }
+        ))
         # The macro %verb expands to "@'bjóða'" which matches terminals
         # whose corresponding token has a meaning with the 'bjóða' lemma.
         # The macro %noun is resolved by calling the function wrong_noun()
@@ -2250,7 +2250,7 @@ class PatternMatcher:
             )
         )
 
-        NOUNS_02 = {"haus_þgf", "þvottur_þgf"}
+        NOUNS_02 = frozenset(("haus_þgf", "þvottur_þgf"))
         cls.ctx_verb_02 = {"verb": "@'hegna'", "noun": partial(wrong_noun, NOUNS_02)}
         cls.add_pattern(
             (
@@ -2295,7 +2295,7 @@ class PatternMatcher:
             )
         )
 
-        NOUNS_AF_OBJ: Set[str] = {
+        NOUNS_AF_OBJ = frozenset((
             "aðgangur_þf",
             "aðgangur_nf",
             "drag_nf",
@@ -2313,7 +2313,7 @@ class PatternMatcher:
             "uppskrift_nf",
             "uppskrift_þf",
             # "grín_þf"
-        }
+        ))
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
         cls.ctx_noun_af_obj = {"noun": partial(wrong_noun_af, NOUNS_AF_OBJ)}
@@ -2475,7 +2475,7 @@ class PatternMatcher:
         )
 
         # Check errors in dir4loc
-        def dir4loc(verbs: Set[str], tree: SimpleTree) -> bool:
+        def dir4loc(verbs: FrozenSet[str], tree: SimpleTree) -> bool:
             """Context matching function for the %noun macro in combination
             with 'að'"""
             lemma = tree.own_lemma
@@ -2484,7 +2484,7 @@ class PatternMatcher:
                 return False
             return lemma in verbs
 
-        VERBS: FrozenSet[str] = frozenset(("safna", "kaupa", "læsa", "geyma"))
+        VERBS = frozenset(("safna", "kaupa", "læsa", "geyma"))
         # The macro %verb is resolved by calling the function dir4loc()
         # with the potentially matching tree node as an argument.
         cls.ctx_dir_loc = {"verb": partial(dir4loc, VERBS)}
@@ -2856,7 +2856,7 @@ class PatternMatcher:
             )
         )
 
-        def subjsing(nouns: Set[str], tree: SimpleTree) -> bool:
+        def subjsing(nouns: FrozenSet[str], tree: SimpleTree) -> bool:
             """Context matching function for the %noun macro"""
             if not tree.is_terminal:
                 return False
@@ -2868,7 +2868,7 @@ class PatternMatcher:
                 return False
             return lemma in nouns
 
-        NOUNS_NUM: FrozenSet[str] = frozenset(("þríeyki", "tvíeyki", "hluti", "hópur"))
+        NOUNS_NUM = frozenset(("þríeyki", "tvíeyki", "hluti", "hópur"))
         # The macro %noun is resolved by calling the function subjnum()
         # with the potentially matching tree node as an argument.
         cls.ctx_subjsing = {"noun": partial(subjsing, NOUNS_NUM)}

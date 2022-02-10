@@ -119,6 +119,9 @@ class AnnResultDict(TypedDict):
     tokens: List[AnnTokenDict]
 
 
+TokenSumType = List[Union[List[CorrectToken], CorrectToken]]
+
+
 # File types for UTF-8 encoded text files
 ReadFile = argparse.FileType("r", encoding="utf-8")
 WriteFile = argparse.FileType("w", encoding="utf-8")
@@ -183,30 +186,32 @@ def val(
     return t.val
 
 
-def check_errors(**options: Any) -> Optional[Union[str, Tuple]]:
+def check_errors(
+    **options: Any,
+) -> Union[str, Tuple[str, TokenSumType], Tuple[str, List[CorrectToken]]]:
     """Return a string in the chosen format and correction level using the spelling and grammar checker"""
-    if options["infile"] == sys.stdin and sys.stdin.isatty():
+    if options["infile"] is sys.stdin and sys.stdin.isatty():
         # terminal input is empty, most likely no value was given for infile:
         # Nothing we can do
         print("No input has been given, nothing can be returned")
-        raise ValueError
-    if options["all_errors"]:
+        sys.exit(1)
+    if options.get("all_errors"):
         return check_grammar(**options)
     else:
         return check_spelling(**options)
 
 
-def check_spelling(**options: Any) -> Union[str, Tuple]:
+def check_spelling(**options: Any) -> Union[str, Tuple[str, TokenSumType]]:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
+    format = options.get("format", "")
     if options["spaced"]:
         to_text = normalized_text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
     toks = sentence_stream(**options)
-    format = options.get("format", "")
     unisum: List[str] = []
-    toksum: List[Union[List[CorrectToken], CorrectToken]] = []
+    toksum: TokenSumType = []
     allsum: List[str] = []
     annlist: List[str] = []
     for toklist in toks:
@@ -268,7 +273,7 @@ def check_spelling(**options: Any) -> Union[str, Tuple]:
     return unistr
 
 
-def sentence_stream(**options) -> Iterator[List[CorrectToken]]:
+def sentence_stream(**options: str) -> Iterator[List[CorrectToken]]:
     """Yield a stream of sentence token lists from the source text"""
     # Initialize sentence accumulator list
     curr_sent: List[CorrectToken] = []
@@ -284,22 +289,21 @@ def sentence_stream(**options) -> Iterator[List[CorrectToken]]:
         yield curr_sent
 
 
-def check_grammar(**options: Any) -> Union[str, Tuple]:
+def check_grammar(**options: Any) -> Union[str, Tuple[str, List[CorrectToken]]]:
     """Do a full spelling and grammar check of the source text"""
 
     accumul: List[str] = []
     offset = 0
-    inneroptions: Dict[str, Union[str, bool]] = {}
-    inneroptions["annotate_unparsed_sentences"] = options.get(
-        "annotate_unparsed_sentences", True
-    )
+    annotate_unparsed_sentences = options.get("annotate_unparsed_sentences", True)
     alltoks: List[CorrectToken] = []
     annlist: List[str] = []
+    format = options.get("format", "")
     for toklist in sentence_stream(**options):
         len_tokens = len(toklist)
         # Invoke the spelling and grammar checker on the token list
-        # Only contains options relevant to the grammar check
-        sent = check_tokens(toklist, **inneroptions)
+        sent = check_tokens(
+            toklist, annotate_unparsed_sentences=annotate_unparsed_sentences
+        )
         if sent is None:
             # Should not happen?
             continue
@@ -337,7 +341,6 @@ def check_grammar(**options: Any) -> Union[str, Tuple]:
         # (more narrow/specific annotations before broader ones)
         a.sort(key=lambda ann: (ann.start, ann.end))
 
-        format = options.get("format", "")
         if format == "text" or format == "textplustoks":
             arev = sorted(a, key=lambda ann: (ann.start, ann.end), reverse=True)
             cleantoklist: List[CorrectToken] = toklist[:]
