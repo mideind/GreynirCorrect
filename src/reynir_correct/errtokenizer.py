@@ -90,7 +90,6 @@ from .settings import (
     Ritmyndir,
     RitmyndirDetails,
     IecNonwords,
-    Icesquer,
     Settings,
 )
 from .spelling import Corrector
@@ -1573,8 +1572,9 @@ WRONG_FORMERS: Mapping[str, str] = {
 }
 
 # Using these word parts results in a context-independent error
-# Attn.: Make sure these errors are available as a prefix
+# Attn.: Make sure these errors are available in prefix.txt in BinPackage
 WRONG_FORMERS_CI: Mapping[str, str] = {
+    "Atlandshafs": "Atlantshafs",
     "akríl": "akrýl",
     "dísel": "dísil",
     "eyrnar": "eyrna",
@@ -2124,7 +2124,7 @@ def lookup_unknown_words(
         # Check rare (or nonexistent) words and see if we have a potential correction
         elif not token.val or is_rare(token):
             # Yes, this is a rare word that needs further attention
-            if only_ci and token.txt[0].islower():
+            if only_ci and token.txt[0].islower():  # TODO add check_caps here
                 # Don't want to correct
                 # Don't want to tag capitalized words, mostly foreign entities
                 token.set_error(

@@ -35,7 +35,7 @@
 
 """
 
-from typing import DefaultDict, List, Tuple, Set, Union, Optional, Iterable, Callable
+from typing import DefaultDict, List, Tuple, Set, Optional, Iterable, Callable
 from typing import TYPE_CHECKING
 
 import math

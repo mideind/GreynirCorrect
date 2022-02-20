@@ -1392,20 +1392,22 @@ class Stats:
                                 cast(int, et["fn"]) if "fn" in et else 0,
                                 cast(int, et["fp"]) if "fp" in et else 0,
                                 cast(float, et["recall"]) * 100.0
-                                if ("recall" in et and et["recall"] > 0.0)
+                                if ("recall" in et and float(et["recall"]) > 0.0)
                                 else NO_RESULTS,  # Or "N/A", but that messes with the f-string formatting
                                 cast(float, et["precision"]) * 100.0
-                                if ("precision" in et and et["precision"] > 0.0)
+                                if ("precision" in et and float(et["precision"]) > 0.0)
                                 else NO_RESULTS,
                                 fscore * 100.0 if fscore > 0.0 else NO_RESULTS,
                                 cast(int, et["ctp"]) if "ctp" in et else 0,
                                 cast(int, et["cfn"]) if "cfn" in et else 0,
                                 cast(int, et["cfp"]) if "cfp" in et else 0,
                                 cast(float, et["crecall"]) * 100.0
-                                if ("crecall" in et and et["crecall"] > 0.0)
+                                if ("crecall" in et and float(et["crecall"]) > 0.0)
                                 else NO_RESULTS,
                                 cast(float, et["cprecision"]) * 100.0
-                                if ("cprecision" in et and et["cprecision"] > 0.0)
+                                if (
+                                    "cprecision" in et and float(et["cprecision"]) > 0.0
+                                )
                                 else NO_RESULTS,
                                 cfscore * 100.0 if cfscore > 0.0 else NO_RESULTS,
                             )
@@ -1416,12 +1418,12 @@ class Stats:
                             subfp += cast(int, et["fp"]) if "fp" in et else 0
                             subrecall += (
                                 cast(float, et["recall"]) * freq * 100.0
-                                if ("recall" in et and et["recall"] > 0.0)
+                                if ("recall" in et and float(et["recall"]) > 0.0)
                                 else 0.0
                             )
                             subprecision += (
                                 cast(float, et["precision"]) * freq * 100.0
-                                if ("precision" in et and et["precision"] > 0.0)
+                                if ("precision" in et and float(et["precision"]) > 0.0)
                                 else 0.0
                             )
                             subf += fscore * freq * 100.0 if fscore > 0.0 else 0.0
@@ -1430,12 +1432,14 @@ class Stats:
                             subcfp += cast(int, et["cfp"]) if "cfp" in et else 0
                             subcrecall += (
                                 cast(float, et["crecall"]) * freq * 100.0
-                                if ("crecall" in et and et["crecall"] > 0.0)
+                                if ("crecall" in et and float(et["crecall"]) > 0.0)
                                 else 0.0
                             )
                             subcprecision += (
                                 cast(float, et["cprecision"]) * freq * 100.0
-                                if ("cprecision" in et and et["cprecision"] > 0.0)
+                                if (
+                                    "cprecision" in et and float(et["cprecision"]) > 0.0
+                                )
                                 else 0.0
                             )
                             subcf += cfscore * freq * 100.0 if cfscore > 0.0 else 0.0

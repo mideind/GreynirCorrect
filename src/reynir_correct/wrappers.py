@@ -35,7 +35,6 @@
             as a generator. Default value is sys.stdin
     format: Defines the output format. String. 
             text: Output is returned as a corrected version of the input.
-            textplustoks: Output is returned as a tuple of the output text and tokens.
             json: Output is returned as a JSON string.
             csv:  Output is returned in a csv format.
             m2:   Output is returned in the M2 format, see https://github.com/nusnlp/m2scorer
@@ -48,7 +47,7 @@
     annotations: If True, can all error annotations are returned at the end of the output. Works with format text.
     generate_suggestion_list: If True, the annotation can in certain cases contain a list of possible corrections, for the user to pick from.
     suppress_suggestions: If True, more farfetched automatically retrieved corrections are rejected and no error is added.
-    ignore_wordlist: The value is a set of strings. Each string is a word that should not be marked as an error or corrected.
+    ignore_wordlist: The value is a set of strings, a whitelist. Each string is a word that should not be marked as an error or corrected.
     one_sent: Defines input as containing only one sentence.
 """
 
@@ -183,7 +182,7 @@ def val(
     return t.val
 
 
-def check_errors(**options: Any) -> Optional[Union[str, Tuple]]:
+def check_errors(**options: Any) -> str:
     """Return a string in the chosen format and correction level using the spelling and grammar checker"""
     if options["infile"] == sys.stdin and sys.stdin.isatty():
         # terminal input is empty, most likely no value was given for infile:
@@ -196,7 +195,7 @@ def check_errors(**options: Any) -> Optional[Union[str, Tuple]]:
         return check_spelling(**options)
 
 
-def check_spelling(**options: Any) -> Union[str, Tuple]:
+def check_spelling(**options: Any) -> str:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
     if options["spaced"]:
@@ -206,7 +205,6 @@ def check_spelling(**options: Any) -> Union[str, Tuple]:
     toks = sentence_stream(**options)
     format = options.get("format", "")
     unisum: List[str] = []
-    toksum: List[Union[List[CorrectToken], CorrectToken]] = []
     allsum: List[str] = []
     annlist: List[str] = []
     for toklist in toks:
@@ -220,13 +218,6 @@ def check_spelling(**options: Any) -> Union[str, Tuple]:
                     txt = txt + "\n" + "\n".join(annlist)
                     annlist = []
             unisum.append(txt)
-            continue
-        elif format == "textplustoks":
-            unisum.append(to_text(toklist))
-            if options.get("print_all", False):
-                toksum.extend(toklist)
-            else:
-                toksum.append(toklist)
             continue
         for t in toklist:
             if format == "csv":
@@ -263,12 +254,10 @@ def check_spelling(**options: Any) -> Union[str, Tuple]:
             unistr = unistr + "\n" + "\n".join(annlist)
     else:
         unistr = "\n".join(unisum)
-    if toksum:
-        return unistr, toksum
     return unistr
 
 
-def sentence_stream(**options) -> Iterator[List[CorrectToken]]:
+def sentence_stream(**options: Any) -> Iterator[List[CorrectToken]]:
     """Yield a stream of sentence token lists from the source text"""
     # Initialize sentence accumulator list
     curr_sent: List[CorrectToken] = []
@@ -284,7 +273,7 @@ def sentence_stream(**options) -> Iterator[List[CorrectToken]]:
         yield curr_sent
 
 
-def check_grammar(**options: Any) -> Union[str, Tuple]:
+def check_grammar(**options: Any) -> str:
     """Do a full spelling and grammar check of the source text"""
 
     accumul: List[str] = []
@@ -293,7 +282,6 @@ def check_grammar(**options: Any) -> Union[str, Tuple]:
     inneroptions["annotate_unparsed_sentences"] = options.get(
         "annotate_unparsed_sentences", True
     )
-    alltoks: List[CorrectToken] = []
     annlist: List[str] = []
     for toklist in sentence_stream(**options):
         len_tokens = len(toklist)
@@ -341,7 +329,6 @@ def check_grammar(**options: Any) -> Union[str, Tuple]:
         if format == "text" or format == "textplustoks":
             arev = sorted(a, key=lambda ann: (ann.start, ann.end), reverse=True)
             cleantoklist: List[CorrectToken] = toklist[:]
-            alltoks.extend(cleantoklist)
             for xann in arev:
                 if xann.suggest is None:
                     # Nothing to correct with, nothing we can do
@@ -429,6 +416,4 @@ def check_grammar(**options: Any) -> Union[str, Tuple]:
     else:
         accumstr = "\n".join(accumul)
 
-    if format == "textplustoks":
-        return (accumstr, alltoks)
     return accumstr

@@ -13,6 +13,7 @@ from typing import (
     Iterable,
     Dict,
     Union,
+    Set,
 )
 import sys
 import argparse
@@ -40,7 +41,7 @@ def gen(f: Iterator[str]) -> Iterable[str]:
 
 def main():
 
-    options: Dict[str, Union[str, bool]] = {}
+    options: Dict[str, Union[str, bool, Set[str]]] = {}
     # Hægt að biðja um annað til að fá frekari upplýsingar!
     options["format"] = "text"  # text, json, csv, m2, textplustoks
     options["annotations"] = True
@@ -50,7 +51,8 @@ def main():
     # options["generate_suggestion_list"] = True
     options["ignore_comments"] = True
     options["annotate_unparsed_sentences"] = True
-    options["ignore_wordlist"] = set([])
+    wlset: Set[str] = set([])
+    options["ignore_wordlist"] = wlset
     options["spaced"] = False
     options["print_all"] = True
     args = parser.parse_args()
