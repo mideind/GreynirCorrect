@@ -38,7 +38,7 @@
 
 import reynir_correct as rc
 from reynir_correct import detokenize
-from reynir_correct.wrappers import check_errors
+from reynir_correct.wrappers import test_grammar as check_errors
 
 # Tests for errtokenizer.py
 
@@ -60,8 +60,6 @@ def normalize(g):
 def check(p):
     """Return a corrected, normalized string form of the input along with the tokens"""
     options: Dict[str, Union[str, bool]] = {}
-    options["format"] = "textplustoks"
-    options["all_errors"] = True
     options["infile"] = [p]
     options["one_sent"] = False
 
