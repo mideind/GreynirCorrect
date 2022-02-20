@@ -14,7 +14,6 @@ from typing import (
     Dict,
     Set,
     Union,
-    Set,
 )
 import sys
 import argparse
@@ -44,7 +43,7 @@ def main() -> None:
 
     options: Dict[str, Union[str, bool, Set[str]]] = {}
     # Hægt að biðja um annað til að fá frekari upplýsingar!
-    options["format"] = "text"  # text, json, csv, m2, textplustoks
+    options["format"] = "text"  # text, json, csv, m2
     options["annotations"] = True
     options["all_errors"] = True
     # options["infile"] = open("prufa.txt", "r")

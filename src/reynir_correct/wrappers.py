@@ -202,7 +202,7 @@ def check_spelling(**options: Any) -> str:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
     format = options.get("format", "")
-    if options["spaced"]:
+    if options.get("spaced", False):
         to_text = normalized_text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
@@ -260,6 +260,38 @@ def check_spelling(**options: Any) -> str:
     return unistr
 
 
+def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
+    # Initialize sentence accumulator list
+    # Function to convert a token list to output text
+    if options.get("spaced", False):
+        to_text = normalized_text_from_tokens
+    else:
+        to_text = partial(detokenize, normalize=True)
+    toks = sentence_stream(**options)
+    unisum: List[str] = []
+    toksum: TokenSumType = []
+    allsum: List[str] = []
+    annlist: List[str] = []
+    for toklist in toks:
+        unisum.append(to_text(toklist))
+        if options.get("print_all", False):
+            toksum.extend(toklist)
+        else:
+            toksum.append(toklist)
+        continue
+        if allsum:
+            unisum.extend(allsum)
+            allsum = []
+    if options.get("print_all", False):
+        # We want the annotations at the bottom
+        unistr = " ".join(unisum)
+        if annlist:
+            unistr = unistr + "\n" + "\n".join(annlist)
+    else:
+        unistr = "\n".join(unisum)
+    return unistr, toksum
+
+
 def sentence_stream(**options: Any) -> Iterator[List[CorrectToken]]:
     """Yield a stream of sentence token lists from the source text"""
     # Initialize sentence accumulator list
@@ -276,6 +308,69 @@ def sentence_stream(**options: Any) -> Iterator[List[CorrectToken]]:
         yield curr_sent
 
 
+def test_grammar(**options: Any) -> Tuple[str, TokenSumType]:
+    """Do a full spelling and grammar check of the source text"""
+
+    accumul: List[str] = []
+    offset = 0
+    alltoks: TokenSumType = []
+    inneroptions: Dict[str, Union[str, bool]] = {}
+    inneroptions["annotate_unparsed_sentences"] = options.get(
+        "annotate_unparsed_sentences", True
+    )
+    annlist: List[str] = []
+    for toklist in sentence_stream(**options):
+        # Invoke the spelling and grammar checker on the token list
+        # Only contains options relevant to the grammar check
+        sent = check_tokens(toklist, **inneroptions)
+        if sent is None:
+            # Should not happen?
+            continue
+
+        # Maintain token character offsets, accumulated over the entire source text
+        token_offsets: Dict[int, int] = dict()
+        for ix, t in enumerate(toklist):
+            token_offsets[ix] = offset
+            offset += len(t.original or t.txt or "")
+
+        # Extract the annotation list (defensive programming here)
+        a: List[Annotation] = getattr(sent, "annotations", cast(List[Annotation], []))
+        # Sort in ascending order by token start index, and then by end index
+        # (more narrow/specific annotations before broader ones)
+        a.sort(key=lambda ann: (ann.start, ann.end))
+
+        arev = sorted(a, key=lambda ann: (ann.start, ann.end), reverse=True)
+        cleantoklist: List[CorrectToken] = toklist[:]
+        alltoks.extend(cleantoklist)
+        for xann in arev:
+            if xann.suggest is None:
+                # Nothing to correct with, nothing we can do
+                continue
+            cleantoklist[xann.start + 1].txt = xann.suggest
+            if xann.end > xann.start:
+                # Annotation spans many tokens
+                # "Okkur börnunum langar í fisk"
+                # "Leita að kílómeter af féinu" → leita að kílómetri af fénu → leita að kílómetra af fénu
+                # "dást af þeim" → "dást að þeim"
+                # Single-token annotations for this span have already been handled
+                # Only case is one ann, many toks in toklist
+                # Give the first token the correct value
+                # Delete the other tokens
+                del cleantoklist[xann.start + 2 : xann.end + 2]
+        txt = detokenize(cleantoklist, normalize=True)
+        if options.get("annotations", False):
+            for aann in a:
+                annlist.append(str(aann))
+            if annlist and not options.get("print_all", False):
+                txt = txt + "\n" + "\n".join(annlist)
+                annlist = []
+        accumul.append(txt)
+
+    accumstr = "\n".join(accumul)
+
+    return accumstr, alltoks
+
+
 def check_grammar(**options: Any) -> str:
     """Do a full spelling and grammar check of the source text"""
 
@@ -290,9 +385,8 @@ def check_grammar(**options: Any) -> str:
     for toklist in sentence_stream(**options):
         len_tokens = len(toklist)
         # Invoke the spelling and grammar checker on the token list
-        sent = check_tokens(
-            toklist, annotate_unparsed_sentences=annotate_unparsed_sentences
-        )
+        # Only contains options relevant to the grammar check
+        sent = check_tokens(toklist, **inneroptions)
         if sent is None:
             # Should not happen?
             continue
