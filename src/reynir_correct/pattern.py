@@ -2488,7 +2488,7 @@ class PatternMatcher:
                 return False
             return lemma in verbs
 
-        VERBS: FrozenSet[str] = frozenset(("safna", "kaupa", "læsa", "geyma"))
+        VERBS = frozenset(("safna", "kaupa", "læsa", "geyma"))
         # The macro %verb is resolved by calling the function dir4loc()
         # with the potentially matching tree node as an argument.
         cls.ctx_dir_loc = {"verb": partial(dir4loc, VERBS)}
@@ -2872,7 +2872,7 @@ class PatternMatcher:
                 return False
             return lemma in nouns
 
-        NOUNS_NUM: FrozenSet[str] = frozenset(("þríeyki", "tvíeyki", "hluti", "hópur"))
+        NOUNS_NUM = frozenset(("þríeyki", "tvíeyki", "hluti", "hópur"))
         # The macro %noun is resolved by calling the function subjnum()
         # with the potentially matching tree node as an argument.
         cls.ctx_subjsing = {"noun": partial(subjsing, NOUNS_NUM)}
