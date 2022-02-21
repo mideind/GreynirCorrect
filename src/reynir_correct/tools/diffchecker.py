@@ -49,10 +49,9 @@ def main() -> None:
     # options["infile"] = open("prufa.txt", "r")
     options["one_sent"] = False
     # options["generate_suggestion_list"] = True
-    options["ignore_comments"] = True
+    options["ignore_comments"] = True  # Only used here
     options["annotate_unparsed_sentences"] = True
-    wlset: Set[str] = set([])
-    options["ignore_wordlist"] = wlset
+    options["ignore_wordlist"] = set()
     options["spaced"] = False
     options["print_all"] = True
     args = parser.parse_args()
