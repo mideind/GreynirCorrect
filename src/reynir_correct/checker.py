@@ -348,7 +348,7 @@ class GreynirCorrect(Greynir):
                         end=len(sent.tokens) - 1,
                         code="E001",
                         text="Málsgreinin fellur ekki að reglum",
-                        detail="Þáttun brást í kring um {0}. tóka ('{1}')".format(
+                        detail="Þáttun brást í kringum {0}. tóka ('{1}')".format(
                             err_index + 1, toktext
                         ),
                     )

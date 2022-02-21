@@ -43,13 +43,13 @@ def main() -> None:
 
     options: Dict[str, Union[str, bool, Set[str]]] = {}
     # Hægt að biðja um annað til að fá frekari upplýsingar!
-    options["format"] = "text"  # text, json, csv, m2, textplustoks
+    options["format"] = "text"  # text, json, csv, m2
     options["annotations"] = True
     options["all_errors"] = True
     # options["infile"] = open("prufa.txt", "r")
     options["one_sent"] = False
     # options["generate_suggestion_list"] = True
-    options["ignore_comments"] = True
+    options["ignore_comments"] = True  # Only used here
     options["annotate_unparsed_sentences"] = True
     options["ignore_wordlist"] = set()
     options["spaced"] = False

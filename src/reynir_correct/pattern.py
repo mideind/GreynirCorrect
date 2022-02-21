@@ -2222,16 +2222,18 @@ class PatternMatcher:
                 return False
             return (lemma + "_" + case) in nouns
 
-        NOUNS_01 = frozenset((
-            "ósigur_þf",
-            "hnekkir_þf",
-            "álitshnekkir_þf",
-            "afhroð_þf",
-            "bani_þf",
-            "færi_ef",
-            "boð_ef",
-            "átekt_ef",
-        ))
+        NOUNS_01: FrozenSet[str] = frozenset(
+            [
+                "ósigur_þf",
+                "hnekkir_þf",
+                "álitshnekkir_þf",
+                "afhroð_þf",
+                "bani_þf",
+                "færi_ef",
+                "boð_ef",
+                "átekt_ef",
+            ]
+        )
         # The macro %verb expands to "@'bjóða'" which matches terminals
         # whose corresponding token has a meaning with the 'bjóða' lemma.
         # The macro %noun is resolved by calling the function wrong_noun()
@@ -2250,7 +2252,7 @@ class PatternMatcher:
             )
         )
 
-        NOUNS_02 = frozenset(("haus_þgf", "þvottur_þgf"))
+        NOUNS_02: FrozenSet[str] = frozenset(["haus_þgf", "þvottur_þgf"])
         cls.ctx_verb_02 = {"verb": "@'hegna'", "noun": partial(wrong_noun, NOUNS_02)}
         cls.add_pattern(
             (
@@ -2295,25 +2297,27 @@ class PatternMatcher:
             )
         )
 
-        NOUNS_AF_OBJ = frozenset((
-            "aðgangur_þf",
-            "aðgangur_nf",
-            "drag_nf",
-            "drag_þf",
-            "grunnur_nf",
-            "grunnur_þf",
-            "hugmynd_nf",
-            "hugmynd_þf",
-            "leit_nf",
-            "leit_þf",
-            "dauðaleit_nf",
-            "dauðaleit_þf",
-            "lykill_nf",
-            "lykill_þf",
-            "uppskrift_nf",
-            "uppskrift_þf",
-            # "grín_þf"
-        ))
+        NOUNS_AF_OBJ: FrozenSet[str] = frozenset(
+            [
+                "aðgangur_þf",
+                "aðgangur_nf",
+                "drag_nf",
+                "drag_þf",
+                "grunnur_nf",
+                "grunnur_þf",
+                "hugmynd_nf",
+                "hugmynd_þf",
+                "leit_nf",
+                "leit_þf",
+                "dauðaleit_nf",
+                "dauðaleit_þf",
+                "lykill_nf",
+                "lykill_þf",
+                "uppskrift_nf",
+                "uppskrift_þf",
+                # "grín_þf"
+            ]
+        )
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
         cls.ctx_noun_af_obj = {"noun": partial(wrong_noun_af, NOUNS_AF_OBJ)}

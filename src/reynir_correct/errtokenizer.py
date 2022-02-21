@@ -89,7 +89,6 @@ from .settings import (
     Ritmyndir,
     RitmyndirDetails,
     IecNonwords,
-    # Icesquer,
     Settings,
 )
 from .spelling import Corrector
@@ -352,8 +351,10 @@ class CorrectToken(Tok):
         return cls(TOK.WORD, txt, val, original)
 
     def __repr__(self) -> str:
-        return "<CorrectToken(kind: {0}, txt: '{1}', val: {2}, original: '{3}')>".format(
-            TOK.descr[self.kind], self.txt, self.val, self.original
+        return (
+            "<CorrectToken(kind: {0}, txt: '{1}', val: {2}, original: '{3}')>".format(
+                TOK.descr[self.kind], self.txt, self.val, self.original
+            )
         )
 
     __str__ = __repr__
@@ -883,7 +884,10 @@ class SpellingSuggestion(Error):
     ) -> None:
         # Spelling suggestion codes start with "W"
         super().__init__(
-            "W" + code, is_warning=True, original=original, suggest=suggest,
+            "W" + code,
+            is_warning=True,
+            original=original,
+            suggest=suggest,
         )
         self._suggestlist = suggestlist
         self._txt = txt
@@ -1566,8 +1570,9 @@ WRONG_FORMERS: Mapping[str, str] = {
 }
 
 # Using these word parts results in a context-independent error
-# Attn.: Make sure these errors are available as a prefix
+# Attn.: Make sure these errors are available in prefix.txt in BinPackage
 WRONG_FORMERS_CI: Mapping[str, str] = {
+    "Atlandshafs": "Atlantshafs",
     "akríl": "akrýl",
     "dísel": "dísil",
     "eyrnar": "eyrna",
@@ -2117,7 +2122,7 @@ def lookup_unknown_words(
         # Check rare (or nonexistent) words and see if we have a potential correction
         elif not token.val or is_rare(token):
             # Yes, this is a rare word that needs further attention
-            if only_ci and token.txt[0].islower():
+            if only_ci and token.txt[0].islower():  # TODO add check_caps here
                 # Don't want to correct
                 # Don't want to tag capitalized words, mostly foreign entities
                 token.set_error(
@@ -2160,7 +2165,11 @@ def lookup_unknown_words(
                     # We add the most likely candidate as the suggest value
                     token.set_error(
                         SpellingSuggestion(
-                            "002", text, token.txt, best_cand, final_sugg_list,
+                            "002",
+                            text,
+                            token.txt,
+                            best_cand,
+                            final_sugg_list,
                         )
                     )
                     # NOTE: We add each meaning. When the user picks a suggestion,
@@ -2585,7 +2594,8 @@ def late_fix_capitalization(
 
 
 def late_fix_merges(
-    token_stream: Iterable[CorrectToken], ignore_wordlist: Set[str],
+    token_stream: Iterable[CorrectToken],
+    ignore_wordlist: Set[str],
 ) -> Iterator[CorrectToken]:
     """Annotate tokens where error annotation has disappeared due to token
     merging and delete annotations for tokens in ignore wordlist"""
@@ -2891,7 +2901,7 @@ class CorrectionPipeline(DefaultPipeline):
         self._generate_suggestion_list = options.pop("generate_suggestion_list", False)
         # Skip spelling suggestions
         self._suppress_suggestions = options.pop("suppress_suggestions", False)
-        # Only give suggestions, don't correct anything
+        # Only give suggestions, don't correct anything automatically
         self._suggest_not_correct = options.pop("suggest_not_correct", False)
         # Wordlist for words that should not be marked as errors or corrected
         self._ignore_wordlist = options.pop("ignore_wordlist", set())

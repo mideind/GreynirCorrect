@@ -37,7 +37,7 @@
 from typing import Iterable, cast
 import reynir_correct as rc
 import tokenizer
-from reynir_correct.wrappers import check_errors
+from reynir_correct.wrappers import test_spelling as check_errors
 
 
 def dump(tokens):
@@ -65,9 +65,7 @@ def roundtrip(s: str) -> str:
 def check(p):
     """Return a corrected, normalized string form of the input along with the tokens"""
     options: Dict[str, Union[str, bool]] = {}
-    options["format"] = "textplustoks"
     options["spaced"] = False
-    options["all_errors"] = False  # Only token-level annotation performed
     options["infile"] = [p]
     options["one_sent"] = False
     options[
