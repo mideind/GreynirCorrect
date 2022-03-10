@@ -76,12 +76,11 @@ class AnnotationDict(TypedDict):
     suggest: Optional[str]
 
 
-# AnnotationDict = Dict[str, Union[str, int, None]]
 AnnotationTuple2 = Tuple[str, str]
 AnnotationTuple4 = Tuple[str, int, int, str]
 AnnotationTuple6 = Tuple[str, str, int, int, str, str]
 AnnotationReturn = Union[
-    str, AnnotationTuple2, AnnotationTuple4, AnnotationTuple6, AnnotationDict
+    None, str, AnnotationTuple2, AnnotationTuple4, AnnotationTuple6, AnnotationDict
 ]
 AnnotationFunc = Callable[[str, str, Node], AnnotationReturn]
 
@@ -669,7 +668,7 @@ class ErrorFinder(ParseForestNavigator):
             suggest=suggestion,
         )
 
-    def VillaÍTölu(self, txt: str, variants: str, node: Node) -> AnnotationDict:
+    def VillaÍTölu(self, txt: str, variants: str, node: Node) -> Optional[AnnotationDict]:
         # Sögn á að vera í sömu tölu og frumlag
         children = list(node.enum_child_nodes())
         ch0, ch1 = children
@@ -712,13 +711,17 @@ class ErrorFinder(ParseForestNavigator):
             v -= {"ft"}
             v.add("et")
         suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, "so", v)
+        suggest = emulate_case(suggest, template=origin)
+        if suggest == origin:
+            # Avoid meaningless annotation
+            return None
         return AnnotationDict(
             text="Sögnin á sennilega að vera í {1}, þ.e. '{0}'".format(suggest, number),
             detail=detail,
             start=start,
             end=end,
             original=origin,
-            suggest=emulate_case(suggest, template=origin),
+            suggest=suggest,
         )
 
     def VillaFsMeðFallstjórn(

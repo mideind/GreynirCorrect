@@ -204,7 +204,8 @@ class PatternMatcher:
         if cat == "so":
             # Get rid of irrelevant variants for verbs
             realvars = set(variants) - SKIPVARS
-            if "lh" not in realvars:
+            if "lhþt" not in realvars:
+                # No need for cases if this is not LHÞT
                 realvars -= ALL_CASES
         else:
             realvars = variants

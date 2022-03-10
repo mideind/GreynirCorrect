@@ -326,6 +326,20 @@ def test_corrected_meanings(rc: reynir_correct.GreynirCorrect) -> None:
     )
 
 
+def test_lhþt_variant(rc: reynir_correct.GreynirCorrect) -> None:
+    """Check for a regression in the handling of LHÞT variants in BinPackage"""
+    s = (
+        "Minna þekkt eru sem dæmi rafgas og kvarka-límeindarafgas, "
+        "Bose-Einstein þétting og oddskiptaeindaþétting, sérstætt efni, "
+        "vökvakristall, ofurstraumefni og ofurþéttefni og einnig "
+        "meðseglunar- og járnseglunarhamir segulmagnaðra efna."
+    )
+    try:
+        rc.parse_single(s)
+    except ValueError:
+        assert False, "Regression in handling of LHÞT variants in BinPackage"
+
+
 if __name__ == "__main__":
 
     from reynir_correct import GreynirCorrect
