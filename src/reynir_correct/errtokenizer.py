@@ -1872,6 +1872,10 @@ def lookup_unknown_words(
             return token
         _, m = db.lookup_g(corrected, at_sentence_start=at_sentence_start)
         text, details, refs = get_details(code, token.txt, corrected, m[0].stofn)
+        if not details:
+            # Code not found in collection
+            print("Code not found: {}".format(code))
+            return token
         token.set_error(RitmyndirError(code, text, details, refs, token.txt, corrected))
         if corrected not in STOP_WORDS:
             # Exclude most common foreign stop words
@@ -1885,7 +1889,7 @@ def lookup_unknown_words(
         """Return short and detailed descriptions for the error category plus a link to grammar references where possible"""
         # text is the short version, about the category and the error.
         # details is the long version with references.
-        standref, cat, det = RitmyndirDetails.DICT[code]
+        standref, cat, det = RitmyndirDetails.DICT.get(code, ("", "", ""))
         references: List[str] = []
         text = "{}: '{}' -> '{}'".format(cat, txt, correct)
         details = det
