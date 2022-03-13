@@ -234,6 +234,9 @@ class PatternMatcher:
             "forsetninguna 'að', ekki 'af'.".format(vp.tidy_text)
         )
         suggest = match.substituted_text(pp_af, "að")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -266,6 +269,9 @@ class PatternMatcher:
             "forsetninguna 'af', ekki 'að'.".format(vp.tidy_text)
         )
         suggest = match.substituted_text(pp_að, "af")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -296,6 +302,9 @@ class PatternMatcher:
             "Í samhenginu 'að spyrja að e-u' er notuð " "forsetningin 'að', ekki 'af'."
         )
         suggest = self.suggestion_complex(match, "spyrja", "af")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -326,6 +335,9 @@ class PatternMatcher:
             "forsetningin 'að', ekki 'af'."
         )
         suggest = self.suggestion_complex(match, "vitni", "af")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -362,6 +374,9 @@ class PatternMatcher:
             "Í samhenginu 'gera grín að e-u' er notuð " "forsetningin 'að', ekki 'af'."
         )
         suggest = self.suggestion_complex(match, "grín", "af")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -397,6 +412,9 @@ class PatternMatcher:
             "forsetningin 'að', ekki 'af'.".format(np.tidy_text)
         )
         suggest = self.suggestion_complex(match, "leiða", "af")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -438,6 +456,9 @@ class PatternMatcher:
             "forsetningin 'að', ekki 'af'."
         )
         suggest = self.suggestion_complex(match, lemma, "af")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -476,6 +497,9 @@ class PatternMatcher:
             "forsetningin 'að', ekki 'af'."
         )
         suggest = self.suggestion_complex(match, "leggja", "af")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -506,6 +530,9 @@ class PatternMatcher:
             "forsetningin 'að', ekki 'af'."
         )
         suggest = self.suggestion_complex(match, "utan", "af")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -542,6 +569,9 @@ class PatternMatcher:
             "forsetningin 'að', ekki 'af'."
         )
         suggest = self.suggestion_complex(match, "uppvís", "af")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -581,6 +611,9 @@ class PatternMatcher:
             "Í samhenginu 'að verða að ósk' er notuð " "forsetningin 'að', ekki 'af'."
         )
         suggest = self.suggestion_complex(match, "verða", "af")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -628,6 +661,9 @@ class PatternMatcher:
             "forsetningin 'af', ekki 'að'."
         )
         suggest = self.suggestion_complex(match, "áhyggja", "að")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -651,6 +687,9 @@ class PatternMatcher:
         text = "'hluti að' á sennilega að vera 'hluti af'"
         detail = "Í samhenginu 'hluti af e-u' er notuð forsetningin 'af', ekki 'að'."
         suggest = self.suggestion_complex(match, "hluti", "að")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -676,6 +715,9 @@ class PatternMatcher:
             "Í samhenginu 'leggja e-ð af mörkum' er notuð "
             "forsetningin 'af', ekki 'að'."
         )
+        if suggest == pp.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -700,6 +742,9 @@ class PatternMatcher:
             "Í samhenginu 'láta gott af sér leiða' er notuð "
             "forsetningin 'af', ekki 'að'."
         )
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -728,6 +773,9 @@ class PatternMatcher:
             "Í samhenginu 'fá/hljóta heiðurinn af' er notuð "
             "forsetningin 'af', ekki 'að'."
         )
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -770,6 +818,9 @@ class PatternMatcher:
             f"Orðasambandið '{match.tidy_text}' tekur yfirleitt með sér "
             f"forsetninguna 'af', ekki 'að'."
         )
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -801,6 +852,9 @@ class PatternMatcher:
             suggest = self.suggestion_complex(match, "fullur", "að")
         if suggest == "":
             return
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -822,6 +876,9 @@ class PatternMatcher:
             "forsetninguna 'af', ekki 'að'."
         )
         suggest = self.suggestion_complex(match, "gagn", "að")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -848,6 +905,9 @@ class PatternMatcher:
             "forsetninguna 'af', ekki 'að'."
         )
         suggest = self.suggestion_complex(match, "frétt", "að")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -875,6 +935,9 @@ class PatternMatcher:
             "Orðasambandið 'að stafa af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -903,6 +966,9 @@ class PatternMatcher:
             "forsetninguna 'af', ekki 'að'."
         )
         suggest = self.suggestion_complex(match, "óléttur", "að")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -931,6 +997,9 @@ class PatternMatcher:
             "Orðasambandið 'að heyra af e-u' tekur yfirleitt með sér "
             "forsetninguna 'af', ekki 'að'."
         )
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -959,6 +1028,9 @@ class PatternMatcher:
             "forsetninguna 'af', ekki 'að'."
         )
         suggest = self.suggestion_complex(match, "gaman", "að")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -980,6 +1052,9 @@ class PatternMatcher:
             "Í samhenginu 'heillaður af e-u' er notuð " "forsetningin 'af', ekki 'að'."
         )
         suggest = self.suggestion_complex(match, "heillaður", "að")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1013,6 +1088,9 @@ class PatternMatcher:
             "forsetninguna 'af', ekki 'að'."
         )
         suggest = self.suggestion_complex(match, lemma, "að")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1043,6 +1121,9 @@ class PatternMatcher:
             f"Í samhenginu '{match.tidy_text}' er rétt að nota "
             f"forsetninguna 'af' í stað 'að'."
         )
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1075,6 +1156,9 @@ class PatternMatcher:
                 NounPhrase(place), correct_preposition
             )
         )
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1096,6 +1180,9 @@ class PatternMatcher:
         detail = text
         tidy_text = match.tidy_text
         suggest = tidy_text.replace("birginn", "byrginn", 1)
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1133,6 +1220,7 @@ class PatternMatcher:
             )
         )
         suggest = ""
+        # TODO get better suggest value
         self._ann.append(
             Annotation(
                 start=start,
@@ -1164,6 +1252,9 @@ class PatternMatcher:
             )
         )
         suggest = match.substituted_text(pp_af, "að")
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1222,6 +1313,10 @@ class PatternMatcher:
             f"Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
             "svokallað dvalarhorf ('Ég er ekki að skilja þetta')."
         )
+        # TODO better original value!
+        if suggest == "vera að":
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1262,6 +1357,9 @@ class PatternMatcher:
                 narrow_match, correction, adv.tidy_text
             )
         )
+        if correction == adv.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1285,6 +1383,9 @@ class PatternMatcher:
             match.tidy_text, correction, p.tidy_text
         )
         suggest = match.tidy_text.replace(p.tidy_text, correction)
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1326,6 +1427,9 @@ class PatternMatcher:
                 context, correction, advp.tidy_text
             )
         )
+        if correction == advp.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1352,6 +1456,9 @@ class PatternMatcher:
                 match.tidy_text, correction, advp.tidy_text
             )
         )
+        if correction == advp.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1494,6 +1601,9 @@ class PatternMatcher:
             "Hér er notuð tvöföld ákveðni, þ.e. ábendingarfornafn á undan "
             "nafnorði með greini. Það er ekki í samræmi við viðtekinn málstaðal."
         )
+        if suggest == match.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1547,7 +1657,9 @@ class PatternMatcher:
         for ann in self._ann:
             if ann.code in generic and ann.start == start and ann.end == end:
                 self._ann.remove(ann)
-
+        if suggest == so.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
@@ -1555,7 +1667,7 @@ class PatternMatcher:
                 code="P_PLURSUB_" + kind,
                 text=text,
                 detail=detail,
-                original=so.text,
+                original=so.tidy_text,
                 suggest=emulate_case(suggest, template=so.text),
             )
         )
@@ -1606,7 +1718,9 @@ class PatternMatcher:
         for ann in self._ann:
             if ann.code in generic and ann.start == start and ann.end == end:
                 self._ann.remove(ann)
-
+        if suggest == so.tidy_text:
+            # No need to annotate, no changes were made
+            return
         self._ann.append(
             Annotation(
                 start=start,
