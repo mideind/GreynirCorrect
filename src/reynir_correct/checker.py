@@ -465,8 +465,8 @@ def check_with_stats(
     """Return a dict containing parsed paragraphs as well as statistics"""
     return check_with_custom_parser(
         text,
-        options=options,
         split_paragraphs=split_paragraphs,
         progress_func=progress_func,
         annotate_unparsed_sentences=annotate_unparsed_sentences,
+        **options
     )
