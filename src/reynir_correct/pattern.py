@@ -223,10 +223,11 @@ class PatternMatcher:
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "af" }')
         # Calculate the start and end token indices, spanning both phrases
-        assert vp is not None
-        assert pp is not None
+        if vp is None or pp is None:
+            return
         pp_af = pp.first_match('"af"')
-        assert pp_af is not None
+        if pp_af is None:
+            return
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
         detail = (
@@ -258,10 +259,11 @@ class PatternMatcher:
         # Find the attached prepositional phrase
         pp = match.first_match('P > { "að" }')
         # Calculate the start and end token indices, spanning both phrases
-        assert vp is not None
-        assert pp is not None
+        if vp is None or pp is None:
+            return
         pp_að = pp.first_match('"að"')
-        assert pp_að is not None
+        if pp_að is None:
+            return
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
         detail = (
@@ -288,12 +290,14 @@ class PatternMatcher:
         """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal phrase
         vp = match.first_match("VP > { 'spyrja' }")
-        assert vp is not None
+        if vp is None:
+            return
         # Find the attached prepositional/adverbial phrase
         pp = match.first_match('P > { "af" }')
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
-        assert pp is not None
+        if pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         text = "Í '{0}' á 'af' sennilega að vera 'að'".format(vp.tidy_text)
@@ -325,8 +329,8 @@ class PatternMatcher:
         pp = match.first_match('P > { "af" }')
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
-        assert np is not None
-        assert pp is not None
+        if np is None or pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "'verða vitni af' á sennilega að vera 'verða vitni að'"
@@ -359,8 +363,8 @@ class PatternMatcher:
         pp = match.first_match('P > { "af" }')
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
-        assert np is not None
-        assert pp is not None
+        if np is None or pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         if vp is None:
             start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
@@ -398,9 +402,8 @@ class PatternMatcher:
         pp = match.first_match('P > { "af" }')
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
-        assert vp is not None
-        assert np is not None
-        assert pp is not None
+        if vp is None or np is None or pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -442,9 +445,8 @@ class PatternMatcher:
         pp = match.first_match('P > { "af" }')
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
-        assert vp is not None
-        assert np is not None
-        assert pp is not None
+        if vp is None or np is None or pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -483,9 +485,8 @@ class PatternMatcher:
             pp = match.first_match('ADVP > { "af" }')
         # Find the offending nominal phrase
         np = match.first_match('NP >> { "velli" }')
-        assert vp is not None
-        assert pp is not None
-        assert np is not None
+        if vp is None or pp is None or np is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], pp.span[0], np.span[0]),
@@ -520,8 +521,8 @@ class PatternMatcher:
             advp = match.first_match("ADVP >> { 'utan' }")
         # Find the attached prepositional phrase
         pp = match.first_match('ADVP > { "af" }')
-        assert advp is not None
-        assert pp is not None
+        if advp is None or pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(advp.span[0], pp.span[0]), max(advp.span[1], pp.span[1])
         text = "'utan af' á sennilega að vera 'utan að'"
@@ -555,9 +556,8 @@ class PatternMatcher:
         pp = match.first_match('PP > { "af" }')
         if pp is None:
             pp = match.first_match("ADVP > { 'af' }")
-        assert vp is not None
-        assert np is not None
-        assert pp is not None
+        if vp is None or np is None or pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -598,9 +598,8 @@ class PatternMatcher:
         np = match.first_match("NP > 'ósk' ")
         if np is None:
             np = match.first_match("NP >> 'ósk' ")
-        assert vp is not None
-        assert pp is not None
-        assert np is not None
+        if vp is None or pp is None or np is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], pp.span[0], np.span[0]),
@@ -652,8 +651,8 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         np = match.first_match("NP > { 'áhyggja' }")
         pp = match.first_match('PP > { "að" }')
-        assert np is not None
-        assert pp is not None
+        if np is None or pp is None:
+            return
         start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
         text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
         detail = (
@@ -681,8 +680,8 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         np = match.first_match("NP > { 'hluti' }")
         pp = match.first_match("PP > { 'að' }")
-        assert np is not None
-        assert pp is not None
+        if np is None or pp is None:
+            return
         start, end = min(np.span[0], pp.span[0]), max(np.span[-1], pp.span[-1])
         text = "'hluti að' á sennilega að vera 'hluti af'"
         detail = "Í samhenginu 'hluti af e-u' er notuð forsetningin 'af', ekki 'að'."
@@ -706,7 +705,8 @@ class PatternMatcher:
         """Handle a match of a suspect preposition pattern"""
         # Find the offending prepositional phrase
         pp = match.first_match('PP > { "að" "mörkum" }')
-        assert pp is not None
+        if pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp.span
         suggest = self.suggestion_complex(match, "leggja", "að")
@@ -735,7 +735,8 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = match.span
         pp = match.first_match("P > { 'að' }")
-        assert pp is not None
+        if pp is None:
+            return
         suggest = self.suggestion_complex(match, "láta", "að")
         text = f"'{match.tidy_text}' á sennilega að vera '{suggest}'"
         detail = (
@@ -763,8 +764,8 @@ class PatternMatcher:
         np = match.first_match("NP > { 'heiður' }")
         # Find the attached prepositional phrase
         pp = match.first_match("P > { 'að' }")
-        assert np is not None
-        assert pp is not None
+        if np is None or pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         suggest = self.suggestion_complex(match, "heiður", "að")
@@ -796,7 +797,8 @@ class PatternMatcher:
             vp = match.first_match("VP >> { 'eiga' }")
         # Find the nominal object
         np = match.first_match("( NP|ADVP )")
-        assert np is not None
+        if np is None:
+            return
         legal_lemmas = frozenset(("aðild", "frumkvæði", "hlut", "upptak"))
         if any(lemma in legal_lemmas for lemma in np.lemmas):
             # 'Eiga aðild/frumkvæði/hlut/upptök að e-u' is legal; do not complain
@@ -805,8 +807,8 @@ class PatternMatcher:
         pp = match.first_match('P > { "að" }')
         if pp is None:
             pp = match.first_match('PP > { "að" }')
-        assert vp is not None
-        assert pp is not None
+        if vp is None or pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = (
             min(vp.span[0], np.span[0], pp.span[0]),
@@ -924,7 +926,8 @@ class PatternMatcher:
         """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal phrase
         vp = match.first_match("VP > { 'stafa' }")
-        assert vp is not None
+        if vp is None:
+            return
         start, end = match.span
         suggest = self.suggestion_complex(match, "stafa", "að")
         if " að " in vp.tidy_text:
@@ -956,8 +959,8 @@ class PatternMatcher:
         np = match.first_match("NP > { 'óléttur' }")
         # Find the attached prepositional phrase
         pp = match.first_match("P > { 'að' }")
-        assert np is not None
-        assert pp is not None
+        if np is None or pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
@@ -987,8 +990,8 @@ class PatternMatcher:
         vp = match.first_match("VP > { 'heyra' }")
         # Find the attached prepositional phrase
         pp = match.first_match("P > { 'að' }")
-        assert vp is not None
-        assert pp is not None
+        if vp is None or pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(vp.span[0], pp.span[0]), max(vp.span[1], pp.span[1])
         suggest = self.suggestion_complex(match, "heyra", "að")
@@ -1018,8 +1021,8 @@ class PatternMatcher:
         np = match.first_match("NP > { 'gaman' }")
         # Find the attached prepositional phrase
         pp = match.first_match("P > { 'að' }")
-        assert np is not None
-        assert pp is not None
+        if np is None or pp is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "'gaman að' á sennilega að vera 'gaman af'"
@@ -1075,7 +1078,8 @@ class PatternMatcher:
         if vp is None:
             vp = match.first_match("NP > { 'valinn' }")
             lemma = "valinn"
-        assert vp is not None
+        if vp is None:
+            return
         start, end = match.span
         if " að " in vp.tidy_text:
             text = "'{0}' á sennilega að vera '{1}'".format(
@@ -1109,10 +1113,11 @@ class PatternMatcher:
         np = match.first_match(" %noun ", context)
         # Find the attached prepositional phrase
         pp = match.first_match("P > { 'að' }")
-        assert np is not None
-        assert pp is not None
+        if np is None or pp is None:
+            return
         pp_að = pp.first_match('"að"')
-        assert pp_að is not None
+        if pp_að is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         suggest = match.substituted_text(pp_að, "af")
@@ -1205,10 +1210,12 @@ class PatternMatcher:
         for instance 'byði hnekki' where the verb should
         be 'bíða' -> 'biði hnekki' instead of 'bjóða'"""
         vp = match.first_match("VP > { %verb }", context)
-        assert vp is not None
+        if vp is None:
+            return
         verb = next(ch for ch in vp.children if ch.tcat == "so").own_lemma_mm
         np = match.first_match("NP >> { %noun }", context)
-        assert np is not None
+        if np is None:
+            return
         start, end = min(vp.span[0], np.span[0]), max(vp.span[1], np.span[1])
         # noun = next(ch for ch in np.leaves if ch.tcat == "no").own_lemma
         text = "Hér á líklega að vera sögnin '{0}' í stað '{1}'.".format(
@@ -1239,10 +1246,11 @@ class PatternMatcher:
         np = match.first_match(" %noun ", context)
         # Find the attached prepositional phrase
         pp = match.first_match("P > { 'af' }")
-        assert np is not None
-        assert pp is not None
+        if np is None or pp is None:
+            return
         pp_af = pp.first_match('"af"')
-        assert pp_af is not None
+        if pp_af is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = min(np.span[0], pp.span[0]), max(np.span[1], pp.span[1])
         text = "Hér á líklega að vera forsetningin 'að' í stað 'af'."
@@ -1444,7 +1452,8 @@ class PatternMatcher:
 
     def dir_loc_simple(self, match: SimpleTree) -> None:
         advp = match.first_match("ADVP > { ('inn'|'út'|'niður'|'upp') }")
-        assert advp is not None
+        if advp is None:
+            return
         start, end = match.span
         if "niður" in match.tidy_text:
             correction = "niðri"
@@ -1507,7 +1516,7 @@ class PatternMatcher:
         elif kind == "REL":
             detail = f"Í tilvísunarsetningum er aðeins framsöguháttur sagna tækur."
         else:
-            assert False
+            return
         if not detail:
             detail = f"Í {sent_kind} er yfirleitt notaður framsöguháttur sagna."
         self._ann.append(
@@ -1555,7 +1564,7 @@ class PatternMatcher:
                 "viðtengingarhætti fremur en framsöguhætti."
             )
         else:
-            assert False
+            return
         self._ann.append(
             Annotation(
                 start=start,
