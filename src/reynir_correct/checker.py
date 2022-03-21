@@ -186,10 +186,10 @@ class GreynirCorrect(Greynir):
     _lock = Lock()
 
     def __init__(self, **options: Any) -> None:
-        super().__init__(**options)
         self._annotate_unparsed_sentences = options.pop(
             "annotate_unparsed_sentences", True
         )
+        super().__init__(**options)
         self._options = options
         # if options:
         #    raise ValueError(f"Unknown option(s) for GreynirCorrect: {options}")
@@ -468,5 +468,5 @@ def check_with_stats(
         split_paragraphs=split_paragraphs,
         progress_func=progress_func,
         annotate_unparsed_sentences=annotate_unparsed_sentences,
-        **options
+        **options,
     )

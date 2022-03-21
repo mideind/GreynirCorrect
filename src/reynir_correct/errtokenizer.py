@@ -1861,6 +1861,7 @@ def lookup_unknown_words(
     def add_ritmyndir_error(token: CorrectToken) -> CorrectToken:
         """Add an error with corresponding correct value and details given info in Ritmyndir"""
         # TODO At the moment the code assumes only one correct value is available in data
+        lemma = token.txt
         code = Ritmyndir.get_code(token.txt)
         if code in NEUTRAL_RITMYNDIR_CODES:
             # Not an error
@@ -1871,9 +1872,13 @@ def lookup_unknown_words(
             # No correct value available
             return token
         _, m = db.lookup_g(corrected, at_sentence_start=at_sentence_start)
-        text, details, refs = get_details(code, token.txt, corrected, m[0].stofn)
-        if not details:
+        if m:
+            lemma = m[0].stofn
+        text, details, refs = get_details(code, token.txt, corrected, lemma)
+        try:
+            assert details
             # Code not found in collection
+        except AssertionError:
             print("Code not found: {}".format(code))
             return token
         token.set_error(RitmyndirError(code, text, details, refs, token.txt, corrected))
@@ -1889,7 +1894,10 @@ def lookup_unknown_words(
         """Return short and detailed descriptions for the error category plus a link to grammar references where possible"""
         # text is the short version, about the category and the error.
         # details is the long version with references.
-        standref, cat, det = RitmyndirDetails.DICT.get(code, ("", "", ""))
+        try:
+            standref, cat, det = RitmyndirDetails.DICT[code]
+        except KeyError:
+            return ("", "", list(""))
         references: List[str] = []
         text = "{}: '{}' -> '{}'".format(cat, txt, correct)
         details = det
