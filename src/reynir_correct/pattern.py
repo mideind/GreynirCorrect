@@ -1667,6 +1667,7 @@ class PatternMatcher:
         for ann in self._ann:
             if ann.code in generic and ann.start == start and ann.end == end:
                 self._ann.remove(ann)
+        suggest = emulate_case(suggest, template=so.text)
         if suggest == so.tidy_text:
             # No need to annotate, no changes were made
             return
@@ -1678,7 +1679,7 @@ class PatternMatcher:
                 text=text,
                 detail=detail,
                 original=so.tidy_text,
-                suggest=emulate_case(suggest, template=so.text),
+                suggest=suggest,
             )
         )
 

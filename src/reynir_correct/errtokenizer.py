@@ -1879,7 +1879,6 @@ def lookup_unknown_words(
             assert details
             # Code not found in collection
         except AssertionError:
-            print("Code not found: {}".format(code))
             return token
         token.set_error(RitmyndirError(code, text, details, refs, token.txt, corrected))
         if corrected not in STOP_WORDS:
@@ -1897,7 +1896,7 @@ def lookup_unknown_words(
         try:
             standref, cat, det = RitmyndirDetails.DICT[code]
         except KeyError:
-            return ("", "", list(""))
+            return ("", "", [""])
         references: List[str] = []
         text = "{}: '{}' -> '{}'".format(cat, txt, correct)
         details = det
