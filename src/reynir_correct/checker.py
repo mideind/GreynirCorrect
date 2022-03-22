@@ -186,17 +186,18 @@ class GreynirCorrect(Greynir):
     _lock = Lock()
 
     def __init__(self, **options: Any) -> None:
-        super().__init__()
         self._annotate_unparsed_sentences = options.pop(
             "annotate_unparsed_sentences", True
         )
-        if options:
-            raise ValueError(f"Unknown option(s) for GreynirCorrect: {options}")
+        super().__init__(**options)
+        self._options = options
+        # if options:
+        #    raise ValueError(f"Unknown option(s) for GreynirCorrect: {options}")
 
     def tokenize(self, text: StringIterable) -> Iterator[Tok]:
         """Use the correcting tokenizer instead of the normal one"""
         # The CorrectToken class is a duck-typing implementation of Tok
-        return tokenize_and_correct(text)
+        return tokenize_and_correct(text, **self._options)
 
     @classmethod
     def _dump_token(cls, tok: Tok) -> Tuple[Any, ...]:
@@ -426,11 +427,14 @@ def check_with_custom_parser(
     progress_func: ProgressFunc = None,
     split_paragraphs: bool = False,
     annotate_unparsed_sentences: bool = True,
+    **options: Any,
 ) -> CheckResult:
     """Return a dict containing parsed paragraphs as well as statistics,
     using the given correction/parser class. This is a low-level
     function; normally check_with_stats() should be used."""
-    rc = parser_class(annotate_unparsed_sentences=annotate_unparsed_sentences)
+    rc = parser_class(
+        annotate_unparsed_sentences=annotate_unparsed_sentences, **options
+    )
     job = rc.submit(
         text,
         parse=True,
@@ -456,6 +460,7 @@ def check_with_stats(
     split_paragraphs: bool = False,
     progress_func: ProgressFunc = None,
     annotate_unparsed_sentences: bool = True,
+    **options: Any,
 ) -> CheckResult:
     """Return a dict containing parsed paragraphs as well as statistics"""
     return check_with_custom_parser(
@@ -463,4 +468,5 @@ def check_with_stats(
         split_paragraphs=split_paragraphs,
         progress_func=progress_func,
         annotate_unparsed_sentences=annotate_unparsed_sentences,
+        **options,
     )

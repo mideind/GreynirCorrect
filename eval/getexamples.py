@@ -99,14 +99,14 @@ parser.add_argument(
 
 
 def element_text(element: ET.Element) -> str:
-    """ Return the text of the given element,
-        including all its subelements, if any """
+    """Return the text of the given element,
+    including all its subelements, if any"""
     return "".join(element.itertext())
 
 
 def correct_spaces(tokens: Iterable[Tuple[str, str]]) -> str:
-    """ Returns a string with a reasonably correct concatenation
-        of the tokens, where each token is a (tag, text) tuple. """
+    """Returns a string with a reasonably correct concatenation
+    of the tokens, where each token is a (tag, text) tuple."""
     return detokenize(
         Tok(TOK.PUNCTUATION if tag == "c" else TOK.WORD, txt, None)
         for tag, txt in tokens
@@ -115,7 +115,7 @@ def correct_spaces(tokens: Iterable[Tuple[str, str]]) -> str:
 
 def get_examples(fpath: str) -> None:
 
-    """ Process a single error corpus file in TEI XML format """
+    """Process a single error corpus file in TEI XML format"""
 
     # Set up XML namespace stuff
     NS = "http://www.tei-c.org/ns/1.0"
@@ -129,7 +129,7 @@ def get_examples(fpath: str) -> None:
     buffer: List[str] = []
 
     def bprint(s: str) -> None:
-        """ Buffered print: accumulate output for printing at the end """
+        """Buffered print: accumulate output for printing at the end"""
         buffer.append(s)
 
     try:
