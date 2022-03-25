@@ -56,6 +56,9 @@ from abc import ABC, abstractmethod
 
 from tokenizer.abbrev import Abbreviations
 from tokenizer.definitions import (
+    HTML_ESCAPE_REGEX,
+    HTML_ESCAPES,
+    UNICODE_REPLACEMENTS,
     BIN_Tuple,
     BIN_TupleList,
     NumberTuple,
@@ -2614,10 +2617,10 @@ def late_fix_merges(
     # Where the error is placed by default on the first word instead of
     # the word that changes (also could be many changes!)
     for token in token_stream:
-        # Add annotations if annotation has disappeared
+        # Add annotations if token text has been changed, excluding soft hyphen deletion
         if (
             token.original
-            and token.txt.strip() != token.original.strip()
+            and token.txt.strip() != token.original.strip().replace("\u00AD", "")
             and isinstance(token, CorrectToken)  # type: ignore
             and not token.error
         ):
