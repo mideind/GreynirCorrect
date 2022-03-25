@@ -56,9 +56,6 @@ from abc import ABC, abstractmethod
 
 from tokenizer.abbrev import Abbreviations
 from tokenizer.definitions import (
-    HTML_ESCAPE_REGEX,
-    HTML_ESCAPES,
-    UNICODE_REPLACEMENTS,
     BIN_Tuple,
     BIN_TupleList,
     NumberTuple,
