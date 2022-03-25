@@ -342,7 +342,7 @@ Copyright and License
    :align: right
    :alt: Miðeind ehf.
 
-**Copyright © 2021 Miðeind ehf.**
+**Copyright © 2022 Miðeind ehf.**
 
 GreynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
 

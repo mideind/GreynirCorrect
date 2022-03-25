@@ -3,7 +3,7 @@
 
     Greynir: Natural language processing for Icelandic
 
-    Copyright (C) 2021 Miðeind ehf.
+    Copyright (C) 2022 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -57,7 +57,7 @@ from .annotation import Annotation
 from .version import __version__
 
 __author__ = u"Miðeind ehf"
-__copyright__ = "(C) 2021 Miðeind ehf."
+__copyright__ = "(C) 2022 Miðeind ehf."
 
 __all__ = (
     "Greynir",
