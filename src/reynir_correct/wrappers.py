@@ -501,7 +501,7 @@ def check_grammar(**options: Any) -> str:
             accumul.append("S {0}".format(cleaned))
             for mann in a:
                 accumul.append(
-                    "A {0} {1}|||{2}|||{3}||REQUIRED|||-NONE-||0".format(
+                    "A {0} {1}|||{2}|||{3}|||REQUIRED|||-NONE-|||0".format(
                         mann.start, mann.end, mann.code, mann.suggest
                     )
                 )
