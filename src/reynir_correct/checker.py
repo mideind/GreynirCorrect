@@ -189,6 +189,7 @@ class GreynirCorrect(Greynir):
         self._annotate_unparsed_sentences = options.pop(
             "annotate_unparsed_sentences", True
         )
+        self._ignore_rules = options.pop("ignore_rules", [])
         super().__init__(**options)
         self._options = options
         # if options:
@@ -375,6 +376,13 @@ class GreynirCorrect(Greynir):
                 del ann[i]
             else:
                 # Check the next pair
+                i += 1
+        # Remove ignored annotations
+        i = 0
+        while i < len(ann):
+            if ann[i].code in self._ignore_rules:
+                del ann[i]
+            else:
                 i += 1
         return ann
 

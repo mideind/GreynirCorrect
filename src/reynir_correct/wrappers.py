@@ -318,6 +318,7 @@ def test_grammar(**options: Any) -> Tuple[str, TokenSumType]:
     inneroptions["annotate_unparsed_sentences"] = options.get(
         "annotate_unparsed_sentences", True
     )
+    inneroptions["ignore_rules"] = options.get("ignore_rules", [])
     annlist: List[str] = []
     for toklist in sentence_stream(**options):
         # Invoke the spelling and grammar checker on the token list
@@ -380,6 +381,7 @@ def check_grammar(**options: Any) -> str:
     inneroptions["annotate_unparsed_sentences"] = options.get(
         "annotate_unparsed_sentences", True
     )
+    inneroptions["ignore_rules"] = options.get("ignore_rules", [])
     annlist: List[str] = []
     format = options.get("format", "")
     for toklist in sentence_stream(**options):
