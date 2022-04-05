@@ -61,6 +61,8 @@ from tokenizer.definitions import (
     NumberTuple,
     PersonNameList,
     ValType,
+    UNICODE_REPLACEMENTS,
+    UNICODE_REGEX,
 )
 from reynir import TOK, Tok
 from reynir.bintokenizer import (
@@ -2604,6 +2606,20 @@ def late_fix_capitalization(
             at_sentence_start = False
 
 
+def unicode_replacement(txt: str) -> str:
+    """Replace some composite glyphs with single code points"""
+    return re.sub(
+        UNICODE_REGEX,
+        lambda match: UNICODE_REPLACEMENTS[match.group()],
+        txt,
+    )
+
+
+def substitute(txt: str, span: Tuple[int, int], new: str) -> str:
+    """Substitute a span with a single or empty character 'new'."""
+    return txt[: span[0]] + new + txt[span[1] :]
+
+
 def late_fix_merges(
     token_stream: Iterable[CorrectToken],
     ignore_wordlist: Set[str],
@@ -2614,10 +2630,10 @@ def late_fix_merges(
     # Where the error is placed by default on the first word instead of
     # the word that changes (also could be many changes!)
     for token in token_stream:
-        # Add annotations if annotation has disappeared
+        # Add annotations if token text has been changed, excluding soft hyphen deletion
         if (
             token.original
-            and token.txt.strip() != token.original.strip()
+            and token.txt.strip() != unicode_replacement(token.original.strip())
             and isinstance(token, CorrectToken)  # type: ignore
             and not token.error
         ):
