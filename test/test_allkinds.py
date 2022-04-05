@@ -59,7 +59,15 @@ def normalize(g):
 
 def check(p):
     """Return a corrected, normalized string form of the input along with the tokens"""
-    options: Dict[str, Union[str, bool]] = {}
+    options = {}
+    options["infile"] = [p]
+    options["one_sent"] = False
+
+    return check_errors(**options)
+
+
+def check_with_options(p, options={}):
+    """Return a corrected, normalized string form of the input along with the tokens"""
     options["infile"] = [p]
     options["one_sent"] = False
 
@@ -1532,6 +1540,67 @@ def test_né():
     check_sentence(s, [(3, 3, "P_NT_Né")])
     s = "Við keyptum annaðhvort brauð né ost."
     check_sentence(s, [(4, 4, "P_NT_Né")])
+
+
+def test_ignore_rules(verbose=False):
+    options = {}
+    options["ignore_rules"] = {"C001"}
+    # doubling
+    s, g = check_with_options("Ég hélt mér mér fast í sætið.", options)
+    assert not g[3].error_code
+    # wrong compounds
+    options["ignore_rules"] = {"C002"}
+    s, g = check_with_options(
+        "Fötin koma í margskonar litum og fara afturábak afþvíað annarstaðar "
+        "eru fjögurhundruð mikilsháttar hestar.",
+        options,
+    )
+    for ix in range(len(g)):
+        # Setningin þáttast ekki fyrst villurnar finnast ekki
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+    # split compounds
+    options["ignore_rules"] = {"C003", "C005/w"}
+    s, g = check_with_options(
+        "Aðal inngangur að auka herbergi er gagn stæður öðrum gangi.", options
+    )
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+    # unique_context_independent_errors
+    options["ignore_rules"] = {
+        "S001",
+        "S004",
+        "ASLSTAFVANTAR",
+        "ASLAUKASTAF",
+        "ASLVIXL",
+        "EKKIORD",
+    }
+    s, g = check_with_options(
+        "Fomaður fór til fljúgjandi augnæknis í liltu andyri Svíþjóðar.", options
+    )
+
+    # Errors in fixed phrases (multiword errors)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+    options["ignore_rules"] = {"S005", "P_yyii", "P_kvhv", "P_afað"}
+    s, g = check_with_options(
+        "Alla sýna lífdaga hljóp hún allt kvað fætur toga af ástæðulausu.", options
+    )
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # subject case
+    options["ignore_rules"] = {"P_WRONG_CASE_nf_þf"}
+    s, g = check_with_options(
+        "Ég dreymdi að það væri hundur í fiskabúrinu mínu.", options
+    )
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # Pattern errors
+    options["ignore_rules"] = {"P_NT_Heldur"}
+    s, g = check_with_options("Gíraffi er stærri heldur en fíll.", options)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
 
 
 if __name__ == "__main__":

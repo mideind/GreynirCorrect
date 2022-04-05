@@ -1503,6 +1503,10 @@ class MultiwordErrorStream(MatchingStream):
     def match(self, tq: List[Tok], ix: int) -> Iterable[Tok]:
         """This is a complete match of an error phrase;
         yield the replacement phrase"""
+        if "P_" + MultiwordErrors.get_code(ix) in self._ignore_rules:
+            for t in tq:
+                yield t
+            return
         replacement = MultiwordErrors.get_replacement(ix)
         db = self._db
         token_ctor = self._token_ctor
@@ -1532,7 +1536,7 @@ class MultiwordErrorStream(MatchingStream):
             if capfirst:
                 repstring = repstring.capitalize()
                 capfirst = False
-            if i == 0 and MultiwordErrors.get_code((ix)) not in self._ignore_rules:
+            if i == 0:
                 ct.set_error(
                     PhraseError(
                         MultiwordErrors.get_code(ix),

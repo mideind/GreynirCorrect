@@ -54,7 +54,7 @@ def main() -> None:
     options["ignore_wordlist"] = set()
     options["spaced"] = False
     options["print_all"] = True
-    # options["ignore_rules"] = {"EI4EY", "S001", "P_NT_Einkunn", "C004/w", "P_NT_Heldur/w"}
+    options["ignore_rules"] = {"C002"}
     args = parser.parse_args()
     inputfile = args.inputfile
     if inputfile is sys.stdin and sys.stdin.isatty():
