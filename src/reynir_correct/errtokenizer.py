@@ -62,7 +62,6 @@ from tokenizer.definitions import (
     PersonNameList,
     ValType,
     UNICODE_REPLACEMENTS,
-    HTML_ESCAPE_REGEX,
     UNICODE_REGEX,
 )
 from reynir import TOK, Tok
@@ -2609,14 +2608,11 @@ def late_fix_capitalization(
 
 def unicode_replacement(txt: str) -> str:
     """Replace some composite glyphs with single code points"""
-    total_reduction = 0
-    for m in UNICODE_REGEX.finditer(txt):
-        span, new_letter = m.span(), UNICODE_REPLACEMENTS[m.group(0)]
-        txt = substitute(
-            txt, (span[0] - total_reduction, span[1] - total_reduction), new_letter
-        )
-        total_reduction += span[1] - span[0] - len(new_letter)
-    return txt
+    return re.sub(
+        UNICODE_REGEX,
+        lambda match: UNICODE_REPLACEMENTS[match.group()],
+        txt,
+    )
 
 
 def substitute(txt: str, span: Tuple[int, int], new: str) -> str:
