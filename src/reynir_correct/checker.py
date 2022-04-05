@@ -189,7 +189,7 @@ class GreynirCorrect(Greynir):
         self._annotate_unparsed_sentences = options.pop(
             "annotate_unparsed_sentences", True
         )
-        self._ignore_rules = options.pop("ignore_rules", [])
+        self._ignore_rules = options.get("ignore_rules", [])
         super().__init__(**options)
         self._options = options
         # if options:
@@ -316,7 +316,11 @@ class GreynirCorrect(Greynir):
                     ann.append(a)
         # Then, look at the whole sentence
         num_words = words_in_bin + words_not_in_bin
-        if num_words > 2 and words_in_bin / num_words < ICELANDIC_RATIO:
+        if (
+            num_words > 2
+            and words_in_bin / num_words < ICELANDIC_RATIO
+            and "E004" not in self._ignore_rules
+        ):
             # The sentence contains less than 50% Icelandic
             # words: assume it's in a foreign language and discard the
             # token level annotations
@@ -333,7 +337,7 @@ class GreynirCorrect(Greynir):
                 )
             ]
         elif not parsed:
-            if self._annotate_unparsed_sentences:
+            if self._annotate_unparsed_sentences and "E001" not in self._ignore_rules:
                 # If the sentence couldn't be parsed,
                 # put an annotation on it as a whole.
                 # In this case, we keep the token-level annotations.

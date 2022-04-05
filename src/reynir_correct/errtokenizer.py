@@ -990,7 +990,10 @@ class PhraseError(Error):
 
 
 def parse_errors(
-    token_stream: Iterator[Tok], db: GreynirBin, only_ci: bool
+    token_stream: Iterator[Tok],
+    db: GreynirBin,
+    only_ci: bool,
+    ignore_rules: Set[str],
 ) -> Iterator[CorrectToken]:
 
     """This tokenization phase is done before BÍN annotation
@@ -1060,6 +1063,7 @@ def parse_errors(
                 and token.val
                 and token.txt in WRONG_ABBREVS
                 and len(token.txt) > 1
+                and "A001" not in ignore_rules
             ):
                 original = token.txt
                 corrected = WRONG_ABBREVS[original]
@@ -1086,8 +1090,10 @@ def parse_errors(
             # found in BÍN (token.val is truthy), it's not safe to assume
             # that it's an error.
             if (
-                not token.val or "." in token.txt
-            ) and token.txt in Abbreviations.WRONGDOTS:
+                (not token.val or "." in token.txt)
+                and token.txt in Abbreviations.WRONGDOTS
+                and "A002" not in ignore_rules
+            ):
                 # Multiple periods in original, some subset missing here
                 # We suggest the first alternative meaning here, out of
                 # potentially multiple such meanings
@@ -1138,7 +1144,10 @@ def parse_errors(
                 and token.txt == next_token.txt
                 and token.kind == TOK.WORD
             ):
-                if token.txt.lower() in AllowedMultiples.SET:
+                if (
+                    token.txt.lower() in AllowedMultiples.SET
+                    and "C004/w" not in ignore_rules
+                ):
                     next_token.set_error(
                         CompoundError(
                             "004/w",
@@ -1148,7 +1157,7 @@ def parse_errors(
                         )
                     )
                     yield token
-                else:
+                elif "C001" not in ignore_rules:
                     # Step to next token
                     original = (token.original or "") + (next_token.original or "")
                     next_token = CorrectToken.word(token.txt, original=original)
@@ -1175,6 +1184,7 @@ def parse_errors(
                 and next_token.txt
                 and token.txt.lower() == next_token.txt.lower()
                 and token.kind == TOK.WORD
+                and "C004" not in ignore_rules
             ):
                 # Set possible error on next token
                 next_token.set_error(
@@ -1194,6 +1204,7 @@ def parse_errors(
                 token.txt
                 and token.txt.endswith(("-og", "-eða"))
                 and token.txt[0] != "-"
+                and "C002" not in ignore_rules
             ):
                 # Coalesced word, such as 'fjármála-og'  # TODO Doesn't work here
                 first, second = token.txt.rsplit("-", maxsplit=1)
@@ -1217,7 +1228,11 @@ def parse_errors(
                 continue
 
             # Splitting wrongly compounded words
-            if token.txt and token.txt.lower() in WrongCompounds.DICT:
+            if (
+                token.txt
+                and token.txt.lower() in WrongCompounds.DICT
+                and "C002" not in ignore_rules
+            ):
                 correct_phrase = list(WrongCompounds.DICT[token.txt.lower()])
                 # Make the split phrase emulate the case of
                 # the original token
@@ -1264,7 +1279,10 @@ def parse_errors(
                         token = next_token
                         at_sentence_start = False
                         continue
-                    if token.txt.lower() in Morphemes.BOUND_DICT:
+                    if (
+                        token.txt.lower() in Morphemes.BOUND_DICT
+                        and "S007" not in ignore_rules
+                    ):
                         # Only want to mark as an error, can't fix in CI-mode.
                         token.set_error(
                             SpellingError(
@@ -1314,7 +1332,10 @@ def parse_errors(
                     token = next_token
                     at_sentence_start = False
                     continue
-                if any(m.stofn.replace("-", "") in next_stems for m in meanings):
+                if (
+                    any(m.stofn.replace("-", "") in next_stems for m in meanings)
+                    and "C003" not in ignore_rules
+                ):
                     first_txt = token.txt
                     original = (token.original or "") + (next_token.original or "")
                     token = CorrectToken.word(
@@ -1348,7 +1369,7 @@ def parse_errors(
                     token = next_token
                     at_sentence_start = False
                     continue
-                if not notposes:
+                if not notposes and "C003" not in ignore_rules:
                     # No other PoS available, most likely a compound error
                     first_txt = token.txt
                     original = (token.original or "") + (next_token.original or "")
@@ -1369,7 +1390,7 @@ def parse_errors(
                     token = get()
                     at_sentence_start = False
                     continue
-                if poses:
+                if poses and "C005/w" not in ignore_rules:
                     transposes = list(set(POS[c] for c in poses))
                     if len(transposes) == 1:
                         tp = transposes[0]
@@ -1395,7 +1416,7 @@ def parse_errors(
                 and token.txt != cast(Tuple[str, str], token.val)[1]
             ):
                 ntxt = cast(Tuple[str, str], token.val)[1]
-                if ntxt in "„“":
+                if ntxt in "„“" and "N001" not in ignore_rules:
                     # TODO Could add normalize_quotation_marks as a parameter,
                     # should normalize automatically if chosen
                     token.set_error(
@@ -1409,7 +1430,7 @@ def parse_errors(
                         )
                     )
                 elif ntxt == "…":
-                    if token.txt == "..":
+                    if token.txt == ".." and "N002" not in ignore_rules:
                         # Assume user meant to write a single period
                         # Doesn't happen with current tokenizer behaviour
                         token.set_error(
@@ -1420,7 +1441,7 @@ def parse_errors(
                                 ".",
                             )
                         )
-                    elif len(token.txt) > 3:
+                    elif len(token.txt) > 3 and "N002" not in ignore_rules:
                         # Informal, should be standardized to an ellipsis
                         token.set_error(
                             PunctuationError(
@@ -1435,7 +1456,7 @@ def parse_errors(
                         # Not pointed out, allowed as-is
                         # TODO could add normalize_ellipsis as a parameter here
                         pass
-                elif ntxt == "?!":
+                elif ntxt == "?!" and "N003" not in ignore_rules:
                     # Changed automatically, pointed out as informal
                     token.set_error(
                         PunctuationError(
@@ -1466,10 +1487,13 @@ class MultiwordErrorStream(MatchingStream):
     matches with the MultiwordErrors phrase dictionary,
     and inserting replacement phrases when matches are found"""
 
-    def __init__(self, db: GreynirBin, token_ctor: TokenCtor) -> None:
+    def __init__(
+        self, db: GreynirBin, token_ctor: TokenCtor, ignore_rules: Set[str]
+    ) -> None:
         super().__init__(MultiwordErrors.DICT)
         self._token_ctor = token_ctor
         self._db = db
+        self._ignore_rules = ignore_rules
 
     def length(self, ix: int) -> int:
         """Return the length (word count) of the original phrase
@@ -1508,7 +1532,7 @@ class MultiwordErrorStream(MatchingStream):
             if capfirst:
                 repstring = repstring.capitalize()
                 capfirst = False
-            if i == 0:
+            if i == 0 and MultiwordErrors.get_code((ix)) not in self._ignore_rules:
                 ct.set_error(
                     PhraseError(
                         MultiwordErrors.get_code(ix),
@@ -1529,7 +1553,10 @@ class MultiwordErrorStream(MatchingStream):
 
 
 def handle_multiword_errors(
-    token_stream: Iterator[CorrectToken], db: GreynirBin, token_ctor: TokenCtor
+    token_stream: Iterator[CorrectToken],
+    db: GreynirBin,
+    token_ctor: TokenCtor,
+    ignore_rules: Set[str],
 ) -> Iterator[CorrectToken]:
 
     """Parse a stream of tokens looking for multiword phrases
@@ -1538,7 +1565,7 @@ def handle_multiword_errors(
     length of the longest phrase.
     """
 
-    mwes = MultiwordErrorStream(db, token_ctor)
+    mwes = MultiwordErrorStream(db, token_ctor, ignore_rules)
     tok_stream = cast(Iterator[Tok], token_stream)
     yield from cast(Iterator[CorrectToken], mwes.process(tok_stream))
 
@@ -1591,6 +1618,7 @@ def fix_compound_words(
     db: GreynirBin,
     token_ctor: TokenCtor,
     only_ci: bool,
+    ignore_rules: Set[str],
 ) -> Iterator[CorrectToken]:
 
     """Fix incorrectly compounded words"""
@@ -1603,7 +1631,10 @@ def fix_compound_words(
             at_sentence_start = True
             continue
         if (
-            token.txt and token.txt.endswith("-og") and len(token.txt) > 3
+            token.txt
+            and token.txt.endswith("-og")
+            and len(token.txt) > 3
+            and "C002" not in ignore_rules
         ):  # TODO can't find a relevant case
             prefix = token.txt[:-2]
             _, m = db.lookup_g(prefix, at_sentence_start)
@@ -1648,7 +1679,7 @@ def fix_compound_words(
             cw = ["ótal"] + cw[2:]
 
         cw0: str = cw[0]
-        if cw0 in NOT_FORMERS:
+        if cw0 in NOT_FORMERS and "C002" not in ignore_rules:
             # Prefix is invalid as such; should be split
             # into two words
             prefix = emulate_case(cw0, template=token.txt)
@@ -1683,7 +1714,7 @@ def fix_compound_words(
                 yield token
                 continue
             notposes = set(m.ordfl for m in meanings2 if m.ordfl not in freepos)
-            if not notposes:
+            if not notposes and "C002" not in ignore_rules:
                 # No other PoS available, we found an error
                 _, meanings1 = db.lookup_g(prefix, at_sentence_start)
                 t1 = token_ctor.Word(prefix, meanings1, token=token)
@@ -1702,7 +1733,7 @@ def fix_compound_words(
             else:
                 # Other possibilities but want to mark as a possible error
                 # Often just weird forms in BÍN left
-                if not only_ci:
+                if not only_ci and "C005" not in ignore_rules:
                     transposes = list(set(POS[c] for c in poses))
                     if len(transposes) == 1:
                         tp = transposes[0]
@@ -1720,7 +1751,7 @@ def fix_compound_words(
                         )
                     )
 
-        elif cw0 in WRONG_FORMERS_CI:
+        elif cw0 in WRONG_FORMERS_CI and "C006" not in ignore_rules:
             correct_former = WRONG_FORMERS_CI[cw0]
             corrected = correct_former + token.txt[len(cw0) :]
             corrected = emulate_case(corrected, template=token.txt)
@@ -1738,7 +1769,7 @@ def fix_compound_words(
             )
             token = t1
 
-        elif not only_ci and cw0 in WRONG_FORMERS:
+        elif not only_ci and cw0 in WRONG_FORMERS and "C006" not in ignore_rules:
             # Splice a correct front onto the word
             # ('feyknaglaður' -> 'feiknaglaður')
             correct_former = WRONG_FORMERS[cw0]
@@ -1766,6 +1797,7 @@ def lookup_unknown_words(
     token_ctor: TokenCtor,
     corrector: Corrector,
     only_ci: bool,
+    ignore_rules: Set[str],
     apply_suggestions: bool,
     suppress_suggestions: bool,
     generate_suggestion_list: bool,
@@ -1865,6 +1897,8 @@ def lookup_unknown_words(
         code = Ritmyndir.get_code(token.txt)
         if code in NEUTRAL_RITMYNDIR_CODES:
             # Not an error
+            return token
+        if code in ignore_rules:
             return token
         corrected = Ritmyndir.get_correct_form(token.txt)
         corrected = emulate_case(corrected, template=token.txt)
@@ -2046,17 +2080,19 @@ def lookup_unknown_words(
         # !!! TODO: Handle upper/lowercase
         if token.txt in UniqueErrors.DICT:
             # Note: corrected is a tuple
-            corrected = UniqueErrors.DICT[token.txt]
-            assert isinstance(corrected, tuple)
-            corrected_display = " ".join(corrected)
-            for ix, corrected_word in enumerate(corrected):
-                if ix == 0:
-                    rtok = replace_word(1, token, corrected_word, corrected_display)
-                    at_sentence_start = False
-                else:
-                    # In a multi-word sequence, we only mark the first
-                    # token with a SpellingError
-                    rtok = replace_word(1, token, corrected_word, None)
+            rtok = token
+            if "S001" not in ignore_rules:
+                corrected = UniqueErrors.DICT[token.txt]
+                assert isinstance(corrected, tuple)
+                corrected_display = " ".join(corrected)
+                for ix, corrected_word in enumerate(corrected):
+                    if ix == 0:
+                        rtok = replace_word(1, token, corrected_word, corrected_display)
+                        at_sentence_start = False
+                    else:
+                        # In a multi-word sequence, we only mark the first
+                        # token with a SpellingError
+                        rtok = replace_word(1, token, corrected_word, None)
                 yield rtok
                 context = (prev_context + tuple(rtok.txt.split()))[-3:]
                 prev_context = context
@@ -2069,10 +2105,11 @@ def lookup_unknown_words(
             assert isinstance(corrected, tuple)
             corrected_display = " ".join(corrected)
             for ix, corrected_word in enumerate(corrected):
-                if ix == 0:
+                rtok = token
+                if ix == 0 and "S001" not in ignore_rules:
                     rtok = replace_word(1, token, corrected_word, corrected_display)
                     at_sentence_start = False
-                else:
+                elif "S001" not in ignore_rules:
                     # In a multi-word sequence, we only mark the first
                     # token with a SpellingError
                     rtok = replace_word(1, token, corrected_word, None)
@@ -2083,7 +2120,7 @@ def lookup_unknown_words(
 
         # And Icelandic Search Query Errors
         # NOTE removed due to worsened outcomes, look into further
-        # if token.txt in Icesquer.DICT:
+        # if token.txt in Icesquer.DICT and "S001" not in ignore_rules:
         #    # Note: corrected is a tuple
         #    corrected = Icesquer.DICT[token.txt]
         #    assert isinstance(corrected, tuple)
@@ -2118,9 +2155,11 @@ def lookup_unknown_words(
         # !!! TODO: We are not handling those here.
         # !!! TODO: Handle upper/lowercase
         if not token.val and CIDErrorForms.contains(token.txt):
-            corr_txt = CIDErrorForms.get_correct_form(token.txt)
-            rtok = replace_word(2, token, corr_txt, corr_txt)
-            at_sentence_start = False
+            rtok = token
+            if "S002" not in ignore_rules:
+                corr_txt = CIDErrorForms.get_correct_form(token.txt)
+                rtok = replace_word(2, token, corr_txt, corr_txt)
+                at_sentence_start = False
             # Update the context with the replaced token
             context = (prev_context + tuple(rtok.txt.split()))[-3:]
             yield rtok
@@ -2133,7 +2172,9 @@ def lookup_unknown_words(
         # Check rare (or nonexistent) words and see if we have a potential correction
         elif not token.val or is_rare(token):
             # Yes, this is a rare word that needs further attention
-            if only_ci and token.txt[0].islower():  # TODO add check_caps here
+            if (
+                only_ci and token.txt[0].islower() and "U001" not in ignore_rules
+            ):  # TODO add check_caps here
                 # Don't want to correct
                 # Don't want to tag capitalized words, mostly foreign entities
                 token.set_error(
@@ -2170,7 +2211,7 @@ def lookup_unknown_words(
                         m_list.append(m)
                     continue
                 # Check if we got any hits:
-                if final_sugg_list:
+                if final_sugg_list and "S002" not in ignore_rules:
                     best_cand = final_sugg_list[0]
                     text = f"Orðið '{token.txt}' gæti átt að vera '{best_cand}'"
                     # We add the most likely candidate as the suggest value
@@ -2207,7 +2248,7 @@ def lookup_unknown_words(
                         # If the token already contains an error and we're not so certain
                         # about this new one, we yield no annotation
                         yield token
-                    else:
+                    elif "S001" not in ignore_rules:
                         if Settings.DEBUG:
                             print(
                                 "Suggested '{1}' instead of '{0}'".format(
@@ -2225,10 +2266,11 @@ def lookup_unknown_words(
                         print(
                             "Corrected '{0}' to '{1}'".format(token.txt, corrected_txt)
                         )
-                    if suggest_not_correct:
+                    ctok = token
+                    if suggest_not_correct and "S001" not in ignore_rules:
                         # Only suggest_word, not correct
                         ctok = suggest_word(1, token, corrected_txt, m)
-                    else:
+                    elif "S004" not in ignore_rules:
                         ctok = correct_word(4, token, corrected_txt, m)
                     yield ctok
                     # Update the context with the corrected token
@@ -2242,7 +2284,7 @@ def lookup_unknown_words(
             # mark the token as an unknown word
             # (but only as a warning if it is an uppercase word or
             # if we're within parentheses)
-            if token.txt[0].islower():
+            if token.txt[0].islower() and "Y001" not in ignore_rules:
                 token.set_error(
                     UnknownWordError(
                         code="001",
@@ -2266,6 +2308,7 @@ def fix_capitalization(
     db: GreynirBin,
     token_ctor: TokenCtor,
     only_ci: bool,
+    ignore_rules: Set[str],
 ) -> Iterator[CorrectToken]:
 
     """Annotate tokens with errors if they are capitalized incorrectly"""
@@ -2372,6 +2415,7 @@ def fix_capitalization(
                     token.txt.islower()
                     or "-" in token.txt
                     and token.txt.split("-")[0].islower()
+                    and "Z002" not in ignore_rules
                 ):
                     # Token is lowercase but should be capitalized
                     original_txt = token.txt
@@ -2396,7 +2440,7 @@ def fix_capitalization(
                             suggest=correct,
                         )
                     )
-                elif token.txt in WRONG_ACRONYMS:
+                elif token.txt in WRONG_ACRONYMS and "Z006" not in ignore_rules:
                     original_txt = token.txt
                     correct = token.txt.upper()
                     _, m = db.lookup_g(correct, False)
@@ -2411,7 +2455,7 @@ def fix_capitalization(
                             suggest=original_txt.upper(),
                         )
                     )
-                else:
+                elif "Z001" not in ignore_rules:
                     # Token is capitalized but should be lower case
                     original_txt = token.txt
                     correct = token.txt.lower()
@@ -2426,7 +2470,10 @@ def fix_capitalization(
                         )
                     )
         elif token.kind in {TOK.DATEREL, TOK.DATEABS}:
-            if any(m in token.txt for m in MONTH_NAMES_CAPITALIZED):
+            if (
+                any(m in token.txt for m in MONTH_NAMES_CAPITALIZED)
+                and "Z003" not in ignore_rules
+            ):
                 # There is a capitalized month name within the token: suspicious
                 if token.txt.upper() == token.txt:
                     # ALL-CAPS: don't worry about it
@@ -2484,6 +2531,7 @@ def late_fix_capitalization(
     db: GreynirBin,
     token_ctor: TokenCtor,
     only_ci: bool,
+    ignore_rules: Set[str],
 ) -> Iterator[CorrectToken]:
 
     """Annotate final, coalesced tokens with errors
@@ -2533,26 +2581,35 @@ def late_fix_capitalization(
                         case = "há"
                         correct = token.txt.capitalize()
                     _, m = db.lookup_g(correct, True)
-                    token = token_ctor.Word(correct, m, token=token)
-                    token.set_error(
-                        CapitalizationError(
-                            code,
-                            "Rita á '{0}' með {1}staf".format(token.txt, case),
-                            original=token.txt,
-                            suggest=correct,
+                    if "C" + code not in ignore_rules:
+                        token = token_ctor.Word(correct, m, token=token)
+                        token.set_error(
+                            CapitalizationError(
+                                code,
+                                "Rita á '{0}' með {1}staf".format(token.txt, case),
+                                original=token.txt,
+                                suggest=correct,
+                            )
                         )
-                    )
         elif token.kind == TOK.NUMBER:
             if re.match(r"[0-9.,/-]+$", token.txt) or token.txt.isupper():
                 # '1.234,56' or '3/4' or "-6" or '24 MILLJÓNIR' is always OK
                 pass
             elif at_sentence_start:
-                if token.txt[0].isnumeric() and not token.txt[1:].islower():
+                if (
+                    token.txt[0].isnumeric()
+                    and not token.txt[1:].islower()
+                    and "S004" not in ignore_rules
+                ):
                     # '500 Milljónir' at sentence start
                     token = number_error(
                         token, token.txt.lower(), "004", "með lágstöfum"
                     )
-                elif token.txt[0].isupper() and not token.txt[1:].islower():
+                elif (
+                    token.txt[0].isupper()
+                    and not token.txt[1:].islower()
+                    and "S005" not in ignore_rules
+                ):
                     # 'Fimm Hundruð milljónir' at sentence start
                     token = number_error(
                         token,
@@ -2560,7 +2617,7 @@ def late_fix_capitalization(
                         "005",
                         "með hástaf aðeins í upphafi",
                     )
-                elif token.txt[0].islower():
+                elif token.txt[0].islower() and "S006" not in ignore_rules:
                     # 'fimm hundruð milljónir' at sentence start
                     token = number_error(
                         token, token.txt.capitalize(), "006", "með hástaf"
@@ -2570,7 +2627,10 @@ def late_fix_capitalization(
                 pass
             else:
                 # Mixed case: something strange going on
-                token = number_error(token, token.txt.lower(), "004", "með lágstöfum")
+                if "S004" not in ignore_rules:
+                    token = number_error(
+                        token, token.txt.lower(), "004", "með lágstöfum"
+                    )
         elif token.kind == TOK.AMOUNT:
             if token.txt.islower() or token.txt.isupper():
                 # All lower case or ALL-CAPS: don't worry about it
@@ -2585,16 +2645,17 @@ def late_fix_capitalization(
                 token = token_ctor.Amount(lower, tval2[1], tval2[0], tval2[2], tval2[3])
                 token.original = original
                 assert isinstance(token, CorrectToken)
-                token.set_error(
-                    CapitalizationError(
-                        "005",
-                        "Fjárhæðina '{0}' á að rita "
-                        "með lágstöfum".format(original_txt),
-                        original=original_txt,
-                        suggest=lower,
-                        is_warning=True,
+                if "S005" not in ignore_rules:
+                    token.set_error(
+                        CapitalizationError(
+                            "005",
+                            "Fjárhæðina '{0}' á að rita "
+                            "með lágstöfum".format(original_txt),
+                            original=original_txt,
+                            suggest=lower,
+                            is_warning=True,
+                        )
                     )
-                )
         elif token.kind == TOK.MEASUREMENT:
             # !!! TODO
             pass
@@ -2607,6 +2668,7 @@ def late_fix_capitalization(
 def late_fix_merges(
     token_stream: Iterable[CorrectToken],
     ignore_wordlist: Set[str],
+    ignore_rules: Set[str],
 ) -> Iterator[CorrectToken]:
     """Annotate tokens where error annotation has disappeared due to token
     merging and delete annotations for tokens in ignore wordlist"""
@@ -2620,6 +2682,7 @@ def late_fix_merges(
             and token.txt.strip() != token.original.strip()
             and isinstance(token, CorrectToken)  # type: ignore
             and not token.error
+            and not "S005" in ignore_rules
         ):
             token.set_error(
                 SpellingError(
@@ -2698,7 +2761,9 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
 
 
 def check_style(
-    token_stream: Iterable[CorrectToken], db: GreynirBin
+    token_stream: Iterable[CorrectToken],
+    db: GreynirBin,
+    ignore_rules: Set[str],
 ) -> Iterator[CorrectToken]:
     """Annotate context-independent, word-level style errors"""
 
@@ -2708,7 +2773,11 @@ def check_style(
             # Check whether the token meanings are all marked with
             # style warnings in BÍN
             _, k_meanings = db.lookup_ksnid(token.txt)
-            if k_meanings and all(style_warning(k) for k in k_meanings):
+            if (
+                k_meanings
+                and all(style_warning(k) for k in k_meanings)
+                and not "T001" in ignore_rules
+            ):
                 # Every meaning has a style warning in BÍN: Annotate it.
                 # We use the first meaning only, but theoretically there could
                 # be different annotations for different meanings.
@@ -2916,11 +2985,12 @@ class CorrectionPipeline(DefaultPipeline):
         self._suggest_not_correct = options.pop("suggest_not_correct", False)
         # Wordlist for words that should not be marked as errors or corrected
         self._ignore_wordlist = options.pop("ignore_wordlist", set())
+        self._ignore_rules = options.get("ignore_rules", set())
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """Add a correction pass just before BÍN annotation"""
         assert self._db is not None
-        return parse_errors(stream, self._db, self._only_ci)
+        return parse_errors(stream, self._db, self._only_ci, self._ignore_rules)
 
     def check_spelling(self, stream: TokenIterator) -> TokenIterator:
         """Attempt to resolve unknown words"""
@@ -2929,32 +2999,40 @@ class CorrectionPipeline(DefaultPipeline):
         if self._corrector is None:
             self._corrector = Corrector(self._db)
         only_ci = self._only_ci
+        ignore_rules = self._ignore_rules
         # Shenanigans to satisfy mypy
         token_ctor = cast(TokenCtor, self._token_ctor)
         ct_stream = cast(Iterator[CorrectToken], stream)
         # Fix compound words
-        ct_stream = fix_compound_words(ct_stream, self._db, token_ctor, only_ci)
+        ct_stream = fix_compound_words(
+            ct_stream, self._db, token_ctor, only_ci, ignore_rules
+        )
         # Fix multiword error phrases
         if not only_ci:
-            ct_stream = handle_multiword_errors(ct_stream, self._db, token_ctor)
+            ct_stream = handle_multiword_errors(
+                ct_stream, self._db, token_ctor, ignore_rules
+            )
         # Fix capitalization
-        ct_stream = fix_capitalization(ct_stream, self._db, token_ctor, only_ci)
+        ct_stream = fix_capitalization(
+            ct_stream, self._db, token_ctor, only_ci, ignore_rules
+        )
         # Fix single-word errors
         ct_stream = lookup_unknown_words(
             ct_stream,
             token_ctor,
             self._corrector,
             only_ci,
+            ignore_rules,
             self._apply_suggestions,
             self._suppress_suggestions,
             self._generate_suggestion_list,
             self._suggest_not_correct,
         )
         # Check taboo words
-        if not only_ci:
+        if not only_ci and "T001" not in ignore_rules:
             ct_stream = check_taboo_words(ct_stream)
         # Check context-independent style errors, indicated in BÍN
-        ct_stream = check_style(ct_stream, self._db)
+        ct_stream = check_style(ct_stream, self._db, ignore_rules)
         return ct_stream
 
     def final_correct(self, stream: TokenIterator) -> TokenIterator:
@@ -2965,10 +3043,12 @@ class CorrectionPipeline(DefaultPipeline):
         ct_stream = cast(Iterator[CorrectToken], stream)
         token_ctor = cast(TokenCtor, self._token_ctor)
         ct_stream = late_fix_capitalization(
-            ct_stream, self._db, token_ctor, self._only_ci
+            ct_stream, self._db, token_ctor, self._only_ci, self._ignore_rules
         )
 
-        ct_stream = late_fix_merges(ct_stream, self._ignore_wordlist)
+        ct_stream = late_fix_merges(
+            ct_stream, self._ignore_wordlist, self._ignore_rules
+        )
         return ct_stream
 
 
