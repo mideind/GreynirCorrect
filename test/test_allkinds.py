@@ -59,10 +59,7 @@ def normalize(g):
 
 def check(p):
     """Return a corrected, normalized string form of the input along with the tokens"""
-    options = {}
-    options["infile"] = [p]
-    options["one_sent"] = False
-
+    options = dict(infile=[p], one_sent=False)
     return check_errors(**options)
 
 
@@ -1545,10 +1542,11 @@ def test_né():
 def test_ignore_rules(verbose=False):
     options = {}
     options["ignore_rules"] = {"C001"}
-    # doubling
+    # doubling - C001
     s, g = check_with_options("Ég hélt mér mér fast í sætið.", options)
     assert not g[3].error_code
-    # wrong compounds
+
+    # wrong compounds - C002
     options["ignore_rules"] = {"C002"}
     s, g = check_with_options(
         "Fötin koma í margskonar litum og fara afturábak afþvíað annarstaðar "
@@ -1558,6 +1556,7 @@ def test_ignore_rules(verbose=False):
     for ix in range(len(g)):
         # Setningin þáttast ekki fyrst villurnar finnast ekki
         assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
     # split compounds
     options["ignore_rules"] = {"C003", "C005/w"}
     s, g = check_with_options(
@@ -1565,6 +1564,7 @@ def test_ignore_rules(verbose=False):
     )
     for ix in range(len(g)):
         assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
     # unique_context_independent_errors
     options["ignore_rules"] = {
         "S001",
@@ -1599,6 +1599,124 @@ def test_ignore_rules(verbose=False):
     # Pattern errors
     options["ignore_rules"] = {"P_NT_Heldur"}
     s, g = check_with_options("Gíraffi er stærri heldur en fíll.", options)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # check_style - Y001/w
+    options["ignore_rules"] = {"Y001/w"}
+    s, g = check_with_options("Hún er æxling og labbaði um herbergið.", options)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # check_taboo_words - T001/w
+    options["ignore_rules"] = {"T001/w"}
+    s, g = check_with_options("Hann er typpalingur og labbaði um herbergið.", options)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # late_fix_merges - S005
+    options["ignore_rules"] = {"S005"}
+    s, g = check_with_options(
+        "Hún á fimm miljónir króna og labbaði um herbergið.", options
+    )
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+    s, g = check_with_options(
+        "Það er 1,8 millarður króna sem labbaði um herbergið.", options
+    )
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # late_fix_capitalization
+    # Z001
+    options["ignore_rules"] = {"Z001"}
+    s, g = check_with_options(
+        "Hann var Félags- og barnamálaráðherra og labbaði um herbergið.", options
+    )
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001", "S005"}
+
+    # Z002
+    options["ignore_rules"] = {"Z002"}
+    s, g = check_with_options(
+        "félags- og barnamálaráðherra labbaði um herbergið.", options
+    )
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001", "S005"}
+
+    # Z004
+    options["ignore_rules"] = {"Z004"}
+    s, g = check_with_options("500 Milljónir löbbuðu um herbergið.", options)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # Z005
+    options["ignore_rules"] = {"Z005"}
+    s, g = check_with_options("Fimm Hundruð milljónir löbbuðu um herbergið.", options)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # fix_capitalization
+    # Z002
+    options["ignore_rules"] = {"Z002"}
+    s, g = check_with_options(
+        "Hún heitir hrafnhildur benediktsdóttir og labbaði um herbergið.", options
+    )
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001", "U001"}
+    s, g = check_with_options(
+        "Hann heitir ásþór harðarson og labbaði um herbergið.", options
+    )
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001", "U001"}
+
+    # Z006
+    options["ignore_rules"] = {"Z006"}
+    s, g = check_with_options("Hann var í Así og labbaði um herbergið.", options)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001", "S004"}
+
+    # Z003
+    options["ignore_rules"] = {"Z003"}
+    s, g = check_with_options("Hann datt 15. Apríl og labbaði um herbergið.", options)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # lookup_unknown_wors
+    # Ritmyndir errors - EI4EY
+    options["ignore_rules"] = {"EI4EY"}
+    s, g = check_with_options("Gíraffi er stærri heldur en fíll.", options)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # S001 - Icelandic error corpus nonwords
+    options["ignore_rules"] = {"S001"}
+    s, g = check_with_options(
+        "Hann á þriðjun í starfsemi og labbaði um herbergið.", options
+    )
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # S002 - CIDErrorForms
+    options["ignore_rules"] = {"S002"}
+    s, g = check_with_options(
+        "Hann saknar aðalspurningunnar og labbaði um herbergið.", options
+    )
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # U001
+    options["ignore_rules"] = {"U001"}
+    s, g = check_with_options("Hún er blurbilosiru og labbaði um herbergið.", options)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+    # C006
+    options["ignore_rules"] = {"C006"}
+    s, g = check_with_options("Hún var kvennmaður og labbaði um herbergið.", options)
+    for ix in range(len(g)):
+        assert not g[ix].error_code or g[ix].error_code in {"E001", "NN4N-ORD"}
+    s, g = check_with_options("Hann var feyknaglaður og labbaði um herbergið.", options)
     for ix in range(len(g)):
         assert not g[ix].error_code or g[ix].error_code in {"E001"}
 

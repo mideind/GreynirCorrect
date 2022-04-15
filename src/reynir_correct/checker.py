@@ -49,6 +49,7 @@
 
 from typing import (
     Any,
+    FrozenSet,
     Mapping,
     cast,
     Iterable,
@@ -189,7 +190,7 @@ class GreynirCorrect(Greynir):
         self._annotate_unparsed_sentences = options.pop(
             "annotate_unparsed_sentences", True
         )
-        self._ignore_rules = options.get("ignore_rules", [])
+        self._ignore_rules: FrozenSet[str] = options.get("ignore_rules", set())
         super().__init__(**options)
         self._options = options
         # if options:
@@ -382,12 +383,7 @@ class GreynirCorrect(Greynir):
                 # Check the next pair
                 i += 1
         # Remove ignored annotations
-        i = 0
-        while i < len(ann):
-            if ann[i].code in self._ignore_rules:
-                del ann[i]
-            else:
-                i += 1
+        ann = [a for a in ann if a.code not in self._ignore_rules]
         return ann
 
     def create_sentence(self, job: Job, s: TokenList) -> Sentence:

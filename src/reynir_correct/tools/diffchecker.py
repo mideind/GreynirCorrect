@@ -42,19 +42,19 @@ def gen(f: Iterator[str]) -> Iterable[str]:
 def main() -> None:
 
     options: Dict[str, Union[str, bool, Set[str]]] = {}
-    # Hægt að biðja um annað til að fá frekari upplýsingar!
     options["format"] = "text"  # text, json, csv, m2
     options["annotations"] = True
     options["all_errors"] = True
     # options["infile"] = open("prufa.txt", "r")
     options["one_sent"] = False
     # options["generate_suggestion_list"] = True
-    options["ignore_comments"] = True  # Only used here
+    options["ignore_comments"] = False  # Only used here
+    options["generate_suggestion_list"] = False
     options["annotate_unparsed_sentences"] = True
     options["ignore_wordlist"] = set()
     options["spaced"] = False
     options["print_all"] = True
-    options["ignore_rules"] = {"C002"}
+    options["ignore_rules"] = set("")
     args = parser.parse_args()
     inputfile = args.inputfile
     if inputfile is sys.stdin and sys.stdin.isatty():
