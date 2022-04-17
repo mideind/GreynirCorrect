@@ -1540,6 +1540,7 @@ def test_né():
 
 
 def test_ignore_rules(verbose=False):
+    """Test error annotation deletion. In some cases, when a certain error type is skipped, another similar error type is applied."""
     options = {}
     options["ignore_rules"] = {"C001"}
     # doubling - C001

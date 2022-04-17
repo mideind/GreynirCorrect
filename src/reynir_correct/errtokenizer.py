@@ -2598,6 +2598,7 @@ def late_fix_capitalization(
             token.error_code
             and token.error_code == "Z002"
             and " " in token.txt
+            and token.original
             and not " " in token.error_original
         ):
             # Error was not updated when the compound was amalgamated
@@ -2740,7 +2741,12 @@ def late_fix_merges(
                         suggest=token.txt,
                     ),
                 )
-        elif token.error and " " in token.txt and not " " in token.error_suggest:
+        elif (
+            token.error
+            and " " in token.txt
+            and not " " in token.error_suggest
+            and token.original
+        ):
             # Error was added to the token before merging with another (fimm milljónir *kóna*)
             # Capitalization errors are handled elsewhere, most likely spelling errors here
             # Determine which word(s) in the string the error represents

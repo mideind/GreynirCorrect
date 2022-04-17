@@ -54,7 +54,7 @@ def main() -> None:
     options["ignore_wordlist"] = set()
     options["spaced"] = False
     options["print_all"] = True
-    options["ignore_rules"] = set("")
+    options["ignore_rules"] = set([""])
     args = parser.parse_args()
     inputfile = args.inputfile
     if inputfile is sys.stdin and sys.stdin.isatty():
