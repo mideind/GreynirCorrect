@@ -577,7 +577,7 @@ GCtoIEC = {
 # to avoid magic numbers
 NO_RESULTS = -1.0
 
-GCSKIPCODES = frozenset(("E001", "C005", "Z002", "W001"))
+GCSKIPCODES = frozenset(("E001")
 
 # Define the command line arguments
 
@@ -1957,7 +1957,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             xtok = None
                             xtok = next(x)
                             continue
-                        if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
+                        if ytok.code in GCSKIPCODES:
                             # Skip these errors, shouldn't be compared.
                             if ANALYSIS:
                                 analysisblob.append(
@@ -2037,7 +2037,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     analysisblob.append("\tDumping rest of GC errors:")
                 while ytok is not None:
                     # This is a remaining GC annotation: false positive
-                    if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
+                    if ytok.code in GCSKIPCODES:
                         # Skip these errors, shouldn't be a part of the results.
                         if ANALYSIS:
                             analysisblob.append(

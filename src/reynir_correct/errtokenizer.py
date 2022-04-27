@@ -2595,7 +2595,8 @@ def late_fix_capitalization(
             at_sentence_start = True
             continue
         if (
-            token.error_code
+            isinstance(token, CorrectToken)
+            and token.error_code
             and token.error_code == "Z002"
             and " " in token.txt
             and token.original
@@ -2742,8 +2743,10 @@ def late_fix_merges(
                     ),
                 )
         elif (
-            token.error
+            isinstance(token, CorrectToken)  # type: ignore
+            and token.error
             and " " in token.txt
+            and token.error_suggest
             and not " " in token.error_suggest
             and token.original
         ):
