@@ -771,7 +771,7 @@ class StyleWarning(Error):
     """A StyleWarning marks a word that is annotated with a
     style comment in BÍN (malsnid/bmalsnid properties in Ksnid)."""
 
-    # Y001_w: Style warning for word
+    # Y001/w: Style warning for word
 
     def __init__(
         self,
@@ -2106,19 +2106,18 @@ def lookup_unknown_words(
             corrected = UniqueErrors.DICT[token.txt]
             assert isinstance(corrected, tuple)
             corrected_display = " ".join(corrected)
-            for ix, corrected_word in enumerate(corrected):
-                if ix == 0:
-                    if "S001" not in ignore_rules:
+            if "S001" not in ignore_rules:
+                for ix, corrected_word in enumerate(corrected):
+                    if ix == 0:
                         rtok = replace_word(1, token, corrected_word, corrected_display)
-                    at_sentence_start = False
-                else:
-                    # In a multi-word sequence, we only mark the first
-                    # token with a SpellingError
-                    if "S001" not in ignore_rules:
+                        at_sentence_start = False
+                    else:
+                        # In a multi-word sequence, we only mark the first
+                        # token with a SpellingError
                         rtok = replace_word(1, token, corrected_word, None)
-                yield rtok
-            context = (prev_context + tuple(rtok.txt.split()))[-3:]
-            prev_context = context
+                    yield rtok
+                    context = (prev_context + tuple(rtok.txt.split()))[-3:]
+                    prev_context = context
             continue
 
         # Similarly, check Icelandic Error Corpus Nonwords
@@ -2127,19 +2126,19 @@ def lookup_unknown_words(
             corrected = IecNonwords.DICT[token.txt]
             assert isinstance(corrected, tuple)
             corrected_display = " ".join(corrected)
-            for ix, corrected_word in enumerate(corrected):
-                rtok = token
-                if "S001" not in ignore_rules:
+            if "S001" not in ignore_rules:
+                for ix, corrected_word in enumerate(corrected):
+                    rtok = token
                     if ix == 0:
                         rtok = replace_word(1, token, corrected_word, corrected_display)
+                        at_sentence_start = False
                     else:
                         # In a multi-word sequence, we only mark the first
                         # token with a SpellingError
                         rtok = replace_word(1, token, corrected_word, None)
-                at_sentence_start = False
-                yield rtok
-                context = (prev_context + tuple(rtok.txt.split()))[-3:]
-                prev_context = context
+                    yield rtok
+                    context = (prev_context + tuple(rtok.txt.split()))[-3:]
+                    prev_context = context
             continue
 
         # And Icelandic Search Query Errors
@@ -2275,12 +2274,6 @@ def lookup_unknown_words(
                     else:
                         rtok = token
                         if "W001" not in ignore_rules:
-                            if Settings.DEBUG:
-                                print(
-                                    "Suggested '{1}' instead of '{0}'".format(
-                                        token.txt, corrected_txt
-                                    )
-                                )
                             rtok = suggest_word(1, token, corrected_txt, m)
                         yield rtok
                     # We do not update the context in this case
@@ -2596,13 +2589,14 @@ def late_fix_capitalization(
             continue
         if (
             isinstance(token, CorrectToken)
-            and token.error_code
             and token.error_code == "Z002"
             and " " in token.txt
             and token.original
             and not " " in token.error_original
         ):
-            # Error was not updated when the compound was amalgamated
+            # 'félags- og barnamálaráðherra datt':
+            # The capitalization error in the first word of sentence has been corrected ('Félags-').
+            # The compound is then amalgamated at later stages but the error is not updated there.
             new_error_original = emulate_case(
                 token.original, template=token.error_original
             )
@@ -3067,7 +3061,7 @@ class CorrectionPipeline(DefaultPipeline):
         self._suggest_not_correct = options.pop("suggest_not_correct", False)
         # Wordlist for words that should not be marked as errors or corrected
         self._ignore_wordlist = options.pop("ignore_wordlist", set())
-        self._ignore_rules = options.get("ignore_rules", set())
+        self._ignore_rules = options.pop("ignore_rules", set())
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """Add a correction pass just before BÍN annotation"""
