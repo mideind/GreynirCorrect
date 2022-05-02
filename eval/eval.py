@@ -303,6 +303,10 @@ NAMES = {
     "wrong_span": "Wrong span",
 }
 
+# GC code-IEC code : [tp, fn, fp]
+GCRESULTS = defaultdict(int)
+
+
 # Three levels: Supercategories, subcategories and error codes
 # supercategory: {subcategory : [error code]}
 SUPERCATEGORIES: DefaultDict[str, DefaultDict[str, List[str]]] = defaultdict(
@@ -577,7 +581,58 @@ GCtoIEC = {
 # to avoid magic numbers
 NO_RESULTS = -1.0
 
-GCSKIPCODES = frozenset(("E001")
+GCSKIPCODES = frozenset((
+    "E001",
+    "ASLAUKASTAF",
+    "ASLSTAFVANTAR",
+    "ASLVITLSTAF",
+    "ASLVIXL",
+    "BEYGVILLA",
+    "C003",
+    "C004/w",
+    "C004",
+    "C005",
+    "E004",
+    "EY4EI",
+    "P_DIR_LOC",
+    "P_DOUBLE_DEFINITE",
+    "P_MOOD_ACK",
+    "P_MOOD_COND",
+    "P_MOOD_PURP",
+    "P_MOOD_REL",
+    "P_MOOD_TEMP",
+    "P_MOOD_TEMP/w",
+    "P_NT_Einkunn",
+    "P_NT_FráÞvíAð",
+    "P_NT_FsMeðFallstjórn",
+    "P_NT_Heldur",
+    "P_NT_Heldur/w",
+    "P_NT_ÍTölu",
+    "P_NT_Komma",
+    "P_NT_Komma/w",
+    "P_NT_Manns",
+    "P_NT_Né",
+    "P_NT_Sem/w",
+    "P_NT_Sem",
+    "P_NT_Síðan",
+    "P_NT_VeraAð",
+    "P_WRONG_CASE_nf_þf",
+    "P_WRONG_CASE_nf_þgf",
+    "P_WRONG_PLACE_PP",
+    "P_WRONG_PREP_AÐ",
+    "P_WRONG_PREP_AF",
+    "S001",
+    "S004",
+    "S005",
+    "T001",
+    "T001/w",
+    "U001",
+    "W001",
+    "W001/w",
+    "Y001",
+    "Y001/w",
+    "Ý4Í",
+    ))
 
 # Define the command line arguments
 
@@ -718,6 +773,7 @@ class Stats:
         self._wrong_span: DefaultDict[str, int] = defaultdict(int)
         # reference error code : freq - for hypotheses with the unparsable error code
         self._tp_unparsables: DefaultDict[str, int] = defaultdict(int)
+        self._gc_results: ErrTypeStatsDict = ErrTypeStatsDict(Counter)
 
     def add_file(self, category: str) -> None:
         """Add a processed file in a given content category"""
@@ -731,6 +787,7 @@ class Stats:
         false_negatives: Dict[str, int],
         ups: Dict[str, int],
         errtypefreqs: ErrTypeStatsDict,
+        gcresults: ErrTypeStatsDict,
     ) -> None:
         """Add the result of a process() call to the statistics collection"""
         for sent_result in stats:
@@ -745,6 +802,10 @@ class Stats:
         for okey, d in errtypefreqs.items():  # okey = xtype; d = DefaultDict[str, int]
             for ikey, vv in d.items():  # ikey = tp, fn, ...
                 self._errtypes[okey][ikey] += vv  # v = freq for each metric
+
+        for okey, v in gcresults.items():
+            for ikey, vv in v.items():
+                self._gc_results[okey][ikey] += vv
 
     def add_sentence(
         self,
@@ -927,6 +988,7 @@ class Stats:
                 else:
                     bprint(f"   {c:<13}:           N/A")
 
+
         def calc_recall(
             right: int, wrong: int, rights: str, wrongs: str, recs: str
         ) -> None:
@@ -970,7 +1032,7 @@ class Stats:
             cfp = cast(int, catdict.get("cfp", 0))
             crecall: float = NO_RESULTS
             cprecision: float = NO_RESULTS
-            catdict["freq"] = tp + fn
+            catdict["freq"] = tp + fn + fp
             if tp + fn + fp == 0:  # No values in category
                 catdict["recall"] = NO_RESULTS
                 catdict["precision"] = NO_RESULTS
@@ -1346,6 +1408,15 @@ class Stats:
             totalcrecall = 0.0
             totalcprecision = 0.0
             totalcf = 0.0
+            def basic_results(tp: int, fn: int, fp: int) -> None:
+                # Recall
+                recall = tp / (tp + fn) if tp+fn > 0 else NO_RESULTS
+                # Precision
+                precision = tp / (tp + fp) if tp + fp > 0 else NO_RESULTS
+                # F0.5 score
+                f05 = 1.25 * (precision * recall) / (0.25 * precision + recall) if precision + recall > 0.0 else NO_RESULTS
+                return (recall, precision, f05)
+
             for supercat in SUPERCATEGORIES:
                 # supercategory: {subcategory : error code}
                 # entry = supercategory, catlist = {subcategory : error code}
@@ -1384,177 +1455,110 @@ class Stats:
                             freq = cast(int, et["freq"])
                             fscore = cast(float, et["f05score"])
                             cfscore = cast(float, et["cf05score"])
-                            # codework
+                            tpcode = cast(int, et["tp"]) if "tp" in et else 0
+                            fncode = cast(int, et["fn"]) if "fn" in et else 0
+                            fpcode = cast(int, et["fp"]) if "fp" in et else 0
+                            rcode, pcode, fcode = basic_results(tpcode, fncode, fpcode)
+
+                            ctpcode = cast(int, et["ctp"]) if "ctp" in et else 0
+                            cfncode = cast(int, et["cfn"]) if "cfn" in et else 0
+                            cfpcode = cast(int, et["cfp"]) if "cfp" in et else 0
+                            crcode, cpcode, cfcode = basic_results(ctpcode, cfncode, cfpcode)
+                            # results for each error code (lowest layer)
                             subblob = subblob + "{}\t{}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\n".format(
                                 code,
                                 freq,
-                                cast(int, et["tp"]) if "tp" in et else 0,
-                                cast(int, et["fn"]) if "fn" in et else 0,
-                                cast(int, et["fp"]) if "fp" in et else 0,
-                                cast(float, et["recall"]) * 100.0
-                                if ("recall" in et and float(et["recall"]) > 0.0)
-                                else NO_RESULTS,  # Or "N/A", but that messes with the f-string formatting
-                                cast(float, et["precision"]) * 100.0
-                                if ("precision" in et and float(et["precision"]) > 0.0)
-                                else NO_RESULTS,
-                                fscore * 100.0 if fscore > 0.0 else NO_RESULTS,
-                                cast(int, et["ctp"]) if "ctp" in et else 0,
-                                cast(int, et["cfn"]) if "cfn" in et else 0,
-                                cast(int, et["cfp"]) if "cfp" in et else 0,
-                                cast(float, et["crecall"]) * 100.0
-                                if ("crecall" in et and float(et["crecall"]) > 0.0)
-                                else NO_RESULTS,
-                                cast(float, et["cprecision"]) * 100.0
-                                if (
-                                    "cprecision" in et and float(et["cprecision"]) > 0.0
-                                )
-                                else NO_RESULTS,
-                                cfscore * 100.0 if cfscore > 0.0 else NO_RESULTS,
+                                tpcode,
+                                fncode,
+                                fpcode,
+                                rcode * 100.0 if rcode > 0 else NO_RESULTS,
+                                pcode * 100.0 if pcode > 0 else NO_RESULTS,
+                                fcode * 100.0 if fcode > 0 else NO_RESULTS,
+                                ctpcode,
+                                cfncode,
+                                cfpcode,
+                                crcode * 100.0 if crcode > 0 else NO_RESULTS,
+                                cpcode * 100.0 if cpcode > 0 else NO_RESULTS,
+                                cfcode * 100.0 if cfcode > 0 else NO_RESULTS,
                             )
-                            # subwork
-                            subfreq += freq
-                            subtp += cast(int, et["tp"]) if "tp" in et else 0
-                            subfn += cast(int, et["fn"]) if "fn" in et else 0
-                            subfp += cast(int, et["fp"]) if "fp" in et else 0
-                            subrecall += (
-                                cast(float, et["recall"]) * freq * 100.0
-                                if ("recall" in et and float(et["recall"]) > 0.0)
-                                else 0.0
-                            )
-                            subprecision += (
-                                cast(float, et["precision"]) * freq * 100.0
-                                if ("precision" in et and float(et["precision"]) > 0.0)
-                                else 0.0
-                            )
-                            subf += fscore * freq * 100.0 if fscore > 0.0 else 0.0
-                            subctp += cast(int, et["ctp"]) if "ctp" in et else 0
-                            subcfn += cast(int, et["cfn"]) if "cfn" in et else 0
-                            subcfp += cast(int, et["cfp"]) if "cfp" in et else 0
-                            subcrecall += (
-                                cast(float, et["crecall"]) * freq * 100.0
-                                if ("crecall" in et and float(et["crecall"]) > 0.0)
-                                else 0.0
-                            )
-                            subcprecision += (
-                                cast(float, et["cprecision"]) * freq * 100.0
-                                if (
-                                    "cprecision" in et and float(et["cprecision"]) > 0.0
-                                )
-                                else 0.0
-                            )
-                            subcf += cfscore * freq * 100.0 if cfscore > 0.0 else 0.0
+                            # result for each subcategory (collection of error codes)
+                            if tpcode != NO_RESULTS:
+                                # This means tp is 0 so we haven't begun to handle
+                                subfreq += freq
+                                subtp += tpcode
+                                subfn += fncode
+                                subfp += fpcode
+                                if ctpcode != NO_RESULTS:
+                                    subctp += ctpcode
+                                    subcfn += cfncode
+                                    subcfp += cfpcode
 
-                    if subfreq != 0:
-                        subblob = (
-                            "\n{}\t{}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\n".format(
-                                subcat.capitalize(),
-                                subfreq,
-                                subtp,
-                                subfn,
-                                subfp,
-                                subrecall / subfreq,
-                                subprecision / subfreq,
-                                subf / subfreq,
-                                subctp,
-                                subcfn,
-                                subcfp,
-                                subcrecall / subfreq,
-                                subcprecision / subfreq,
-                                subcf / subfreq,
-                            )
-                            + subblob
-                        )
-                    else:
-                        subblob = (
-                            "\n{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                                subcat.capitalize(),
-                                subfreq,
-                                subtp,
-                                subfn,
-                                subfp,
-                                NO_RESULTS,
-                                NO_RESULTS,
-                                NO_RESULTS,
-                                subctp,
-                                subcfn,
-                                subcfp,
-                                NO_RESULTS,
-                                NO_RESULTS,
-                                NO_RESULTS,
-                            )
-                            + subblob
-                        )
-
-                    # superwork
-                    superblob += subblob
-                    superfreq += subfreq
-                    supertp += subtp
-                    superfn += subfn
-                    superfp += subfp
-                    superrecall += subrecall
-                    superprecision += subprecision
-                    superf += subf
-                    superctp += subctp
-                    supercfn += subcfn
-                    supercfp += subcfp
-                    supercrecall += subcrecall
-                    supercprecision += subcprecision
-                    supercf += subcf
-                if superfreq != 0:
-                    superblob = (
+                    subrecall, subprecision, subf = basic_results(subtp, subfn, subfp)
+                    subcrecall, subcprecision, subcf = basic_results(subctp, subcfn, subcfp)
+                    subblob = (
                         "\n{}\t{}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\n".format(
-                            supercat.capitalize(),
-                            superfreq,
-                            supertp,
-                            superfn,
-                            superfp,
-                            superrecall / superfreq,
-                            superprecision / superfreq,
-                            superf / superfreq,
-                            superctp,
-                            supercfn,
-                            supercfp,
-                            supercrecall / superfreq,
-                            supercprecision / superfreq,
-                            supercf / superfreq,
+                            subcat.capitalize(),
+                            subfreq,
+                            subtp,
+                            subfn,
+                            subfp,
+                            subrecall * 100.0 if subrecall > 0 else NO_RESULTS,
+                            subprecision * 100.0 if subprecision > 0 else NO_RESULTS,
+                            subf * 100.0 if subf > 0 else NO_RESULTS,
+                            subctp,
+                            subcfn,
+                            subcfp,
+                            subcrecall * 100.0 if subcrecall > 0 else NO_RESULTS,
+                            subcprecision * 100.0 if subcprecision > 0 else NO_RESULTS,
+                            subcf * 100.0 if subcf > 0 else NO_RESULTS,
                         )
-                        + superblob
+                        + subblob
                     )
-                else:
-                    superblob = (
-                        "\n{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                            supercat.capitalize(),
-                            superfreq,
-                            supertp,
-                            superfn,
-                            superfp,
-                            NO_RESULTS,
-                            NO_RESULTS,
-                            NO_RESULTS,
-                            superctp,
-                            supercfn,
-                            supercfp,
-                            NO_RESULTS,
-                            NO_RESULTS,
-                            NO_RESULTS,
-                        )
-                        + superblob
+                    # results for each supercategory (collection of subcategories)
+                    if subtp != NO_RESULTS:
+                        superblob += subblob
+                        superfreq += subfreq
+                        supertp += subtp
+                        superfn += subfn
+                        superfp += subfp
+                        if superctp != NO_RESULTS:
+                            superctp += subctp
+                            supercfn += subcfn
+                            supercfp += subcfp
+                superrecall, superprecision, superf = basic_results(supertp, superfn, superfp)
+                supercrecall, supercprecision, supercf = basic_results(superctp, supercfn, supercfp)
+                superblob = (
+                    "\n{}\t{}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\n".format(
+                        supercat.capitalize(),
+                        superfreq,
+                        supertp,
+                        superfn,
+                        superfp,
+                        superrecall * 100.0 if superrecall > 0 else NO_RESULTS,
+                        superprecision * 100.0 if superprecision > 0 else NO_RESULTS,
+                        superf * 100.0 if superf > 0 else NO_RESULTS,
+                        superctp,
+                        supercfn,
+                        supercfp,
+                        supercrecall * 100.0 if supercrecall > 0 else NO_RESULTS,
+                        supercprecision * 100.0 if supercprecision > 0 else NO_RESULTS,
+                        supercf * 100.0 if supercf > 0 else NO_RESULTS,
                     )
-                totalfreq += superfreq
-                totaltp += supertp
-                totalfn += superfn
-                totalfp += superfp
-                totalrecall += superrecall
-                totalprecision += superprecision
-                totalf += superf
-                totalctp += superctp
-                totalcfn += supercfn
-                totalcfp += supercfp
-                totalcrecall += supercrecall
-                totalcprecision += supercprecision
-                totalcf += supercf
+                    + superblob
+                )
+                if supertp != NO_RESULTS:
+                    totalfreq += superfreq
+                    totaltp += supertp
+                    totalfn += superfn
+                    totalfp += superfp
+                    if superctp != NO_RESULTS:
+                        totalctp += superctp
+                        totalcfn += supercfn
+                        totalcfp += supercfp
 
                 bprint("".join(superblob))
+            totalrecall, totalprecision, totalf = basic_results(totaltp, totalfn, totalfp)
+            totalcrecall, totalcprecision, totalcf = basic_results(totalctp, totalcfn, totalcfp)
             bprint(
                 "\n{}\t{}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\n".format(
                     "Total",
@@ -1562,19 +1566,26 @@ class Stats:
                     totaltp,
                     totalfn,
                     totalfp,
-                    totalrecall / totalfreq,
-                    totalprecision / totalfreq,
-                    totalf / totalfreq,
+                    totalrecall * 100.0 if totalrecall > 0 else NO_RESULTS,
+                    totalprecision * 100.0 if totalprecision > 0 else NO_RESULTS,
+                    totalf * 100.0 if totalf > 0 else NO_RESULTS,
                     totalctp,
                     totalcfn,
                     totalcfp,
-                    totalcrecall / totalfreq,
-                    totalcprecision / totalfreq,
-                    totalcf / totalfreq,
+                    totalcrecall * 100.0 if totalcrecall > 0 else NO_RESULTS,
+                    totalcprecision * 100.0 if totalcprecision > 0 else NO_RESULTS,
+                    totalcf * 100.0 if totalcf > 0 else NO_RESULTS,
                 )
             )
 
-        # output_duration()
+        def output_gc_results():
+            bprint("cat\ttp\tfp")
+            for cat, v in self._gc_results.items():
+                tp = self._gc_results[cat]["tp"]
+                fp = self._gc_results[cat]["fp"]
+                bprint("{}\t{}\t{}".format(cat, tp, fp))
+
+        output_duration()
         # output_sentence_scores()
         # output_token_scores()
         # output_error_cat_scores()
@@ -1582,7 +1593,7 @@ class Stats:
         bprint(f"\n\nResults for iEC-categories:")
         # output_supercategory_scores()
         output_all_scores()
-
+        output_gc_results()
         # Print the accumulated output before exiting
         for s in buffer:
             print(s)
@@ -1618,7 +1629,6 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
 
     # Unpack arguments
     fpath, category = fpath_and_category
-
     # Set up XML namespace stuff
     NS = "http://www.tei-c.org/ns/1.0"
     # Length of namespace prefix to cut from tag names, including { }
@@ -1636,7 +1646,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
     ups: Dict[str, int] = defaultdict(int)
     # Stats for each error code (xtypes)
     errtypefreqs: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs().copy)
-
+    gcresults: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs().copy)
     try:
 
         if not QUIET:
@@ -1971,6 +1981,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             # The annotation spans overlap
                             # or almost overlap and contain the same original value or correction
                             tp += 1
+                            gcresults[ytok.code+"\t"+cast(str, xtok["xtype"])]["tp"] += 1
+                            #print(gcresults[ytok.code+"-"+cast(str, xtok["xtype"])+"-tp"])
                             errtypefreqs[xtype]["tp"] += 1
                             if ANALYSIS:
                                 analysisblob.append("\t          TP: {}".format(xtype))
@@ -2003,6 +2015,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         if yend < xstart:
                             # Extraneous GC annotation before next iEC annotation
                             fp += 1
+                            gcresults[ytok.code+"\t"+cast(str, xtok["xtype"])]["fp"] += 1
+                            #print(gcresults[ytok.code+"-"+cast(str, xtok["xtype"])+"-fp"])
                             errtypefreqs[ytype]["fp"] += 1
                             cfp += 1
                             errtypefreqs[ytype]["cfp"] += 1
@@ -2047,6 +2061,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         continue
                     fp += 1
                     ytype = GCtoIEC[ytok.code][0] if ytok.code in GCtoIEC else ytok.code
+                    gcresults[ytok.code+"\t"+ytype]["fp"] += 1
+                    #print(gcresults[ytok.code+"-"+ytype+"-fp"])
                     errtypefreqs[ytype]["fp"] += 1
                     cfp += 1
                     errtypefreqs[ytype]["cfp"] += 1
@@ -2148,7 +2164,6 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             for txt in buffer:
                 print(txt)
             print("", flush=True)
-
     # This return value will be pickled and sent back to the parent process
     return dict(
         stats=stats,
@@ -2156,6 +2171,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
         false_negatives=false_negatives,
         ups=ups,
         errtypefreqs=errtypefreqs,
+        gcresults=gcresults,
     )
 
 
@@ -2256,7 +2272,6 @@ def main() -> None:
     with OUTPUT_LOCK:
         stats.output(cores=args.cores or os.cpu_count() or 1)
         print("", flush=True)
-
 
 if __name__ == "__main__":
     main()
