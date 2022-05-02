@@ -577,7 +577,7 @@ GCtoIEC = {
 # to avoid magic numbers
 NO_RESULTS = -1.0
 
-GCSKIPCODES = frozenset(("E001", "C005", "Z002", "W001"))
+GCSKIPCODES = frozenset(["E001"])
 
 # Define the command line arguments
 
@@ -1275,22 +1275,25 @@ class Stats:
                             freq = cast(int, et["freq"])
                             fscore = cast(float, et["f05score"])
                             # codework
-                            subblob = subblob + "\t\t{} {}  ({:3.2f}, {:3.2f}, {:3.2f}) ({},{},{})| {}\n".format(
-                                code,
-                                freq,
-                                cast(float, et["recall"]) * 100.0
-                                if "recall" in et
-                                else 0.0,
-                                cast(float, et["precision"]) * 100.0
-                                if "precision" in et
-                                else 0.0,
-                                fscore * 100.0,
-                                cast(int, et["tp"]) if "tp" in et else 0,
-                                cast(int, et["fn"]) if "fn" in et else 0,
-                                cast(int, et["fp"]) if "fp" in et else 0,
-                                cast(float, et["corr_rec"])
-                                if "corr_rec" in et
-                                else 0.0,
+                            subblob = (
+                                subblob
+                                + "\t\t{} {}  ({:3.2f}, {:3.2f}, {:3.2f}) ({},{},{})| {}\n".format(
+                                    code,
+                                    freq,
+                                    cast(float, et["recall"]) * 100.0
+                                    if "recall" in et
+                                    else 0.0,
+                                    cast(float, et["precision"]) * 100.0
+                                    if "precision" in et
+                                    else 0.0,
+                                    fscore * 100.0,
+                                    cast(int, et["tp"]) if "tp" in et else 0,
+                                    cast(int, et["fn"]) if "fn" in et else 0,
+                                    cast(int, et["fp"]) if "fp" in et else 0,
+                                    cast(float, et["corr_rec"])
+                                    if "corr_rec" in et
+                                    else 0.0,
+                                )
                             )
                             # subwork
                             subfreq += freq
@@ -1385,31 +1388,38 @@ class Stats:
                             fscore = cast(float, et["f05score"])
                             cfscore = cast(float, et["cf05score"])
                             # codework
-                            subblob = subblob + "{}\t{}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\n".format(
-                                code,
-                                freq,
-                                cast(int, et["tp"]) if "tp" in et else 0,
-                                cast(int, et["fn"]) if "fn" in et else 0,
-                                cast(int, et["fp"]) if "fp" in et else 0,
-                                cast(float, et["recall"]) * 100.0
-                                if ("recall" in et and float(et["recall"]) > 0.0)
-                                else NO_RESULTS,  # Or "N/A", but that messes with the f-string formatting
-                                cast(float, et["precision"]) * 100.0
-                                if ("precision" in et and float(et["precision"]) > 0.0)
-                                else NO_RESULTS,
-                                fscore * 100.0 if fscore > 0.0 else NO_RESULTS,
-                                cast(int, et["ctp"]) if "ctp" in et else 0,
-                                cast(int, et["cfn"]) if "cfn" in et else 0,
-                                cast(int, et["cfp"]) if "cfp" in et else 0,
-                                cast(float, et["crecall"]) * 100.0
-                                if ("crecall" in et and float(et["crecall"]) > 0.0)
-                                else NO_RESULTS,
-                                cast(float, et["cprecision"]) * 100.0
-                                if (
-                                    "cprecision" in et and float(et["cprecision"]) > 0.0
+                            subblob = (
+                                subblob
+                                + "{}\t{}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\n".format(
+                                    code,
+                                    freq,
+                                    cast(int, et["tp"]) if "tp" in et else 0,
+                                    cast(int, et["fn"]) if "fn" in et else 0,
+                                    cast(int, et["fp"]) if "fp" in et else 0,
+                                    cast(float, et["recall"]) * 100.0
+                                    if ("recall" in et and float(et["recall"]) > 0.0)
+                                    else NO_RESULTS,  # Or "N/A", but that messes with the f-string formatting
+                                    cast(float, et["precision"]) * 100.0
+                                    if (
+                                        "precision" in et
+                                        and float(et["precision"]) > 0.0
+                                    )
+                                    else NO_RESULTS,
+                                    fscore * 100.0 if fscore > 0.0 else NO_RESULTS,
+                                    cast(int, et["ctp"]) if "ctp" in et else 0,
+                                    cast(int, et["cfn"]) if "cfn" in et else 0,
+                                    cast(int, et["cfp"]) if "cfp" in et else 0,
+                                    cast(float, et["crecall"]) * 100.0
+                                    if ("crecall" in et and float(et["crecall"]) > 0.0)
+                                    else NO_RESULTS,
+                                    cast(float, et["cprecision"]) * 100.0
+                                    if (
+                                        "cprecision" in et
+                                        and float(et["cprecision"]) > 0.0
+                                    )
+                                    else NO_RESULTS,
+                                    cfscore * 100.0 if cfscore > 0.0 else NO_RESULTS,
                                 )
-                                else NO_RESULTS,
-                                cfscore * 100.0 if cfscore > 0.0 else NO_RESULTS,
                             )
                             # subwork
                             subfreq += freq
@@ -1957,7 +1967,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             xtok = None
                             xtok = next(x)
                             continue
-                        if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
+                        if ytok.code in GCSKIPCODES:
                             # Skip these errors, shouldn't be compared.
                             if ANALYSIS:
                                 analysisblob.append(
@@ -2037,7 +2047,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     analysisblob.append("\tDumping rest of GC errors:")
                 while ytok is not None:
                     # This is a remaining GC annotation: false positive
-                    if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
+                    if ytok.code in GCSKIPCODES:
                         # Skip these errors, shouldn't be a part of the results.
                         if ANALYSIS:
                             analysisblob.append(
