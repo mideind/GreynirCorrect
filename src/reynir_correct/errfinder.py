@@ -64,14 +64,15 @@ from .annotation import Annotation
 from .errtokenizer import emulate_case
 from .pattern import PatternMatcher
 
+
 # Typing stuff
 class AnnotationDict(TypedDict):
     """The annotation for a sentence"""
 
     text: str
     detail: str
-    start: Optional[int]
-    end: Optional[int]
+    start: int
+    end: int
     original: Optional[str]
     suggest: Optional[str]
 
@@ -668,7 +669,9 @@ class ErrorFinder(ParseForestNavigator):
             suggest=suggestion,
         )
 
-    def VillaÍTölu(self, txt: str, variants: str, node: Node) -> Optional[AnnotationDict]:
+    def VillaÍTölu(
+        self, txt: str, variants: str, node: Node
+    ) -> Optional[AnnotationDict]:
         # Sögn á að vera í sömu tölu og frumlag
         children = list(node.enum_child_nodes())
         ch0, ch1 = children
@@ -749,8 +752,7 @@ class ErrorFinder(ParseForestNavigator):
                 text="Á sennilega að vera '{0}'".format(correct_np),
                 detail=(
                     "Forsetningin '{0}' stýrir {1}falli.".format(
-                        preposition.lower(),
-                        CASE_NAMES[variants],
+                        preposition.lower(), CASE_NAMES[variants],
                     )
                 ),
                 start=start,
@@ -1263,12 +1265,12 @@ class ErrorFinder(ParseForestNavigator):
                     # Empty or no dict: this means that upon closer inspection,
                     # there was no need to annotate
                     return None
-                ann_text = cast(str, ann.get("text"))
-                ann_detail = cast(str, ann.get("detail"))
-                original = cast(str, ann.get("original"))
-                suggestion = cast(str, ann.get("suggest"))
-                start = cast(int, ann.get("start", start))
-                end = cast(int, ann.get("end", end))
+                ann_text = ann.get("text")
+                ann_detail = ann.get("detail")
+                original = ann.get("original")
+                suggestion = ann.get("suggest")
+                start = ann.get("start", start)
+                end = ann.get("end", end)
         else:
             # No: use a default text
             ann_text = "'{0}' er líklega rangt".format(span_text)
