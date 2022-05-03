@@ -1265,10 +1265,10 @@ class ErrorFinder(ParseForestNavigator):
                     # Empty or no dict: this means that upon closer inspection,
                     # there was no need to annotate
                     return None
-                ann_text = ann.get("text")
-                ann_detail = ann.get("detail")
-                original = ann.get("original")
-                suggestion = ann.get("suggest")
+                ann_text = ann.get("text") or ""
+                ann_detail = ann.get("detail") or ""
+                original = ann.get("original") or ""
+                suggestion = ann.get("suggest") or ""
                 start = ann.get("start", start)
                 end = ann.get("end", end)
         else:
