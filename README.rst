@@ -119,6 +119,69 @@ annotation applies, within the original input string.
 
 ``P_WRONG_CASE_þgf_þf`` and ``S004`` are error codes.
 
+Another function supports options and corrects the output:
+
+.. code-block:: python
+   from reynir_correct import check_errors
+   x = "Páli, vini mínum, langaði að horfa á sjónnvarpið."
+   options = {}
+   options["infile"] = [x]
+   options["annotations"] = True
+   s, g = check_errors(**options)
+   print("Original sentence:")
+   print("".join([p.original for p in g if p.original]))
+   print("Corrected sentence and annotations:")
+   for i in split("\n"):
+      print(i)
+
+Output::
+
+   Original sentence:
+   'Páli, vini mínum, langaði að horfa á sjónnvarpið.'
+   Corrected sentence and annotations:
+   'Pál, vin minn, langaði að horfa á sjónvarpið.'
+   000-004: P_WRONG_CASE_þgf_þf Á líklega að vera 'Pál, vin minn' | 'Páli, vini mínum,' -> 'Pál, vin minn' | None
+   009-009: S004   Orðið 'sjónnvarpið' var leiðrétt í 'sjónvarpið' | 'sjónnvarpið' -> 'sjónvarpið' | None
+
+
+The following options can be specified:
+
+
++-----------------------------------+--------------------------------------------------+
+| | ``infile``                      | Defines the input. Can be a ReadFile             |
+|                                   | object or an Iterable object such as             |
+|                                   | a generator. Default value is sys.stdin.         |
++-----------------------------------+--------------------------------------------------+
+| | ``all_errors``                  | Defines the level of correction.                 |
+|                                   | If False, only token-level annotation is         |
+|                                   | carried out. If True, sentence-level             |
+|                                   | annotation is carried out.                       |
++-----------------------------------+--------------------------------------------------+
+| | ``annotate_unparsed_sentences`` | If True, sentences that cannot be parsed         |
+|                                   | are annotated as errors as a whole.              |
++-----------------------------------+--------------------------------------------------+
+| | ``generate_suggestion_list``    | If True, the annotation can in certain           |
+|                                   | cases contain a list of possible corrections,    |
+|                                   | for the user to pick from.                       |
++-----------------------------------+--------------------------------------------------+
+| | ``suppress_suggestions``        | If True, more farfetched automatically           |
+|                                   | retrieved corrections are rejected and           |
+|                                   | no error is added.                               |
++-----------------------------------+--------------------------------------------------+
+| | ``ignore_wordlist``             | The value is a set of strings, a whitelist.      |
+|                                   | Each string is a word that should not be         |
+|                                   | marked as an error or corrected.                 |
++-----------------------------------+--------------------------------------------------+
+| | ``one_sent``                    | Defines input as containing only one sentence.   |
++-----------------------------------+--------------------------------------------------+
+| | ``ignore_rules``                | A list of error codes that should be ignored     |
+|                                   | in the annotation process.                       |
++-----------------------------------+--------------------------------------------------+
+| | ``annotations``                 | If True, can all error annotations are returned  |
+|                                   | at the end of the output. Works with format text.|
++-----------------------------------+--------------------------------------------------+
+
+
 .. _prerequisites:
 
 *************

@@ -1683,7 +1683,7 @@ def test_ignore_rules(verbose=False):
     for ix in range(len(g)):
         assert not g[ix].error_code or g[ix].error_code in {"E001"}
 
-    # lookup_unknown_wors
+    # lookup_unknown_words
     # Ritmyndir errors - EI4EY
     options["ignore_rules"] = {"EI4EY"}
     s, g = check_with_options("Gíraffi er stærri heldur en fíll.", options)

@@ -192,7 +192,7 @@ def check_errors(**options: Any) -> str:
         # Nothing we can do
         print("No input has been given, nothing can be returned")
         sys.exit(1)
-    if options.get("all_errors"):
+    if options.get("all_errors", True):
         return check_grammar(**options)
     else:
         return check_spelling(**options)
