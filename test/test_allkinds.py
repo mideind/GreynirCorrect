@@ -59,13 +59,13 @@ def normalize(g):
 
 def check(p):
     """Return a corrected, normalized string form of the input along with the tokens"""
-    options = dict(infile=[p], one_sent=False)
+    options = dict(input=[p], one_sent=False)
     return check_errors(**options)
 
 
 def check_with_options(p, options={}):
     """Return a corrected, normalized string form of the input along with the tokens"""
-    options["infile"] = [p]
+    options["input"] = [p]
     options["one_sent"] = False
 
     return check_errors(**options)

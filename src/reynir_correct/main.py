@@ -100,8 +100,13 @@ def main() -> None:
 
     args = parser.parse_args()
     # Fill options with information from args
+    if args.infile is sys.stdin and sys.stdin.isatty():
+        # terminal input is empty, most likely no value was given for infile:
+        # Nothing we can do
+        print("No input has been given, nothing can be returned")
+        sys.exit(1)
     options: Dict[str, bool] = {}
-    options["infile"] = args.infile
+    options["input"] = args.infile
     if args.suppress_suggestions:
         options["suppress_suggestions"] = args.suppress_suggestions
     options["format"] = args.format

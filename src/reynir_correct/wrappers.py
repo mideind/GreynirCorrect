@@ -31,8 +31,8 @@
     This module exposes functions to return corrected strings given an input text.
     The following options are defined:
 
-    infile: Defines the input. Can be a ReadFile object or an Iterable object such 
-            as a generator. Default value is sys.stdin
+    input:  Defines the input. Can be a string or an iterable of strings, such
+            as a file object.
     format: Defines the output format. String. 
             text: Output is returned as a corrected version of the input.
             json: Output is returned as a JSON string.
@@ -187,11 +187,6 @@ def val(
 
 def check_errors(**options: Any) -> str:
     """Return a string in the chosen format and correction level using the spelling and grammar checker"""
-    if options["infile"] is sys.stdin and sys.stdin.isatty():
-        # terminal input is empty, most likely no value was given for infile:
-        # Nothing we can do
-        print("No input has been given, nothing can be returned")
-        sys.exit(1)
     if options.get("all_errors", True):
         return check_grammar(**options)
     else:
@@ -210,14 +205,16 @@ def check_spelling(**options: Any) -> str:
     unisum: List[str] = []
     allsum: List[str] = []
     annlist: List[str] = []
+    annotations = options.get("annotations", False)
+    print_all = options.get("print_all", False)
     for toklist in toks:
         if format == "text":
             txt = to_text(toklist)
-            if options.get("annotations", False):
+            if annotations:
                 for t in toklist:
                     if t.error:
                         annlist.append(str(t.error))
-                if annlist and not options.get("print_all", False):
+                if annlist and not print_all:
                     txt = txt + "\n" + "\n".join(annlist)
                     annlist = []
             unisum.append(txt)
@@ -250,7 +247,7 @@ def check_spelling(**options: Any) -> str:
         if allsum:
             unisum.extend(allsum)
             allsum = []
-    if options.get("print_all", False):
+    if print_all:
         # We want the annotations at the bottom
         unistr = " ".join(unisum)
         if annlist:
@@ -272,9 +269,10 @@ def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
     toksum: TokenSumType = []
     allsum: List[str] = []
     annlist: List[str] = []
+    print_all = options.get("print_all", False)
     for toklist in toks:
         unisum.append(to_text(toklist))
-        if options.get("print_all", False):
+        if print_all:
             toksum.extend(toklist)
         else:
             toksum.append(toklist)
@@ -282,7 +280,7 @@ def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
         if allsum:
             unisum.extend(allsum)
             allsum = []
-    if options.get("print_all", False):
+    if print_all:
         # We want the annotations at the bottom
         unistr = " ".join(unisum)
         if annlist:
@@ -296,7 +294,8 @@ def sentence_stream(**options: Any) -> Iterator[List[CorrectToken]]:
     """Yield a stream of sentence token lists from the source text"""
     # Initialize sentence accumulator list
     curr_sent: List[CorrectToken] = []
-    for t in errtokenize(options["infile"], **options):
+    gen = options["input"]
+    for t in errtokenize(gen, **options):
         # Normal shallow parse, one line per sentence,
         # tokens separated by spaces
         curr_sent.append(t)

@@ -119,19 +119,18 @@ annotation applies, within the original input string.
 
 ``P_WRONG_CASE_þgf_þf`` and ``S004`` are error codes.
 
-Another function supports options and corrects the output:
+For more detailed, low-level control, the ``check_errors()`` function
+supports options and can produce various types of output:
 
 .. code-block:: python
    from reynir_correct import check_errors
    x = "Páli, vini mínum, langaði að horfa á sjónnvarpið."
-   options = {}
-   options["infile"] = [x]
-   options["annotations"] = True
+   options = { "input": x, "annotations": True }
    s, g = check_errors(**options)
    print("Original sentence:")
-   print("".join([p.original for p in g if p.original]))
+   print("".join(p.original for p in g if p.original))
    print("Corrected sentence and annotations:")
-   for i in split("\n"):
+   for i in s.split("\n"):
       print(i)
 
 Output::
@@ -148,9 +147,8 @@ The following options can be specified:
 
 
 +-----------------------------------+--------------------------------------------------+
-| | ``infile``                      | Defines the input. Can be a ReadFile             |
-|                                   | object or an Iterable object such as             |
-|                                   | a generator. Default value is sys.stdin.         |
+| | ``input``                       | Defines the input. Can be a string or an         |
+|                                   | iterable of strings, such as a file object.      |
 +-----------------------------------+--------------------------------------------------+
 | | ``all_errors``                  | Defines the level of correction.                 |
 |                                   | If False, only token-level annotation is         |
@@ -160,24 +158,27 @@ The following options can be specified:
 | | ``annotate_unparsed_sentences`` | If True, sentences that cannot be parsed         |
 |                                   | are annotated as errors as a whole.              |
 +-----------------------------------+--------------------------------------------------+
-| | ``generate_suggestion_list``    | If True, the annotation can in certain           |
+| | ``generate_suggestion_list``    | If True, annotations can in certain              |
 |                                   | cases contain a list of possible corrections,    |
 |                                   | for the user to pick from.                       |
 +-----------------------------------+--------------------------------------------------+
 | | ``suppress_suggestions``        | If True, more farfetched automatically           |
-|                                   | retrieved corrections are rejected and           |
-|                                   | no error is added.                               |
+|                                   | suggested corrections are suppressed.            |
 +-----------------------------------+--------------------------------------------------+
-| | ``ignore_wordlist``             | The value is a set of strings, a whitelist.      |
+| | ``ignore_wordlist``             | The value is a set of strings to whitelist.      |
 |                                   | Each string is a word that should not be         |
-|                                   | marked as an error or corrected.                 |
+|                                   | marked as an error or corrected. The comparison  |
+|                                   | is case-sensitive.                               |
 +-----------------------------------+--------------------------------------------------+
-| | ``one_sent``                    | Defines input as containing only one sentence.   |
+| | ``one_sent``                    | The input contains a single sentence only.       |
+|                                   | Sentence splitting should not be attempted.      |
 +-----------------------------------+--------------------------------------------------+
-| | ``ignore_rules``                | A list of error codes that should be ignored     |
+| | ``ignore_rules``                | A set of error codes that should be ignored      |
 |                                   | in the annotation process.                       |
 +-----------------------------------+--------------------------------------------------+
-| | ``annotations``                 | If True, can all error annotations are returned  |
+| | ``annotations``                 | If True, generate annotations.                   |
++-----------------------------------+--------------------------------------------------+
+| | ``print_all``                   | If True, all error annotations are returned      |
 |                                   | at the end of the output. Works with format text.|
 +-----------------------------------+--------------------------------------------------+
 
