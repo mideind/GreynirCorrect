@@ -49,6 +49,7 @@
     suppress_suggestions: If True, more farfetched automatically retrieved corrections are rejected and no error is added.
     ignore_wordlist: The value is a set of strings, a whitelist. Each string is a word that should not be marked as an error or corrected.
     one_sent: Defines input as containing only one sentence.
+    ignore_rules: A list of error codes that should be ignored in the annotation process.    
 """
 
 
@@ -187,6 +188,8 @@ def val(
 
 def check_errors(**options: Any) -> str:
     """Return a string in the chosen format and correction level using the spelling and grammar checker"""
+    if type(options.get("input", sys.stdin)) == str:
+        options["input"] = [options["input"]]  # Turn into an Iterable
     if options.get("all_errors", True):
         return check_grammar(**options)
     else:
@@ -196,7 +199,7 @@ def check_errors(**options: Any) -> str:
 def check_spelling(**options: Any) -> str:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
-    format = options.get("format", "")
+    format = options.get("format", "json")
     if options.get("spaced", False):
         to_text = normalized_text_from_tokens
     else:
@@ -382,7 +385,7 @@ def check_grammar(**options: Any) -> str:
     )
     inneroptions["ignore_rules"] = options.get("ignore_rules", set())
     annlist: List[str] = []
-    format = options.get("format", "")
+    format = options.get("format", "json")
     for toklist in sentence_stream(**options):
         len_tokens = len(toklist)
         # Invoke the spelling and grammar checker on the token list
@@ -514,5 +517,4 @@ def check_grammar(**options: Any) -> str:
             accumstr = accumstr + "\n" + "\n".join(annlist)
     else:
         accumstr = "\n".join(accumul)
-
     return accumstr

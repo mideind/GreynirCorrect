@@ -125,62 +125,58 @@ supports options and can produce various types of output:
 .. code-block:: python
    from reynir_correct import check_errors
    x = "Páli, vini mínum, langaði að horfa á sjónnvarpið."
-   options = { "input": x, "annotations": True }
-   s, g = check_errors(**options)
-   print("Original sentence:")
-   print("".join(p.original for p in g if p.original))
-   print("Corrected sentence and annotations:")
+   options = { "input": x, "annotations": True, "format": "text" }
+   s = check_errors(**options)
    for i in s.split("\n"):
       print(i)
 
 Output::
 
-   Original sentence:
-   'Páli, vini mínum, langaði að horfa á sjónnvarpið.'
-   Corrected sentence and annotations:
-   'Pál, vin minn, langaði að horfa á sjónvarpið.'
+   Pál, vin minn, langaði að horfa á sjónvarpið.
    000-004: P_WRONG_CASE_þgf_þf Á líklega að vera 'Pál, vin minn' | 'Páli, vini mínum,' -> 'Pál, vin minn' | None
    009-009: S004   Orðið 'sjónnvarpið' var leiðrétt í 'sjónvarpið' | 'sjónnvarpið' -> 'sjónvarpið' | None
 
 
 The following options can be specified:
-
-
-+-----------------------------------+--------------------------------------------------+
-| | ``input``                       | Defines the input. Can be a string or an         |
-|                                   | iterable of strings, such as a file object.      |
-+-----------------------------------+--------------------------------------------------+
-| | ``all_errors``                  | Defines the level of correction.                 |
-|                                   | If False, only token-level annotation is         |
-|                                   | carried out. If True, sentence-level             |
-|                                   | annotation is carried out.                       |
-+-----------------------------------+--------------------------------------------------+
-| | ``annotate_unparsed_sentences`` | If True, sentences that cannot be parsed         |
-|                                   | are annotated as errors as a whole.              |
-+-----------------------------------+--------------------------------------------------+
-| | ``generate_suggestion_list``    | If True, annotations can in certain              |
-|                                   | cases contain a list of possible corrections,    |
-|                                   | for the user to pick from.                       |
-+-----------------------------------+--------------------------------------------------+
-| | ``suppress_suggestions``        | If True, more farfetched automatically           |
-|                                   | suggested corrections are suppressed.            |
-+-----------------------------------+--------------------------------------------------+
-| | ``ignore_wordlist``             | The value is a set of strings to whitelist.      |
-|                                   | Each string is a word that should not be         |
-|                                   | marked as an error or corrected. The comparison  |
-|                                   | is case-sensitive.                               |
-+-----------------------------------+--------------------------------------------------+
-| | ``one_sent``                    | The input contains a single sentence only.       |
-|                                   | Sentence splitting should not be attempted.      |
-+-----------------------------------+--------------------------------------------------+
-| | ``ignore_rules``                | A set of error codes that should be ignored      |
-|                                   | in the annotation process.                       |
-+-----------------------------------+--------------------------------------------------+
-| | ``annotations``                 | If True, generate annotations.                   |
-+-----------------------------------+--------------------------------------------------+
-| | ``print_all``                   | If True, all error annotations are returned      |
-|                                   | at the end of the output. Works with format text.|
-+-----------------------------------+--------------------------------------------------+
++-----------------------------------+--------------------------------------------------+-----------------+
+| | Option                          | Description                                      | Default value   |
++-----------------------------------+--------------------------------------------------+-----------------+
+| | ``input``                       | Defines the input. Can be a string or an         | sys.stdin       |       
+|                                   | iterable of strings, such as a file object.      |                 |         
++-----------------------------------+--------------------------------------------------+-----------------+
+| | ``all_errors``                  | Defines the level of correction.                 | True            |
+|                                   | If False, only token-level annotation is         |                 |
+|                                   | carried out. If True, sentence-level             |                 |
+|                                   | annotation is carried out.                       |                 |
++-----------------------------------+--------------------------------------------------+-----------------+
+| | ``annotate_unparsed_sentences`` | If True, sentences that cannot be parsed         | True            |
+|                                   | are annotated as errors as a whole.              |                 |
++-----------------------------------+--------------------------------------------------+-----------------+
+| | ``generate_suggestion_list``    | If True, annotations can in certain              | False           |
+|                                   | cases contain a list of possible corrections,    |                 |
+|                                   | for the user to pick from.                       |                 |
++-----------------------------------+--------------------------------------------------+-----------------+
+| | ``suppress_suggestions``        | If True, more farfetched automatically           | False           |
+|                                   | suggested corrections are suppressed.            |                 |
++-----------------------------------+--------------------------------------------------+-----------------+
+| | ``ignore_wordlist``             | The value is a set of strings to whitelist.      | set()           |
+|                                   | Each string is a word that should not be         |                 |
+|                                   | marked as an error or corrected. The comparison  |                 |
+|                                   | is case-sensitive.                               |                 |
++-----------------------------------+--------------------------------------------------+-----------------+
+| | ``one_sent``                    | The input contains a single sentence only.       | False           |
+|                                   | Sentence splitting should not be attempted.      |                 |
++-----------------------------------+--------------------------------------------------+-----------------+
+| | ``ignore_rules``                | A set of error codes that should be ignored      | set()           |
+|                                   | in the annotation process.                       |                 |
++-----------------------------------+--------------------------------------------------+-----------------+
+| | ``annotations``                 | If True, generate annotations and add to the end | False           |
+|                                   | of the output. Works with format text.           |                 |
++-----------------------------------+--------------------------------------------------+-----------------+
+| | ``print_all``                   | If False, each sentence (and its annotations     | False           |
+|                                   | if option ``annotations`` is True) is output     |                 |
+|                                   | in a new line. Works with format text.           |                 |
++-----------------------------------+--------------------------------------------------+-----------------+
 
 
 .. _prerequisites:
