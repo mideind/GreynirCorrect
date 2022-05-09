@@ -38,7 +38,7 @@
 
 import reynir_correct as rc
 from reynir_correct import detokenize
-from reynir_correct.wrappers import test_grammar as check_errors
+from reynir_correct.wrappers import test_grammar as wrap_check
 
 # Tests for errtokenizer.py
 
@@ -62,7 +62,7 @@ def check(p, options={}):
     options["input"] = [p]
     options["one_sent"] = False
 
-    return check_errors(**options)
+    return wrap_check(**options)
 
 
 def test_punctuation(verbose=False):

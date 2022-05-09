@@ -188,7 +188,7 @@ def val(
 
 def check_errors(**options: Any) -> str:
     """Return a string in the chosen format and correction level using the spelling and grammar checker"""
-    input = options.get("input", sys.stdin)
+    input = options.get("input", None)
     if isinstance(input, str):
         options["input"] = [input]
     if options.get("all_errors", True):
@@ -298,7 +298,9 @@ def sentence_stream(**options: Any) -> Iterator[List[CorrectToken]]:
     """Yield a stream of sentence token lists from the source text"""
     # Initialize sentence accumulator list
     curr_sent: List[CorrectToken] = []
-    gen = options.get("input", sys.stdin)
+    gen = options.get("input", None)
+    if gen is None:
+        gen = sys.stdin
     for t in errtokenize(gen, **options):
         # Normal shallow parse, one line per sentence,
         # tokens separated by spaces
