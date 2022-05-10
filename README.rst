@@ -10,8 +10,6 @@
 GreynirCorrect: Spelling and grammar correction for Icelandic
 ==============================================================
 
-.. _overview:
-
 ********
 Overview
 ********
@@ -56,8 +54,6 @@ GreynirCorrect can be invoked as a command-line tool
 to perform token-level correction and, optionally, grammar analysis.
 The command is ``correct infile.txt outfile.txt``.
 The command-line tool is further documented below.
-
-.. _examples:
 
 ********
 Examples
@@ -123,6 +119,7 @@ For more detailed, low-level control, the ``check_errors()`` function
 supports options and can produce various types of output:
 
 .. code-block:: python
+
    from reynir_correct import check_errors
    x = "Páli, vini mínum, langaði að horfa á sjónnvarpið."
    options = { "input": x, "annotations": True, "format": "text" }
@@ -138,48 +135,47 @@ Output::
 
 
 The following options can be specified:
+
 +-----------------------------------+--------------------------------------------------+-----------------+
 | | Option                          | Description                                      | Default value   |
 +-----------------------------------+--------------------------------------------------+-----------------+
-| | ``input``                       | Defines the input. Can be a string or an         | sys.stdin       |       
-|                                   | iterable of strings, such as a file object.      |                 |         
+| | ``input``                       | Defines the input. Can be a string or an         | ``sys.stdin``   |
+|                                   | iterable of strings, such as a file object.      |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
-| | ``all_errors``                  | Defines the level of correction.                 | True            |
+| | ``all_errors``                  | Defines the level of correction.                 | ``True``        |
 |                                   | If False, only token-level annotation is         |                 |
 |                                   | carried out. If True, sentence-level             |                 |
 |                                   | annotation is carried out.                       |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
-| | ``annotate_unparsed_sentences`` | If True, sentences that cannot be parsed         | True            |
-|                                   | are annotated as errors as a whole.              |                 |
+| | ``annotate_unparsed_sentences`` | If True, sentences that cannot be parsed         | ``True``        |
+|                                   | are annotated in their entirety as errors.       |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
-| | ``generate_suggestion_list``    | If True, annotations can in certain              | False           |
+| | ``generate_suggestion_list``    | If True, annotations can in certain              | ``False``       |
 |                                   | cases contain a list of possible corrections,    |                 |
 |                                   | for the user to pick from.                       |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
-| | ``suppress_suggestions``        | If True, more farfetched automatically           | False           |
+| | ``suppress_suggestions``        | If True, more farfetched automatically           | ``False``       |
 |                                   | suggested corrections are suppressed.            |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
-| | ``ignore_wordlist``             | The value is a set of strings to whitelist.      | set()           |
+| | ``ignore_wordlist``             | The value is a set of strings to whitelist.      | ``set()``       |
 |                                   | Each string is a word that should not be         |                 |
 |                                   | marked as an error or corrected. The comparison  |                 |
 |                                   | is case-sensitive.                               |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
-| | ``one_sent``                    | The input contains a single sentence only.       | False           |
+| | ``one_sent``                    | The input contains a single sentence only.       | ``False``       |
 |                                   | Sentence splitting should not be attempted.      |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
-| | ``ignore_rules``                | A set of error codes that should be ignored      | set()           |
+| | ``ignore_rules``                | A set of error codes that should be ignored      | ``set()``       |
 |                                   | in the annotation process.                       |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
-| | ``annotations``                 | If True, generate annotations and add to the end | False           |
-|                                   | of the output. Works with format text.           |                 |
+| | ``annotations``                 | If True, generate annotations and add to the end | ``False``       |
+|                                   | of the output. Works with format ``text``.       |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
-| | ``print_all``                   | If False, each sentence (and its annotations     | False           |
+| | ``print_all``                   | If False, each sentence (and its annotations     | ``False``       |
 |                                   | if option ``annotations`` is True) is output     |                 |
-|                                   | in a new line. Works with format text.           |                 |
+|                                   | in a new line. Works with format ``text``.       |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
 
-
-.. _prerequisites:
 
 *************
 Prerequisites
@@ -196,8 +192,6 @@ requires compilation from sources, you may need
    $ sudo apt-get install python3-dev
 
 ...or something to similar effect to enable this.
-
-.. _installation:
 
 ************
 Installation
@@ -220,8 +214,6 @@ If you want to be able to edit the source, do like so
    $ pip install -e .
 
 The package source code is now in ``GreynirCorrect/src/reynir_correct``.
-
-.. _commandline:
 
 *********************
 The command line tool
@@ -288,6 +280,7 @@ Command Line Examples
    $ echo "Atvinuleysi jógst um 3%" | correct
    Atvinnuleysi jókst um 3%
 
+
 .. code-block:: bash
 
    $ echo "Barnið vil grænann lit" | correct --csv
@@ -297,8 +290,10 @@ Command Line Examples
    6,"lit",""
    0,"",""
 
+
 Note how *vil* is not corrected, as it is a valid and common word, and
 the ``correct`` command does not perform grammar checking by default.
+
 
 .. code-block:: bash
 
@@ -313,49 +308,51 @@ the ``correct`` command does not perform grammar checking by default.
 To perform whole-sentence grammar checking and annotation as well as spell checking,
 use the ``--grammar`` option:
 
+
 .. code-block:: bash
 
    $ echo "Ég kláraði verkefnið þrátt fyrir að ég var þreittur." | correct --grammar
-      {
-         "original":"Ég kláraði verkefnið þrátt fyrir að ég var þreittur.",
-         "corrected":"Ég kláraði verkefnið þrátt fyrir að ég var þreyttur.",
-         "tokens":[
-            {"k":6,"x":"Ég","o":"Ég"},
-            {"k":6,"x":"kláraði","o":" kláraði"},
-            {"k":6,"x":"verkefnið","o":" verkefnið"},
-            {"k":6,"x":"þrátt fyrir","o":" þrátt fyrir"},
-            {"k":6,"x":"að","o":" að"},
-            {"k":6,"x":"ég","o":" ég"},
-            {"k":6,"x":"var","o":" var"},
-            {"k":6,"x":"þreyttur","o":" þreittur"},
-            {"k":1,"x":".","o":"."}
-         ],
-         "annotations":[
-            {
-               "start":6,
-               "end":6,
-               "start_char":35,
-               "end_char":37,
-               "code":"P_MOOD_ACK",
-               "text":"Hér er réttara að nota viðtengingarhátt
-                  sagnarinnar 'vera', þ.e. 'væri'.",
-               "detail":"Í viðurkenningarsetningum á borð við 'Z'
-                  í dæminu 'X gerði Y þrátt fyrir að Z' á sögnin að vera
-                  í viðtengingarhætti fremur en framsöguhætti.",
-               "suggest":"væri"
-            },
-            {
-               "start":7,
-               "end":7,
-               "start_char":38,
-               "end_char":41,
-               "code":"S004",
-               "text":"Orðið 'þreittur' var leiðrétt í 'þreyttur'",
-               "detail":"",
-               "suggest":"þreyttur"
-            }
-         ]
-      }
+   {
+      "original":"Ég kláraði verkefnið þrátt fyrir að ég var þreittur.",
+      "corrected":"Ég kláraði verkefnið þrátt fyrir að ég var þreyttur.",
+      "tokens":[
+         {"k":6,"x":"Ég","o":"Ég"},
+         {"k":6,"x":"kláraði","o":" kláraði"},
+         {"k":6,"x":"verkefnið","o":" verkefnið"},
+         {"k":6,"x":"þrátt fyrir","o":" þrátt fyrir"},
+         {"k":6,"x":"að","o":" að"},
+         {"k":6,"x":"ég","o":" ég"},
+         {"k":6,"x":"var","o":" var"},
+         {"k":6,"x":"þreyttur","o":" þreittur"},
+         {"k":1,"x":".","o":"."}
+      ],
+      "annotations":[
+         {
+            "start":6,
+            "end":6,
+            "start_char":35,
+            "end_char":37,
+            "code":"P_MOOD_ACK",
+            "text":"Hér er réttara að nota viðtengingarhátt
+               sagnarinnar 'vera', þ.e. 'væri'.",
+            "detail":"Í viðurkenningarsetningum á borð við 'Z'
+               í dæminu 'X gerði Y þrátt fyrir að Z' á sögnin að vera
+               í viðtengingarhætti fremur en framsöguhætti.",
+            "suggest":"væri"
+         },
+         {
+            "start":7,
+            "end":7,
+            "start_char":38,
+            "end_char":41,
+            "code":"S004",
+            "text":"Orðið 'þreittur' var leiðrétt í 'þreyttur'",
+            "detail":"",
+            "suggest":"þreyttur"
+         }
+      ]
+   }
+
 
 The output has been formatted for legibility - each input sentence is actually
 represented by a JSON object in a single line of text, terminated by newline.
@@ -366,8 +363,6 @@ The grammar corrections are found in the ``annotations`` list.
 To apply corrections and suggestions from the annotations,
 replace source text or tokens (as identified by the ``start`` and ``end``,
 or ``start_char`` and ``end_char`` properties) with the ``suggest`` field, if present.
-
-.. _tests:
 
 *****
 Tests
@@ -390,8 +385,6 @@ Icelandic Government's 5-year Language Technology Programme for Icelandic,
 which is managed by Almannarómur and described
 `here <https://www.stjornarradid.is/lisalib/getfile.aspx?itemid=56f6368e-54f0-11e7-941a-005056bc530c>`__
 (English version `here <https://clarin.is/media/uploads/mlt-en.pdf>`__).
-
-.. _license:
 
 *********************
 Copyright and License
