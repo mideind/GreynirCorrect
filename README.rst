@@ -424,7 +424,9 @@ This software is licensed under the *MIT License*:
 
 GreynirCorrect indirectly embeds the `Database of Icelandic Morphology <https://bin.arnastofnun.is>`_
 (`Beygingarlýsing íslensks nútímamáls <https://bin.arnastofnun.is>`_), abbreviated BÍN,
-along with directly using `Ritmyndir <https://bin.arnastofnun.is/DMII/LTdata/comp-format/nonstand-form/>`, a collection of non-standard word forms.
+along with directly using
+`Ritmyndir <https://bin.arnastofnun.is/DMII/LTdata/comp-format/nonstand-form/>`_,
+a collection of non-standard word forms.
 Miðeind does not claim any endorsement by the BÍN authors or copyright holders.
 
 The BÍN source data are publicly available under the
