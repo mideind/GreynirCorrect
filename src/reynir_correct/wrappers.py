@@ -72,7 +72,7 @@ import json
 from functools import partial
 from typing_extensions import TypedDict
 
-from tokenizer import detokenize, normalized_text_from_tokens
+from tokenizer import detokenize, text_from_tokens, normalized_text_from_tokens
 from tokenizer.definitions import AmountTuple, NumberTuple
 
 from .errtokenizer import TOK, CorrectToken, Error
@@ -187,7 +187,8 @@ def val(
 
 
 def check_errors(**options: Any) -> str:
-    """Return a string in the chosen format and correction level using the spelling and grammar checker"""
+    """Return a string in the chosen format and correction level
+        using the spelling and grammar checker"""
     input = options.get("input", None)
     if isinstance(input, str):
         options["input"] = [input]
@@ -202,7 +203,10 @@ def check_spelling(**options: Any) -> str:
     # Function to convert a token list to output text
     format = options.get("format", "json")
     if options.get("spaced", False):
-        to_text = normalized_text_from_tokens
+        if options.get("normalize", False):
+            to_text = normalized_text_from_tokens
+        else:
+            to_text = text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
     toks = sentence_stream(**options)
@@ -265,7 +269,10 @@ def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
     if options.get("spaced", False):
-        to_text = normalized_text_from_tokens
+        if options.get("normalize", False):
+            to_text = normalized_text_from_tokens
+        else:
+            to_text = text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
     toks = sentence_stream(**options)

@@ -38,6 +38,7 @@
 
 from typing import (
     Dict,
+    Union,
 )
 
 import sys
@@ -75,7 +76,9 @@ parser.add_argument(
     help="Suppress more agressive error suggestions",
 )
 
-parser.add_argument("--spaced", "-sp", help="Separate tokens with spaces", action="store_true")
+parser.add_argument(
+    "--spaced", "-sp", help="Separate tokens with spaces", action="store_true"
+)
 
 # Determines the output format
 parser.add_argument(
@@ -103,6 +106,21 @@ parser.add_argument(
     action="store_true",
 )
 
+# Add --json for compatibility; works the same as --format=json
+parser.add_argument(
+    "--json", "-j", help="Output in JSON format", action="store_true",
+)
+
+# Add --csv for compatibility; works the same as --format=csv
+parser.add_argument(
+    "--csv", "-c", help="Output in CSV format", action="store_true",
+)
+
+# Add --normalize
+parser.add_argument(
+    "--normalize", "-n", help="Normalize punctuation", action="store_true",
+)
+
 
 def main() -> None:
     """Main function, called when the 'correct' command is invoked"""
@@ -114,12 +132,17 @@ def main() -> None:
         # Nothing we can do
         print("No input has been given, nothing can be returned")
         sys.exit(1)
-    options: Dict[str, bool] = {}
+    options: Dict[str, Union[bool, str]] = {}
     options["input"] = args.infile
     if args.suppress_suggestions:
         options["suppress_suggestions"] = args.suppress_suggestions
     options["format"] = args.format
+    if args.json:
+        options["format"] = "json"
+    elif args.csv:
+        options["format"] = "csv"
     options["spaced"] = args.spaced
+    options["normalize"] = args.normalize
     options["all_errors"] = args.all_errors or args.grammar
     print(check_errors(**options), file=args.outfile)
 
