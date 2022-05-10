@@ -143,7 +143,7 @@ The following options can be specified:
 |                                   | iterable of strings, such as a file object.      |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
 | | ``all_errors``                  | Defines the level of correction.                 | ``True``        |
-|                                   | If False, only token-level annotation is         |                 |
+| | (alias ``grammar``)             | If False, only token-level annotation is         |                 |
 |                                   | carried out. If True, sentence-level             |                 |
 |                                   | annotation is carried out.                       |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+

@@ -70,16 +70,17 @@ parser.add_argument(
 
 parser.add_argument(
     "--suppress_suggestions",
-    "-sss",
+    "-ss",
     action="store_true",
     help="Suppress more agressive error suggestions",
 )
 
-parser.add_argument("--spaced", help="Separate tokens with spaces", action="store_true")
+parser.add_argument("--spaced", "-sp", help="Separate tokens with spaces", action="store_true")
 
 # Determines the output format
 parser.add_argument(
     "--format",
+    "-f",
     nargs="?",
     type=str,
     default="text",
@@ -90,6 +91,14 @@ parser.add_argument(
 parser.add_argument(
     "--all_errors",
     "-a",
+    help="Annotate both grammar and spelling errors",
+    action="store_true",
+)
+
+# Add --grammar for compatibility; works the same as --all_errors
+parser.add_argument(
+    "--grammar",
+    "-g",
     help="Annotate both grammar and spelling errors",
     action="store_true",
 )
@@ -111,7 +120,7 @@ def main() -> None:
         options["suppress_suggestions"] = args.suppress_suggestions
     options["format"] = args.format
     options["spaced"] = args.spaced
-    options["all_errors"] = args.all_errors
+    options["all_errors"] = args.all_errors or args.grammar
     print(check_errors(**options), file=args.outfile)
 
 
