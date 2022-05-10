@@ -66,7 +66,7 @@ def check(p):
     """Return a corrected, normalized string form of the input along with the tokens"""
     options: Dict[str, Union[str, bool]] = {}
     options["spaced"] = False
-    options["infile"] = [p]
+    options["input"] = [p]
     options["one_sent"] = False
     options[
         "print_all"

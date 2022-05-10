@@ -2590,7 +2590,7 @@ def late_fix_capitalization(
             at_sentence_start = True
             continue
         if (
-            isinstance(token, CorrectToken)
+            isinstance(token, CorrectToken)  # type: ignore
             and token.error_code == "Z002"
             and " " in token.txt
             and token.original

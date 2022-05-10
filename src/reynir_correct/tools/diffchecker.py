@@ -26,7 +26,7 @@ WriteFile = argparse.FileType("w", encoding="utf-8")
 parser = argparse.ArgumentParser(description="Corrects Icelandic text")
 
 parser.add_argument(
-    "inputfile",
+    "infile",
     nargs="?",
     type=ReadFile,
     default=sys.stdin,
@@ -45,7 +45,7 @@ def main() -> None:
     options["format"] = "text"  # text, json, csv, m2
     options["annotations"] = True
     options["all_errors"] = True
-    # options["infile"] = open("prufa.txt", "r")
+    # options["input"] = open("prufa.txt", "r")
     options["one_sent"] = False
     # options["generate_suggestion_list"] = True
     options["ignore_comments"] = False  # Only used here
@@ -58,13 +58,13 @@ def main() -> None:
     options["print_all"] = True
     options["ignore_rules"] = set()
     args = parser.parse_args()
-    inputfile = args.inputfile
-    if inputfile is sys.stdin and sys.stdin.isatty():
+    infile = args.infile
+    if infile is sys.stdin and sys.stdin.isatty():
         # terminal input is empty, most likely no value was given for infile:
         # Nothing we can do
         print("No input has been given, nothing can be returned")
         sys.exit(1)
-    itering = gen(inputfile)
+    itering = gen(infile)
     for sent in itering:
         sent = sent.strip()
         if not sent:
@@ -74,7 +74,7 @@ def main() -> None:
             if not options.get("ignore_comments"):
                 print(sent)
             continue
-        options["infile"] = sent
+        options["input"] = sent
         x = check_errors(**options)
         # Here we can compare x to gold by zipping sentences
         # from output and gold together and iterating in a for loop
