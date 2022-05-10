@@ -168,13 +168,6 @@ The following options can be specified:
 | | ``ignore_rules``                | A set of error codes that should be ignored      | ``set()``       |
 |                                   | in the annotation process.                       |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
-| | ``annotations``                 | If True, generate annotations and add to the end | ``False``       |
-|                                   | of the output. Works with format ``text``.       |                 |
-+-----------------------------------+--------------------------------------------------+-----------------+
-| | ``print_all``                   | If False, each sentence (and its annotations     | ``False``       |
-|                                   | if option ``annotations`` is True) is output     |                 |
-|                                   | in a new line. Works with format ``text``.       |                 |
-+-----------------------------------+--------------------------------------------------+-----------------+
 
 
 *************
