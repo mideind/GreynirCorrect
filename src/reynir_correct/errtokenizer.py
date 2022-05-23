@@ -1926,6 +1926,9 @@ def lookup_unknown_words(
         if code in ignore_rules:
             return token
         corrected = Ritmyndir.get_correct_form(token.txt)
+        if token.txt[0].istitle() and not corrected.istitle():
+            # Most likely a (foreign) named entity - Sky News → Ský News
+            return token
         corrected = emulate_case(corrected, template=token.txt)
         if not corrected:
             # No correct value available
