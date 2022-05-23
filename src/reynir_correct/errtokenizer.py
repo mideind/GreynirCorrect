@@ -1926,7 +1926,13 @@ def lookup_unknown_words(
         if code in ignore_rules:
             return token
         corrected = Ritmyndir.get_correct_form(token.txt)
-        if token.txt[0].istitle() and not corrected.istitle():
+        if (
+            token.txt[0].istitle()
+            and not token.cap_sentence_start
+            and not corrected.istitle()
+        ):
+            # We only want to correct tokens in title case not at sentence start
+            # if the correction is also in title case
             # Most likely a (foreign) named entity - Sky News → Ský News
             return token
         corrected = emulate_case(corrected, template=token.txt)
@@ -2042,6 +2048,15 @@ def lookup_unknown_words(
         ):
             # Don't correct PCR-próf to Pcr-próf,
             # or félags- og barnamálaráðherra to félags- og varnamálaráðherra
+            return False
+        elif (
+            token.txt[0].isupper()
+            and not token.cap_sentence_start
+            and not any(is_cap(mean.stofn) for mean in m)
+        ):
+            # We only want to correct tokens in title case not at sentence start
+            #  if the correction appears in title case in the data,
+            # Most likely a (foreign) named entity - Sky News -> Ský News
             return False
         # elif len(token.txt) == 1 and (
         #    corrected_txt
