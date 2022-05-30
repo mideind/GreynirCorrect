@@ -2499,11 +2499,7 @@ def fix_capitalization(
                             )
                         )
                 else:
-                    if (  # type: ignore
-                        "Z001" not in ignore_rules
-                        and isinstance(token.val, BIN_Tuple)
-                        and not any(v.ordfl == "lo" for v in token.val)  # type: ignore
-                    ):
+                    if "Z001" not in ignore_rules:
                         # Token is capitalized but should be lower case
                         # NOTE: We skip checks for adjectives as they are in most cases a part of
                         # a named entity (Danska ríkisútvarpið, Íslensk erfðagreining) that
@@ -2583,6 +2579,7 @@ def late_fix_capitalization(
     token_ctor: TokenCtor,
     only_ci: bool,
     ignore_rules: FrozenSet[str],
+    suppress_suggestions: bool,
 ) -> Iterator[CorrectToken]:
 
     """Annotate final, coalesced tokens with errors
@@ -2664,6 +2661,9 @@ def late_fix_capitalization(
                                 suggest=correct,
                             )
                         )
+            if suppress_suggestions and token.error_code and token.error_code == "Z001" and isinstance(token.val, list) and any(v.ordfl == "lo" for v in token.val):  # type: ignore
+                token.remove_error(token.original.strip())
+
         elif token.kind == TOK.NUMBER:
             if re.match(r"[0-9.,/-]+$", token.txt) or token.txt.isupper():
                 # '1.234,56' or '3/4' or "-6" or '24 MILLJÓNIR' is always OK
@@ -2832,9 +2832,8 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
             token.val is not None
             and token.has_meanings
             and token.txt not in NOT_TABOO
-            and isinstance(token.val, BIN_Tuple)
-            and not any(v.stofn + "_" + v.ordfl for v in token.val)  # type: ignore
-            and not token.error
+            and isinstance(token.val, list)  # List of BIN_Tuple
+            and not any(v.stofn + "_" + v.ordfl in NOT_TABOO for v in token.val)  # type: ignore
         ):
             # We skip checks for tokens already containing an error, as the taboo word
             # might be the system's invention.
@@ -2873,17 +2872,26 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                         )
                         suggest = sw[0].split("_")[0]
                         sugglist = list(w.split("_")[0] for w in sw)
-                    token.set_error(
-                        TabooWarning(
-                            "001",
-                            explanation,
-                            detail or None,
-                            token.txt,
-                            suggest,
-                            sugglist,
+                    if (
+                        token.error_code
+                        and token.error_code[0] == "W"
+                        and token.txt.strip() != token.original.strip()
+                    ):
+                        # The system seems to have used automatic methods to 'correct'
+                        # to a taboo words: remove the error
+                        token.remove_error(token.original.strip())
+                    else:
+                        token.set_error(
+                            TabooWarning(
+                                "001",
+                                explanation,
+                                detail or None,
+                                token.txt,
+                                suggest,
+                                sugglist,
+                            )
                         )
-                    )
-                    # !!! TODO: Add correctly inflected suggestion here
+                        # !!! TODO: Add correctly inflected suggestion here
                     break
         yield token
 
@@ -3171,7 +3179,12 @@ class CorrectionPipeline(DefaultPipeline):
         ct_stream = cast(Iterator[CorrectToken], stream)
         token_ctor = cast(TokenCtor, self._token_ctor)
         ct_stream = late_fix_capitalization(
-            ct_stream, self._db, token_ctor, self._only_ci, self._ignore_rules
+            ct_stream,
+            self._db,
+            token_ctor,
+            self._only_ci,
+            self._ignore_rules,
+            self._suppress_suggestions,
         )
 
         ct_stream = late_fix_merges(
