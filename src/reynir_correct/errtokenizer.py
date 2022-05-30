@@ -1929,7 +1929,9 @@ def lookup_unknown_words(
             return token
         corrected = Ritmyndir.get_correct_form(token.txt)
         if (
+            # Needed due to difference in title case for Icelandic and English in MWE
             token.txt[0].istitle()
+            and not token.txt.isupper()
             and not token.cap_sentence_start
             and not corrected.istitle()
         ):
