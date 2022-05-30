@@ -300,6 +300,8 @@ class PatternMatcher:
         if pp is None:
             return
         pp_af = pp.first_match('"af"')
+        if pp_af is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "Í '{0}' á 'af' sennilega að vera 'að'".format(vp.tidy_text)
@@ -332,7 +334,9 @@ class PatternMatcher:
             pp = match.first_match('ADVP > { "af" }')
         if np is None or pp is None:
             return
-        pp_af = pp_af.first_match('"að"')
+        pp_af = pp.first_match('"að"')
+        if pp_af is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'verða vitni af' á sennilega að vera 'verða vitni að'"
@@ -368,6 +372,8 @@ class PatternMatcher:
         if np is None or pp is None:
             return
         pp_af = pp.first_match('"af"')
+        if pp_af is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'gera grín af' á sennilega að vera 'gera grín að'"
@@ -402,6 +408,8 @@ class PatternMatcher:
         if vp is None or np is None or pp is None:
             return
         pp_af = pp.first_match('"af"')
+        if pp_af is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'leiða {0} af' á sennilega að vera 'leiða {0} að'".format(np.tidy_text)
@@ -443,6 +451,8 @@ class PatternMatcher:
         if vp is None or np is None or pp is None:
             return
         pp_af = pp.first_match('"af"')
+        if pp_af is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'marka upphaf af' á sennilega að vera 'marka upphaf að'"
@@ -481,6 +491,8 @@ class PatternMatcher:
         if vp is None or pp is None or np is None:
             return
         pp_af = pp.first_match('"af"')
+        if pp_af is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'leggja af velli' á sennilega að vera 'leggja að velli'"
@@ -515,6 +527,8 @@ class PatternMatcher:
         if advp is None or pp is None:
             return
         pp_af = pp.first_match('"af"')
+        if pp_af is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'utan af' á sennilega að vera 'utan að'"
@@ -551,6 +565,8 @@ class PatternMatcher:
         if vp is None or np is None or pp is None:
             return
         pp_af = pp.first_match('"af"')
+        if pp_af is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'uppvís af' á sennilega að vera 'uppvís að'"
@@ -591,6 +607,8 @@ class PatternMatcher:
         if vp is None or pp is None or np is None:
             return
         pp_af = pp.first_match('"af"')
+        if pp_af is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'af ósk' á sennilega að vera 'að ósk'"
@@ -643,6 +661,8 @@ class PatternMatcher:
         if np is None or pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         start, end = pp_að.span
         text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
         detail = (
@@ -673,6 +693,8 @@ class PatternMatcher:
         if np is None or pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         start, end = pp_að.span
         text = "'hluti að' á sennilega að vera 'hluti af'"
         detail = "Í samhenginu 'hluti af e-u' er notuð forsetningin 'af', ekki 'að'."
@@ -699,6 +721,8 @@ class PatternMatcher:
         if pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_að.span
         suggest = self.suggestion_complex(match, "leggja", "að")
@@ -729,6 +753,8 @@ class PatternMatcher:
         if pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         start, end = pp_að.span
         suggest = pp_að.substituted_text(pp_að, "af")
         whole = self.suggestion_complex(match, "láta", "að")
@@ -761,6 +787,8 @@ class PatternMatcher:
         if np is None or pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_að.span
         whole = self.suggestion_complex(match, "heiður", "að")
@@ -806,6 +834,8 @@ class PatternMatcher:
         if vp is None or pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_að.span
         suggest = pp_að.substituted_text(pp_að, "af")
@@ -838,6 +868,8 @@ class PatternMatcher:
         if pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         start, end = pp_að.span
         text = "'til að' á sennilega að vera 'til af'"
         detail = (
@@ -868,6 +900,8 @@ class PatternMatcher:
         if pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         start, end = pp_að.span
         text = "'gagn að' á sennilega að vera 'gagn af'"
         detail = (
@@ -899,6 +933,8 @@ class PatternMatcher:
         if pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         start, end = pp_að.span
         # Calculate the start and end token indices, spanning both phrases
         text = "'að' á sennilega að vera 'af'"
@@ -934,6 +970,8 @@ class PatternMatcher:
         if pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         start, end = pp_að.span
         suggest = pp_að.substituted_text(pp_að, "af")
         whole = self.suggestion_complex(match, "stafa", "að")
@@ -969,6 +1007,8 @@ class PatternMatcher:
         if np is None or pp is None:
             return
         pp_af = pp.first_match('"af"')
+        if pp_af is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'{0} af' á sennilega að vera '{0} að'".format(np.tidy_text)
@@ -1001,6 +1041,8 @@ class PatternMatcher:
         if vp is None or pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_að.span
         suggest = pp_að.substituted_text(pp_að, "af")
@@ -1034,6 +1076,8 @@ class PatternMatcher:
         if np is None or pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_að.span
         text = "'gaman að' á sennilega að vera 'gaman af'"
@@ -1064,12 +1108,14 @@ class PatternMatcher:
         if pp is None:
             return
         pp_að = pp.first_match('"að"')
+        if pp_að is None:
+            return
         start, end = pp_að.span
         text = "'heillaður að' á sennilega að vera 'heillaður af'"
         detail = (
             "Í samhenginu 'heillaður af e-u' er notuð " "forsetningin 'af', ekki 'að'."
         )
-        suggesst = pp_að.substituted_text(pp_að, "af")
+        suggest = pp_að.substituted_text(pp_að, "af")
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
             return
@@ -1097,7 +1143,9 @@ class PatternMatcher:
         if vp is None or pp is None:
             return
         pp_að = pp.first_match('"að"')
-        pp = pp_að.span
+        if pp_að is None:
+            return
+        start, end = pp_að.span
         if " að " in vp.tidy_text:
             text = "'{0}' á sennilega að vera '{1}'".format(
                 vp.tidy_text, vp.tidy_text.replace(" að ", " af ")
@@ -1136,7 +1184,7 @@ class PatternMatcher:
         if pp_að is None:
             return
         # Calculate the start and end token indices, spanning both phrases
-        start, end = pp_að
+        start, end = pp_að.span
         suggest = match.substituted_text(pp_að, "af")
         text = "Hér á líklega að vera forsetningin 'af' í stað 'að'."
         detail = (

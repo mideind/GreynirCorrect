@@ -2499,8 +2499,10 @@ def fix_capitalization(
                             )
                         )
                 else:
-                    if "Z001" not in ignore_rules and not any(
-                        v.ordfl == "lo" for v in token.val
+                    if (  # type: ignore
+                        "Z001" not in ignore_rules
+                        and isinstance(token.val, BIN_Tuple)
+                        and not any(v.ordfl == "lo" for v in token.val)  # type: ignore
                     ):
                         # Token is capitalized but should be lower case
                         # NOTE: We skip checks for adjectives as they are in most cases a part of
@@ -2826,10 +2828,12 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
 
     for token in token_stream:
         # Check taboo words
-        if (
-            token.has_meanings
+        if (  # type: ignore
+            token.val is not None
+            and token.has_meanings
             and token.txt not in NOT_TABOO
-            and not any(v.stofn + "_" + v.ordfl for v in token.val)
+            and isinstance(token.val, BIN_Tuple)
+            and not any(v.stofn + "_" + v.ordfl for v in token.val)  # type: ignore
             and not token.error
         ):
             # We skip checks for tokens already containing an error, as the taboo word
