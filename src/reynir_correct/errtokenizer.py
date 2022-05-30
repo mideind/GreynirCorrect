@@ -2503,6 +2503,10 @@ def fix_capitalization(
                         v.ordfl == "lo" for v in token.val
                     ):
                         # Token is capitalized but should be lower case
+                        # NOTE: We skip checks for adjectives as they are in most cases a part of
+                        # a named entity (Danska ríkisútvarpið, Íslensk erfðagreining) that
+                        # the system does not recognize. In the case of better NER, this should
+                        # be reverted.
                         original_txt = token.txt
                         correct = token.txt.lower()
                         _, m = db.lookup_g(correct, False)
