@@ -2664,7 +2664,8 @@ def late_fix_capitalization(
                             )
                         )
             if suppress_suggestions and token.error_code and token.error_code == "Z001" and isinstance(token.val, list) and any(v.ordfl == "lo" for v in token.val):  # type: ignore
-                token.remove_error(token.original.strip())
+                orig = token.original.strip() if token.original else token.txt
+                token.remove_error(orig)
 
         elif token.kind == TOK.NUMBER:
             if re.match(r"[0-9.,/-]+$", token.txt) or token.txt.isupper():
@@ -2876,12 +2877,18 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                         sugglist = list(w.split("_")[0] for w in sw)
                     if (
                         token.error_code
+                        and token.original
                         and token.error_code[0] == "W"
                         and token.txt.strip() != token.original.strip()
                     ):
                         # The system seems to have used automatic methods to 'correct'
                         # to a taboo words: remove the error
-                        token.remove_error(token.original.strip())
+                        orig = (
+                            token.original.strip()
+                            if token.original
+                            else token.txt.strip()
+                        )
+                        token.remove_error(orig)
                     else:
                         token.set_error(
                             TabooWarning(
