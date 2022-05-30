@@ -212,6 +212,8 @@ STOP_WORDS = frozenset(("in", "the", "for", "at"))
 
 RITREGLUR_URL = "https://ritreglur.arnastofnun.is/#"
 
+NOT_TABOO = frozenset(("nýbúinn", "hommi_kk"))
+
 # A dictionary of token error classes, used in serialization
 ErrorType = Type["Error"]
 ERROR_CLASS_REGISTRY: Dict[str, ErrorType] = dict()
@@ -2497,7 +2499,9 @@ def fix_capitalization(
                             )
                         )
                 else:
-                    if "Z001" not in ignore_rules:
+                    if "Z001" not in ignore_rules and not any(
+                        v.ordfl == "lo" for v in token.val
+                    ):
                         # Token is capitalized but should be lower case
                         original_txt = token.txt
                         correct = token.txt.lower()
@@ -2818,7 +2822,14 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
 
     for token in token_stream:
         # Check taboo words
-        if token.has_meanings:
+        if (
+            token.has_meanings
+            and token.txt not in NOT_TABOO
+            and not any(v.stofn + "_" + v.ordfl for v in token.val)
+            and not token.error
+        ):
+            # We skip checks for tokens already containing an error, as the taboo word
+            # might be the system's invention.
             # !!! TODO: This could be made more efficient if all
             # !!! TODO: taboo word forms could be generated ahead of time
             # !!! TODO: and checked via a set lookup
@@ -2866,7 +2877,6 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                     )
                     # !!! TODO: Add correctly inflected suggestion here
                     break
-
         yield token
 
 
