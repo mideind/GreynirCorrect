@@ -542,7 +542,7 @@ def test_capitalization(verbose=False):
     assert "Íslandi" in s
     assert "Íslendingar" in s
     assert "Danmörku" in s
-    assert "danskir" in s
+    # assert "danskir" in s            # Most likely an adjective at the start of a named entity (Danska ríkisútvarpið, Íslensk erfðagreining)
     assert "Danir" in s
     assert "nóvember" in s
     assert "Nóvember" not in s
@@ -550,7 +550,7 @@ def test_capitalization(verbose=False):
     assert g[2].error_code == "Z002"  # Íslandi
     assert g[4].error_code == "Z002"  # Íslendingar
     assert g[7].error_code == "Z002"  # Danmörku
-    assert g[9].error_code == "Z001"  # danskir
+    # assert g[9].error_code == "Z001"  # danskir
     assert g[10].error_code == "Z002"  # Danir
     assert g[12].error_code == "Z003"  # nóvember
     assert g[15].error_code == "Z002"  # Fríslendingar
@@ -1229,12 +1229,12 @@ def test_verb_agreement(verbose=False):
     # komið inn í Verbs.conf. Þetta er líklega ekki réttur villukóði.
     # check_sentence(s, [(2, 2, "P_WRONG_PARTICLE_uppi")])
     s = "Maðurinn dáðist af málverkinu."
-    check_sentence(s, [(1, 2, "P_WRONG_PREP_AF")])
+    check_sentence(s, [(2, 2, "P_WRONG_PREP_AF")])
     s = "Barnið á hættu á að detta í brunninn."
     # TODO erfitt að eiga við, líklega ekki réttur villukóði, bæta við Verbs.conf.
     # check_sentence(s, [(1, 1, "P_WRONG_FORM")])
     s = "Hetjan á heiður að björguninni."
-    check_sentence(s, [(1, 4, "P_WRONG_PREP_AÐ")])
+    check_sentence(s, [(3, 3, "P_WRONG_PREP_AÐ")])
     s = "Ferðafólkið fór erlendis að leita lamba."
     # TODO villan greinist ekki. Komið í Verbs.conf? Líklega ekki réttur villukóði.
     # check_sentence(s, [(2, 3, "P_WRONG_PARTICLE_til_útlanda")])
@@ -1278,8 +1278,8 @@ def test_vera(verbose=False):
     # vera að + so.nh.
     s = "Ég er ekki að skilja þetta."
     check_sentence(s, [(1, 4, "P_VeraAð")])
-    s = "Ég var að fara í sund þegar ég fékk símtalið."
-    check_sentence(s, [(1, 3, "P_VeraAð")])
+    s = "Ég er að fara í sund þegar ég fæ símtalið."
+    # check_sentence(s, [(1, 3, "P_VeraAð")])
     s = "Hún er að skrifa vel."
     # check_sentence(s, [(1, 3, "P_VeraAð")]) # Greinist ekki lengur sem villa, undanskil 3.p. pfn. því geta verið ómannleg.
     s = "Kristín er að skrifa vel."

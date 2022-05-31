@@ -212,6 +212,11 @@ STOP_WORDS = frozenset(("in", "the", "for", "at"))
 
 RITREGLUR_URL = "https://ritreglur.arnastofnun.is/#"
 
+# The set contains two kinds of data
+# Single word forms: 'nýbúinn' should be excluded, but other word forms of 'nýbúi' should not
+# Lemmas_part-of-speech: all word forms of 'hommi' should be excluded from checking.
+NOT_TABOO = frozenset(("nýbúinn", "hommi_kk"))
+
 # A dictionary of token error classes, used in serialization
 ErrorType = Type["Error"]
 ERROR_CLASS_REGISTRY: Dict[str, ErrorType] = dict()
@@ -1926,6 +1931,17 @@ def lookup_unknown_words(
         if code in ignore_rules:
             return token
         corrected = Ritmyndir.get_correct_form(token.txt)
+        if (
+            # Needed due to difference in title case for Icelandic and English in MWE
+            token.txt[0].istitle()
+            and not token.txt.isupper()
+            and not token.cap_sentence_start
+            and not corrected.istitle()
+        ):
+            # We only want to correct tokens in title case not at sentence start
+            # if the correction is also in title case
+            # Most likely a (foreign) named entity - Sky News → Ský News
+            return token
         corrected = emulate_case(corrected, template=token.txt)
         if not corrected:
             # No correct value available
@@ -2039,6 +2055,15 @@ def lookup_unknown_words(
         ):
             # Don't correct PCR-próf to Pcr-próf,
             # or félags- og barnamálaráðherra to félags- og varnamálaráðherra
+            return False
+        elif (
+            token.txt[0].isupper()
+            and not token.cap_sentence_start
+            and not any(is_cap(mean.stofn) for mean in m)
+        ):
+            # We only want to correct tokens in title case not at sentence start
+            #  if the correction appears in title case in the data,
+            # Most likely a (foreign) named entity - Sky News -> Ský News
             return False
         # elif len(token.txt) == 1 and (
         #    corrected_txt
@@ -2481,6 +2506,10 @@ def fix_capitalization(
                 else:
                     if "Z001" not in ignore_rules:
                         # Token is capitalized but should be lower case
+                        # NOTE: We skip checks for adjectives as they are in most cases a part of
+                        # a named entity (Danska ríkisútvarpið, Íslensk erfðagreining) that
+                        # the system does not recognize. In the case of better NER, this should
+                        # be reverted.
                         original_txt = token.txt
                         correct = token.txt.lower()
                         _, m = db.lookup_g(correct, False)
@@ -2555,6 +2584,7 @@ def late_fix_capitalization(
     token_ctor: TokenCtor,
     only_ci: bool,
     ignore_rules: FrozenSet[str],
+    suppress_suggestions: bool,
 ) -> Iterator[CorrectToken]:
 
     """Annotate final, coalesced tokens with errors
@@ -2636,6 +2666,10 @@ def late_fix_capitalization(
                                 suggest=correct,
                             )
                         )
+            if suppress_suggestions and token.error_code == "Z001" and isinstance(token.val, list) and any(v.ordfl == "lo" for v in token.val):  # type: ignore
+                orig = token.original.strip() if token.original else token.txt
+                token.remove_error(orig)
+
         elif token.kind == TOK.NUMBER:
             if re.match(r"[0-9.,/-]+$", token.txt) or token.txt.isupper():
                 # '1.234,56' or '3/4' or "-6" or '24 MILLJÓNIR' is always OK
@@ -2800,7 +2834,15 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
 
     for token in token_stream:
         # Check taboo words
-        if token.has_meanings:
+        if (  # type: ignore
+            token.val is not None
+            and token.has_meanings
+            and token.txt not in NOT_TABOO
+            and isinstance(token.val, list)  # List of BIN_Tuple
+            and not any(v.stofn + "_" + v.ordfl in NOT_TABOO for v in token.val)  # type: ignore
+        ):
+            # We skip checks for tokens already containing an error, as the taboo word
+            # might be the system's invention.
             # !!! TODO: This could be made more efficient if all
             # !!! TODO: taboo word forms could be generated ahead of time
             # !!! TODO: and checked via a set lookup
@@ -2836,19 +2878,33 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                         )
                         suggest = sw[0].split("_")[0]
                         sugglist = list(w.split("_")[0] for w in sw)
-                    token.set_error(
-                        TabooWarning(
-                            "001",
-                            explanation,
-                            detail or None,
-                            token.txt,
-                            suggest,
-                            sugglist,
+                    if (
+                        token.error_code
+                        and token.original
+                        and token.error_code[0] == "W"
+                        and token.txt.strip() != token.original.strip()
+                    ):
+                        # The system seems to have used automatic methods to 'correct'
+                        # to a taboo word: remove the error
+                        orig = (
+                            token.original.strip()
+                            if token.original
+                            else token.txt.strip()
                         )
-                    )
-                    # !!! TODO: Add correctly inflected suggestion here
+                        token.remove_error(orig)
+                    else:
+                        token.set_error(
+                            TabooWarning(
+                                "001",
+                                explanation,
+                                detail or None,
+                                token.txt,
+                                suggest,
+                                sugglist,
+                            )
+                        )
+                        # !!! TODO: Add correctly inflected suggestion here
                     break
-
         yield token
 
 
@@ -3135,7 +3191,12 @@ class CorrectionPipeline(DefaultPipeline):
         ct_stream = cast(Iterator[CorrectToken], stream)
         token_ctor = cast(TokenCtor, self._token_ctor)
         ct_stream = late_fix_capitalization(
-            ct_stream, self._db, token_ctor, self._only_ci, self._ignore_rules
+            ct_stream,
+            self._db,
+            token_ctor,
+            self._only_ci,
+            self._ignore_rules,
+            self._suppress_suggestions,
         )
 
         ct_stream = late_fix_merges(
