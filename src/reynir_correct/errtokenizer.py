@@ -212,6 +212,9 @@ STOP_WORDS = frozenset(("in", "the", "for", "at"))
 
 RITREGLUR_URL = "https://ritreglur.arnastofnun.is/#"
 
+# The set contains two kinds of data
+# Single word forms: 'nýbúinn' should be excluded, but other word forms of 'nýbúi' should not
+# Lemmas_part-of-speech: all word forms of 'hommi' should be excluded from checking.
 NOT_TABOO = frozenset(("nýbúinn", "hommi_kk"))
 
 # A dictionary of token error classes, used in serialization
@@ -2663,7 +2666,7 @@ def late_fix_capitalization(
                                 suggest=correct,
                             )
                         )
-            if suppress_suggestions and token.error_code and token.error_code == "Z001" and isinstance(token.val, list) and any(v.ordfl == "lo" for v in token.val):  # type: ignore
+            if suppress_suggestions and token.error_code == "Z001" and isinstance(token.val, list) and any(v.ordfl == "lo" for v in token.val):  # type: ignore
                 orig = token.original.strip() if token.original else token.txt
                 token.remove_error(orig)
 
@@ -2882,7 +2885,7 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
                         and token.txt.strip() != token.original.strip()
                     ):
                         # The system seems to have used automatic methods to 'correct'
-                        # to a taboo words: remove the error
+                        # to a taboo word: remove the error
                         orig = (
                             token.original.strip()
                             if token.original
