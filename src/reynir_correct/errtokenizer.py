@@ -212,10 +212,8 @@ STOP_WORDS = frozenset(("in", "the", "for", "at"))
 
 RITREGLUR_URL = "https://ritreglur.arnastofnun.is/#"
 
-# The set contains two kinds of data
 # Single word forms: 'nýbúinn' should be excluded, but other word forms of 'nýbúi' should not
-# Lemmas_part-of-speech: all word forms of 'hommi' should be excluded from checking.
-NOT_TABOO = frozenset(("nýbúinn", "hommi_kk"))
+NOT_TABOO = frozenset(("nýbúinn",))
 
 # A dictionary of token error classes, used in serialization
 ErrorType = Type["Error"]
@@ -2835,11 +2833,7 @@ def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectT
     for token in token_stream:
         # Check taboo words
         if (  # type: ignore
-            token.val is not None
-            and token.has_meanings
-            and token.txt not in NOT_TABOO
-            and isinstance(token.val, list)  # List of BIN_Tuple
-            and not any(v.stofn + "_" + v.ordfl in NOT_TABOO for v in token.val)  # type: ignore
+            token.val is not None and token.has_meanings and token.txt not in NOT_TABOO
         ):
             # We skip checks for tokens already containing an error, as the taboo word
             # might be the system's invention.
