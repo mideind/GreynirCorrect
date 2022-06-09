@@ -325,7 +325,7 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self.node_span(node)
         return AnnotationDict(
             text="'{0}' er sennilega ofaukið".format(txt),
-            detail="Yfirleitt nægir að nota 'en' í þessu samhengi.",
+            detail="Yfirleitt nægir að nota 'en' í þessu samhengi, 'heldur en' telst frekar óformlegt. Það á þó stundum rétt hjá sér í löngum setningum ef langt er frá upphaflega samanburðinum til seinni samanburðarins til að auka skýrleika textans.",
             original=orig_txt,
             start=start,
             end=end,
@@ -752,7 +752,8 @@ class ErrorFinder(ParseForestNavigator):
                 text="Á sennilega að vera '{0}'".format(correct_np),
                 detail=(
                     "Forsetningin '{0}' stýrir {1}falli.".format(
-                        preposition.lower(), CASE_NAMES[variants],
+                        preposition.lower(),
+                        CASE_NAMES[variants],
                     )
                 ),
                 start=start,
