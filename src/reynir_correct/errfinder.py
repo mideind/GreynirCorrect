@@ -597,19 +597,21 @@ class ErrorFinder(ParseForestNavigator):
             suggest=correct_pronoun,
         )
 
-    def AðvörunSem(self, txt: str, variants: str, node: Node) -> AnnotationDict:
+    def AðvörunSemOg(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'sem' er sennilega ofaukið
-        start, end = self.node_span(node)
+        ch1, ch2 = self._terminal_nodes[node.start : node.end]
+        start, _ = ch1.span
+        _, end = ch2.span
         return AnnotationDict(
-            text="'{0}' er að öllum líkindum ofaukið".format(txt),
+            text="'{0}' er að öllum líkindum ofaukið".format(ch1.text),
             detail=(
-                "Oft fer betur á að rita 'og', 'og einnig' eða 'og jafnframt' "
-                " í stað 'sem og'."
+                "Oft fer betur á að rita 'og', 'og einnig', 'og jafnframt' "
+                " eða 'og auk þess' í stað 'sem og'."
             ),
             start=start,
             end=end,
             original=txt,
-            suggest="",  # Token should be deleted
+            suggest="og einnig",
         )
 
     def AðvörunAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
