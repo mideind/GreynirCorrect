@@ -688,12 +688,12 @@ class CapitalizationError(Error):
     except at the beginning of a sentence, or should be upper case
     but occurs in lower case."""
 
-    # Z001: Word should begin with lowercase letter
-    # Z002: Word should begin with uppercase letter
-    # Z003: Month name should begin with lowercase letter
-    # Z004: Numbers should be written in lowercase ('24 milljónir')
-    # Z005: Amounts should be written in lowercase ('24 milljónir króna') (is_warning)
-    # Z006: Acronyms should be written in uppercase ('RÚV')
+    # Z001: Word should begin with lowercase letter.
+    # Z002: Word should begin with uppercase letter.
+    # Z003: Month name should begin with lowercase letter.
+    # Z004: Numbers should be written in lowercase ('24 milljónir').
+    # Z005: Amounts should be written in lowercase ('24 milljónir króna') (is_warning).
+    # Z006: Acronyms should be written in uppercase ('RÚV').
 
     def __init__(
         self, code: str, txt: str, original: str, suggest: str, is_warning: bool = False
@@ -715,9 +715,9 @@ class AbbreviationError(Error):
     """An AbbreviationError is an error where an abbreviation
     is not spelled out, punctuated or spaced correctly."""
 
-    # A001: Abbreviation corrected
+    # A001: Abbreviation corrected.
     # A002: Token found in Abbreviations.WRONGDOTS and no
-    #       other meaning available; corrected as an acronym
+    #       other meaning available; corrected as an acronym.
 
     def __init__(self, code: str, txt: str, original: str, suggest: str) -> None:
         # Abbreviation error codes start with "A"
@@ -735,7 +735,7 @@ class TabooWarning(Error):
     """A TabooWarning marks a word that is vulgar or not appropriate
     in formal text."""
 
-    # T001: Taboo word usage warning, with suggested replacement
+    # T001: Taboo word usage warning, with suggested replacement.
 
     def __init__(
         self,
@@ -813,7 +813,7 @@ class SpellingError(Error):
     """A SpellingError is an erroneous word that was replaced
     by a much more likely word that exists in the dictionary."""
 
-    # S001: Common errors picked up by unique_errors. Should be corrected
+    # S001: Common errors picked up by unique_errors. Should be corrected.
     # S002: Errors handled by spelling.py. Corrections should possibly
     #       only be suggested.
     # S003: Erroneously formed word forms picked up by ErrorForms.
