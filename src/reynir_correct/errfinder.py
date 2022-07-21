@@ -1088,7 +1088,7 @@ class ErrorFinder(ParseForestNavigator):
             objtree = self.find_verb_direct_object(tnode)
             if objtree is None:
                 return
-            code = "P_WRONG_CASE" + obj_case_abbr + "_" + correct_case_abbr
+            code = "P_WRONG_CASE_" + obj_case_abbr + "_" + correct_case_abbr
             if objtree is not None:
                 # We know what the object is: annotate it
                 start, end = objtree.span
