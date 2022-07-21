@@ -1716,5 +1716,19 @@ def test_ignore_rules(verbose=False):
         assert not g[ix].error_code or g[ix].error_code in {"E001"}
 
 
+def test_suppress_suggestions(verbose=False):
+
+    x, y = check(
+        "Það var leiðilegt en þæginlegt að koma tímalega á áfangastað um fjögurleitið.",
+        options,
+    )
+    options["suppress_suggestions"] = True
+    s, g = check(
+        "Það var leiðilegt en þæginlegt að koma tímalega á áfangastað um fjögurleitið.",
+        options,
+    )
+    assert y != g
+
+
 if __name__ == "__main__":
     pass
