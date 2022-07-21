@@ -169,6 +169,7 @@ The following options can be specified:
 |                                   | in the annotation process.                       |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
 
+An overview of error codes is available `here <https://github.com/mideind/GreynirCorrect/blob/master/doc/errorcodes.rst>`__.
 
 *************
 Prerequisites
