@@ -1717,7 +1717,7 @@ def test_ignore_rules(verbose=False):
 
 
 def test_suppress_suggestions(verbose=False):
-
+    options = {}
     x, y = check(
         "Það var leiðilegt en þæginlegt að koma tímalega á áfangastað um fjögurleitið.",
         options,
