@@ -188,7 +188,7 @@ def val(
 
 def check_errors(**options: Any) -> str:
     """Return a string in the chosen format and correction level
-        using the spelling and grammar checker"""
+    using the spelling and grammar checker"""
     input = options.get("input", None)
     if isinstance(input, str):
         options["input"] = [input]

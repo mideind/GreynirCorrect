@@ -82,6 +82,14 @@ def main() -> None:
         if x:
             print(x)
         print("=================================")
+    """
+    # Used when output shouldn't be split into sentences
+    options["input"] = infile
+    x = check_errors(**options)
+    if x:
+        print(x)
+    print("=================================")
+    """
 
 
 if __name__ == "__main__":

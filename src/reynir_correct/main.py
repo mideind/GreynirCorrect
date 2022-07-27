@@ -108,17 +108,26 @@ parser.add_argument(
 
 # Add --json for compatibility; works the same as --format=json
 parser.add_argument(
-    "--json", "-j", help="Output in JSON format", action="store_true",
+    "--json",
+    "-j",
+    help="Output in JSON format",
+    action="store_true",
 )
 
 # Add --csv for compatibility; works the same as --format=csv
 parser.add_argument(
-    "--csv", "-c", help="Output in CSV format", action="store_true",
+    "--csv",
+    "-c",
+    help="Output in CSV format",
+    action="store_true",
 )
 
 # Add --normalize
 parser.add_argument(
-    "--normalize", "-n", help="Normalize punctuation", action="store_true",
+    "--normalize",
+    "-n",
+    help="Normalize punctuation",
+    action="store_true",
 )
 
 
