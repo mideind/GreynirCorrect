@@ -717,7 +717,7 @@ class ErrorFinder(ParseForestNavigator):
             v.add("et")
         suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, "so", v)
         suggest = emulate_case(suggest, template=origin)
-        if suggest == origin:
+        if suggest == origin or not suggest:
             # Avoid meaningless annotation
             return None
         return AnnotationDict(
