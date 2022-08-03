@@ -325,7 +325,7 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self.node_span(node)
         return AnnotationDict(
             text="'{0}' er sennilega ofaukið".format(txt),
-            detail="Yfirleitt nægir að nota 'en' í þessu samhengi, 'heldur en' telst frekar óformlegt. Það á þó stundum rétt hjá sér í löngum setningum ef langt er frá upphaflega samanburðinum til seinni samanburðarins til að auka skýrleika textans.",
+            detail="Yfirleitt nægir að nota 'en' í þessu samhengi, 'heldur en' telst frekar óformlegt. Það á þó stundum rétt hjá sér í löngum setningum ef langt er frá upphaflega samanburðarliðnum til seinni samanburðarliðarins til að auka skýrleika textans.",
             original=orig_txt,
             start=start,
             end=end,

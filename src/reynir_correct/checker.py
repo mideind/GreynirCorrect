@@ -354,7 +354,7 @@ class GreynirCorrect(Greynir):
                         start=0,
                         end=len(sent.tokens) - 1,
                         code="E001",
-                        text="Ekki tókst að þátta setningu, mögulega felst villa í henni",  # Formerly "Málsgreinin fellur ekki að reglum"
+                        text="Ekki tókst að þátta setningu; mögulega felst villa í henni",  # Formerly "Málsgreinin fellur ekki að reglum"
                         detail="Þáttun brást í kringum {0}. tóka ('{1}')".format(
                             err_index + 1, toktext
                         ),

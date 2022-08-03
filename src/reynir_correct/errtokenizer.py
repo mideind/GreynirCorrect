@@ -601,9 +601,9 @@ class PunctuationError(Error):
 
     """A PunctuationError is an error where punctuation is wrong"""
 
-    # N001: Wrong quotation marks
-    # N002: Three periods should be an ellipsis
-    # N003: Informal combination of punctuation marks (??!!)
+    # N001: Wrong quotation marks.
+    # N002/w: Three periods should be an ellipsis.
+    # N003/w: Informal combination of punctuation marks (??!!).
 
     def __init__(
         self, code: str, txt: str, original: str, suggest: str, span: int = 1
@@ -630,7 +630,7 @@ class CompoundError(Error):
     #       Should be pointed out but not deleted.
     # C005/w: Possible split compound, depends on meaning/PoS chosen by parser.
     # C006: A part of a compound word is wrong.
-    # C007: A multiword compound such as "skóla-og frístundasvið" correctly split up
+    # C007: A multiword compound such as "skóla-og frístundasvið" with merged first parts split up.
 
     def __init__(
         self, code: str, txt: str, *, original: str, suggest: str, span: int = 1
@@ -688,9 +688,9 @@ class CapitalizationError(Error):
     except at the beginning of a sentence, or should be upper case
     but occurs in lower case."""
 
-    # Z001: Word should begin with lowercase letter.
-    # Z002: Word should begin with uppercase letter.
-    # Z003: Month name should begin with lowercase letter.
+    # Z001: Word should begin with a lowercase letter.
+    # Z002: Word should begin with an uppercase letter.
+    # Z003: Month name should begin with a lowercase letter.
     # Z004: Numbers should be written in lowercase ('24 milljónir').
     # Z005: Amounts should be written in lowercase ('24 milljónir króna') (is_warning).
     # Z006: Acronyms should be written in uppercase ('RÚV').
@@ -776,7 +776,7 @@ class StyleWarning(Error):
     """A StyleWarning marks a word that is annotated with a
     style comment in BÍN (malsnid/bmalsnid properties in Ksnid)."""
 
-    # Y001/w: Style warning for word
+    # Y001/w: Style warning for word.
 
     def __init__(
         self,
@@ -813,10 +813,10 @@ class SpellingError(Error):
     """A SpellingError is an erroneous word that was replaced
     by a much more likely word that exists in the dictionary."""
 
-    # S001: Common errors picked up by unique_errors. Should be corrected.
-    # S002: Errors handled by spelling.py. Corrections should possibly
+    # S001: Common errors that cannot be interpreted as other words, picked up by unique_errors. Should be corrected.
+    # S002: Less common errors that cannot be interpreted as other words, handled by spelling.py. Corrections should possibly
     #       only be suggested.
-    # S003: Erroneously formed word forms picked up by ErrorForms.
+    # S003: Erroneously formed words picked up by ErrorForms.
     #       Should be corrected.
     # S004: Rare word, a more common one has been substituted.
     # S005: Error has been corrected but annotation was lost in merging,
@@ -877,8 +877,8 @@ class SpellingSuggestion(Error):
     """A SpellingSuggestion is an annotation suggesting that
     a word might be misspelled."""
 
-    # W001: Replacement suggested
-    # W002: A list of suggestions is given
+    # W001: Replacement suggested.
+    # W002: A list of suggestions is given.
 
     def __init__(
         self,
@@ -968,7 +968,7 @@ class PhraseError(Error):
     """A PhraseError is a wrong multiword phrase, where a word is out
     of place in its context."""
 
-    # P_xxx: Phrase error codes
+    # P_xxx: Phrase error codes.
 
     def __init__(
         self,
@@ -1454,10 +1454,10 @@ def parse_errors(
                     if token.txt == "..":
                         # Assume user meant to write a single period
                         # Doesn't happen with current tokenizer behaviour
-                        if "N002" not in ignore_rules:
+                        if "N002/w" not in ignore_rules:
                             token.set_error(
                                 PunctuationError(
-                                    "002",
+                                    "002/w",
                                     "Gæti átt að vera einn punktur (.)",
                                     token.txt,
                                     ".",
@@ -1465,10 +1465,10 @@ def parse_errors(
                             )
                     elif len(token.txt) > 3:
                         # Informal, should be standardized to an ellipsis
-                        if "N002" not in ignore_rules:
+                        if "N002/w" not in ignore_rules:
                             token.set_error(
                                 PunctuationError(
-                                    "002",
+                                    "002/w",
                                     "Óformlegt; gæti átt að vera þrípunktur (…)",
                                     token.txt,
                                     ntxt,
@@ -1481,10 +1481,10 @@ def parse_errors(
                         pass
                 elif ntxt == "?!":
                     # Changed automatically, pointed out as informal
-                    if "N003" not in ignore_rules:
+                    if "N003/w" not in ignore_rules:
                         token.set_error(
                             PunctuationError(
-                                "003",
+                                "003/w",
                                 "'{0}' er óformlegt, breytt í '{1}'".format(
                                     token.txt, ntxt
                                 ),
