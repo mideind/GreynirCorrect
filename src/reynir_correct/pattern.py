@@ -1816,6 +1816,21 @@ class PatternMatcher:
         if c is None:
             return
         start, end = c.span[0], c.span[1]
+        if (
+            match.root.first_match("'hvorki'") is not None
+            or "eitt né neitt" in match.root.text
+        ):
+            # Check to see if VillaNé (P_NT_Né) has been activated
+            # and should be deleted
+            for ann in self._ann:
+                if ann.code == "P_NT_Né" and ann.start == start and ann.end == end:
+                    self._ann.remove(ann)
+            return
+
+        for ann in self._ann:
+            if ann.code == "P_NT_Né" and ann.start == start and ann.end == end:
+                # We have already annotated the error, no need to do it twice
+                return
         correction = "eða"
         text = "'né' gæti átt að vera 'eða'"
         detail = "'né' er hluti af margorða samtengingunni 'hvorki né' en getur ekki staðið eitt og sér sem aukatenging."
@@ -1823,7 +1838,7 @@ class PatternMatcher:
             Annotation(
                 start=start,
                 end=end,
-                code="P_NT_Né",
+                code="P_Né",
                 text=text,
                 detail=detail,
                 original="né",
@@ -3046,7 +3061,7 @@ class PatternMatcher:
         cls.add_pattern(
             (
                 "né",  # Trigger lemma for this pattern
-                "VP > { NP > { C > 'né' } }",
+                " IP >> { 'né' } ",
                 lambda self, match: self.né(match),
                 None,
             )

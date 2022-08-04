@@ -1523,14 +1523,30 @@ def test_styles():
 
 
 def test_né():
+    # Attn. error codes 'P_Né' and 'P_NT_Né' are used,
+    # depending on where the error is handled
     s = "Ég fór út né gekk heim."
     check_sentence(s, [(3, 3, "P_NT_Né")])
     s = "Ég hvorki fór út né gekk heim."
     check_sentence(s, [])
     s = "Við keyptum brauð né ost."
-    check_sentence(s, [(3, 3, "P_NT_Né")])
+    check_sentence(s, [(3, 3, "P_Né")])
     s = "Við keyptum annaðhvort brauð né ost."
-    check_sentence(s, [(4, 4, "P_NT_Né")])
+    check_sentence(s, [(4, 4, "P_Né")])
+    s = "Ég hugsa ekki um hvað Bretland gerir né hvað Ísland gerir."
+    check_sentence(s, [(7, 7, "P_NT_Né")])
+    s = "Hann er sakaður um kynþáttafordóma en eftir því sem ég best veit eru fylgdarlaus ungmenni ekki kynþáttur, þjóð né þjóðarbrot."
+    check_sentence(s, [(19, 19, "P_Né")])
+    s = "Alþjóðaheilbrigðisstofnunin hefur gefið út að suðurafríska afbrigði kórónuveirunnar leiði ekki til verri veikinda né sé það banvænna en önnur."
+    check_sentence(s, [(13, 13, "P_NT_Né")])
+
+    # Some false positives to watch out for
+    s = "Hvorki þarf sýnatöku vegna loka sóttkvíar í dag né í lok smitgátar."
+    check_sentence(s, [])
+    s = "Við erum búnir að vera hér í sólarhring og það er ekki enn búið að bæta eitt né neitt."
+    check_sentence(s, [])
+    s = "Læknarnir sögðu að símanum hafi verið smyglað inn í fangelsið en lögreglan vildi hvorki staðfesta né tjá sig um fréttina."
+    check_sentence(s, [])
 
 
 def test_ignore_rules(verbose=False):
@@ -1698,6 +1714,20 @@ def test_ignore_rules(verbose=False):
     s, g = check("Hann var feyknaglaður og labbaði um herbergið.", options)
     for ix in range(len(g)):
         assert not g[ix].error_code or g[ix].error_code in {"E001"}
+
+
+def test_suppress_suggestions(verbose=False):
+    options = {}
+    x, y = check(
+        "Það var leiðilegt en þæginlegt að koma tímalega á áfangastað um fjögurleitið.",
+        options,
+    )
+    options["suppress_suggestions"] = True
+    s, g = check(
+        "Það var leiðilegt en þæginlegt að koma tímalega á áfangastað um fjögurleitið.",
+        options,
+    )
+    assert y != g
 
 
 if __name__ == "__main__":
