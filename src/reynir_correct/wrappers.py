@@ -466,7 +466,7 @@ def check_grammar(**options: Any) -> str:
             accumul.append(txt)
         elif format == "preservenewline":
             arev = sorted(a, key=lambda ann: (ann.start, ann.end), reverse=True)
-            cleantoklist: List[CorrectToken] = toklist[:]
+            cleantoklist = toklist[:]
             for xann in arev:
                 if xann.suggest is None:
                     # Nothing to correct with, nothing we can do
