@@ -42,7 +42,9 @@ def gen(f: Iterator[str]) -> Iterable[str]:
 def main() -> None:
 
     options: Dict[str, Union[str, bool, Set[str]]] = {}
-    options["format"] = "text"  # text, json, csv, m2
+    options[
+        "format"
+    ] = "preservenewline"  # text, textplustoks, preservenewline, json, csv, m2
     options["annotations"] = True
     options["all_errors"] = True
     # options["input"] = open("prufa.txt", "r")
@@ -64,6 +66,7 @@ def main() -> None:
         # Nothing we can do
         print("No input has been given, nothing can be returned")
         sys.exit(1)
+    """
     itering = gen(infile)
     for sent in itering:
         sent = sent.strip()
@@ -89,7 +92,6 @@ def main() -> None:
     if x:
         print(x)
     print("=================================")
-    """
 
 
 if __name__ == "__main__":

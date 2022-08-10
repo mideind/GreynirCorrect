@@ -464,6 +464,35 @@ def check_grammar(**options: Any) -> str:
                     txt = txt + "\n" + "\n".join(annlist)
                     annlist = []
             accumul.append(txt)
+        elif format == "preservenewline":
+            arev = sorted(a, key=lambda ann: (ann.start, ann.end), reverse=True)
+            cleantoklist: List[CorrectToken] = toklist[:]
+            for xann in arev:
+                if xann.suggest is None:
+                    # Nothing to correct with, nothing we can do
+                    continue
+                cleantoklist[xann.start + 1].txt = xann.suggest
+                if xann.end > xann.start:
+                    # Annotation spans many tokens
+                    # "Okkur börnunum langar í fisk"
+                    # "Leita að kílómeter af féinu" → leita að kílómetri af fénu → leita að kílómetra af fénu
+                    # "dást af þeim" → "dást að þeim"
+                    # Single-token annotations for this span have already been handled
+                    # Only case is one ann, many toks in toklist
+                    # Give the first token the correct value
+                    # Delete the other tokens
+                    del cleantoklist[xann.start + 2 : xann.end + 2]
+            for item in cleantoklist:
+                if item.original and "\n" in item.original:
+                    item.txt = "\n" * item.original.count("\n") + item.txt
+            txt = detokenize(cleantoklist, normalize=True)
+            if options.get("annotations", False):
+                for aann in a:
+                    annlist.append(str(aann))
+                if annlist and not options.get("print_all", False):
+                    txt = txt + "\n" + "\n".join(annlist)
+                    annlist = []
+            accumul.append(txt)
 
         elif format == "json":
             # Create final dictionary for JSON encoding
@@ -525,6 +554,8 @@ def check_grammar(**options: Any) -> str:
         if annlist:
             # We want the annotations at the bottom
             accumstr = accumstr + "\n" + "\n".join(annlist)
+    elif options.get("preservenewline", False):
+        accumstr = "".join(accumul)
     else:
         accumstr = "\n".join(accumul)
     return accumstr
