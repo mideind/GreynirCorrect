@@ -75,7 +75,7 @@ from typing_extensions import TypedDict
 from tokenizer import detokenize, text_from_tokens, normalized_text_from_tokens, TOK
 from tokenizer.definitions import AmountTuple, NumberTuple
 
-from .errtokenizer import TOK, CorrectToken, Error
+from .errtokenizer import CorrectToken, Error
 from .errtokenizer import tokenize as errtokenize
 from .annotation import Annotation
 from .checker import check_tokens
@@ -278,7 +278,6 @@ def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
     toks = sentence_stream(**options)
     unisum: List[str] = []
     toksum: TokenSumType = []
-    allsum: List[str] = []
     annlist: List[str] = []
     print_all = options.get("print_all", False)
     for toklist in toks:
@@ -288,9 +287,6 @@ def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
         else:
             toksum.append(toklist)
         continue
-        if allsum:
-            unisum.extend(allsum)
-            allsum = []
     if print_all:
         # We want the annotations at the bottom
         unistr = " ".join(unisum)
@@ -393,17 +389,17 @@ def check_grammar(**options: Any) -> str:
     )
     inneroptions["ignore_rules"] = options.get("ignore_rules", set())
 
-    sentence_results: List[dict] = []
+    sentence_results: List[Dict[str, Any]] = []
 
-    sentence_classifier = None
+    sentence_classifier: Optional[SentenceClassifier] = None
 
     for raw_tokens in sentence_stream(**options):
         original_sentence = "".join([t.original or t.txt for t in raw_tokens])
 
         if options.get("sentence_prefilter", False):
             # Only construct the classifier model if we need it
+            from .classifier import SentenceClassifier
             if sentence_classifier is None:
-                from .classifier import SentenceClassifier
                 sentence_classifier = SentenceClassifier()
 
             if not sentence_classifier.classify(original_sentence):
@@ -427,6 +423,10 @@ def check_grammar(**options: Any) -> str:
                 continue
 
         annotated_sentence = check_tokens(raw_tokens, **inneroptions)
+        if annotated_sentence is None:
+            # This should not happen, but we check to be sure, and to satisfy mypy
+            # TODO: Should we rather raise an exception instead of silently discarding the sentence?
+            continue
 
         # Extract the annotation list (defensive programming here)
         annotations: List[Annotation] = getattr(annotated_sentence, "annotations", cast(List[Annotation], []))
@@ -492,7 +492,14 @@ def check_grammar(**options: Any) -> str:
     return format_output(sentence_results, options.get("format", "json"), extra_text_options)
 
 
-def format_output(sentence_results, format_type, extra_text_options):
+def format_output(sentence_results: List[Dict[str, Any]], format_type: str, extra_text_options: Dict[str, Any]) -> str:
+    """
+    Format grammar analysis results in the given format.
+
+    `sentence_results` is a list of individual sentences and their analysis
+    `format_type` is the output format to use, one of 'text', 'json', 'csv', 'm2'
+    `extra_text_options` takes extra options for the text format. Ignored for other formats.
+    """
 
     if format_type == "text":
         return format_text(sentence_results, extra_text_options)
@@ -506,9 +513,9 @@ def format_output(sentence_results, format_type, extra_text_options):
     raise Exception(f"Tried to format with invalid format: {format_type}")
 
 
-def format_text(sentence_results, extra_options):
-    output = []
-    annlist = []
+def format_text(sentence_results: List[Dict[str, Any]], extra_options: Dict[str, Any]) -> str:
+    output: List[str] = []
+    annlist: List[str] = []
     for result in sentence_results:
         txt = result["corrected"]
 
@@ -523,7 +530,7 @@ def format_text(sentence_results, extra_options):
     return "\n".join(output)
 
 
-def format_json(sentence_results):
+def format_json(sentence_results: List[Dict[str, Any]]) -> str:
     formatted_sentences: List[str] = []
 
     offset = 0
@@ -568,8 +575,8 @@ def format_json(sentence_results):
     return "\n".join(formatted_sentences)
 
 
-def format_csv(sentence_results):
-    accumul = []
+def format_csv(sentence_results: List[Dict[str, Any]]) -> str:
+    accumul: List[str] = []
     for result in sentence_results:
         for ann in result["annotations"]:
             accumul.append(
@@ -585,8 +592,8 @@ def format_csv(sentence_results):
     return "\n".join(accumul)
 
 
-def format_m2(sentence_results):
-    accumul = []
+def format_m2(sentence_results: List[Dict[str, Any]]) -> str:
+    accumul: List[str] = []
     for result in sentence_results:
         accumul.append("S {0}".format(" ".join([t["x"] for t in result["tokens"]])))
         for ann in result["annotations"]:

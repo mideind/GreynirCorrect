@@ -47,7 +47,7 @@ from typing import Union, List, overload
 
 try:
     from datasets import load_dataset
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, TextClassificationPipeline
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, TextClassificationPipeline  # type: ignore
 except:
     import sys
     import warnings
@@ -67,7 +67,7 @@ class SentenceClassifier:
     _model_name = "mideind/error-correction-sentence-classifier"
     _true_label = "LABEL_1"
 
-    def __init__(self):
+    def __init__(self) -> None:
         # TODO: Make model public and remove auth
         tokenizer = AutoTokenizer.from_pretrained(self._model_name, use_auth_token=True)
         model = AutoModelForSequenceClassification.from_pretrained(self._model_name, use_auth_token=True)
