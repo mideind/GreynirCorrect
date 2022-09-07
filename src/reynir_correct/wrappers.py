@@ -395,8 +395,36 @@ def check_grammar(**options: Any) -> str:
 
     sentence_results: List[dict] = []
 
+    sentence_classifier = None
+
     for raw_tokens in sentence_stream(**options):
         original_sentence = "".join([t.original or t.txt for t in raw_tokens])
+
+        if options.get("sentence_prefilter", False):
+            # Only construct the classifier model if we need it
+            if sentence_classifier is None:
+                from .classifier import SentenceClassifier
+                sentence_classifier = SentenceClassifier()
+
+            if not sentence_classifier.classify(original_sentence):
+                # Skip the full parse if we think the sentence is probably correct
+
+                # Remove the metatokens (e.g. sentence-begin) from the token stream 
+                # to be consistent with what the parser returns.
+                # TODO: use TOK.META_BEGIN when that PR is ready
+                tokens_no_meta = [t for t in raw_tokens if t.kind < TOK.S_SPLIT]
+                nice_tokens = [
+                    AnnTokenDict(k=d.kind, x=d.txt, o=d.original or d.txt)
+                    for d in tokens_no_meta
+                ]
+                sentence_results.append({
+                    "original": original_sentence,
+                    "corrected": original_sentence,
+                    "partially_corrected": original_sentence,
+                    "annotations": [],
+                    "tokens": nice_tokens,
+                })
+                continue
 
         annotated_sentence = check_tokens(raw_tokens, **inneroptions)
 
@@ -463,7 +491,7 @@ def check_grammar(**options: Any) -> str:
     }
     return format_output(sentence_results, options.get("format", "json"), extra_text_options)
 
-    
+
 def format_output(sentence_results, format_type, extra_text_options):
 
     if format_type == "text":

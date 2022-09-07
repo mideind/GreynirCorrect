@@ -130,6 +130,12 @@ parser.add_argument(
     action="store_true",
 )
 
+parser.add_argument(
+    "--sentence_prefilter",
+    help="Run a heuristic filter on sentences to determine whether they are probably correct. Probably correct sentences will not go through the full parsing process.",
+    action="store_true",
+)
+
 
 def main() -> None:
     """Main function, called when the 'correct' command is invoked"""
@@ -153,6 +159,7 @@ def main() -> None:
     options["spaced"] = args.spaced
     options["normalize"] = args.normalize
     options["all_errors"] = args.all_errors or args.grammar
+    options["sentence_prefilter"] = args.sentence_prefilter
     print(check_errors(**options), file=args.outfile)
 
 
