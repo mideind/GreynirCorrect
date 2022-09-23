@@ -72,10 +72,10 @@ import json
 from functools import partial
 from typing_extensions import TypedDict
 
-from tokenizer import detokenize, text_from_tokens, normalized_text_from_tokens
+from tokenizer import detokenize, text_from_tokens, normalized_text_from_tokens, TOK
 from tokenizer.definitions import AmountTuple, NumberTuple
 
-from .errtokenizer import TOK, CorrectToken, Error
+from .errtokenizer import CorrectToken, Error
 from .errtokenizer import tokenize as errtokenize
 from .annotation import Annotation
 from .checker import check_tokens
@@ -278,7 +278,6 @@ def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
     toks = sentence_stream(**options)
     unisum: List[str] = []
     toksum: TokenSumType = []
-    allsum: List[str] = []
     annlist: List[str] = []
     print_all = options.get("print_all", False)
     for toklist in toks:
@@ -288,9 +287,6 @@ def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
         else:
             toksum.append(toklist)
         continue
-        if allsum:
-            unisum.extend(allsum)
-            allsum = []
     if print_all:
         # We want the annotations at the bottom
         unistr = " ".join(unisum)
@@ -387,144 +383,224 @@ def test_grammar(**options: Any) -> Tuple[str, TokenSumType]:
 def check_grammar(**options: Any) -> str:
     """Do a full spelling and grammar check of the source text"""
 
-    accumul: List[str] = []
-    offset = 0
     inneroptions: Dict[str, Union[str, bool]] = {}
     inneroptions["annotate_unparsed_sentences"] = options.get(
         "annotate_unparsed_sentences", True
     )
     inneroptions["ignore_rules"] = options.get("ignore_rules", set())
-    annlist: List[str] = []
-    format = options.get("format", "json")
-    for toklist in sentence_stream(**options):
-        len_tokens = len(toklist)
-        # Invoke the spelling and grammar checker on the token list
-        # Only contains options relevant to the grammar check
-        sent = check_tokens(toklist, **inneroptions)
-        if sent is None:
-            # Should not happen?
+
+    sentence_results: List[Dict[str, Any]] = []
+
+    sentence_classifier: Optional[SentenceClassifier] = None
+
+    for raw_tokens in sentence_stream(**options):
+        original_sentence = "".join([t.original or t.txt for t in raw_tokens])
+
+        if options.get("sentence_prefilter", False):
+            # Only construct the classifier model if we need it
+            from .classifier import SentenceClassifier
+            if sentence_classifier is None:
+                sentence_classifier = SentenceClassifier()
+
+            if not sentence_classifier.classify(original_sentence):
+                # Skip the full parse if we think the sentence is probably correct
+
+                # Remove the metatokens (e.g. sentence-begin) from the token stream 
+                # to be consistent with what the parser returns.
+                # TODO: use TOK.META_BEGIN when that PR is ready
+                tokens_no_meta = [t for t in raw_tokens if t.kind < TOK.S_SPLIT]
+                nice_tokens = [
+                    AnnTokenDict(k=d.kind, x=d.txt, o=d.original or d.txt)
+                    for d in tokens_no_meta
+                ]
+                sentence_results.append({
+                    "original": original_sentence,
+                    "corrected": original_sentence,
+                    "partially_corrected": original_sentence,
+                    "annotations": [],
+                    "tokens": nice_tokens,
+                })
+                continue
+
+        annotated_sentence = check_tokens(raw_tokens, **inneroptions)
+        if annotated_sentence is None:
+            # This should not happen, but we check to be sure, and to satisfy mypy
+            # TODO: Should we rather raise an exception instead of silently discarding the sentence?
             continue
 
+        # Extract the annotation list (defensive programming here)
+        annotations: List[Annotation] = getattr(annotated_sentence, "annotations", cast(List[Annotation], []))
+        # Sort in ascending order by token start index, and then by end index
+        # (more narrow/specific annotations before broader ones)
+        annotations.sort(key=lambda ann: (ann.start, ann.end))
+
+        # Generate a sentence with only spelling corrections applied
+        partially_corrected_sentence = detokenize(annotated_sentence.tokens)
+
+        # Generate a sentence with all corrections applied
+        full_correction_toks = annotated_sentence.tokens[:]
+        for ann in annotations[::-1]:
+            if ann.suggest is None:
+                # Nothing to correct with, nothing we can do
+                continue
+            full_correction_toks[ann.start].txt = ann.suggest
+            if ann.end > ann.start:
+                # Annotation spans many tokens
+                # "Okkur börnunum langar í fisk"
+                # "Leita að kílómeter af féinu" → leita að kílómetri af fénu → leita að kílómetra af fénu
+                # "dást af þeim" → "dást að þeim"
+                # Single-token annotations for this span have already been handled
+                # Only case is one ann, many toks in toklist
+                # Give the first token the correct value
+                # Delete the other tokens
+                del full_correction_toks[ann.start + 1 : ann.end + 1]
+        fully_corrected_sentence = detokenize(full_correction_toks)
+
+        # Make a nice token list 
         tokens: List[AnnTokenDict]
-        if sent.tree is None:
+        if annotated_sentence.tree is None:
             # Not parsed: use the raw token list
             tokens = [
                 AnnTokenDict(k=d.kind, x=d.txt, o=d.original or d.txt)
-                for d in sent.tokens
+                for d in annotated_sentence.tokens
             ]
         else:
             # Successfully parsed: use the text from the terminals (where available)
             # since we have more info there, for instance on em/en dashes.
             # Create a map of token indices to corresponding terminal text
-            assert sent.terminals is not None
-            token_map = {t.index: t.text for t in sent.terminals}
+            assert annotated_sentence.terminals is not None
+            token_map = {t.index: t.text for t in annotated_sentence.terminals}
             tokens = [
                 AnnTokenDict(
                     k=d.kind, x=token_map.get(ix, d.txt), o=d.original or d.txt
                 )
-                for ix, d in enumerate(sent.tokens)
+                for ix, d in enumerate(annotated_sentence.tokens)
             ]
-        # Maintain token character offsets, accumulated over the entire source text
-        token_offsets: Dict[int, int] = dict()
-        for ix, t in enumerate(toklist):
-            token_offsets[ix] = offset
-            offset += len(t.original or t.txt or "")
 
-        # Create a normalized form of the sentence
-        cleaned = detokenize(toklist, normalize=True)
-        # Extract the annotation list (defensive programming here)
-        a: List[Annotation] = getattr(sent, "annotations", cast(List[Annotation], []))
-        # Sort in ascending order by token start index, and then by end index
-        # (more narrow/specific annotations before broader ones)
-        a.sort(key=lambda ann: (ann.start, ann.end))
+        sentence_results.append({
+            "original": original_sentence,
+            "partially_corrected": partially_corrected_sentence,
+            "corrected": fully_corrected_sentence,
+            "annotations": annotations,
+            "tokens": tokens,
+        })
+    
+    extra_text_options = { 
+        "annotations": options.get("annotations", False),
+        "print_all": options.get("print_all", False),
+    }
+    return format_output(sentence_results, options.get("format", "json"), extra_text_options)
 
-        if format == "text" or format == "textplustoks":
-            arev = sorted(a, key=lambda ann: (ann.start, ann.end), reverse=True)
-            cleantoklist: List[CorrectToken] = toklist[:]
-            for xann in arev:
-                if xann.suggest is None:
-                    # Nothing to correct with, nothing we can do
-                    continue
-                cleantoklist[xann.start + 1].txt = xann.suggest
-                if xann.end > xann.start:
-                    # Annotation spans many tokens
-                    # "Okkur börnunum langar í fisk"
-                    # "Leita að kílómeter af féinu" → leita að kílómetri af fénu → leita að kílómetra af fénu
-                    # "dást af þeim" → "dást að þeim"
-                    # Single-token annotations for this span have already been handled
-                    # Only case is one ann, many toks in toklist
-                    # Give the first token the correct value
-                    # Delete the other tokens
-                    del cleantoklist[xann.start + 2 : xann.end + 2]
-            txt = detokenize(cleantoklist, normalize=True)
-            if options.get("annotations", False):
-                for aann in a:
-                    annlist.append(str(aann))
-                if annlist and not options.get("print_all", False):
-                    txt = txt + "\n" + "\n".join(annlist)
-                    annlist = []
-            accumul.append(txt)
 
-        elif format == "json":
-            # Create final dictionary for JSON encoding
-            # Convert the annotations to a standard format before encoding in JSON
-            annotations: List[AnnDict] = [
-                AnnDict(
-                    # Start token index of this annotation
-                    start=ann.start,
-                    # End token index (inclusive)
-                    end=ann.end,
-                    # Character offset of the start of the annotation in the original text
-                    start_char=token_offsets[ann.start],
-                    # Character offset of the end of the annotation in the original text
-                    # (inclusive, i.e. the offset of the last character)
-                    end_char=(
-                        token_offsets[ann.end + 1]
-                        if ann.end + 1 < len_tokens
-                        else offset
-                    )
-                    - 1,
-                    code=ann.code,
-                    text=ann.text,
-                    detail=ann.detail or "",
-                    suggest=ann.suggest or "",
-                )
-                for ann in a
-            ]
-            ard = AnnResultDict(
-                original=cleaned,
-                corrected=sent.tidy_text,
-                tokens=tokens,
-                annotations=annotations,
+def format_output(sentence_results: List[Dict[str, Any]], format_type: str, extra_text_options: Dict[str, Any]) -> str:
+    """
+    Format grammar analysis results in the given format.
+
+    `sentence_results` is a list of individual sentences and their analysis
+    `format_type` is the output format to use, one of 'text', 'json', 'csv', 'm2'
+    `extra_text_options` takes extra options for the text format. Ignored for other formats.
+    """
+
+    if format_type == "text":
+        return format_text(sentence_results, extra_text_options)
+    elif format_type == "json":
+        return format_json(sentence_results)
+    elif format_type == "csv":
+        return format_csv(sentence_results)
+    elif format_type == "m2":
+        return format_m2(sentence_results)
+
+    raise Exception(f"Tried to format with invalid format: {format_type}")
+
+
+def format_text(sentence_results: List[Dict[str, Any]], extra_options: Dict[str, Any]) -> str:
+    output: List[str] = []
+    annlist: List[str] = []
+    for result in sentence_results:
+        txt = result["corrected"]
+
+        if extra_options["annotations"]:
+            for aann in result["annotations"]:
+                annlist.append(str(aann))
+            if annlist and not extra_options["print_all"]:
+                txt = txt + "\n" + "\n".join(annlist)
+                annlist = []
+        output.append(txt)
+
+    return "\n".join(output)
+
+
+def format_json(sentence_results: List[Dict[str, Any]]) -> str:
+    formatted_sentences: List[str] = []
+
+    offset = 0
+    for result in sentence_results:
+        tokens = result['tokens']
+
+        token_offsets: List[int] = []
+        for t in tokens:
+            token_offsets.append(offset)
+            offset += len(t['o'] or t['x'] or "")
+        # Add a past-the-end offset to make later calculations more convenient
+        token_offsets.append(offset)
+
+        # Convert the annotations to a standard format before encoding in JSON
+        formatted_annotations: List[AnnDict] = [
+            AnnDict(
+                # Start token index of this annotation
+                start=ann.start,
+                # End token index (inclusive)
+                end=ann.end,
+                # Character offset of the start of the annotation in the original text
+                start_char=token_offsets[ann.start],
+                # Character offset of the end of the annotation in the original text
+                # (inclusive, i.e. the offset of the last character)
+                end_char = token_offsets[ann.end+1] - 1,
+                code=ann.code,
+                text=ann.text,
+                detail=ann.detail or "",
+                suggest=ann.suggest or "",
             )
+            for ann in result['annotations']
+        ]
+        ard = AnnResultDict(
+            original=result['original'],
+            corrected=result['corrected'],
+            tokens=tokens,
+            annotations=formatted_annotations,
+        )
 
-            accumul.append(json_dumps(ard))
-        elif format == "csv":
-            for cann in a:
-                accumul.append(
-                    "{},{},{},{},{},{}".format(
-                        cann.code,
-                        cann.original,
-                        cann.suggest,
-                        cann.start,
-                        cann.end,
-                        cann.suggestlist,
-                    )
+        formatted_sentences.append(json.dumps(ard))
+
+    return "\n".join(formatted_sentences)
+
+
+def format_csv(sentence_results: List[Dict[str, Any]]) -> str:
+    accumul: List[str] = []
+    for result in sentence_results:
+        for ann in result["annotations"]:
+            accumul.append(
+                "{},{},{},{},{},{}".format(
+                    ann.code,
+                    ann.original,
+                    ann.suggest,
+                    ann.start,
+                    ann.end,
+                    ann.suggestlist,
+            )
+        )
+    return "\n".join(accumul)
+
+
+def format_m2(sentence_results: List[Dict[str, Any]]) -> str:
+    accumul: List[str] = []
+    for result in sentence_results:
+        accumul.append("S {0}".format(" ".join([t["x"] for t in result["tokens"]])))
+        for ann in result["annotations"]:
+            accumul.append(
+                "A {0} {1}|||{2}|||{3}|||REQUIRED|||-NONE-|||0".format(
+                    ann.start, ann.end, ann.code, ann.suggest
                 )
-        elif format == "m2":
-            accumul.append("S {0}".format(cleaned))
-            for mann in a:
-                accumul.append(
-                    "A {0} {1}|||{2}|||{3}|||REQUIRED|||-NONE-|||0".format(
-                        mann.start, mann.end, mann.code, mann.suggest
-                    )
-                )
-            accumul.append("")
-    if options.get("print_all", True):
-        accumstr = " ".join(accumul)
-        if annlist:
-            # We want the annotations at the bottom
-            accumstr = accumstr + "\n" + "\n".join(annlist)
-    else:
-        accumstr = "\n".join(accumul)
-    return accumstr
+            )
+        accumul.append("")
+    return "\n".join(accumul)

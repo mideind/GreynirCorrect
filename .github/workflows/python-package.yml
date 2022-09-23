@@ -29,7 +29,12 @@ jobs:
         python -m pip install --upgrade pip wheel setuptools
         python -m pip install git+https://github.com/mideind/Tokenizer#egg=tokenizer
         python -m pip install git+https://github.com/mideind/GreynirPackage#egg=reynir
-        python -m pip install -e .
+        # The neural sentence classifier doesn't work with pypy so don't try to install it
+        if [ "${{ matrix.python-version }}" == "pypy-3.7" ]; then
+          python -m pip install -e .
+        else
+          python -m pip install -e .[sentence_classifier]
+        fi
     - name: Type check with mypy
       run: |
         if [ "${{ matrix.python-version }}" == "3.7" ]; then python -m pip install mypy; fi
