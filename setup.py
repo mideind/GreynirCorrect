@@ -115,6 +115,9 @@ setup(
     keywords=["nlp", "parser", "icelandic"],
     setup_requires=[],
     install_requires=["reynir>=3.4.0", "icegrams>=1.1.0", "typing_extensions"],
+    extras_require={
+        "sentence_classifier": ["transformers", "datasets", "torch"],
+    },
     # Set up a 'correct' command ('correct.exe' on Windows),
     # which calls main() in src/reynir-correct/main.py
     entry_points={
