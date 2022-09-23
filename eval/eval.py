@@ -1773,8 +1773,16 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 # Nothing to do: drop this and go to the next sentence
                 continue
             # print(text)
+            options = {}
+            options["annotate_unparsed_sentences"] = True  # True is default
+            options["suppress_suggestions"] = False  # False is default
+            options["ignore_rules"] = set(
+                [
+                    "",
+                ]
+            )
             # Pass it to GreynirCorrect
-            pg = [list(p) for p in gc_check(text)]
+            pg = [list(p) for p in gc_check(text, **options)]
             s: Optional[_Sentence] = None
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 s = pg[0][0]
