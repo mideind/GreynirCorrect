@@ -47,7 +47,7 @@ from typing import Union, List, overload
 
 try:
     from datasets import load_dataset
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, TextClassificationPipeline  # type: ignore
+    from transformers import pipeline  # type: ignore
 except:
     import sys
     import warnings
@@ -64,14 +64,16 @@ except:
 
 
 class SentenceClassifier:
-    _model_name = "mideind/error-correction-sentence-classifier"
-    _true_label = "LABEL_1"
+    _model_name = "mideind/yfirlestur-icelandic-classification-byt5"
+    _true_label = "1"
+    _domain_prefix = "has_error "
 
     def __init__(self) -> None:
-        # TODO: Make model public and remove auth
-        tokenizer = AutoTokenizer.from_pretrained(self._model_name, use_auth_token=True)
-        model = AutoModelForSequenceClassification.from_pretrained(self._model_name, use_auth_token=True)
-        self.pipe = TextClassificationPipeline(model=model, tokenizer=tokenizer)
+        self.pipe = pipeline(
+            'text2text-generation',
+            model=self._model_name,
+            tokenizer="google/byt5-base"
+        )
 
     @overload
     def classify(self, text: str) -> bool:
@@ -84,9 +86,12 @@ class SentenceClassifier:
     def classify(self, text):
         """Classify a sentence or sentences.
         For each sentence, return true iff the sentence probably contains an error."""
-        result = self.pipe(text)
+        if isinstance(text, str):
+            text = [text]
 
-        result = [r["label"] == self._true_label for r in result]
+        result = self.pipe([self._domain_prefix + t for t in text])
+        result = [r["generated_text"] == self._true_label for r in result]
+
         if len(result) == 1:
             result = result[0]
 
@@ -98,7 +103,7 @@ def _main() -> None:
 
     many_sents = ["Þesi settníng er ekki rét sfsett.", "Þessi setning er rétt stafsett."]
     many_results = classifier.classify(many_sents)
-    one_sent = "Þesi líga."
+    one_sent = "Þesi er vavasöm."
     one_result = classifier.classify(one_sent)
 
     print(f"Sentence: {many_sents[0]}")
