@@ -7,7 +7,7 @@
     :target: https://pypi.org/project/reynir-correct/
 .. image:: https://shields.io/github/v/release/mideind/GreynirCorrect?display_name=tag
     :target: https://github.com/mideind/GreynirCorrect/releases
-.. image:: https://github.com/mideind/GreynirCorrect/workflows/Python%20package/badge.svg?branch=master
+.. image:: https://github.com/mideind/GreynirCorrect/actions/workflows/python-package.yml/badge.svg
     :target: https://github.com/mideind/GreynirCorrect/actions?query=workflow%3A%22Python+package%22
 
 ==============================================================
