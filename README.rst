@@ -3,6 +3,10 @@
     :target: https://opensource.org/licenses/MIT
 .. image:: https://img.shields.io/badge/python-3.7-blue.svg
     :target: https://www.python.org/downloads/release/python-370/
+.. image:: https://img.shields.io/pypi/v/reynir-correct
+    :target: https://pypi.org/project/reynir-correct/
+.. image:: https://shields.io/github/v/release/mideind/GreynirCorrect?display_name=tag
+    :target: https://github.com/mideind/GreynirCorrect/releases
 .. image:: https://github.com/mideind/GreynirCorrect/workflows/Python%20package/badge.svg?branch=master
     :target: https://github.com/mideind/GreynirCorrect/actions?query=workflow%3A%22Python+package%22
 
