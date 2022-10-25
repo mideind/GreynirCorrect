@@ -59,11 +59,11 @@ if sys.version_info < (3, 7):
 def read(*names: str, **kwargs: str):
     try:
         return io.open(
-            join(dirname(__file__), *names),
-            encoding=kwargs.get("encoding", "utf8")
+            join(dirname(__file__), *names), encoding=kwargs.get("encoding", "utf8")
         ).read()
     except (IOError, OSError):
         return ""
+
 
 # Load version string from file
 __version__ = "[missing]"
@@ -75,11 +75,10 @@ setup(
     license="MIT",
     description="A spelling and grammar corrector for Icelandic",
     long_description="{0}\n{1}".format(
-        re
-            .compile("^.. start-badges.*^.. end-badges", re.M | re.S)
-            .sub("", read("README.rst")),
-        re
-            .sub(":[a-z]+:`~?(.*?)`", r"``\1``", read("CHANGELOG.rst")),
+        re.compile("^.. start-badges.*^.. end-badges", re.M | re.S).sub(
+            "", read("README.rst")
+        ),
+        re.sub(":[a-z]+:`~?(.*?)`", r"``\1``", read("CHANGELOG.rst")),
     ),
     author="Miðeind ehf",
     author_email="mideind@mideind.is",
@@ -106,6 +105,8 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python :: Implementation :: PyPy",
         "Topic :: Software Development :: Libraries :: Python Modules",
@@ -121,8 +122,8 @@ setup(
     # Set up a 'correct' command ('correct.exe' on Windows),
     # which calls main() in src/reynir-correct/main.py
     entry_points={
-        'console_scripts': [
-            'correct=reynir_correct.main:main',
+        "console_scripts": [
+            "correct=reynir_correct.main:main",
         ],
     },
 )
