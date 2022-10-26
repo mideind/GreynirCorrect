@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.7, 3.8, 3.9, "3.10", 3.11, pypy-3.7]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "pypy-3.7"]
 
     steps:
     - uses: actions/checkout@v2
@@ -26,7 +26,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install GreynirCorrect
       run: |
-        python -m pip install --upgrade pip wheel setuptools
+        python -m pip install --upgrade pip wheel setuptools pytest
         python -m pip install git+https://github.com/mideind/Tokenizer#egg=tokenizer
         python -m pip install git+https://github.com/mideind/GreynirPackage#egg=reynir
         # The neural sentence classifier doesn't work with pypy so don't try to install it
@@ -35,11 +35,10 @@ jobs:
         else
           python -m pip install -e .[sentence_classifier]
         fi
-    - name: Type check with mypy
+    - name: Typecheck with mypy
       run: |
         if [ "${{ matrix.python-version }}" == "3.7" ]; then python -m pip install mypy; fi
         if [ "${{ matrix.python-version }}" == "3.7" ]; then mypy --python-version=3.7 src/reynir_correct; fi
     - name: Test with pytest
       run: |
-        python -m pip install pytest
-        pytest
+        python -m pytest

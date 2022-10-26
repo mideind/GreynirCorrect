@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -*-
 """
     Greynir: Natural language processing for Icelandic
 
