@@ -42,15 +42,15 @@
 
 """
 
-from typing import Union, List, overload
+from typing import List, Union, overload
 
 
 try:
     from datasets import load_dataset
     from transformers import pipeline  # type: ignore
 except:
-    import sys
     import warnings
+
     warningtext = (
         "Tried to import the classifier module without the required packages installed.\n"
         "The required packages are in the 'sentence_classifier' extra\n"
@@ -70,9 +70,7 @@ class SentenceClassifier:
 
     def __init__(self) -> None:
         self.pipe = pipeline(
-            'text2text-generation',
-            model=self._model_name,
-            tokenizer="google/byt5-base"
+            "text2text-generation", model=self._model_name, tokenizer="google/byt5-base"
         )
 
     @overload
@@ -83,25 +81,25 @@ class SentenceClassifier:
     def classify(self, text: List[str]) -> List[bool]:
         ...
 
-    def classify(self, text):
+    def classify(self, text: Union[str, List[str]]) -> Union[List[bool], bool]:
         """Classify a sentence or sentences.
         For each sentence, return true iff the sentence probably contains an error."""
         if isinstance(text, str):
             text = [text]
 
-        result = self.pipe([self._domain_prefix + t for t in text])
-        result = [r["generated_text"] == self._true_label for r in result]
+        pipe_result = self.pipe([self._domain_prefix + t for t in text])
+        result: List[bool] = [r["generated_text"] == self._true_label for r in pipe_result]
 
-        if len(result) == 1:
-            result = result[0]
-
-        return result
+        return result[0] if len(result) == 1 else result
 
 
 def _main() -> None:
     classifier = SentenceClassifier()
 
-    many_sents = ["Þesi settníng er ekki rét sfsett.", "Þessi setning er rétt stafsett."]
+    many_sents = [
+        "Þesi settníng er ekki rét sfsett.",
+        "Þessi setning er rétt stafsett.",
+    ]
     many_results = classifier.classify(many_sents)
     one_sent = "Þesi er vavasöm."
     one_result = classifier.classify(one_sent)
