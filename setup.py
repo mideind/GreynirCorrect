@@ -112,9 +112,9 @@ setup(
         "Topic :: Utilities",
         "Topic :: Text Processing :: Linguistic",
     ],
-    keywords=["nlp", "parser", "icelandic"],
+    keywords=["nlp", "parser", "icelandic", "spellchecker"],
     setup_requires=[],
-    install_requires=["reynir>=3.4.0", "icegrams>=1.1.0", "typing_extensions"],
+    install_requires=["reynir>=3.5.1", "icegrams>=1.1.0", "typing_extensions"],
     extras_require={
         "sentence_classifier": ["transformers", "datasets", "torch"],
     },
