@@ -2,9 +2,11 @@ name: tests
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - '*' # Run on all branches
   pull_request:
-    branches: [ master ]
+    branches:
+      - '*' # Run on all branches
 
 jobs:
   build:

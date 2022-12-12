@@ -42,7 +42,7 @@
 
 """
 
-from typing import Union, List, overload
+from typing import List, overload
 
 
 try:
@@ -51,6 +51,7 @@ try:
 except:
     import sys
     import warnings
+
     warningtext = (
         "Tried to import the classifier module without the required packages installed.\n"
         "The required packages are in the 'sentence_classifier' extra\n"
@@ -70,9 +71,7 @@ class SentenceClassifier:
 
     def __init__(self) -> None:
         self.pipe = pipeline(
-            'text2text-generation',
-            model=self._model_name,
-            tokenizer="google/byt5-base"
+            "text2text-generation", model=self._model_name, tokenizer="google/byt5-base"
         )
 
     @overload
@@ -101,7 +100,10 @@ class SentenceClassifier:
 def _main() -> None:
     classifier = SentenceClassifier()
 
-    many_sents = ["Þesi settníng er ekki rét sfsett.", "Þessi setning er rétt stafsett."]
+    many_sents = [
+        "Þesi settníng er ekki rét sfsett.",
+        "Þessi setning er rétt stafsett.",
+    ]
     many_results = classifier.classify(many_sents)
     one_sent = "Þesi er vavasöm."
     one_result = classifier.classify(one_sent)

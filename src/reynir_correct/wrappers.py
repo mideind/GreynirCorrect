@@ -33,7 +33,7 @@
 
     input:  Defines the input. Can be a string or an iterable of strings, such
             as a file object.
-    format: Defines the output format. String. 
+    format: Defines the output format. String.
             text: Output is returned as a corrected version of the input.
             json: Output is returned as a JSON string.
             csv:  Output is returned in a csv format.
@@ -41,7 +41,7 @@
                   The output is as follows:
                   S <tokenized system output for sentence 1>
                   A <token start offset> <token end offset>|||<error type>|||<correction1>||<correction2||..||correctionN|||<required>|||<comment>|||<annotator id>
-    all_errors: Defines the level of correction. If False, only token-level annotation is carried out. 
+    all_errors: Defines the level of correction. If False, only token-level annotation is carried out.
                 If True, sentence-level annotation is carried out.
     annotate_unparsed_sentences: If True, sentences that cannot be parsed are annotated as errors as a whole.
     annotations: If True, can all error annotations are returned at the end of the output. Works with format text.
@@ -49,7 +49,7 @@
     suppress_suggestions: If True, more farfetched automatically retrieved corrections are rejected and no error is added.
     ignore_wordlist: The value is a set of strings, a whitelist. Each string is a word that should not be marked as an error or corrected.
     one_sent: Defines input as containing only one sentence.
-    ignore_rules: A list of error codes that should be ignored in the annotation process.    
+    ignore_rules: A list of error codes that should be ignored in the annotation process.
 """
 
 
@@ -399,13 +399,14 @@ def check_grammar(**options: Any) -> str:
         if options.get("sentence_prefilter", False):
             # Only construct the classifier model if we need it
             from .classifier import SentenceClassifier
+
             if sentence_classifier is None:
                 sentence_classifier = SentenceClassifier()
 
             if not sentence_classifier.classify(original_sentence):
                 # Skip the full parse if we think the sentence is probably correct
 
-                # Remove the metatokens (e.g. sentence-begin) from the token stream 
+                # Remove the metatokens (e.g. sentence-begin) from the token stream
                 # to be consistent with what the parser returns.
                 # TODO: use TOK.META_BEGIN when that PR is ready
                 tokens_no_meta = [t for t in raw_tokens if t.kind < TOK.S_SPLIT]
@@ -413,13 +414,15 @@ def check_grammar(**options: Any) -> str:
                     AnnTokenDict(k=d.kind, x=d.txt, o=d.original or d.txt)
                     for d in tokens_no_meta
                 ]
-                sentence_results.append({
-                    "original": original_sentence,
-                    "corrected": original_sentence,
-                    "partially_corrected": original_sentence,
-                    "annotations": [],
-                    "tokens": nice_tokens,
-                })
+                sentence_results.append(
+                    {
+                        "original": original_sentence,
+                        "corrected": original_sentence,
+                        "partially_corrected": original_sentence,
+                        "annotations": [],
+                        "tokens": nice_tokens,
+                    }
+                )
                 continue
 
         annotated_sentence = check_tokens(raw_tokens, **inneroptions)
@@ -429,7 +432,9 @@ def check_grammar(**options: Any) -> str:
             continue
 
         # Extract the annotation list (defensive programming here)
-        annotations: List[Annotation] = getattr(annotated_sentence, "annotations", cast(List[Annotation], []))
+        annotations: List[Annotation] = getattr(
+            annotated_sentence, "annotations", cast(List[Annotation], [])
+        )
         # Sort in ascending order by token start index, and then by end index
         # (more narrow/specific annotations before broader ones)
         annotations.sort(key=lambda ann: (ann.start, ann.end))
@@ -456,7 +461,7 @@ def check_grammar(**options: Any) -> str:
                 del full_correction_toks[ann.start + 1 : ann.end + 1]
         fully_corrected_sentence = detokenize(full_correction_toks)
 
-        # Make a nice token list 
+        # Make a nice token list
         tokens: List[AnnTokenDict]
         if annotated_sentence.tree is None:
             # Not parsed: use the raw token list
@@ -477,22 +482,30 @@ def check_grammar(**options: Any) -> str:
                 for ix, d in enumerate(annotated_sentence.tokens)
             ]
 
-        sentence_results.append({
-            "original": original_sentence,
-            "partially_corrected": partially_corrected_sentence,
-            "corrected": fully_corrected_sentence,
-            "annotations": annotations,
-            "tokens": tokens,
-        })
-    
-    extra_text_options = { 
+        sentence_results.append(
+            {
+                "original": original_sentence,
+                "partially_corrected": partially_corrected_sentence,
+                "corrected": fully_corrected_sentence,
+                "annotations": annotations,
+                "tokens": tokens,
+            }
+        )
+
+    extra_text_options = {
         "annotations": options.get("annotations", False),
         "print_all": options.get("print_all", False),
     }
-    return format_output(sentence_results, options.get("format", "json"), extra_text_options)
+    return format_output(
+        sentence_results, options.get("format", "json"), extra_text_options
+    )
 
 
-def format_output(sentence_results: List[Dict[str, Any]], format_type: str, extra_text_options: Dict[str, Any]) -> str:
+def format_output(
+    sentence_results: List[Dict[str, Any]],
+    format_type: str,
+    extra_text_options: Dict[str, Any],
+) -> str:
     """
     Format grammar analysis results in the given format.
 
@@ -513,7 +526,9 @@ def format_output(sentence_results: List[Dict[str, Any]], format_type: str, extr
     raise Exception(f"Tried to format with invalid format: {format_type}")
 
 
-def format_text(sentence_results: List[Dict[str, Any]], extra_options: Dict[str, Any]) -> str:
+def format_text(
+    sentence_results: List[Dict[str, Any]], extra_options: Dict[str, Any]
+) -> str:
     output: List[str] = []
     annlist: List[str] = []
     for result in sentence_results:
@@ -535,12 +550,12 @@ def format_json(sentence_results: List[Dict[str, Any]]) -> str:
 
     offset = 0
     for result in sentence_results:
-        tokens = result['tokens']
+        tokens = result["tokens"]
 
         token_offsets: List[int] = []
         for t in tokens:
             token_offsets.append(offset)
-            offset += len(t['o'] or t['x'] or "")
+            offset += len(t["o"] or t["x"] or "")
         # Add a past-the-end offset to make later calculations more convenient
         token_offsets.append(offset)
 
@@ -555,17 +570,17 @@ def format_json(sentence_results: List[Dict[str, Any]]) -> str:
                 start_char=token_offsets[ann.start],
                 # Character offset of the end of the annotation in the original text
                 # (inclusive, i.e. the offset of the last character)
-                end_char = token_offsets[ann.end+1] - 1,
+                end_char=token_offsets[ann.end + 1] - 1,
                 code=ann.code,
                 text=ann.text,
                 detail=ann.detail or "",
                 suggest=ann.suggest or "",
             )
-            for ann in result['annotations']
+            for ann in result["annotations"]
         ]
         ard = AnnResultDict(
-            original=result['original'],
-            corrected=result['corrected'],
+            original=result["original"],
+            corrected=result["corrected"],
             tokens=tokens,
             annotations=formatted_annotations,
         )
@@ -587,8 +602,8 @@ def format_csv(sentence_results: List[Dict[str, Any]]) -> str:
                     ann.start,
                     ann.end,
                     ann.suggestlist,
+                )
             )
-        )
     return "\n".join(accumul)
 
 
