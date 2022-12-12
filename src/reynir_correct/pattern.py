@@ -369,7 +369,7 @@ class PatternMatcher:
         pp = match.first_match('P > { "af" }')
         if pp is None:
             pp = match.first_match('ADVP > { "af" }')
-        if np is None or pp is None:
+        if vp is None or np is None or pp is None:
             return
         pp_af = pp.first_match('"af"')
         if pp_af is None:

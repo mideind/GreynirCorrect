@@ -42,14 +42,13 @@
 
 """
 
-from typing import List, overload
+from typing import List, Union, overload
 
 
 try:
     from datasets import load_dataset
     from transformers import pipeline  # type: ignore
 except:
-    import sys
     import warnings
 
     warningtext = (
@@ -82,19 +81,18 @@ class SentenceClassifier:
     def classify(self, text: List[str]) -> List[bool]:
         ...
 
-    def classify(self, text):
+    def classify(self, text: Union[str, List[str]]) -> Union[List[bool], bool]:
         """Classify a sentence or sentences.
         For each sentence, return true iff the sentence probably contains an error."""
         if isinstance(text, str):
             text = [text]
 
-        result = self.pipe([self._domain_prefix + t for t in text])
-        result = [r["generated_text"] == self._true_label for r in result]
+        pipe_result = self.pipe([self._domain_prefix + t for t in text])
+        result: List[bool] = [
+            r["generated_text"] == self._true_label for r in pipe_result
+        ]
 
-        if len(result) == 1:
-            result = result[0]
-
-        return result
+        return result[0] if len(result) == 1 else result
 
 
 def _main() -> None:

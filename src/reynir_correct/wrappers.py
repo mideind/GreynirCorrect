@@ -64,7 +64,11 @@ from typing import (
     Any,
     Union,
     cast,
+    TYPE_CHECKING,
 )
+
+if TYPE_CHECKING:
+    from .classifier import SentenceClassifier
 
 import sys
 import argparse
