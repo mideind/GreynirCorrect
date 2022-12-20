@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
     Greynir: Natural language processing for Icelandic
 
@@ -35,9 +35,6 @@
     This package requires Python >= 3.7, and supports PyPy >= 3.7.
 
 """
-
-from __future__ import print_function
-from __future__ import unicode_literals
 
 import io
 import re
@@ -114,7 +111,7 @@ setup(
     ],
     keywords=["nlp", "parser", "icelandic", "spellchecker"],
     setup_requires=[],
-    install_requires=["reynir>=3.5.1", "icegrams>=1.1.0", "typing_extensions"],
+    install_requires=["reynir>=3.5.3", "icegrams>=1.1.2", "typing_extensions"],
     extras_require={
         "sentence_classifier": ["transformers", "datasets", "torch"],
     },
