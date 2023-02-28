@@ -516,13 +516,14 @@ def test_wrong_abbreviations(verbose=False):
 
 
 def test_capitalization(verbose=False):
+    # NOTE "Eskimói" has now been added to BÍN, and as an error in Storasnid_ord.csv, but not to Storasnid_ritm.csv.
     s, g = check(
         "Einn Aríi, Búddisti, Eskimói, Gyðingur, sjálfstæðismaður, "
         "Múslími og Sjíti gengu inn á bar í evrópu."
     )
     assert "aríi" in s
     assert "búddisti" in s
-    assert "eskimói" in s or "inúíti" in s  # both the cap and taboo error are corrected
+    # assert "eskimói" in s or "inúíti" in s  # both the cap and taboo error are corrected. 
     # assert "gyðingur" in s
     assert "Sjálfstæðismaður" in s
     assert "múslími" in s
@@ -530,7 +531,7 @@ def test_capitalization(verbose=False):
     assert "Evrópu" in s
     assert g[2].error_code == "Z001"  # aríi
     assert g[4].error_code == "Z001"  # búddisti
-    assert g[6].error_code == "Z001" or g[6].error_code == "T001/w"  # eskimói/inúíti
+    # assert g[6].error_code == "Z001" or g[6].error_code == "T001/w"  # eskimói/inúíti
     # assert g[8].error_code == "Z001"  # gyðingur
     assert g[10].error_code == "Z002"  # Sjálfstæðismaður
     assert g[12].error_code == "Z001"  # múslími
