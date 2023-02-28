@@ -83,7 +83,7 @@ class SentenceClassifier:
 
     def classify(self, text: Union[str, List[str]]) -> Union[List[bool], bool]:
         """Classify a sentence or sentences.
-        For each sentence, return true iff the sentence probably contains an error."""
+        For each sentence, return true if the sentence probably contains an error."""
         if isinstance(text, str):
             text = [text]
 
