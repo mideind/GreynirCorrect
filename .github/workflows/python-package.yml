@@ -37,7 +37,7 @@ jobs:
     - name: Typecheck with mypy
       run: |
         if [ "${{ matrix.python-version }}" == "3.7" ]; then python -m pip install mypy; fi
-        if [ "${{ matrix.python-version }}" == "3.7" ]; then mypy --python-version=3.7 src/reynir_correct; fi
+        if [ "${{ matrix.python-version }}" == "3.7" ]; then mypy --ignore-missing-imports --python-version=3.7 src/reynir_correct; fi
     - name: Test with pytest
       run: |
         python -m pytest
