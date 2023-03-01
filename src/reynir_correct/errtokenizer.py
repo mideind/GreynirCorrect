@@ -2164,6 +2164,8 @@ def lookup_unknown_words(
                     yield rtok
                     context = (prev_context + tuple(rtok.txt.split()))[-3:]
                     prev_context = context
+            else:
+                yield token
             continue
 
         # And Icelandic Search Query Errors
