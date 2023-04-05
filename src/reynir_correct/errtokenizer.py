@@ -1631,8 +1631,8 @@ def handle_multiword_errors(
     The algorithm implements N-token lookahead where N is the
     length of the longest phrase.
     """
-
     mwes = MultiwordErrorStream(db, token_ctor, ignore_rules)
+    print(mwes)
     tok_stream = cast(Iterator[Tok], token_stream)
     yield from cast(Iterator[CorrectToken], mwes.process(tok_stream))
 
@@ -3006,6 +3006,7 @@ def check_finance_words(
                             suggest = emulate_case(bmynd, template=token.txt)
                         else:
                             print("ekkert suggest_object!")
+                            n
                         token.set_error(
                             FinanceWarning(
                                 "001",
