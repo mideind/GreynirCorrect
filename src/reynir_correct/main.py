@@ -136,6 +136,13 @@ parser.add_argument(
     action="store_true",
 )
 
+parser.add_argument(
+    "--finance_check",
+    help="Check for third party terminology and tone of voice.",
+    action="store_true",
+    default=False,
+
+)
 
 def main() -> None:
     """Main function, called when the 'correct' command is invoked"""
@@ -160,6 +167,7 @@ def main() -> None:
     options["normalize"] = args.normalize
     options["all_errors"] = args.all_errors or args.grammar
     options["sentence_prefilter"] = args.sentence_prefilter
+    options["finance_check"] = args.finance_check
     print(check_errors(**options), file=args.outfile)
 
 

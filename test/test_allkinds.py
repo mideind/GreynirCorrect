@@ -1730,6 +1730,14 @@ def test_suppress_suggestions(verbose=False):
     )
     assert y != g
 
+def test_finance_word_errors(verbose=False):
+    # I001
+    s, g = check("Hann á feitan bankareikning og ætlar að redda þessu fyrir mig með því að lána mér debitkortið sitt og Netpóstinn.")
+    assert g[4].error_code == "I001/w" 
+    assert g[8].error_code == "I001/w"
+    assert g[17].error_code == "I001/w"
+    assert g[20].error_code == "I001/w"
+
 
 if __name__ == "__main__":
     pass

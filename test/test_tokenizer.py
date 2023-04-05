@@ -436,6 +436,19 @@ def test_taboo_words(verbose=False):
         else:
             assert not g[ix].error_code
 
+def test_finance_words(verbose=False):
+    s, g = check(
+        "Hann á feitan bankareikning og ætlar að fixa þetta fyrir mig."
+    )
+    assert len(g) == 14
+    errors = {4, 8}
+    for ix, _ in enumerate(g):
+        if ix in errors:
+            assert g[ix].error_code == "I001/w"  # Taboo word
+        else:
+            assert not g[ix].error_code
+
+
 
 def test_multiword_errors(verbose=False):
     sent = """
@@ -498,3 +511,4 @@ if __name__ == "__main__":
     test_taboo_words(verbose=True)
     test_multiword_errors(verbose=True)
     test_complex(verbose=True)
+    test_finance_words(verbose=True)

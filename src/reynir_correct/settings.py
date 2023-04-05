@@ -203,6 +203,25 @@ class TabooWords:
         TabooWords.DICT[word] = (replacement, explanation)
 
 
+class FinanceWords:
+
+    # Dictionary structure: dict { flagged_word : (suggested_replacement, explanation) }
+    DICT: Dict[str, Tuple[str, str]] = {}
+
+    @staticmethod
+    def add(flagged_word: str, replacement: str, explanation: str) -> None:
+        if flagged_word in FinanceWords.DICT:
+            raise ConfigError(
+                "Multiple definition of '{0}' in finance_words section".format(flagged_word)
+            )
+        db = GreynirBin.get_db()
+        a = flagged_word.split("_")
+        _, m = db.lookup_g(a[0])
+        if not m or (len(a) >= 2 and all(mm.ordfl != a[1] for mm in m)):
+            raise ConfigError("The word '{0}' is not found in BÍN".format(flagged_word))
+        FinanceWords.DICT[flagged_word] = (replacement, explanation)
+
+
 class Suggestions:
 
     # Dictionary structure: dict { bad_word : [ suggested_replacements ] }
@@ -750,6 +769,41 @@ class Settings:
         TabooWords.add(taboo, replacement, explanation)
 
     @staticmethod
+    def _handle_finance_words(s: str) -> None:
+        """Handle config parameters in the finance_words section"""
+        # Start by parsing explanation string off the end (right hand side), if present
+        lquote = s.find('"')
+        rquote = s.rfind('"')
+        if (lquote >= 0) != (rquote >= 0):
+            raise ConfigError(
+                "Explanation string for finance word should be enclosed in double quotes"
+            )
+        if lquote >= 0:
+            # Obtain explanation from within quotes
+            explanation = s[lquote + 1 : rquote].strip()
+            s = s[:lquote].rstrip()
+        else:
+            # No explanation
+            explanation = ""
+        if not s:
+            raise ConfigError("Expected finance word and a suggested replacement")
+        a = s.lower().split()
+        if len(a) > 2:
+            raise ConfigError("Expected finance word and a suggested replacement")
+        flagged_word = a[0].strip()
+        if len(a) == 2:
+            replacement = a[1].strip()
+        else:
+            replacement = flagged_word
+        # Check all replacement words, which are separated by slashes '/'
+        if any(r.count("_") != 1 for r in replacement.split("/")):
+            raise ConfigError(
+                "Suggested replacement(s) should include a word category (_xx)"
+            )
+        FinanceWords.add(flagged_word, replacement, explanation)
+
+
+    @staticmethod
     def _handle_suggestions(s: str) -> None:
         """Handle config parameters in the suggestions section"""
         a = s.lower().split()
@@ -986,6 +1040,7 @@ class Settings:
                 "icesquer": Settings._handle_icesquer,
                 "ritmyndir": Settings._handle_ritmyndir,
                 "ritmyndir_details": Settings._handle_ritmyndir_details,
+                "finance_words": Settings._handle_finance_words,
             }
             handler = None  # Current section handler
 

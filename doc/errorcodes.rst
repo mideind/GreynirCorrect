@@ -39,6 +39,9 @@ Other categories currently covered are:
 +------------+----------------------------------------------------------------------------------------------+
 || ``E004``  |  The sentence is probably not in Icelandic.                                                  |
 +------------+----------------------------------------------------------------------------------------------+
+|| ``I001``  |  Words not conforming to a formal tone of voice of a financial institution, with suggested   |
+||           |  replacements.                                                                                |
++------------+----------------------------------------------------------------------------------------------+
 || ``N001``  |  Wrong quotation marks.                                                                      |
 +------------+----------------------------------------------------------------------------------------------+
 || ``N002``  |  Three periods should be an ellipsis. A warning is given.                                    |
