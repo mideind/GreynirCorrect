@@ -368,6 +368,7 @@ class GreynirCorrect(Greynir):
             # Run the pattern matcher on the sentence,
             # annotating questionable patterns
             PatternMatcher(ann, sent).run()
+
         # Sort the annotations by their start token index,
         # and then by decreasing span length
         ann.sort(key=lambda a: (a.start, -a.end))

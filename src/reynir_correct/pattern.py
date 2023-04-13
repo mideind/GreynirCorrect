@@ -69,7 +69,7 @@ from reynir.bintokenizer import ALL_CASES
 from reynir_correct.errtokenizer import emulate_case
 
 from .annotation import Annotation
-from reynir_correct.errtokenizer import emulate_case
+
 
 
 # The types involved in pattern processing

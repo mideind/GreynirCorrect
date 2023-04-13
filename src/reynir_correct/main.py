@@ -44,6 +44,7 @@ from typing import (
 import sys
 import argparse
 from .wrappers import check_errors
+from .settings import Settings
 
 
 # File types for UTF-8 encoded text files
@@ -137,12 +138,13 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--finance_check",
-    help="Check for third party terminology and tone of voice.",
-    action="store_true",
+    "--extra_config",
+    nargs=1,
+    type=str,
+    help="Add additional use-specific rules in a configuration file.",
     default=False,
-
 )
+
 
 def main() -> None:
     """Main function, called when the 'correct' command is invoked"""
@@ -167,8 +169,12 @@ def main() -> None:
     options["normalize"] = args.normalize
     options["all_errors"] = args.all_errors or args.grammar
     options["sentence_prefilter"] = args.sentence_prefilter
-    options["finance_check"] = args.finance_check
-    print(check_errors(**options), file=args.outfile)
+    options["extra_config"] = args.extra_config
+    
+    settings = Settings()
+    settings.read(options["extra_config"][0])
+    settings.read("config/GreynirCorrect.conf")
+    print(check_errors(**options, settings=settings), file=args.outfile)
 
 
 if __name__ == "__main__":

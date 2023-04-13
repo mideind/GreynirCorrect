@@ -83,6 +83,7 @@ from .errtokenizer import CorrectToken, Error
 from .errtokenizer import tokenize as errtokenize
 from .annotation import Annotation
 from .checker import check_tokens
+from .settings import Settings
 
 
 class AnnTokenDict(TypedDict, total=False):
@@ -190,19 +191,19 @@ def val(
     return t.val
 
 
-def check_errors(**options: Any) -> str:
+def check_errors(settings: Settings, **options: Any) -> str:
     """Return a string in the chosen format and correction level
     using the spelling and grammar checker"""
     input = options.get("input", None)
     if isinstance(input, str):
         options["input"] = [input]
     if options.get("all_errors", True):
-        return check_grammar(**options)
+        return check_grammar(settings=settings, **options)
     else:
-        return check_spelling(**options)
+        return check_spelling(settings=settings, **options)
 
 
-def check_spelling(**options: Any) -> str:
+def check_spelling(settings: Settings, **options: Any) -> str:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
     format = options.get("format", "json")
@@ -213,7 +214,7 @@ def check_spelling(**options: Any) -> str:
             to_text = text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
-    toks = sentence_stream(**options)
+    toks = sentence_stream(settings=settings, **options)
     unisum: List[str] = []
     allsum: List[str] = []
     annlist: List[str] = []
@@ -301,14 +302,14 @@ def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
     return unistr, toksum
 
 
-def sentence_stream(**options: Any) -> Iterator[List[CorrectToken]]:
+def sentence_stream(settings: Settings, **options: Any) -> Iterator[List[CorrectToken]]:
     """Yield a stream of sentence token lists from the source text"""
     # Initialize sentence accumulator list
     curr_sent: List[CorrectToken] = []
     gen = options.get("input", None)
     if gen is None:
         gen = sys.stdin
-    for t in errtokenize(gen, **options):
+    for t in errtokenize(gen, settings, **options):
         # Normal shallow parse, one line per sentence,
         # tokens separated by spaces
         curr_sent.append(t)
@@ -384,9 +385,8 @@ def test_grammar(**options: Any) -> Tuple[str, TokenSumType]:
     return accumstr, alltoks
 
 
-def check_grammar(**options: Any) -> str:
+def check_grammar(settings: Settings, **options: Any) -> str:
     """Do a full spelling and grammar check of the source text"""
-
     inneroptions: Dict[str, Union[str, bool]] = {}
     inneroptions["annotate_unparsed_sentences"] = options.get(
         "annotate_unparsed_sentences", True
@@ -397,7 +397,7 @@ def check_grammar(**options: Any) -> str:
 
     sentence_classifier: Optional[SentenceClassifier] = None
 
-    for raw_tokens in sentence_stream(**options):
+    for raw_tokens in sentence_stream(settings=settings, **options):
         original_sentence = "".join([t.original or t.txt for t in raw_tokens])
 
         if options.get("sentence_prefilter", False):
