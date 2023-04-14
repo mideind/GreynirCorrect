@@ -107,6 +107,7 @@ class SplitCompounds:
             )
         self.DICT[first_part].add(second_part_stem)
 
+
 class UniqueErrors:
 
     # Dictionary structure: dict { wrong_word : (tuple of right words) }
@@ -188,26 +189,6 @@ class TabooWords:
         if not m or (len(a) >= 2 and all(mm.ordfl != a[1] for mm in m)):
             raise ConfigError("The taboo word '{0}' is not found in BÍN".format(word))
         self.DICT[word] = (replacement, explanation)
-
-
-class ExtraWords:
-    def __init__(self) -> None:
-        # Dictionary structure: dict { flagged_word : (suggested_replacement, explanation) }
-        self.DICT: Dict[str, Tuple[str, str]] = {}
-
-    def add(self, flagged_word: str, replacement: str, explanation: str) -> None:
-        if flagged_word in self.DICT:
-            raise ConfigError(
-                "Multiple definition of '{0}' in extra_words section".format(
-                    flagged_word
-                )
-            )
-        db = GreynirBin.get_db()
-        a = flagged_word.split("_")
-        _, m = db.lookup_g(a[0])
-        if not m or (len(a) >= 2 and all(mm.ordfl != a[1] for mm in m)):
-            raise ConfigError("The word '{0}' is not found in BÍN".format(flagged_word))
-        self.DICT[flagged_word] = (replacement, explanation)
 
 
 class Suggestions:
@@ -588,7 +569,6 @@ class Settings:
         self.unique_errors = UniqueErrors()
         self.multiword_errors = MultiwordErrors()
         self.taboo_words = TabooWords()
-        self.extra_words = ExtraWords()
         self.suggestions = Suggestions()
         self.capitalization_errors = CapitalizationErrors()
         self.ow_forms = OwForms()
@@ -726,39 +706,6 @@ class Settings:
                 "Suggested replacement(s) should include a word category (_xx)"
             )
         self.taboo_words.add(taboo, replacement, explanation)
-
-    def _handle_extra_words(self, s: str) -> None:
-        """Handle config parameters in the extra_words section"""
-        # Start by parsing explanation string off the end (right hand side), if present
-        lquote = s.find('"')
-        rquote = s.rfind('"')
-        if (lquote >= 0) != (rquote >= 0):
-            raise ConfigError(
-                "Explanation string for word should be enclosed in double quotes"
-            )
-        if lquote >= 0:
-            # Obtain explanation from within quotes
-            explanation = s[lquote + 1 : rquote].strip()
-            s = s[:lquote].rstrip()
-        else:
-            # No explanation
-            explanation = ""
-        if not s:
-            raise ConfigError("Expected word and a suggested replacement")
-        a = s.lower().split()
-        if len(a) > 2:
-            raise ConfigError("Expected word and a suggested replacement")
-        flagged_word = a[0].strip()
-        if len(a) == 2:
-            replacement = a[1].strip()
-        else:
-            replacement = flagged_word
-        # Check all replacement words, which are separated by slashes '/'
-        if any(r.count("_") != 1 for r in replacement.split("/")):
-            raise ConfigError(
-                "Suggested replacement(s) should include a word category (_xx)"
-            )
-        self.extra_words.add(flagged_word, replacement, explanation)
 
     def _handle_suggestions(self, s: str) -> None:
         """Handle config parameters in the suggestions section"""
@@ -983,7 +930,6 @@ class Settings:
                 "icesquer": Settings._handle_icesquer,
                 "ritmyndir": Settings._handle_ritmyndir,
                 "ritmyndir_details": Settings._handle_ritmyndir_details,
-                "extra_words": Settings._handle_extra_words,
             }
             handler = None  # Current section handler
 

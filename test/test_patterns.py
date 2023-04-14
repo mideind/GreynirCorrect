@@ -40,11 +40,12 @@ import reynir_correct
 
 from test_annotator import check_sentence  # type: ignore
 
-
 @pytest.fixture(scope="module")
 def rc():
     """Provide a module-scoped GreynirCorrect instance as a test fixture"""
-    r = reynir_correct.GreynirCorrect()
+    settings = reynir_correct.Settings()
+    settings.read("../reynir_correct/config/GreynirCorrect.conf")
+    r = reynir_correct.GreynirCorrect(settings)
     yield r
     # Do teardown here
     r.__class__.cleanup()

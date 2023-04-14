@@ -3,7 +3,7 @@
 
     test_allkinds.py
 
-    Tests for GreynirCorrect module
+    Tests for Greyniorrect module
 
     Copyright (C) 2022 by Miðeind ehf.
 
@@ -35,12 +35,17 @@
 """
 
 # Run with 'pytest -v' for verbose mode
-
+import pytest
 import reynir_correct as rc
 from reynir_correct import detokenize
 from reynir_correct.wrappers import test_grammar as wrap_check
 
 # Tests for errtokenizer.py
+
+# Global settings object for the tests
+settings = rc.Settings()
+settings.read("../reynir_correct/config/GreynirCorrect.conf")
+gc = rc.GreynirCorrect(settings=settings)
 
 
 def dump(tokens):
@@ -62,7 +67,7 @@ def check(p, options={}):
     options["input"] = [p]
     options["one_sent"] = False
 
-    return wrap_check(**options)
+    return wrap_check(rc=gc, **options)
 
 
 def test_punctuation(verbose=False):
@@ -635,7 +640,8 @@ def test_capitalization(verbose=False):
     assert g[9].error_code == "Z002"  # Líbanar
 
     g = rc.tokenize(
-        "Nýr Loftslagsráðherra, Innviðaráðherra og Umhverfisráðherra er Afróasískur, talar Dravídamál, fylgir Lútherstrú og er miðflokksmaður."
+        "Nýr Loftslagsráðherra, Innviðaráðherra og Umhverfisráðherra er Afróasískur, talar Dravídamál, fylgir Lútherstrú og er miðflokksmaður.",
+        gc.settings
     )
     g = list(g)
     if verbose:
@@ -657,7 +663,8 @@ def test_capitalization(verbose=False):
     assert g[17].error_code == "Z002"  # Miðflokksmaður
 
     g = rc.tokenize(
-        "Hann er Suðurkákasískur, tínir Unnarfald, býr í neðra-breiðholti og elskar Múmínálfa og óskarsverðlaunin."
+        "Hann er Suðurkákasískur, tínir Unnarfald, býr í neðra-breiðholti og elskar Múmínálfa og óskarsverðlaunin.",
+        gc.settings
     )
     g = list(g)
     if verbose:
@@ -674,7 +681,7 @@ def test_capitalization(verbose=False):
     assert g[13].error_code == "Z001"  # múmínálfa
     assert g[15].error_code == "Z002"  # Óskarsverðlaunin
 
-    g = rc.tokenize("Í Seinni Heimsstyrjöldinni gerðist meira en í Kalda Stríðinu.")
+    g = rc.tokenize("Í Seinni Heimsstyrjöldinni gerðist meira en í Kalda Stríðinu.", gc.settings)
     g = list(g)
     if verbose:
         dump(g)
@@ -685,7 +692,8 @@ def test_capitalization(verbose=False):
     assert g[9].error_code == "Z001"  # stríðinu
 
     g = rc.tokenize(
-        "Ég tala Víetnömsku, Indónesísku, er Afrísk-amerísk, karíbi, Karíbskur, austur-evrópubúi og vestur-evrópubúi"
+        "Ég tala Víetnömsku, Indónesísku, er Afrísk-amerísk, karíbi, Karíbskur, austur-evrópubúi og vestur-evrópubúi",
+        gc.settings
     )
     g = list(g)
     if verbose:
@@ -1131,18 +1139,18 @@ def check_sentence(s: str, annotations, is_foreign=False):
             assert a.code == code
 
     # Test check_single()
-    check_sent(rc.check_single(s))
+    check_sent(rc.check_single(s, gc))
     # Test check()
-    for pg in rc.check(s):
+    for pg in rc.check(s, gc):
         for sent in pg:
             check_sent(sent)
     # Test check_with_stats()
-    for pg in rc.check_with_stats(s)["paragraphs"]:
+    for pg in rc.check_with_stats(s, gc.settings)["paragraphs"]:
         for sent in pg:
             check_sent(sent)
 
     # Test presevation of original token text
-    tlist = list(rc.tokenize(s))
+    tlist = list(rc.tokenize(s, gc.settings))
     len_tokens = sum(len(t.original or "") for t in tlist)
     assert len_tokens == len(s)
 
@@ -1488,7 +1496,7 @@ def test_compounds():
 
 
 def test_styles():
-    a = rc.check_single("Spanendurnir afdjöfluðu á afarorðunum.")
+    a = rc.check_single("Spanendurnir afdjöfluðu á afarorðunum.", gc)
     assert len(a.annotations) == 3
     assert a.annotations[0].code == "Y001/w"
     assert "úrelt" in a.annotations[0].detail
@@ -1497,7 +1505,8 @@ def test_styles():
     assert a.annotations[2].code == "Y001/w"
     assert "úrelt" in a.annotations[2].detail
     a = rc.check_single(
-        "Jón átti höfundarétt og spaghetti fyrir sveitastjórnarkosningarnar."
+        "Jón átti höfundarétt og spaghetti fyrir sveitastjórnarkosningarnar.",
+        gc
     )
     assert len(a.annotations) == 3
     assert a.annotations[0].code == "Y001/w"
@@ -1507,14 +1516,14 @@ def test_styles():
     assert a.annotations[2].code == "Y001/w"
     assert "villa" in a.annotations[2].detail
     assert "sveitastjórnarkosningarnar" in a.annotations[2].detail
-    a = rc.check_single("Kamesið mitt er ferlega óhreint.")
+    a = rc.check_single("Kamesið mitt er ferlega óhreint.", gc)
     assert len(a.annotations) == 1
     assert a.annotations[0].code == "Y001/w"
     assert "úrelt" in a.annotations[0].detail
     assert "Kamesið" in a.annotations[0].detail
     assert "Kamersið" in a.annotations[0].detail
     assert a.annotations[0].suggest == "Kamersið"
-    a = rc.check_single("Páll kyngdi belgverska konfektinu.")
+    a = rc.check_single("Páll kyngdi belgverska konfektinu.", gc)
     assert len(a.annotations) == 1
     assert a.annotations[0].code == "Y001/w"
     assert "gamalt" in a.annotations[0].detail
@@ -1729,14 +1738,6 @@ def test_suppress_suggestions(verbose=False):
         options,
     )
     assert y != g
-
-def test_finance_word_errors(verbose=False):
-    # I001
-    s, g = check("Hann á feitan bankareikning og ætlar að redda þessu fyrir mig með því að lána mér debitkortið sitt og Netpóstinn.")
-    assert g[4].error_code == "I001/w" 
-    assert g[8].error_code == "I001/w"
-    assert g[17].error_code == "I001/w"
-    assert g[20].error_code == "I001/w"
 
 
 if __name__ == "__main__":

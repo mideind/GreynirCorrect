@@ -85,12 +85,12 @@ from reynir.fastparser import (
     ffi,  # type: ignore
 )
 from reynir.reducer import Reducer
+from reynir_correct.settings import Settings
 
 from .annotation import Annotation
 from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
 from .errfinder import ErrorFinder, ErrorDetectionToken
 from .pattern import PatternMatcher
-
 
 # The type of a grammar check result
 class CheckResult(TypedDict):
@@ -186,20 +186,21 @@ class GreynirCorrect(Greynir):
     _reducer = None
     _lock = Lock()
 
-    def __init__(self, **options: Any) -> None:
+    def __init__(self, settings: Settings, **options: Any) -> None:
         self._annotate_unparsed_sentences = options.pop(
             "annotate_unparsed_sentences", True
         )
         self._ignore_rules: FrozenSet[str] = options.get("ignore_rules", set())
         super().__init__(**options)
         self._options = options
+        self.settings = settings
         # if options:
         #    raise ValueError(f"Unknown option(s) for GreynirCorrect: {options}")
 
     def tokenize(self, text: StringIterable) -> Iterator[Tok]:
         """Use the correcting tokenizer instead of the normal one"""
         # The CorrectToken class is a duck-typing implementation of Tok
-        return tokenize_and_correct(text, **self._options)
+        return tokenize_and_correct(text, settings=self.settings, **self._options)
 
     @classmethod
     def _dump_token(cls, tok: Tok) -> Tuple[Any, ...]:
@@ -396,29 +397,29 @@ class GreynirCorrect(Greynir):
         return sent
 
 
-def check_single(sentence_text: str, **options: Any) -> Optional[Sentence]:
+def check_single(sentence_text: str, rc: GreynirCorrect, **options: Any) -> Optional[Sentence]:
     """Check and annotate a single sentence, given in plain text"""
     # Returns None if no sentence was parsed
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
-    rc = GreynirCorrect(**options)
+    #rc = GreynirCorrect(**options)
     return rc.parse_single(sentence_text, max_sent_tokens=max_sent_tokens)
 
 
-def check_tokens(tokens: Iterable[CorrectToken], **options: Any) -> Optional[Sentence]:
+def check_tokens(tokens: Iterable[CorrectToken], rc: GreynirCorrect, **options: Any) -> Optional[Sentence]:
     """Check and annotate a single sentence, given as a token list"""
     # Returns None if no sentence was parsed
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
-    rc = GreynirCorrect(**options)
+    #rc = GreynirCorrect(**options)
     return rc.parse_tokens(tokens, max_sent_tokens=max_sent_tokens)
 
 
-def check(text: str, **options: Any) -> Iterable[Paragraph]:
+def check(text: str, rc: GreynirCorrect, **options: Any) -> Iterable[Paragraph]:
     """Return a generator of checked paragraphs of text,
     each being a generator of checked sentences with
     annotations"""
     split_paragraphs = options.pop("split_paragraphs", False)
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
-    rc = GreynirCorrect(**options)
+    #rc = GreynirCorrect(**options)
     # This is an asynchronous (on-demand) parse job
     job = rc.submit(
         text,
@@ -432,6 +433,7 @@ def check(text: str, **options: Any) -> Iterable[Paragraph]:
 def check_with_custom_parser(
     text: str,
     *,
+    settings: Settings,
     parser_class: Type[GreynirCorrect] = GreynirCorrect,
     progress_func: ProgressFunc = None,
     split_paragraphs: bool = False,
@@ -442,7 +444,7 @@ def check_with_custom_parser(
     using the given correction/parser class. This is a low-level
     function; normally check_with_stats() should be used."""
     rc = parser_class(
-        annotate_unparsed_sentences=annotate_unparsed_sentences, **options
+        annotate_unparsed_sentences=annotate_unparsed_sentences, settings=settings, **options
     )
     job = rc.submit(
         text,
@@ -465,6 +467,7 @@ def check_with_custom_parser(
 
 def check_with_stats(
     text: str,
+    settings: Settings,
     *,
     split_paragraphs: bool = False,
     progress_func: ProgressFunc = None,
@@ -474,6 +477,7 @@ def check_with_stats(
     """Return a dict containing parsed paragraphs as well as statistics"""
     return check_with_custom_parser(
         text,
+        settings=settings,
         split_paragraphs=split_paragraphs,
         progress_func=progress_func,
         annotate_unparsed_sentences=annotate_unparsed_sentences,

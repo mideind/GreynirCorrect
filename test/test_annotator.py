@@ -67,7 +67,9 @@ import reynir_correct
 @pytest.fixture(scope="module")
 def rc():
     """Provide a module-scoped GreynirCorrect instance as a test fixture"""
-    r = reynir_correct.GreynirCorrect()
+    settings = reynir_correct.Settings()
+    settings.read("../reynir_correct/config/GreynirCorrect.conf")
+    r = reynir_correct.GreynirCorrect(settings)
     yield r
     # Do teardown here
     r.__class__.cleanup()
@@ -131,18 +133,18 @@ def check_sentence(
     assert isinstance(sent, reynir_correct.AnnotatedSentence)
     check_sent(sent)
     # Test check()
-    for pg in reynir_correct.check(s):
+    for pg in reynir_correct.check(s, rc):
         for sent in pg:
             assert isinstance(sent, reynir_correct.AnnotatedSentence)
             check_sent(sent)
     # Test check_with_stats()
-    for pg in reynir_correct.check_with_stats(s)["paragraphs"]:
+    for pg in reynir_correct.check_with_stats(s, rc.settings)["paragraphs"]:
         for sent in pg:
             assert isinstance(sent, reynir_correct.AnnotatedSentence)
             check_sent(sent)
 
     # Test presevation of original token text
-    tlist = list(reynir_correct.tokenize(s))
+    tlist = list(reynir_correct.tokenize(s, rc.settings))
     len_tokens = sum(len(t.original or "") for t in tlist)
     assert len_tokens == len(s)
 

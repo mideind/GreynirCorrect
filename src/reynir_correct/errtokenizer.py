@@ -979,45 +979,6 @@ class PhraseError(Error):
     def description(self) -> str:
         return self._txt
 
-@register_error_class
-class ExtraWarning(Error):
-
-    """A ExtraWarning marks a word that is not conforming with a banking tone of voice."""
-
-    # I001: Extra word usage warning, with suggested replacement.
-
-    def __init__(
-        self,
-        code: str,
-        txt: str,
-        detail: Optional[str],
-        original: str,
-        suggest: Optional[str],
-        suggestlist: Optional[List[str]] = None,
-    ) -> None:
-        # Extra word warnings start with "I"
-        super().__init__(
-            "I" + code, is_warning=True, original=original, suggest=suggest
-        )
-        self._txt = txt
-        self._detail = detail
-        self._suggestlist = suggestlist
-
-    @property
-    def description(self) -> str:
-        return self._txt
-
-    @property
-    def detail(self) -> Optional[str]:
-        return self._detail
-
-    def to_dict(self) -> Dict[str, Any]:
-        d = super().to_dict()
-        d["detail"] = self.detail
-        d["suggest"] = self.suggest
-        d["suggestlist"] = self._suggestlist
-        return d
-
 
 def parse_errors(
     token_stream: Iterator[Tok],
@@ -2860,7 +2821,6 @@ def late_fix_merges(
 def check_taboo_words(token_stream: Iterable[CorrectToken], settings: Settings) -> Iterator[CorrectToken]:
     """Annotate taboo words with warnings"""
     tdict = settings.taboo_words.DICT
-
     for token in token_stream:
         # Check taboo words
         if (  # type: ignore
@@ -2929,85 +2889,6 @@ def check_taboo_words(token_stream: Iterable[CorrectToken], settings: Settings) 
                             )
                         )
                         # !!! TODO: Add correctly inflected suggestion here
-                    break
-        yield token
-
-
-def check_extra_words(
-        token_stream: Iterable[CorrectToken],
-        settings: Settings,
-        db: GreynirBin,
-
-) -> Iterator[CorrectToken]:
-    """Annotate extra words with warnings"""
-    extra_dict = settings.extra_words.DICT
-    for token in token_stream:
-        # Check extra words
-        if (  # type: ignore
-            token.val is not None and token.has_meanings
-        ):
-            for m in token.meanings:
-                key = m.stofn.replace("-", "")
-                # First, look up the lemma + _ + word category
-                t = extra_dict.get(key + "_" + m.ordfl)
-                if t is None:
-                    # Then, look up the lemma only
-                    t = extra_dict.get(key)
-                if t is not None:
-                    # Flagged word
-                    replacement, detail = t
-                    # There can be multiple suggested replacements,
-                    # for instance 'þungunarrof_hk/meðgöngurof_hk'
-                    sw = replacement.split("/")
-                    suggestion = ""
-                    suggest = None
-                    sugglist: List[str] = []
-                    if len(sw) == 1 and sw[0].split("_")[0] == key:
-                        # We have a single suggested word, which is the same as the
-                        # reported word: there is no suggestion, only a notification
-                        explanation = "Orðalagið er hugsanlega ekki í samræmi við raddblæ okkar."
-                    else:
-                        suggestion = ", ".join(f"'{w.split('_')[0]}'" for w in sw)
-                        # Trick to replace the last ", " with " eða ":
-                        # replace the first " ," with " aðe " in a reversed string,
-                        # then re-reverse it
-                        suggestion = suggestion[::-1].replace(" ,", " aðe ", 1)[::-1]
-                        explanation = (
-                            f"Þetta orð er hugsanlega ekki í samræmi við raddblæ okkar, "
-                            f"þú gætir notað {suggestion} í staðinn."
-                        )
-                        suggest, sugg_cat = sw[0].split("_")
-                        sugglist = list(w.split("_")[0] for w in sw)
-                    if (
-                        token.error_code
-                        and token.original
-                        and token.error_code[0] == "W"
-                        and token.txt.strip() != token.original.strip()
-                    ):
-                        orig = (
-                            token.original.strip()
-                            if token.original
-                            else token.txt.strip()
-                        )
-                        token.remove_error(orig)
-                    else:
-                        beyging = token[2][0].beyging
-                        suggest_object = db.lookup_variants(suggest, sugg_cat, beyging, lemma=suggest)
-                        if suggest_object:
-                            bmynd = suggest_object[0].bmynd
-                            suggest = emulate_case(bmynd, template=token.txt)
-                        else:
-                            print("ekkert suggest_object!")
-                        token.set_error(
-                            ExtraWarning(
-                                "001",
-                                explanation,
-                                detail or None,
-                                token.txt,
-                                suggest,
-                                sugglist,
-                            )
-                        )
                     break
         yield token
 
@@ -3287,10 +3168,6 @@ class CorrectionPipeline(DefaultPipeline):
         # Check taboo words
         if not only_ci and "T001/w" not in ignore_rules and "T001" not in ignore_rules:
             ct_stream = check_taboo_words(ct_stream, self.settings)
-
-        # Check extra words
-        if not only_ci and "I001/w" not in ignore_rules and "I001" not in ignore_rules:
-            ct_stream = check_extra_words(ct_stream, self.settings, self._db)
 
         # Check context-independent style errors, indicated in BÍN
         ct_stream = check_style(ct_stream, self._db, ignore_rules)

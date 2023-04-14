@@ -37,7 +37,12 @@ def test_serializers():
         "morguninn eftir vakknaði ég kl. 07:30.",
         "Ég var firstur á fætur en þuríður Hálfdánardóttir var numer 2.",
     ]
-    gc = rc.GreynirCorrect()
+
+    # Global settings object for the tests
+    settings = rc.Settings()
+    settings.read("../reynir_correct/config/GreynirCorrect.conf")
+    gc = rc.GreynirCorrect(settings=settings)
+
     job = gc.submit(sents, parse=True)
     for pg in job.paragraphs():
         for sent in pg:

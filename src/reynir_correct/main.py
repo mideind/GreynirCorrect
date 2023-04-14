@@ -172,8 +172,9 @@ def main() -> None:
     options["extra_config"] = args.extra_config
     
     settings = Settings()
-    settings.read(options["extra_config"][0])
     settings.read("config/GreynirCorrect.conf")
+    if bool(options["extra_config"]):
+        settings.read(options["extra_config"][0])
     print(check_errors(**options, settings=settings), file=args.outfile)
 
 

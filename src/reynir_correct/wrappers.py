@@ -82,9 +82,8 @@ from tokenizer.definitions import AmountTuple, NumberTuple
 from .errtokenizer import CorrectToken, Error
 from .errtokenizer import tokenize as errtokenize
 from .annotation import Annotation
-from .checker import check_tokens
+from .checker import GreynirCorrect, check_tokens
 from .settings import Settings
-
 
 class AnnTokenDict(TypedDict, total=False):
 
@@ -194,13 +193,15 @@ def val(
 def check_errors(settings: Settings, **options: Any) -> str:
     """Return a string in the chosen format and correction level
     using the spelling and grammar checker"""
+
+    rc = GreynirCorrect(settings=settings)
     input = options.get("input", None)
     if isinstance(input, str):
         options["input"] = [input]
     if options.get("all_errors", True):
-        return check_grammar(settings=settings, **options)
+        return check_grammar(rc=rc, **options)
     else:
-        return check_spelling(settings=settings, **options)
+        return check_spelling(settings=rc.settings, **options)
 
 
 def check_spelling(settings: Settings, **options: Any) -> str:
@@ -270,7 +271,7 @@ def check_spelling(settings: Settings, **options: Any) -> str:
     return unistr
 
 
-def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
+def test_spelling(settings: Settings, **options: Any) -> Tuple[str, TokenSumType]:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
     if options.get("spaced", False):
@@ -280,7 +281,7 @@ def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
             to_text = text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
-    toks = sentence_stream(**options)
+    toks = sentence_stream(settings=settings, **options)
     unisum: List[str] = []
     toksum: TokenSumType = []
     annlist: List[str] = []
@@ -321,7 +322,7 @@ def sentence_stream(settings: Settings, **options: Any) -> Iterator[List[Correct
         yield curr_sent
 
 
-def test_grammar(**options: Any) -> Tuple[str, TokenSumType]:
+def test_grammar(rc: GreynirCorrect, **options: Any) -> Tuple[str, TokenSumType]:
     """Do a full spelling and grammar check of the source text"""
 
     accumul: List[str] = []
@@ -333,10 +334,11 @@ def test_grammar(**options: Any) -> Tuple[str, TokenSumType]:
     )
     inneroptions["ignore_rules"] = options.get("ignore_rules", set())
     annlist: List[str] = []
-    for toklist in sentence_stream(**options):
+
+    for toklist in sentence_stream(rc.settings, **options):
         # Invoke the spelling and grammar checker on the token list
         # Only contains options relevant to the grammar check
-        sent = check_tokens(toklist, **inneroptions)
+        sent = check_tokens(toklist, rc, **inneroptions)
         if sent is None:
             # Should not happen?
             continue
@@ -385,7 +387,7 @@ def test_grammar(**options: Any) -> Tuple[str, TokenSumType]:
     return accumstr, alltoks
 
 
-def check_grammar(settings: Settings, **options: Any) -> str:
+def check_grammar(rc: GreynirCorrect, **options: Any) -> str:
     """Do a full spelling and grammar check of the source text"""
     inneroptions: Dict[str, Union[str, bool]] = {}
     inneroptions["annotate_unparsed_sentences"] = options.get(
@@ -397,7 +399,7 @@ def check_grammar(settings: Settings, **options: Any) -> str:
 
     sentence_classifier: Optional[SentenceClassifier] = None
 
-    for raw_tokens in sentence_stream(settings=settings, **options):
+    for raw_tokens in sentence_stream(settings=rc.settings, **options):
         original_sentence = "".join([t.original or t.txt for t in raw_tokens])
 
         if options.get("sentence_prefilter", False):
@@ -429,7 +431,7 @@ def check_grammar(settings: Settings, **options: Any) -> str:
                 )
                 continue
 
-        annotated_sentence = check_tokens(raw_tokens, **inneroptions)
+        annotated_sentence = check_tokens(raw_tokens, rc, **inneroptions)
         if annotated_sentence is None:
             # This should not happen, but we check to be sure, and to satisfy mypy
             # TODO: Should we rather raise an exception instead of silently discarding the sentence?
