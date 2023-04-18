@@ -2676,7 +2676,6 @@ def late_fix_capitalization(
                     if token.txt[0].isupper():
                         code = "001"
                         case = "lág"
-                        print(token.txt.lower())
                         correct = token.txt.lower()
                     else:
                         code = "002"

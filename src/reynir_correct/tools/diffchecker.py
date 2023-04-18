@@ -7,7 +7,7 @@ $ python diffchecker.py prufa.txt
 
 """
 from reynir_correct.wrappers import check_errors
-
+from reynir_correct.settings import Settings
 from typing import (
     Iterator,
     Iterable,
@@ -75,7 +75,8 @@ def main() -> None:
                 print(sent)
             continue
         options["input"] = sent
-        x = check_errors(**options)
+        settings = Settings()
+        x = check_errors(settings=settings, **options)
         # Here we can compare x to gold by zipping sentences
         # from output and gold together and iterating in a for loop
         print(sent.strip())
