@@ -146,6 +146,14 @@ parser.add_argument(
 )
 
 
+parser.add_argument(
+    "--suggest_not_correct",
+    help="Instead of directly changing the text, some stylistic errors are presented as suggestions only.",
+    action="store_true",
+    default=False
+)
+
+
 def main() -> None:
     """Main function, called when the 'correct' command is invoked"""
 
@@ -170,11 +178,18 @@ def main() -> None:
     options["all_errors"] = args.all_errors or args.grammar
     options["sentence_prefilter"] = args.sentence_prefilter
     options["extra_config"] = args.extra_config
-    
+    options["suggest_not_correct"] = args.suggest_not_correct
+
     settings = Settings()
     settings.read("config/GreynirCorrect.conf")
     if bool(options["extra_config"]):
-        settings.read(options["extra_config"][0])
+        # check whether file exists:
+        try:
+            with open(options["extra_config"][0], "r") as f:
+                settings.read(options["extra_config"][0])
+        except FileNotFoundError:
+            print("File not found: " + options["extra_config"][0])
+            sys.exit(1)
     print(check_errors(**options, settings=settings), file=args.outfile)
 
 

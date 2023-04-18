@@ -48,7 +48,7 @@ def main() -> None:
     # options["input"] = open("prufa.txt", "r")
     options["one_sent"] = False
     # options["generate_suggestion_list"] = True
-    options["ignore_comments"] = False  # Only used here
+    options["ignore_comments"] = True  # Only used here
     options["generate_suggestion_list"] = False
     options["annotate_unparsed_sentences"] = True
     options["suppress_suggestions"] = False
@@ -76,6 +76,10 @@ def main() -> None:
             continue
         options["input"] = sent
         settings = Settings()
+        settings.read("config/GreynirCorrect.conf")
+        # additionally loading extra words
+        settings.read("config/ExtraWords.conf")
+
         x = check_errors(settings=settings, **options)
         # Here we can compare x to gold by zipping sentences
         # from output and gold together and iterating in a for loop

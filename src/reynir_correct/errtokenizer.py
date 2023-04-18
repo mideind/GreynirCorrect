@@ -1663,6 +1663,7 @@ WRONG_FORMERS_CI: Mapping[str, str] = {
     "kvenn": "kven",
     "Lundúnar": "Lundúna",
     "öldungar": "öldunga",
+    "debit": "debet",
 }
 
 
@@ -2856,6 +2857,7 @@ def check_wording(
         token_stream: Iterable[CorrectToken],
         settings: Settings,
         db: GreynirBin,
+        suggest_not_correct: bool,
         ) -> Iterator[CorrectToken]:
     """Annotate words to be flagged, with warnings."""
 
@@ -2883,9 +2885,6 @@ def check_wording(
             ):
                 # We skip checks for tokens already containing an error, as the flagged word
                 # might be the system's invention.
-                # !!! TODO: This could be made more efficient if all
-                # !!! TODO: taboo word forms could be generated ahead of time
-                # !!! TODO: and checked via a set lookup
                 for m in token.meanings:
                     key = m.stofn.replace("-", "")
                     # First, look up the lemma + _ + word category
@@ -2894,7 +2893,7 @@ def check_wording(
                         # Then, look up the lemma only
                         t = tdict["words"].get(key)
                     if t is not None:
-                        # Taboo word
+                        # Flagged word
                         replacement, detail = t
                         # There can be multiple suggested replacements,
                         # for instance 'þungunarrof_hk/meðgöngurof_hk'
@@ -2937,8 +2936,11 @@ def check_wording(
                                 bmynd = suggest_object[0].bmynd
                                 suggest = emulate_case(bmynd, template=token.txt)
 
-                            else:
-                                print("ekkert suggest_object!")
+#                            else:
+#                                print(suggest, suggest_object)
+#                                print("ekkert suggest_object!")
+                            if suggest_not_correct:
+                                suggest = token.txt
                             token.set_error(
                                 tdict["error_warning"](
                                     "001",
@@ -3181,7 +3183,7 @@ class CorrectionPipeline(DefaultPipeline):
         self._generate_suggestion_list = options.pop("generate_suggestion_list", False)
         # Skip spelling suggestions
         self._suppress_suggestions = options.pop("suppress_suggestions", False)
-        # Only give suggestions, don't correct anything automatically
+        # Only give suggestions, don't correct everything automatically. Currently only applies to lookup_unknown_words and check_wording.
         self._suggest_not_correct = options.pop("suggest_not_correct", False)
         # Wordlist for words that should not be marked as errors or corrected
         self._ignore_wordlist = options.pop("ignore_wordlist", set())
@@ -3234,7 +3236,7 @@ class CorrectionPipeline(DefaultPipeline):
         # Check taboo words and tone of voice words
         err_codes = {"T001/w", "T001", "V001/w", "V001"}
         if not only_ci and all(code not in ignore_rules for code in err_codes):
-            ct_stream = check_wording(ct_stream, self.settings, self._db)
+            ct_stream = check_wording(ct_stream, self.settings, self._db, self._suggest_not_correct)
 
         # Check context-independent style errors, indicated in BÍN
         ct_stream = check_style(ct_stream, self._db, ignore_rules)
