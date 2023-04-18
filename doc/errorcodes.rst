@@ -39,9 +39,6 @@ Other categories currently covered are:
 +------------+----------------------------------------------------------------------------------------------+
 || ``E004``  |  The sentence is probably not in Icelandic.                                                  |
 +------------+----------------------------------------------------------------------------------------------+
-|| ``I001``  |  Words not conforming to a formal tone of voice of a financial institution, with suggested   |
-||           |  replacements.                                                                                |
-+------------+----------------------------------------------------------------------------------------------+
 || ``N001``  |  Wrong quotation marks.                                                                      |
 +------------+----------------------------------------------------------------------------------------------+
 || ``N002``  |  Three periods should be an ellipsis. A warning is given.                                    |
@@ -64,6 +61,9 @@ Other categories currently covered are:
 || ``T001``  |  Taboo word usage warning, with suggested replacement.                                       |
 +------------+----------------------------------------------------------------------------------------------+
 || ``U001``  |  Unknown word. Nothing more is known. Cannot be corrected, only pointed out.                 |
++------------+----------------------------------------------------------------------------------------------+
+|| ``V001``  |  Words not conforming to a particular tone of voice, with suggested                          |
+||           |  replacements.                                                                               |
 +------------+----------------------------------------------------------------------------------------------+
 || ``W001``  |  Spelling suggestion. Replacement suggested.                                                 |
 +------------+----------------------------------------------------------------------------------------------+

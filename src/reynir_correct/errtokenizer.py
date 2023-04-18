@@ -754,6 +754,45 @@ class TabooWarning(Error):
         d["suggestlist"] = self._suggestlist
         return d
 
+@register_error_class
+class ToneOfVoiceWarning(Error):
+
+    """A ToneOfVoiceWarning marks a word that is not conforming to a particular tone of voice."""
+
+    # 001: Tone of voice word usage warning, with suggested replacement.
+
+    def __init__(
+        self,
+        code: str,
+        txt: str,
+        detail: Optional[str],
+        original: str,
+        suggest: Optional[str],
+        suggestlist: Optional[List[str]] = None,
+    ) -> None:
+        # Tone of voice word warnings start with "V"
+        super().__init__(
+            "V" + code, is_warning=True, original=original, suggest=suggest
+        )
+        self._txt = txt
+        self._detail = detail
+        self._suggestlist = suggestlist
+
+    @property
+    def description(self) -> str:
+        return self._txt
+
+    @property
+    def detail(self) -> Optional[str]:
+        return self._detail
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = super().to_dict()
+        d["detail"] = self.detail
+        d["suggest"] = self.suggest
+        d["suggestlist"] = self._suggestlist
+        return d
+
 
 @register_error_class
 class StyleWarning(Error):
@@ -2347,7 +2386,6 @@ def fix_capitalization(
 ) -> Iterator[CorrectToken]:
 
     """Annotate tokens with errors if they are capitalized incorrectly"""
-
     stems = settings.capitalization_errors.SET_REV
     wrong_stems = settings.capitalization_errors.SET
 
@@ -2579,7 +2617,6 @@ def late_fix_capitalization(
 
     """Annotate final, coalesced tokens with errors
     if they are capitalized incorrectly"""
-
     def number_error(
         token: CorrectToken, replace: str, code: str, instruction_txt: str
     ) -> CorrectToken:
@@ -2602,9 +2639,7 @@ def late_fix_capitalization(
         return ct
 
     at_sentence_start = False
-    settings = Settings()
     stems = settings.capitalization_errors.SET
-
     for token in token_stream:
         if token.kind == TOK.S_BEGIN:
             yield token
@@ -2641,6 +2676,7 @@ def late_fix_capitalization(
                     if token.txt[0].isupper():
                         code = "001"
                         case = "lág"
+                        print(token.txt.lower())
                         correct = token.txt.lower()
                     else:
                         code = "002"
@@ -2817,80 +2853,111 @@ def late_fix_merges(
             token.remove_error(token.original.strip())
         yield token
 
+def check_wording(
+        token_stream: Iterable[CorrectToken],
+        settings: Settings,
+        db: GreynirBin,
+        ) -> Iterator[CorrectToken]:
+    """Annotate words to be flagged, with warnings."""
 
-def check_taboo_words(token_stream: Iterable[CorrectToken], settings: Settings) -> Iterator[CorrectToken]:
-    """Annotate taboo words with warnings"""
-    tdict = settings.taboo_words.DICT
-    for token in token_stream:
-        # Check taboo words
-        if (  # type: ignore
-            token.val is not None and token.has_meanings and token.txt not in NOT_TABOO
-        ):
-            # We skip checks for tokens already containing an error, as the taboo word
-            # might be the system's invention.
-            # !!! TODO: This could be made more efficient if all
-            # !!! TODO: taboo word forms could be generated ahead of time
-            # !!! TODO: and checked via a set lookup
-            for m in token.meanings:
-                key = m.stofn.replace("-", "")
-                # First, look up the lemma + _ + word category
-                t = tdict.get(key + "_" + m.ordfl)
-                if t is None:
-                    # Then, look up the lemma only
-                    t = tdict.get(key)
-                if t is not None:
-                    # Taboo word
-                    replacement, detail = t
-                    # There can be multiple suggested replacements,
-                    # for instance 'þungunarrof_hk/meðgöngurof_hk'
-                    sw = replacement.split("/")
-                    suggestion = ""
-                    suggest = None
-                    sugglist: List[str] = []
-                    if len(sw) == 1 and sw[0].split("_")[0] == key:
-                        # We have a single suggested word, which is the same as the
-                        # taboo word: there is no suggestion, only a notification
-                        explanation = "Óheppilegt eða óviðurkvæmilegt orð"
-                    else:
-                        suggestion = ", ".join(f"'{w.split('_')[0]}'" for w in sw)
-                        # Trick to replace the last ", " with " eða ":
-                        # replace the first " ," with " aðe " in a reversed string,
-                        # then re-reverse it
-                        suggestion = suggestion[::-1].replace(" ,", " aðe ", 1)[::-1]
-                        explanation = (
-                            f"Óheppilegt eða óviðurkvæmilegt orð, "
-                            f"skárra væri t.d. {suggestion}"
-                        )
-                        suggest = sw[0].split("_")[0]
-                        sugglist = list(w.split("_")[0] for w in sw)
-                    if (
-                        token.error_code
-                        and token.original
-                        and token.error_code[0] == "W"
-                        and token.txt.strip() != token.original.strip()
-                    ):
-                        # The system seems to have used automatic methods to 'correct'
-                        # to a taboo word: remove the error
-                        orig = (
-                            token.original.strip()
-                            if token.original
-                            else token.txt.strip()
-                        )
-                        token.remove_error(orig)
-                    else:
-                        token.set_error(
-                            TabooWarning(
-                                "001",
-                                explanation,
-                                detail or None,
-                                token.txt,
-                                suggest,
-                                sugglist,
+    def taboo_template(settings):
+        taboo_template_dict = {}
+        taboo_template_dict["explanation"] = "Óheppilegt eða óviðurkvæmilegt orð"
+        taboo_template_dict["explanation_w_sugg"] = "Óheppilegt eða óviðurkvæmilegt orð, skárra væri t.d. "
+        taboo_template_dict["error_warning"] = TabooWarning
+        taboo_template_dict["words"] = settings.taboo_words.DICT
+        return taboo_template_dict
+
+    def tone_of_voice_template(settings):
+        tone_of_voice_template_dict = {}
+        tone_of_voice_template_dict["explanation"] = "Orðið er ekki í samræmi við raddblæ okkar"
+        tone_of_voice_template_dict["explanation_w_sugg"] = "Orðið er ekki í samræmi við raddblæ okkar, í staðinn gætirðu notað "
+        tone_of_voice_template_dict["error_warning"] = ToneOfVoiceWarning
+        tone_of_voice_template_dict["words"] = settings.tone_of_voice_words.DICT
+        return tone_of_voice_template_dict
+
+    def handle_template_data(token_stream, tdict):
+        for token in token_stream:
+            # Check taboo words
+            if (  # type: ignore
+                token.val is not None and token.has_meanings and token.txt not in NOT_TABOO
+            ):
+                # We skip checks for tokens already containing an error, as the flagged word
+                # might be the system's invention.
+                # !!! TODO: This could be made more efficient if all
+                # !!! TODO: taboo word forms could be generated ahead of time
+                # !!! TODO: and checked via a set lookup
+                for m in token.meanings:
+                    key = m.stofn.replace("-", "")
+                    # First, look up the lemma + _ + word category
+                    t = tdict["words"].get(key + "_" + m.ordfl)
+                    if t is None:
+                        # Then, look up the lemma only
+                        t = tdict["words"].get(key)
+                    if t is not None:
+                        # Taboo word
+                        replacement, detail = t
+                        # There can be multiple suggested replacements,
+                        # for instance 'þungunarrof_hk/meðgöngurof_hk'
+                        sw = replacement.split("/")
+                        suggestion = ""
+                        suggest = None
+
+                        suggest, sugg_cat = sw[0].split("_")
+                        sugglist: List[str] = []
+                        if len(sw) == 1 and sw[0].split("_")[0] == key:
+                            # We have a single suggested word, which is the same as the
+                            # flagged word: there is no suggestion, only a notification
+                            explanation = tdict["explanation"]
+                        else:
+                            suggestion = ", ".join(f"'{w.split('_')[0]}'" for w in sw)
+                            # Trick to replace the last ", " with " eða ":
+                            # replace the first " ," with " aðe " in a reversed string,
+                            # then re-reverse it
+                            suggestion = suggestion[::-1].replace(" ,", " aðe ", 1)[::-1]
+                            explanation = f'{tdict["explanation_w_sugg"]} {suggestion}'
+                            sugglist = list(w.split("_")[0] for w in sw)
+                        if (
+                            token.error_code
+                            and token.original
+                            and token.error_code[0] == "W"
+                            and token.txt.strip() != token.original.strip()
+                        ):
+                            # The system seems to have used automatic methods to 'correct'
+                            # to a flagged word: remove the error
+                            orig = (
+                                token.original.strip()
+                                if token.original
+                                else token.txt.strip()
                             )
-                        )
-                        # !!! TODO: Add correctly inflected suggestion here
-                    break
-        yield token
+                            token.remove_error(orig)
+                        else:
+                            beyging = token[2][0].beyging
+                            suggest_object = db.lookup_variants(suggest, sugg_cat, beyging, lemma=suggest)
+                            if suggest_object:
+                                bmynd = suggest_object[0].bmynd
+                                suggest = emulate_case(bmynd, template=token.txt)
+
+                            else:
+                                print("ekkert suggest_object!")
+                            token.set_error(
+                                tdict["error_warning"](
+                                    "001",
+                                    explanation,
+                                    detail or None,
+                                    token.txt,
+                                    suggest,
+                                    sugglist,
+                                )
+                            )
+                        break
+            yield token
+
+    taboo_data = taboo_template(settings)
+    tone_of_voice_data = tone_of_voice_template(settings)
+    token_stream = handle_template_data(token_stream, taboo_data)
+    token_stream = handle_template_data(token_stream, tone_of_voice_data)
+    yield from token_stream
 
 
 def check_style(
@@ -3165,9 +3232,10 @@ class CorrectionPipeline(DefaultPipeline):
             self._suggest_not_correct,
             self.settings
         )
-        # Check taboo words
-        if not only_ci and "T001/w" not in ignore_rules and "T001" not in ignore_rules:
-            ct_stream = check_taboo_words(ct_stream, self.settings)
+        # Check taboo words and tone of voice words
+        err_codes = {"T001/w", "T001", "V001/w", "V001"}
+        if not only_ci and all(code not in ignore_rules for code in err_codes):
+            ct_stream = check_wording(ct_stream, self.settings, self._db)
 
         # Check context-independent style errors, indicated in BÍN
         ct_stream = check_style(ct_stream, self._db, ignore_rules)

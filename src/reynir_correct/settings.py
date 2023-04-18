@@ -191,6 +191,24 @@ class TabooWords:
         self.DICT[word] = (replacement, explanation)
 
 
+class ToneOfVoiceWords:
+    def __init__(self) -> None:
+        # Dictionary structure: dict { tone_of_voice : (suggested_replacement, explanation) }
+        self.DICT: Dict[str, Tuple[str, str]] = {}
+
+    def add(self, word: str, replacement: str, explanation: str) -> None:
+        if word in self.DICT:
+            raise ConfigError(
+                "Multiple definition of '{0}' in tone_of_voice section".format(word)
+            )
+        db = GreynirBin.get_db()
+        a = word.split("_")
+        _, m = db.lookup_g(a[0])
+        if not m or (len(a) >= 2 and all(mm.ordfl != a[1] for mm in m)):
+            raise ConfigError("The word '{0}' is not found in BÍN".format(word))
+        self.DICT[word] = (replacement, explanation)
+
+
 class Suggestions:
     def __init__(self) -> None:
         # Dictionary structure: dict { bad_word : [ suggested_replacements ] }
@@ -579,6 +597,7 @@ class Settings:
         self.ritmyndir_details = RitmyndirDetails()
         self.iec_nonwords = IecNonwords()
         self.icesquer = Icesquer()
+        self.tone_of_voice_words = ToneOfVoiceWords()
 
     _lock = threading.Lock()
     loaded = False
@@ -707,12 +726,45 @@ class Settings:
             )
         self.taboo_words.add(taboo, replacement, explanation)
 
+    def _handle_tone_of_voice_words(self, s: str) -> None:
+        """Handle config parameters in the tone_of_voice section."""
+        # Start by parsing explanation string off the end (right hand side), if present
+        lquote = s.find('"')
+        rquote = s.rfind('"')
+        if (lquote >= 0) != (rquote >= 0):
+            raise ConfigError(
+                "Explanation string for a word should be enclosed in double quotes"
+            )
+        if lquote >= 0:
+            # Obtain explanation from within quotes
+            explanation = s[lquote + 1 : rquote].strip()
+            s = s[:lquote].rstrip()
+        else:
+            # No explanation
+            explanation = ""
+        if not s:
+            raise ConfigError("Expected a word to flag and a suggested replacement")
+        a = s.lower().split()
+        if len(a) > 2:
+            raise ConfigError("Expected a word to flag and a suggested replacement")
+        flagged_word = a[0].strip()
+        if len(a) == 2:
+            replacement = a[1].strip()
+        else:
+            replacement = flagged_word
+        # Check all replacement words, which are separated by slashes '/'
+        if any(r.count("_") != 1 for r in replacement.split("/")):
+            raise ConfigError(
+                "Suggested replacement(s) should include a word category (_xx)"
+            )
+        self.tone_of_voice_words.add(flagged_word, replacement, explanation)
+
     def _handle_suggestions(self, s: str) -> None:
         """Handle config parameters in the suggestions section"""
         a = s.lower().split()
         if len(a) < 2:
             raise ConfigError(
-                "Expected bad word and at least one suggested replacement"
+                "Expected flagged word and at least one suggested replacement"
             )
         if any(w.count("_") != 1 for w in a[1:]):
             raise ConfigError(
@@ -919,6 +971,7 @@ class Settings:
                 "unique_errors": Settings._handle_unique_errors,
                 "capitalization_errors": Settings._handle_capitalization_errors,
                 "taboo_words": Settings._handle_taboo_words,
+                "tone_of_voice_words": Settings._handle_tone_of_voice_words,
                 "suggestions": Settings._handle_suggestions,
                 "multiword_errors": Settings._handle_multiword_errors,
                 "morphemes": Settings._handle_morphemes,
