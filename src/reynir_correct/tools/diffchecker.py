@@ -57,6 +57,8 @@ def main() -> None:
     options["spaced"] = False
     options["print_all"] = True
     options["ignore_rules"] = set()
+    options["suggest_not_correct"] = False
+
     args = parser.parse_args()
     infile = args.infile
     if infile is sys.stdin and sys.stdin.isatty():

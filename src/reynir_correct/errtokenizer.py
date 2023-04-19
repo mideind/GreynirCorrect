@@ -1070,7 +1070,6 @@ def parse_errors(
 
     token: CorrectToken = cast(CorrectToken, None)
     at_sentence_start = False
-
     try:
 
         # Maintain a one-token lookahead
