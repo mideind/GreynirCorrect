@@ -47,7 +47,7 @@ def main() -> None:
     options["all_errors"] = True
     # options["input"] = open("prufa.txt", "r")
     options["one_sent"] = False
-    # options["generate_suggestion_list"] = True
+    options["generate_suggestion_list"] = True
     options["ignore_comments"] = True  # Only used here
     options["generate_suggestion_list"] = False
     options["annotate_unparsed_sentences"] = True

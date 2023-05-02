@@ -576,6 +576,30 @@ class Icesquer:
         self.DICT[word] = corr
 
 
+class WrongFormers:
+    def __init__(self) -> None:
+        # Dictionary structure: dict { wrong_word : right_word }
+        self.DICT: Dict[str, str] = dict()
+
+    def add(self, word: str, corr: Tuple[str, ...]) -> None:
+        if word in self.DICT:
+            # Happens in the data, just skip it
+            return
+        self.DICT[word] = corr
+
+
+class WrongFormersCID:
+    def __init__(self) -> None:
+        # Dictionary structure: dict { wrong_word : right_word }
+        self.DICT: Dict[str, str] = dict()
+
+    def add(self, word: str, corr: Tuple[str, ...]) -> None:
+        if word in self.DICT:
+            # Happens in the data, just skip it
+            return
+        self.DICT[word] = corr
+
+
 class Settings:
 
     """Global settings"""
@@ -598,6 +622,8 @@ class Settings:
         self.iec_nonwords = IecNonwords()
         self.icesquer = Icesquer()
         self.tone_of_voice_words = ToneOfVoiceWords()
+        self.wrong_formers = WrongFormers()
+        self.wrong_formers_cid = WrongFormersCID()
 
     _lock = threading.Lock()
     loaded = False
@@ -959,6 +985,36 @@ class Settings:
             # )
         self.icesquer.add(word, corr_t)
 
+    def _handle_wrong_formers(self, s: str) -> None:
+        """Handle config parameters in the wrong_formers section"""
+        a = s.lower().split(",", maxsplit=1)
+        if len(a) != 2:
+            raise ConfigError("Expected comma between the word and its correction")
+        word = a[0].strip().strip('"')
+        correction = a[1].strip().strip('"')
+        if not word:
+            raise ConfigError("Expected word before the comma in wrong_formers section")
+        if not correction:
+            raise ConfigError("Expected word after the comma in wrong_formers section")
+        if len(word.split()) != 1 or len(correction.split()) != 1:
+            raise ConfigError("Expected one word on each side in wrong_formers")
+        self.wrong_formers.add(word, correction)
+
+    def _handle_wrong_formers_cid(self, s: str) -> None:
+        """Handle config parameters in the wrong_formers section"""
+        a = s.lower().split(",", maxsplit=1)
+        if len(a) != 2:
+            raise ConfigError("Expected comma between the word and its correction")
+        word = a[0].strip().strip('"')
+        correction = a[1].strip().strip('"')
+        if not word:
+            raise ConfigError("Expected word before the comma in wrong_formers section")
+        if not correction:
+            raise ConfigError("Expected word after the comma in wrong_formers section")
+        if len(word.split()) != 1 or len(correction.split()) != 1:
+            raise ConfigError("Expected one word on each side in wrong_formers")
+        self.wrong_formers_cid.add(word, correction)
+
     def read(self, fname: str) -> None:
         """Read configuration file"""
 
@@ -983,6 +1039,8 @@ class Settings:
                 "icesquer": Settings._handle_icesquer,
                 "ritmyndir": Settings._handle_ritmyndir,
                 "ritmyndir_details": Settings._handle_ritmyndir_details,
+                "wrong_formers": Settings._handle_wrong_formers,
+                "wrong_formers_ci": Settings._handle_wrong_formers_cid,
             }
             handler = None  # Current section handler
 

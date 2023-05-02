@@ -91,6 +91,7 @@ from .annotation import Annotation
 from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
 from .errfinder import ErrorFinder, ErrorDetectionToken
 from .pattern import PatternMatcher
+#from .extrapattern import ExtraPatternMatcher
 
 # The type of a grammar check result
 class CheckResult(TypedDict):
@@ -369,6 +370,9 @@ class GreynirCorrect(Greynir):
             # Run the pattern matcher on the sentence,
             # annotating questionable patterns
             PatternMatcher(ann, sent).run()
+            # Roundabout way of checking if an extra config is given
+            #if len(self.settings.tone_of_voice_words.DICT):
+            #    ExtraPatternMatcher(ann, sent).run()
 
         # Sort the annotations by their start token index,
         # and then by decreasing span length
@@ -397,19 +401,23 @@ class GreynirCorrect(Greynir):
         return sent
 
 
-def check_single(sentence_text: str, rc: GreynirCorrect, **options: Any) -> Optional[Sentence]:
+def check_single(
+    sentence_text: str, rc: GreynirCorrect, **options: Any
+) -> Optional[Sentence]:
     """Check and annotate a single sentence, given in plain text"""
     # Returns None if no sentence was parsed
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
-    #rc = GreynirCorrect(**options)
+    # rc = GreynirCorrect(**options)
     return rc.parse_single(sentence_text, max_sent_tokens=max_sent_tokens)
 
 
-def check_tokens(tokens: Iterable[CorrectToken], rc: GreynirCorrect, **options: Any) -> Optional[Sentence]:
+def check_tokens(
+    tokens: Iterable[CorrectToken], rc: GreynirCorrect, **options: Any
+) -> Optional[Sentence]:
     """Check and annotate a single sentence, given as a token list"""
     # Returns None if no sentence was parsed
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
-    #rc = GreynirCorrect(**options)
+    # rc = GreynirCorrect(**options)
     return rc.parse_tokens(tokens, max_sent_tokens=max_sent_tokens)
 
 
@@ -419,7 +427,7 @@ def check(text: str, rc: GreynirCorrect, **options: Any) -> Iterable[Paragraph]:
     annotations"""
     split_paragraphs = options.pop("split_paragraphs", False)
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
-    #rc = GreynirCorrect(**options)
+    # rc = GreynirCorrect(**options)
     # This is an asynchronous (on-demand) parse job
     job = rc.submit(
         text,
@@ -444,7 +452,9 @@ def check_with_custom_parser(
     using the given correction/parser class. This is a low-level
     function; normally check_with_stats() should be used."""
     rc = parser_class(
-        annotate_unparsed_sentences=annotate_unparsed_sentences, settings=settings, **options
+        annotate_unparsed_sentences=annotate_unparsed_sentences,
+        settings=settings,
+        **options,
     )
     job = rc.submit(
         text,

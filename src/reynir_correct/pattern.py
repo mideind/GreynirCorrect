@@ -71,7 +71,6 @@ from reynir_correct.errtokenizer import emulate_case
 from .annotation import Annotation
 
 
-
 # The types involved in pattern processing
 AnnotationFunction = Callable[["PatternMatcher", SimpleTree], None]
 PatternTuple = Tuple[

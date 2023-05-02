@@ -150,7 +150,7 @@ parser.add_argument(
     "--suggest_not_correct",
     help="Instead of directly changing the text, some stylistic errors are presented as suggestions only.",
     action="store_true",
-    default=False
+    default=False,
 )
 
 
@@ -158,7 +158,6 @@ def main() -> None:
     """Main function, called when the 'correct' command is invoked"""
 
     args = parser.parse_args()
-    print(args)
     # Fill options with information from args
     if args.infile is sys.stdin and sys.stdin.isatty():
         # terminal input is empty, most likely no value was given for infile:

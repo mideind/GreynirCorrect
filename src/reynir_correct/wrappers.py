@@ -85,6 +85,7 @@ from .annotation import Annotation
 from .checker import GreynirCorrect, check_tokens
 from .settings import Settings
 
+
 class AnnTokenDict(TypedDict, total=False):
 
     """Type of the token dictionaries returned from check_errors()"""
