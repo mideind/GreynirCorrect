@@ -66,7 +66,9 @@ def gen_to_string(g):
 
 
 def roundtrip(s: str) -> str:
-    return reynir_correct.detokenize(cast(Iterable[tokenizer.Tok], reynir_correct.tokenize(s)))
+    return reynir_correct.detokenize(
+        cast(Iterable[tokenizer.Tok], reynir_correct.tokenize(s))
+    )
 
 
 def check(p):
@@ -505,4 +507,3 @@ if __name__ == "__main__":
     test_taboo_words(verbose=True)
     test_multiword_errors(verbose=True)
     test_complex(verbose=True)
-    test_finance_words(verbose=True)

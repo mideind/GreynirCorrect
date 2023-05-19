@@ -528,7 +528,7 @@ def test_capitalization(verbose=False):
     )
     assert "aríi" in s
     assert "búddisti" in s
-    # assert "eskimói" in s or "inúíti" in s  # both the cap and taboo error are corrected. 
+    # assert "eskimói" in s or "inúíti" in s  # both the cap and taboo error are corrected.
     # assert "gyðingur" in s
     assert "Sjálfstæðismaður" in s
     assert "múslími" in s
@@ -641,7 +641,7 @@ def test_capitalization(verbose=False):
 
     g = rc.tokenize(
         "Nýr Loftslagsráðherra, Innviðaráðherra og Umhverfisráðherra er Afróasískur, talar Dravídamál, fylgir Lútherstrú og er miðflokksmaður.",
-        gc.settings
+        gc.settings,
     )
     g = list(g)
     if verbose:
@@ -664,7 +664,7 @@ def test_capitalization(verbose=False):
 
     g = rc.tokenize(
         "Hann er Suðurkákasískur, tínir Unnarfald, býr í neðra-breiðholti og elskar Múmínálfa og óskarsverðlaunin.",
-        gc.settings
+        gc.settings,
     )
     g = list(g)
     if verbose:
@@ -681,7 +681,9 @@ def test_capitalization(verbose=False):
     assert g[13].error_code == "Z001"  # múmínálfa
     assert g[15].error_code == "Z002"  # Óskarsverðlaunin
 
-    g = rc.tokenize("Í Seinni Heimsstyrjöldinni gerðist meira en í Kalda Stríðinu.", gc.settings)
+    g = rc.tokenize(
+        "Í Seinni Heimsstyrjöldinni gerðist meira en í Kalda Stríðinu.", gc.settings
+    )
     g = list(g)
     if verbose:
         dump(g)
@@ -693,7 +695,7 @@ def test_capitalization(verbose=False):
 
     g = rc.tokenize(
         "Ég tala Víetnömsku, Indónesísku, er Afrísk-amerísk, karíbi, Karíbskur, austur-evrópubúi og vestur-evrópubúi",
-        gc.settings
+        gc.settings,
     )
     g = list(g)
     if verbose:
@@ -1505,8 +1507,7 @@ def test_styles():
     assert a.annotations[2].code == "Y001/w"
     assert "úrelt" in a.annotations[2].detail
     a = rc.check_single(
-        "Jón átti höfundarétt og spaghetti fyrir sveitastjórnarkosningarnar.",
-        gc
+        "Jón átti höfundarétt og spaghetti fyrir sveitastjórnarkosningarnar.", gc
     )
     assert len(a.annotations) == 3
     assert a.annotations[0].code == "Y001/w"

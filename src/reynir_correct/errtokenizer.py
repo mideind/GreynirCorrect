@@ -2820,35 +2820,41 @@ def late_fix_merges(
         yield token
 
 
+def create_template_dict(
+    settings, explanation: str, explanation_w_sugg: str, error_warning, words
+):
+    template_dict = {}
+    template_dict["explanation"] = explanation
+    template_dict["explanation_w_sugg"] = explanation_w_sugg
+    template_dict["error_warning"] = error_warning
+    template_dict["words"] = words
+    return template_dict
+
+
 def check_wording(
     token_stream: Iterable[CorrectToken],
     settings: Settings,
     db: GreynirBin,
     suggest_not_correct: bool,
 ) -> Iterator[CorrectToken]:
-    """Annotate words to be flagged, with warnings."""
+    """Annotate words to be flagged, with warnings. Here we check for both taboo words and
+    tone of voice issues as determined by an additional config, if given."""
 
-    def taboo_template(settings):
-        taboo_template_dict = {}
-        taboo_template_dict["explanation"] = "Óheppilegt eða óviðurkvæmilegt orð"
-        taboo_template_dict[
-            "explanation_w_sugg"
-        ] = "Óheppilegt eða óviðurkvæmilegt orð, skárra væri t.d. "
-        taboo_template_dict["error_warning"] = TabooWarning
-        taboo_template_dict["words"] = settings.taboo_words.DICT
-        return taboo_template_dict
+    taboo_data = create_template_dict(
+        settings,
+        "Óheppilegt eða óviðurkvæmilegt orð",
+        "Óheppilegt eða óviðurkvæmilegt orð, skárra væri t.d. ",
+        TabooWarning,
+        settings.taboo_words.DICT,
+    )
 
-    def tone_of_voice_template(settings):
-        tone_of_voice_template_dict = {}
-        tone_of_voice_template_dict[
-            "explanation"
-        ] = "Orðið er ekki í samræmi við raddblæ okkar"
-        tone_of_voice_template_dict[
-            "explanation_w_sugg"
-        ] = "Orðið er ekki í samræmi við raddblæ okkar, í staðinn gætirðu notað "
-        tone_of_voice_template_dict["error_warning"] = ToneOfVoiceWarning
-        tone_of_voice_template_dict["words"] = settings.tone_of_voice_words.DICT
-        return tone_of_voice_template_dict
+    tone_of_voice_data = create_template_dict(
+        settings,
+        "Orðið er ekki í samræmi við raddblæ okkar",
+        "Orðið er ekki í samræmi við raddblæ okkar, í staðinn gætirðu notað ",
+        ToneOfVoiceWarning,
+        settings.tone_of_voice_words.DICT,
+    )
 
     def handle_template_data(token_stream, tdict):
         for token in token_stream:
@@ -2929,8 +2935,6 @@ def check_wording(
                         break
             yield token
 
-    taboo_data = taboo_template(settings)
-    tone_of_voice_data = tone_of_voice_template(settings)
     token_stream = handle_template_data(token_stream, taboo_data)
     token_stream = handle_template_data(token_stream, tone_of_voice_data)
     yield from token_stream

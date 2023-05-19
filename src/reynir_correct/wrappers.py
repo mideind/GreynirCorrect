@@ -191,11 +191,26 @@ def val(
     return t.val
 
 
-def check_errors(settings: Settings, **options: Any) -> str:
+def load_config(options):
+    """Load the default configuration file and return a Settings object. Optionally load
+    an additional config if given."""
+    settings = Settings()
+    settings.read("config/GreynirCorrect.conf")
+    if options.get("extra_config", False):
+        # check whether the config path is valid:
+        try:
+            settings.read(options["extra_config"])
+        except FileNotFoundError:
+            print("File not found: " + options["extra_config"])
+            sys.exit(1)
+    return settings
+
+
+def check_errors(**options: Any) -> str:
     """Return a string in the chosen format and correction level
     using the spelling and grammar checker"""
 
-    rc = GreynirCorrect(settings=settings)
+    rc = GreynirCorrect(settings=load_config(options), options=options)
     input = options.get("input", None)
     if isinstance(input, str):
         options["input"] = [input]
@@ -395,7 +410,6 @@ def check_grammar(rc: GreynirCorrect, **options: Any) -> str:
         "annotate_unparsed_sentences", True
     )
     inneroptions["ignore_rules"] = options.get("ignore_rules", set())
-
     sentence_results: List[Dict[str, Any]] = []
 
     sentence_classifier: Optional[SentenceClassifier] = None

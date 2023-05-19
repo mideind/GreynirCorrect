@@ -91,7 +91,6 @@ from .annotation import Annotation
 from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
 from .errfinder import ErrorFinder, ErrorDetectionToken
 from .pattern import PatternMatcher
-#from .extrapattern import ExtraPatternMatcher
 
 # The type of a grammar check result
 class CheckResult(TypedDict):
@@ -176,7 +175,6 @@ class ErrorDetectingParser(Fast_Parser):
 
 
 class GreynirCorrect(Greynir):
-
     """Parser augmented with the ability to add spelling and grammar
     annotations to the returned sentences"""
 
@@ -367,13 +365,16 @@ class GreynirCorrect(Greynir):
             # Add annotations for error-marked nonterminals from the grammar
             # found in the parse tree
             ErrorFinder(ann, sent).run()
+            pm = PatternMatcher(ann, sent)
+            print(self._options)
+            # Check whether an external tone of voice option is set, then also check for extra patterns
+            if self._options.get("extra_tone_of_voice", False):
+                from .extrapattern import add_extra_patterns
+
+                add_extra_patterns(pm)
             # Run the pattern matcher on the sentence,
             # annotating questionable patterns
-            PatternMatcher(ann, sent).run()
-            # Roundabout way of checking if an extra config is given
-            #if len(self.settings.tone_of_voice_words.DICT):
-            #    ExtraPatternMatcher(ann, sent).run()
-
+            pm.run()
         # Sort the annotations by their start token index,
         # and then by decreasing span length
         ann.sort(key=lambda a: (a.start, -a.end))
@@ -407,7 +408,6 @@ def check_single(
     """Check and annotate a single sentence, given in plain text"""
     # Returns None if no sentence was parsed
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
-    # rc = GreynirCorrect(**options)
     return rc.parse_single(sentence_text, max_sent_tokens=max_sent_tokens)
 
 
@@ -417,7 +417,6 @@ def check_tokens(
     """Check and annotate a single sentence, given as a token list"""
     # Returns None if no sentence was parsed
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
-    # rc = GreynirCorrect(**options)
     return rc.parse_tokens(tokens, max_sent_tokens=max_sent_tokens)
 
 

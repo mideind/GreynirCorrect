@@ -138,13 +138,18 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--extra_tone_of_voice",
+    help="Check for additional third-party issues.",
+    action="store_true",
+)
+
+parser.add_argument(
     "--extra_config",
     nargs=1,
     type=str,
-    help="Add additional use-specific rules in a configuration file.",
+    help="Add additional use-specific rules in a configuration file to check for third-party issues.",
     default=False,
 )
-
 
 parser.add_argument(
     "--suggest_not_correct",
@@ -173,24 +178,16 @@ def main() -> None:
         options["format"] = "json"
     elif args.csv:
         options["format"] = "csv"
+    if args.extra_config:
+        options["extra_config"] = args.extra_config[0]
     options["spaced"] = args.spaced
     options["normalize"] = args.normalize
     options["all_errors"] = args.all_errors or args.grammar
     options["sentence_prefilter"] = args.sentence_prefilter
-    options["extra_config"] = args.extra_config
+    options["extra_tone_of_voice"] = args.extra_tone_of_voice
     options["suggest_not_correct"] = args.suggest_not_correct
 
-    settings = Settings()
-    settings.read("config/GreynirCorrect.conf")
-    if bool(options["extra_config"]):
-        # check whether file exists:
-        try:
-            with open(options["extra_config"][0], "r") as f:
-                settings.read(options["extra_config"][0])
-        except FileNotFoundError:
-            print("File not found: " + options["extra_config"][0])
-            sys.exit(1)
-    print(check_errors(**options, settings=settings), file=args.outfile)
+    print(check_errors(**options), file=args.outfile)
 
 
 if __name__ == "__main__":
