@@ -7,7 +7,6 @@ $ python diffchecker.py prufa.txt
 
 """
 from reynir_correct.wrappers import check_errors
-from reynir_correct.settings import Settings
 from typing import (
     Iterator,
     Iterable,
@@ -58,6 +57,8 @@ def main() -> None:
     options["print_all"] = True
     options["ignore_rules"] = set()
     options["suggest_not_correct"] = False
+    options["extra_config"] = "config/ExtraWords.conf"
+    options["extra_tone_of_voice"] = True
 
     args = parser.parse_args()
     infile = args.infile
@@ -77,12 +78,7 @@ def main() -> None:
                 print(sent)
             continue
         options["input"] = sent
-        settings = Settings()
-        settings.read("config/GreynirCorrect.conf")
-        # additionally loading extra words
-        settings.read("config/ExtraWords.conf")
-
-        x = check_errors(settings=settings, **options)
+        x = check_errors(**options)
         # Here we can compare x to gold by zipping sentences
         # from output and gold together and iterating in a for loop
         print(sent.strip())

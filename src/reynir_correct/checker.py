@@ -366,7 +366,6 @@ class GreynirCorrect(Greynir):
             # found in the parse tree
             ErrorFinder(ann, sent).run()
             pm = PatternMatcher(ann, sent)
-            print(self._options)
             # Check whether an external tone of voice option is set, then also check for extra patterns
             if self._options.get("extra_tone_of_voice", False):
                 from .extrapattern import add_extra_patterns

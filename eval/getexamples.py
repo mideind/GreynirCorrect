@@ -67,7 +67,7 @@ from typing import (
     DefaultDict,
 )
 from reynir_correct.annotation import Annotation
-from reynir_correct.checker import AnnotatedSentence, check
+from reynir_correct.checker import AnnotatedSentence, GreynirCorrect, Settings, check
 from tokenizer import detokenize, Tok, TOK
 
 if TYPE_CHECKING:
@@ -84,6 +84,9 @@ _DEV_PATH = "iceErrorCorpus/data/**/*.xml"
 IECCATS: DefaultDict[str, List[str]] = defaultdict(list)
 GCCATS: DefaultDict[str, List[str]] = defaultdict(list)
 
+# GreynirCorrect instance
+settings = Settings()
+rc = GreynirCorrect(settings=settings)
 # Define the command line arguments
 
 parser = argparse.ArgumentParser(
@@ -214,7 +217,7 @@ def get_examples(fpath: str) -> None:
             # Pass it to GreynirCorrect
             if ONLYREF:
                 continue
-            pg = [list(p) for p in check(text)]
+            pg = [list(p) for p in check(text, rc=rc)]
             s: Optional[AnnotatedSentence] = None
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 assert isinstance(pg[0][0], AnnotatedSentence)

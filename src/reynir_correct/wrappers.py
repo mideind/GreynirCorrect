@@ -209,13 +209,12 @@ def load_config(options):
 def check_errors(**options: Any) -> str:
     """Return a string in the chosen format and correction level
     using the spelling and grammar checker"""
-
-    rc = GreynirCorrect(settings=load_config(options), options=options)
+    rc = GreynirCorrect(load_config(options), **options)
     input = options.get("input", None)
     if isinstance(input, str):
         options["input"] = [input]
     if options.get("all_errors", True):
-        return check_grammar(rc=rc, **options)
+        return check_grammar(rc=rc)
     else:
         return check_spelling(settings=rc.settings, **options)
 
@@ -403,21 +402,21 @@ def test_grammar(rc: GreynirCorrect, **options: Any) -> Tuple[str, TokenSumType]
     return accumstr, alltoks
 
 
-def check_grammar(rc: GreynirCorrect, **options: Any) -> str:
+def check_grammar(rc: GreynirCorrect) -> str:
     """Do a full spelling and grammar check of the source text"""
     inneroptions: Dict[str, Union[str, bool]] = {}
-    inneroptions["annotate_unparsed_sentences"] = options.get(
+    inneroptions["annotate_unparsed_sentences"] = rc._options.get(
         "annotate_unparsed_sentences", True
     )
-    inneroptions["ignore_rules"] = options.get("ignore_rules", set())
+    inneroptions["ignore_rules"] = rc._options.get("ignore_rules", set())
     sentence_results: List[Dict[str, Any]] = []
 
     sentence_classifier: Optional[SentenceClassifier] = None
 
-    for raw_tokens in sentence_stream(settings=rc.settings, **options):
+    for raw_tokens in sentence_stream(settings=rc.settings, **rc._options):
         original_sentence = "".join([t.original or t.txt for t in raw_tokens])
 
-        if options.get("sentence_prefilter", False):
+        if rc._options.get("sentence_prefilter", False):
             # Only construct the classifier model if we need it
             from .classifier import SentenceClassifier
 
@@ -514,11 +513,11 @@ def check_grammar(rc: GreynirCorrect, **options: Any) -> str:
         )
 
     extra_text_options = {
-        "annotations": options.get("annotations", False),
-        "print_all": options.get("print_all", False),
+        "annotations": rc._options.get("annotations", False),
+        "print_all": rc._options.get("print_all", False),
     }
     return format_output(
-        sentence_results, options.get("format", "json"), extra_text_options
+        sentence_results, rc._options.get("format", "json"), extra_text_options
     )
 
 

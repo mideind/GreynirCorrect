@@ -585,7 +585,7 @@ class WrongFormers:
         if word in self.DICT:
             # Happens in the data, just skip it
             return
-        self.DICT[word] = corr
+        self.DICT[word] = corr  # type: ignore
 
 
 class WrongFormersCID:
