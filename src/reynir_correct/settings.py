@@ -50,6 +50,7 @@ from collections import defaultdict
 from reynir.basics import ConfigError, LineReader
 from reynir.bindb import GreynirBin
 from reynir.bintokenizer import StateDict
+import importlib.util
 
 
 ErrorFormTuple = Tuple[str, str, int, str, str]
@@ -207,6 +208,15 @@ class ToneOfVoiceWords:
         if not m or (len(a) >= 2 and all(mm.ordfl != a[1] for mm in m)):
             raise ConfigError("The word '{0}' is not found in BÍN".format(word))
         self.DICT[word] = (replacement, explanation)
+
+
+class ToneOfVoicePatterns:
+    def __init__(self) -> None:
+        # A path to a python module containing third party tone of voice patterns
+        self.PATH: str = ""
+
+    def add(self, fpath: str) -> None:
+        self.PATH = fpath
 
 
 class Suggestions:
@@ -597,7 +607,7 @@ class WrongFormersCID:
         if word in self.DICT:
             # Happens in the data, just skip it
             return
-        self.DICT[word] = corr
+        self.DICT[word] = corr  # type: ignore
 
 
 class Settings:
@@ -622,6 +632,7 @@ class Settings:
         self.iec_nonwords = IecNonwords()
         self.icesquer = Icesquer()
         self.tone_of_voice_words = ToneOfVoiceWords()
+        self.tone_of_voice_patterns = ToneOfVoicePatterns()
         self.wrong_formers = WrongFormers()
         self.wrong_formers_cid = WrongFormersCID()
 
@@ -784,6 +795,15 @@ class Settings:
                 "Suggested replacement(s) should include a word category (_xx)"
             )
         self.tone_of_voice_words.add(flagged_word, replacement, explanation)
+
+    def _handle_tone_of_voice_patterns(self, s: str) -> None:
+        """Handle module path for external patterns."""
+        # the string includes quotes, let's remove them
+        p = s.split("=")[1].strip().strip('"')
+        # Should only be a path to a python file
+        if not os.path.exists(p):
+            raise ConfigError("Not a valid path. Expected a path to a Python file")
+        self.tone_of_voice_patterns.add(p)
 
     def _handle_suggestions(self, s: str) -> None:
         """Handle config parameters in the suggestions section"""
@@ -1015,7 +1035,7 @@ class Settings:
             raise ConfigError("Expected one word on each side in wrong_formers")
         self.wrong_formers_cid.add(word, correction)
 
-    def read(self, fname: str) -> None:
+    def read(self, fname: str, external=False) -> None:
         """Read configuration file"""
 
         with Settings._lock:
@@ -1028,6 +1048,7 @@ class Settings:
                 "capitalization_errors": Settings._handle_capitalization_errors,
                 "taboo_words": Settings._handle_taboo_words,
                 "tone_of_voice_words": Settings._handle_tone_of_voice_words,
+                "tone_of_voice_patterns": Settings._handle_tone_of_voice_patterns,
                 "suggestions": Settings._handle_suggestions,
                 "multiword_errors": Settings._handle_multiword_errors,
                 "morphemes": Settings._handle_morphemes,
@@ -1045,8 +1066,11 @@ class Settings:
             handler = None  # Current section handler
 
             rdr = None
+
             try:
-                rdr = LineReader(fname, package_name=__name__)
+                # If an external path is given, use it to read the file
+                package_name = None if external else __name__
+                rdr = LineReader(fname, package_name=package_name)
                 for s in rdr.lines():
                     # Ignore comments
                     ix = s.find("#")

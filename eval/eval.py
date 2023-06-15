@@ -158,7 +158,7 @@ ErrTypeStatsDict = DefaultDict[str, TypeFreqs]
 CatResultDict = Dict[str, Union[int, float, str]]
 
 settings = Settings()
-settings.read("../src/reynir_correct/config/GreynirCorrect.conf")
+settings.read("config/GreynirCorrect.conf")
 rc = GreynirCorrect(settings)
 
 # Create a lock to ensure that only one process outputs at a time
@@ -1791,7 +1791,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 ]
             )
             # Pass it to GreynirCorrect
-            pg = [list(p) for p in gc_check(text, rc, **options)]
+            pg = [list(p) for p in gc_check(text, rc=rc, **options)]
             s: Optional[_Sentence] = None
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 s = pg[0][0]

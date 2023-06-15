@@ -47,6 +47,9 @@
 
 """
 
+import importlib.util
+import os
+import sys
 from typing import (
     Any,
     FrozenSet,
@@ -92,6 +95,7 @@ from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
 from .errfinder import ErrorFinder, ErrorDetectionToken
 from .pattern import PatternMatcher
 
+
 # The type of a grammar check result
 class CheckResult(TypedDict):
     paragraphs: List[List["Sentence"]]
@@ -117,6 +121,21 @@ STYLE_WARNINGS: Mapping[str, str] = {
     "VILLA": "villa",
     "GAM": "gamalt",
 }
+
+
+def load_config(options: Any):
+    """Load the default configuration file and return a Settings object. Optionally load
+    an additional config if given."""
+    settings = Settings()
+    settings.read("config/GreynirCorrect.conf")
+    if options.get("tov_config", False):
+        # check whether the config path is valid:
+        try:
+            settings.read(options["tov_config"], external=True)
+        except FileNotFoundError:
+            print("File not found: " + options["tov_config"])
+            sys.exit(1)
+    return settings
 
 
 def style_warning(k: Ksnid) -> str:
@@ -366,11 +385,16 @@ class GreynirCorrect(Greynir):
             # found in the parse tree
             ErrorFinder(ann, sent).run()
             pm = PatternMatcher(ann, sent)
-            # Check whether an external tone of voice option is set, then also check for extra patterns
-            if self._options.get("extra_tone_of_voice", False):
-                from .extrapattern import add_extra_patterns
-
-                add_extra_patterns(pm)
+            # Check whether external tone of voice patterns are given
+            if self.settings.tone_of_voice_patterns.PATH:
+                file_path = self.settings.tone_of_voice_patterns.PATH
+                module_name = os.path.splitext(os.path.basename(file_path))[0]
+                # Import the module
+                spec = importlib.util.spec_from_file_location(module_name, file_path)
+                module = importlib.util.module_from_spec(spec)  # type: ignore
+                spec.loader.exec_module(module)  # type: ignore
+                # Add the external patterns to the pattern matcher
+                module.add_extra_patterns(pm)  # type: ignore
             # Run the pattern matcher on the sentence,
             # annotating questionable patterns
             pm.run()
@@ -401,31 +425,43 @@ class GreynirCorrect(Greynir):
         return sent
 
 
+def create_rc_instance(rc: Optional[GreynirCorrect], **options) -> GreynirCorrect:
+    """Create a global GreynirCorrect instance if it doesn't exist already.
+    If the rc argument is not None, it is returned as is."""
+    if rc is None:
+        rc = GreynirCorrect(load_config(options), **options)
+    return rc
+
+
 def check_single(
-    sentence_text: str, rc: GreynirCorrect, **options: Any
+    sentence_text: str, rc: Optional[GreynirCorrect] = None, **options: Any
 ) -> Optional[Sentence]:
     """Check and annotate a single sentence, given in plain text"""
     # Returns None if no sentence was parsed
+    rc = create_rc_instance(rc, **options)
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
     return rc.parse_single(sentence_text, max_sent_tokens=max_sent_tokens)
 
 
 def check_tokens(
-    tokens: Iterable[CorrectToken], rc: GreynirCorrect, **options: Any
+    tokens: Iterable[CorrectToken], rc: Optional[GreynirCorrect] = None, **options: Any
 ) -> Optional[Sentence]:
     """Check and annotate a single sentence, given as a token list"""
     # Returns None if no sentence was parsed
+    rc = create_rc_instance(rc, **options)
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
     return rc.parse_tokens(tokens, max_sent_tokens=max_sent_tokens)
 
 
-def check(text: str, rc: GreynirCorrect, **options: Any) -> Iterable[Paragraph]:
+def check(
+    text: str, rc: Optional[GreynirCorrect] = None, **options: Any
+) -> Iterable[Paragraph]:
     """Return a generator of checked paragraphs of text,
     each being a generator of checked sentences with
     annotations"""
     split_paragraphs = options.pop("split_paragraphs", False)
     max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
-    # rc = GreynirCorrect(**options)
+    rc = create_rc_instance(rc, **options)
     # This is an asynchronous (on-demand) parse job
     job = rc.submit(
         text,

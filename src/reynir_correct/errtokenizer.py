@@ -1547,20 +1547,20 @@ class MultiwordErrorStream(MatchingStream):
         self._token_ctor = token_ctor
         self._db = db
         self._ignore_rules = ignore_rules
-        self.settings = settings
+        self.multiword_errors = settings.multiword_errors
 
     def length(self, ix: int) -> int:
         """Return the length (word count) of the original phrase
         that is being replaced"""
-        return self.settings.multiword_errors.get_phrase_length(ix)
+        return self.multiword_errors.get_phrase_length(ix)
 
     def match(self, tq: List[Tok], ix: int) -> Iterable[Tok]:
         """This is a complete match of an error phrase;
         yield the replacement phrase"""
-        if "P_" + self.settings.multiword_errors.get_code(ix) in self._ignore_rules:
+        if "P_" + self.multiword_errors.get_code(ix) in self._ignore_rules:
             yield from tq
             return
-        replacement = self.settings.multiword_errors.get_replacement(ix)
+        replacement = self.multiword_errors.get_replacement(ix)
         db = self._db
         token_ctor = self._token_ctor
         len_tq = len(tq)
@@ -1592,7 +1592,7 @@ class MultiwordErrorStream(MatchingStream):
             if i == 0:
                 ct.set_error(
                     PhraseError(
-                        self.settings.multiword_errors.get_code(ix),
+                        self.multiword_errors.get_code(ix),
                         "Orðasambandið '{0}' var leiðrétt í '{1}'".format(
                             " ".join(t.txt for t in tq), repstring
                         ),

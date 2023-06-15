@@ -3,7 +3,7 @@
 
     test_allkinds.py
 
-    Tests for Greyniorrect module
+    Tests for GreynirCorrect module
 
     Copyright (C) 2022 by Miðeind ehf.
 

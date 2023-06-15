@@ -82,7 +82,7 @@ from tokenizer.definitions import AmountTuple, NumberTuple
 from .errtokenizer import CorrectToken, Error
 from .errtokenizer import tokenize as errtokenize
 from .annotation import Annotation
-from .checker import GreynirCorrect, check_tokens
+from .checker import GreynirCorrect, check_tokens, load_config
 from .settings import Settings
 
 
@@ -189,21 +189,6 @@ def val(
     if quote_word and isinstance(t.val, str):
         return quote(t.val)
     return t.val
-
-
-def load_config(options):
-    """Load the default configuration file and return a Settings object. Optionally load
-    an additional config if given."""
-    settings = Settings()
-    settings.read("config/GreynirCorrect.conf")
-    if options.get("extra_config", False):
-        # check whether the config path is valid:
-        try:
-            settings.read(options["extra_config"])
-        except FileNotFoundError:
-            print("File not found: " + options["extra_config"])
-            sys.exit(1)
-    return settings
 
 
 def check_errors(**options: Any) -> str:
@@ -410,7 +395,6 @@ def check_grammar(rc: GreynirCorrect) -> str:
     )
     inneroptions["ignore_rules"] = rc._options.get("ignore_rules", set())
     sentence_results: List[Dict[str, Any]] = []
-
     sentence_classifier: Optional[SentenceClassifier] = None
 
     for raw_tokens in sentence_stream(settings=rc.settings, **rc._options):

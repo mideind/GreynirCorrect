@@ -137,17 +137,12 @@ parser.add_argument(
     action="store_true",
 )
 
-parser.add_argument(
-    "--extra_tone_of_voice",
-    help="Check for additional third-party issues.",
-    action="store_true",
-)
 
 parser.add_argument(
-    "--extra_config",
+    "--tov_config",
     nargs=1,
     type=str,
-    help="Add additional use-specific rules in a configuration file to check for third-party issues.",
+    help="Add additional use-specific rules in a configuration file to check for third-party tone of voice issues.",
     default=False,
 )
 
@@ -178,13 +173,12 @@ def main() -> None:
         options["format"] = "json"
     elif args.csv:
         options["format"] = "csv"
-    if args.extra_config:
-        options["extra_config"] = args.extra_config[0]
+    if args.tov_config:
+        options["tov_config"] = args.tov_config[0]
     options["spaced"] = args.spaced
     options["normalize"] = args.normalize
     options["all_errors"] = args.all_errors or args.grammar
     options["sentence_prefilter"] = args.sentence_prefilter
-    options["extra_tone_of_voice"] = args.extra_tone_of_voice
     options["suggest_not_correct"] = args.suggest_not_correct
 
     print(check_errors(**options), file=args.outfile)
