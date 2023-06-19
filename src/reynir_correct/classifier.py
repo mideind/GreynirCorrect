@@ -46,7 +46,6 @@ from typing import List, Union, overload
 
 
 try:
-    from datasets import load_dataset
     from transformers import pipeline  # type: ignore
 except:
     import warnings

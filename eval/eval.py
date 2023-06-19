@@ -158,7 +158,7 @@ ErrTypeStatsDict = DefaultDict[str, TypeFreqs]
 CatResultDict = Dict[str, Union[int, float, str]]
 
 settings = Settings()
-settings.read("config/GreynirCorrect.conf")
+settings.read(os.path.join("config", "GreynirCorrect.conf"))
 rc = GreynirCorrect(settings)
 
 # Create a lock to ensure that only one process outputs at a time

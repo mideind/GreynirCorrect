@@ -589,25 +589,25 @@ class Icesquer:
 class WrongFormers:
     def __init__(self) -> None:
         # Dictionary structure: dict { wrong_word : right_word }
-        self.DICT: Dict[str, str] = dict()
+        self.DICT: Dict[str, Tuple[str, ...]] = dict()
 
     def add(self, word: str, corr: Tuple[str, ...]) -> None:
         if word in self.DICT:
             # Happens in the data, just skip it
             return
-        self.DICT[word] = corr  # type: ignore
+        self.DICT[word] = corr
 
 
 class WrongFormersCID:
     def __init__(self) -> None:
         # Dictionary structure: dict { wrong_word : right_word }
-        self.DICT: Dict[str, str] = dict()
+        self.DICT: Dict[str, Tuple[str, ...]] = dict()
 
     def add(self, word: str, corr: Tuple[str, ...]) -> None:
         if word in self.DICT:
             # Happens in the data, just skip it
             return
-        self.DICT[word] = corr  # type: ignore
+        self.DICT[word] = corr
 
 
 class Settings:
@@ -1035,7 +1035,7 @@ class Settings:
             raise ConfigError("Expected one word on each side in wrong_formers")
         self.wrong_formers_cid.add(word, correction)
 
-    def read(self, fname: str, external=False) -> None:
+    def read(self, fname: str, external: bool = False) -> None:
         """Read configuration file"""
 
         with Settings._lock:

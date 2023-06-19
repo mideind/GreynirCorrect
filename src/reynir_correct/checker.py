@@ -47,9 +47,7 @@
 
 """
 
-import importlib.util
-import os
-import sys
+from importlib.abc import Loader
 from typing import (
     Any,
     FrozenSet,
@@ -64,9 +62,12 @@ from typing import (
     Optional,
 )
 from typing_extensions import TypedDict
-
+from importlib.machinery import ModuleSpec
+from types import ModuleType
+import importlib.util
+import os
+import sys
 from threading import Lock
-from typing_extensions import TypedDict
 from islenska.basics import Ksnid
 
 from reynir import (
@@ -123,11 +124,11 @@ STYLE_WARNINGS: Mapping[str, str] = {
 }
 
 
-def load_config(options: Any):
+def load_config(options: Dict[str, Any]):
     """Load the default configuration file and return a Settings object. Optionally load
     an additional config if given."""
     settings = Settings()
-    settings.read("config/GreynirCorrect.conf")
+    settings.read(os.path.join("config", "GreynirCorrect.conf"))
     if options.get("tov_config", False):
         # check whether the config path is valid:
         try:
@@ -390,11 +391,14 @@ class GreynirCorrect(Greynir):
                 file_path = self.settings.tone_of_voice_patterns.PATH
                 module_name = os.path.splitext(os.path.basename(file_path))[0]
                 # Import the module
-                spec = importlib.util.spec_from_file_location(module_name, file_path)
-                module = importlib.util.module_from_spec(spec)  # type: ignore
-                spec.loader.exec_module(module)  # type: ignore
+                spec: Optional[ModuleSpec] = importlib.util.spec_from_file_location(module_name, file_path)
+                if spec is None:
+                    raise FileNotFoundError(f"Could not find a spec for module '{module_name}' at '{file_path}'")
+                assert isinstance(spec.loader, Loader)
+                module: ModuleType = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
                 # Add the external patterns to the pattern matcher
-                module.add_extra_patterns(pm)  # type: ignore
+                module.add_extra_patterns(pm)  # type: ignore # Mypy doesn't know about add_extra_patterns()
             # Run the pattern matcher on the sentence,
             # annotating questionable patterns
             pm.run()
@@ -425,7 +429,7 @@ class GreynirCorrect(Greynir):
         return sent
 
 
-def create_rc_instance(rc: Optional[GreynirCorrect], **options) -> GreynirCorrect:
+def create_rc_instance(rc: Optional[GreynirCorrect], **options: Any) -> GreynirCorrect:
     """Create a global GreynirCorrect instance if it doesn't exist already.
     If the rc argument is not None, it is returned as is."""
     if rc is None:
@@ -480,7 +484,7 @@ def check_with_custom_parser(
     progress_func: ProgressFunc = None,
     split_paragraphs: bool = False,
     annotate_unparsed_sentences: bool = True,
-    **options: Any,
+    **options: Dict[str, Any],
 ) -> CheckResult:
     """Return a dict containing parsed paragraphs as well as statistics,
     using the given correction/parser class. This is a low-level
