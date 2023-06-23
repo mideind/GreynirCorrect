@@ -142,7 +142,7 @@ parser.add_argument(
     "--tov_config",
     nargs=1,
     type=str,
-    help="Add additional use-specific rules in a configuration file to check for third-party tone of voice issues.",
+    help="Add additional use-specific rules in a configuration file to check for custom tone-of-voice issues. Uses the same format as the default GreynirCorrect.conf file",
     default=False,
 )
 
