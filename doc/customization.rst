@@ -27,9 +27,7 @@ An example of a tone-of-voice section is as follows:
 This only works for single words, in whitespace-separated columns within each line:
 
 1. Word + '_' + category
-2. Optional replacement word + '_' + category.
-   There can be multiple replacement words,
-   separated by tight forward slashes '/'.
+2. Optional replacement word + '_' + category. There can be multiple replacement words, separated by tight forward slashes '/'.
 3. Optional explanatory comment, enclosed in double quotes.
 Optional explanatory comment, enclosed in double quotes.
 
@@ -49,7 +47,7 @@ In case the user wants to check for more complex issues, such as multiword phras
 or grammatical errors which require pattern matching, the user can add a separate 
 python module where these issues are handled. This module is provided in a file path 
 in the configuration file, in the section ``[tone_of_voice_patterns]`` and loaded
- dynamically by the ``checker.py`` module.
+dynamically by the ``checker.py`` module.
 
 .. code-block:: python
     [tone_of_voice_patterns]
