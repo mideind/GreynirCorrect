@@ -8,23 +8,29 @@ Tone-of-voice issues
 
 The user can customize GreynirCorrect by providing a configuration file 
 with additional issues to check for. The configuration file should be in the 
-same format as the GreynirCorrect.conf default configuration file, with 
-any of the needed sections from that file.
+same format as the [GreynirCorrect.conf](src/reynir_correct/config/GreynirCorrect.conf) default configuration file, with 
+any of the needed sections from that file, defined with a header in square brackets.
 
 The user can then pass in the path to the configuration file using 
-the ``--tov-config`` command line argument. 
+the ``--tov-config`` command line argument. The config is loaded in addition to the
+default configuration file.
 
-The issues can be tone-of-voice issues, such as words that should be avoided
+Two additional section headers can be added to the configuration file: 
+
+``[tone_of_voice_words]`` and ``[tone_of_voice_patterns]``.
+
+### Tone-of-voice words
+The issues defined ucan be tone-of-voice issues, such as words that should be avoided
 in a particular use case, with suggestions for replacements.
 
 An example of a tone-of-voice section is as follows:
 
 .. code-block:: python
     [tone_of_voice_words]
-    kúrs_kk áfangi_kk "Við kjósum frekar orðið 'áfangi' í textum um framhaldsskóla."
+    kúrs_kk áfangi_kk "Við kjósum frekar orðið 'áfangi' í textum sem fjalla um framhaldsskólanám."
     labba_so ganga_so "Það er talmálslegt að nota 'labba', við tölum frekar um að 'ganga'."
 
-This only works for single words, in whitespace-separated columns within each line:
+This only works for single words, in whitespace-separated columns within each line. The format is as follows:
 
 1. Word + '_' + category
 2. Optional replacement word + '_' + category. There can be multiple replacement words, separated by tight forward slashes '/'.
