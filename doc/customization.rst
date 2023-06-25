@@ -33,9 +33,8 @@ An example of a tone-of-voice section is as follows:
 This only works for single words, in whitespace-separated columns within each line. The format is as follows:
 
 1. Word + '_' + category
-2. Optional replacement word + '_' + category. There can be multiple replacement words, separated by tight forward slashes '/'.
+2. Optional replacement word + '_' + category. There can be multiple replacement words, separated by tight forward slashes '/'
 3. Optional explanatory comment, enclosed in double quotes.
-Optional explanatory comment, enclosed in double quotes.
 
 Note that lines can be continued by ending them with a backslash '\',
 which is especially useful for long explanatory comments.
