@@ -172,6 +172,10 @@ The following options can be specified:
 | | ``ignore_rules``                | A set of error codes that should be ignored      | ``set()``       |
 |                                   | in the annotation process.                       |                 |
 +-----------------------------------+--------------------------------------------------+-----------------+
+| | ``tov_config``                  | Path to an additional configuration file that    | ``False``       |
+|                                   | may be provided for correcting custom            |                 |
+|                                   | tone-of-voice issues.                            |                 |
++-----------------------------------+--------------------------------------------------+-----------------+
 
 An overview of error codes is available `here <https://github.com/mideind/GreynirCorrect/blob/master/doc/errorcodes.rst>`__.
 

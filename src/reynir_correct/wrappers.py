@@ -82,7 +82,8 @@ from tokenizer.definitions import AmountTuple, NumberTuple
 from .errtokenizer import CorrectToken, Error
 from .errtokenizer import tokenize as errtokenize
 from .annotation import Annotation
-from .checker import check_tokens
+from .checker import GreynirCorrect, check_tokens, load_config
+from .settings import Settings
 
 
 class AnnTokenDict(TypedDict, total=False):
@@ -193,16 +194,17 @@ def val(
 def check_errors(**options: Any) -> str:
     """Return a string in the chosen format and correction level
     using the spelling and grammar checker"""
+    rc = GreynirCorrect(load_config(options), **options)
     input = options.get("input", None)
     if isinstance(input, str):
         options["input"] = [input]
     if options.get("all_errors", True):
-        return check_grammar(**options)
+        return check_grammar(rc=rc)
     else:
-        return check_spelling(**options)
+        return check_spelling(settings=rc.settings, **options)
 
 
-def check_spelling(**options: Any) -> str:
+def check_spelling(settings: Settings, **options: Any) -> str:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
     format = options.get("format", "json")
@@ -213,7 +215,7 @@ def check_spelling(**options: Any) -> str:
             to_text = text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
-    toks = sentence_stream(**options)
+    toks = sentence_stream(settings=settings, **options)
     unisum: List[str] = []
     allsum: List[str] = []
     annlist: List[str] = []
@@ -269,7 +271,7 @@ def check_spelling(**options: Any) -> str:
     return unistr
 
 
-def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
+def test_spelling(settings: Settings, **options: Any) -> Tuple[str, TokenSumType]:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
     if options.get("spaced", False):
@@ -279,7 +281,7 @@ def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
             to_text = text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
-    toks = sentence_stream(**options)
+    toks = sentence_stream(settings=settings, **options)
     unisum: List[str] = []
     toksum: TokenSumType = []
     annlist: List[str] = []
@@ -301,14 +303,14 @@ def test_spelling(**options: Any) -> Tuple[str, TokenSumType]:
     return unistr, toksum
 
 
-def sentence_stream(**options: Any) -> Iterator[List[CorrectToken]]:
+def sentence_stream(settings: Settings, **options: Any) -> Iterator[List[CorrectToken]]:
     """Yield a stream of sentence token lists from the source text"""
     # Initialize sentence accumulator list
     curr_sent: List[CorrectToken] = []
     gen = options.get("input", None)
     if gen is None:
         gen = sys.stdin
-    for t in errtokenize(gen, **options):
+    for t in errtokenize(gen, settings, **options):
         # Normal shallow parse, one line per sentence,
         # tokens separated by spaces
         curr_sent.append(t)
@@ -320,7 +322,7 @@ def sentence_stream(**options: Any) -> Iterator[List[CorrectToken]]:
         yield curr_sent
 
 
-def test_grammar(**options: Any) -> Tuple[str, TokenSumType]:
+def test_grammar(rc: GreynirCorrect, **options: Any) -> Tuple[str, TokenSumType]:
     """Do a full spelling and grammar check of the source text"""
 
     accumul: List[str] = []
@@ -332,10 +334,11 @@ def test_grammar(**options: Any) -> Tuple[str, TokenSumType]:
     )
     inneroptions["ignore_rules"] = options.get("ignore_rules", set())
     annlist: List[str] = []
-    for toklist in sentence_stream(**options):
+
+    for toklist in sentence_stream(rc.settings, **options):
         # Invoke the spelling and grammar checker on the token list
         # Only contains options relevant to the grammar check
-        sent = check_tokens(toklist, **inneroptions)
+        sent = check_tokens(toklist, rc, **inneroptions)
         if sent is None:
             # Should not happen?
             continue
@@ -384,23 +387,20 @@ def test_grammar(**options: Any) -> Tuple[str, TokenSumType]:
     return accumstr, alltoks
 
 
-def check_grammar(**options: Any) -> str:
+def check_grammar(rc: GreynirCorrect) -> str:
     """Do a full spelling and grammar check of the source text"""
-
     inneroptions: Dict[str, Union[str, bool]] = {}
-    inneroptions["annotate_unparsed_sentences"] = options.get(
+    inneroptions["annotate_unparsed_sentences"] = rc._options.get(
         "annotate_unparsed_sentences", True
     )
-    inneroptions["ignore_rules"] = options.get("ignore_rules", set())
-
+    inneroptions["ignore_rules"] = rc._options.get("ignore_rules", set())
     sentence_results: List[Dict[str, Any]] = []
-
     sentence_classifier: Optional[SentenceClassifier] = None
 
-    for raw_tokens in sentence_stream(**options):
+    for raw_tokens in sentence_stream(settings=rc.settings, **rc._options):
         original_sentence = "".join([t.original or t.txt for t in raw_tokens])
 
-        if options.get("sentence_prefilter", False):
+        if rc._options.get("sentence_prefilter", False):
             # Only construct the classifier model if we need it
             from .classifier import SentenceClassifier
 
@@ -429,7 +429,7 @@ def check_grammar(**options: Any) -> str:
                 )
                 continue
 
-        annotated_sentence = check_tokens(raw_tokens, **inneroptions)
+        annotated_sentence = check_tokens(raw_tokens, rc, **inneroptions)
         if annotated_sentence is None:
             # This should not happen, but we check to be sure, and to satisfy mypy
             # TODO: Should we rather raise an exception instead of silently discarding the sentence?
@@ -497,11 +497,11 @@ def check_grammar(**options: Any) -> str:
         )
 
     extra_text_options = {
-        "annotations": options.get("annotations", False),
-        "print_all": options.get("print_all", False),
+        "annotations": rc._options.get("annotations", False),
+        "print_all": rc._options.get("print_all", False),
     }
     return format_output(
-        sentence_results, options.get("format", "json"), extra_text_options
+        sentence_results, rc._options.get("format", "json"), extra_text_options
     )
 
 

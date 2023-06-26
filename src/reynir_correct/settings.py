@@ -50,6 +50,7 @@ from collections import defaultdict
 from reynir.basics import ConfigError, LineReader
 from reynir.bindb import GreynirBin
 from reynir.bintokenizer import StateDict
+import importlib.util
 
 
 ErrorFormTuple = Tuple[str, str, int, str, str]
@@ -71,85 +72,78 @@ R_EINKUNN: Mapping[int, str] = {
 
 
 class AllowedMultiples:
+    def __init__(self) -> None:
+        self.SET: Set[str] = set()
 
-    # Set of word forms allowed to appear more than once in a row
-    SET: Set[str] = set()
-
-    @staticmethod
-    def add(word: str) -> None:
-        AllowedMultiples.SET.add(word)
+    def add(self, word: str) -> None:
+        self.SET.add(word)
 
 
 class WrongCompounds:
+    def __init__(self) -> None:
+        # Dictionary structure: dict { wrong_compound : "right phrase" }
+        self.DICT: Dict[str, Tuple[str, ...]] = {}
 
-    # Dictionary structure: dict { wrong_compound : "right phrase" }
-    DICT: Dict[str, Tuple[str, ...]] = {}
-
-    @staticmethod
-    def add(word: str, parts: Tuple[str, ...]) -> None:
-        if word in WrongCompounds.DICT:
+    def add(self, word: str, parts: Tuple[str, ...]) -> None:
+        if word in self.DICT:
             raise ConfigError(
                 "Multiple definition of '{0}' in wrong_compounds section".format(word)
             )
         assert isinstance(parts, tuple)
-        WrongCompounds.DICT[word] = parts
+        self.DICT[word] = parts
 
 
 class SplitCompounds:
 
     # Dict of the form { first_part : set(second_part_stem) }
-    DICT: Dict[str, Set[str]] = defaultdict(set)
+    def __init__(self) -> None:
+        self.DICT: Dict[str, Set[str]] = defaultdict(set)
 
-    @staticmethod
-    def add(first_part: str, second_part_stem: str) -> None:
-        if (
-            first_part in SplitCompounds.DICT
-            and second_part_stem in SplitCompounds.DICT[first_part]
-        ):
+    def add(self, first_part: str, second_part_stem: str) -> None:
+        if first_part in self.DICT and second_part_stem in self.DICT[first_part]:
             raise ConfigError(
                 "Multiple definition of '{0}' in split_compounds section".format(
                     first_part + " " + second_part_stem
                 )
             )
-        SplitCompounds.DICT[first_part].add(second_part_stem)
+        self.DICT[first_part].add(second_part_stem)
 
 
 class UniqueErrors:
 
     # Dictionary structure: dict { wrong_word : (tuple of right words) }
-    DICT: Dict[str, Tuple[str, ...]] = dict()
+    def __init__(self) -> None:
+        self.DICT: Dict[str, Tuple[str, ...]] = dict()
 
-    @staticmethod
-    def add(word: str, corr: Tuple[str, ...]) -> None:
-        if word in UniqueErrors.DICT:
+    def add(self, word: str, corr: Tuple[str, ...]) -> None:
+        if word in self.DICT:
             raise ConfigError(
                 "Multiple definition of '{0}' in unique_errors section".format(word)
             )
-        UniqueErrors.DICT[word] = corr
+        self.DICT[word] = corr
 
 
 class MultiwordErrors:
+    def __init__(self) -> None:
+        # Dictionary structure: dict { phrase tuple: error specification }
+        # List of tuples of multiword error phrases and their word category lists
+        self.LIST: List[Tuple[Tuple[str, ...], str, List[str]]] = []
+        # Parsing dictionary keyed by first word of phrase
+        self.DICT: StateDict = defaultdict(list)
+        # Error dictionary, { phrase : (error_code, right_phrase, right_parts_of_speech) }
+        self.ERROR_DICT: Dict[Tuple[str, ...], str] = dict()
 
-    # Dictionary structure: dict { phrase tuple: error specification }
-    # List of tuples of multiword error phrases and their word category lists
-    LIST: List[Tuple[Tuple[str, ...], str, List[str]]] = []
-    # Parsing dictionary keyed by first word of phrase
-    DICT: StateDict = defaultdict(list)
-    # Error dictionary, { phrase : (error_code, right_phrase, right_parts_of_speech) }
-    ERROR_DICT: Dict[Tuple[str, ...], str] = dict()
-
-    @staticmethod
-    def add(words: Tuple[str, ...], error: str) -> None:
-        if words in MultiwordErrors.ERROR_DICT:
+    def add(self, words: Tuple[str, ...], error: str) -> None:
+        if words in self.ERROR_DICT:
             raise ConfigError(
                 "Multiple definition of '{0}' in multiword_errors section".format(
                     " ".join(words)
                 )
             )
-        MultiwordErrors.ERROR_DICT[words] = error
+        self.ERROR_DICT[words] = error
 
         # Add to phrase list
-        ix = len(MultiwordErrors.LIST)
+        ix = len(self.LIST)
 
         a = error.split(",")
         if len(a) != 2:
@@ -158,40 +152,35 @@ class MultiwordErrors:
         replacement = a[1].strip().split()
 
         # Append the phrase and the error specification in tuple form
-        MultiwordErrors.LIST.append((words, code, replacement))
+        self.LIST.append((words, code, replacement))
 
         # Dictionary structure: dict { firstword: [ (restword_list, phrase_index) ] }
-        MultiwordErrors.DICT[words[0]].append((list(words[1:]), ix))
+        self.DICT[words[0]].append((list(words[1:]), ix))
 
-    @staticmethod
-    def get_phrase(ix: int) -> Tuple[str, ...]:
+    def get_phrase(self, ix: int) -> Tuple[str, ...]:
         """Return the original phrase with index ix"""
-        return MultiwordErrors.LIST[ix][0]
+        return self.LIST[ix][0]
 
-    @staticmethod
-    def get_phrase_length(ix: int) -> int:
+    def get_phrase_length(self, ix: int) -> int:
         """Return the count of words in the original phrase with index ix"""
-        return len(MultiwordErrors.LIST[ix][0])
+        return len(self.LIST[ix][0])
 
-    @staticmethod
-    def get_code(ix: int) -> str:
+    def get_code(self, ix: int) -> str:
         """Return the error code with index ix"""
-        return MultiwordErrors.LIST[ix][1]
+        return self.LIST[ix][1]
 
-    @staticmethod
-    def get_replacement(ix: int) -> List[str]:
+    def get_replacement(self, ix: int) -> List[str]:
         """Return the replacement phrase with index ix"""
-        return MultiwordErrors.LIST[ix][2]
+        return self.LIST[ix][2]
 
 
 class TabooWords:
+    def __init__(self) -> None:
+        # Dictionary structure: dict { taboo_word : (suggested_replacement, explanation) }
+        self.DICT: Dict[str, Tuple[str, str]] = {}
 
-    # Dictionary structure: dict { taboo_word : (suggested_replacement, explanation) }
-    DICT: Dict[str, Tuple[str, str]] = {}
-
-    @staticmethod
-    def add(word: str, replacement: str, explanation: str) -> None:
-        if word in TabooWords.DICT:
+    def add(self, word: str, replacement: str, explanation: str) -> None:
+        if word in self.DICT:
             raise ConfigError(
                 "Multiple definition of '{0}' in taboo_words section".format(word)
             )
@@ -200,32 +189,57 @@ class TabooWords:
         _, m = db.lookup_g(a[0])
         if not m or (len(a) >= 2 and all(mm.ordfl != a[1] for mm in m)):
             raise ConfigError("The taboo word '{0}' is not found in BÍN".format(word))
-        TabooWords.DICT[word] = (replacement, explanation)
+        self.DICT[word] = (replacement, explanation)
+
+
+class ToneOfVoiceWords:
+    def __init__(self) -> None:
+        # Dictionary structure: dict { tone_of_voice : (suggested_replacement, explanation) }
+        self.DICT: Dict[str, Tuple[str, str]] = {}
+
+    def add(self, word: str, replacement: str, explanation: str) -> None:
+        if word in self.DICT:
+            raise ConfigError(
+                "Multiple definition of '{0}' in tone_of_voice section".format(word)
+            )
+        db = GreynirBin.get_db()
+        a = word.split("_")
+        _, m = db.lookup_g(a[0])
+        if not m or (len(a) >= 2 and all(mm.ordfl != a[1] for mm in m)):
+            raise ConfigError("The word '{0}' is not found in BÍN".format(word))
+        self.DICT[word] = (replacement, explanation)
+
+
+class ToneOfVoicePatterns:
+    def __init__(self) -> None:
+        # A path to a python module containing third party tone of voice patterns
+        self.PATH: str = ""
+
+    def add(self, fpath: str) -> None:
+        self.PATH = fpath
 
 
 class Suggestions:
+    def __init__(self) -> None:
+        # Dictionary structure: dict { bad_word : [ suggested_replacements ] }
+        self.DICT: Dict[str, List[str]] = {}
 
-    # Dictionary structure: dict { bad_word : [ suggested_replacements ] }
-    DICT: Dict[str, List[str]] = {}
-
-    @staticmethod
-    def add(word: str, replacements: List[str]) -> None:
-        if word in Suggestions.DICT:
+    def add(self, word: str, replacements: List[str]) -> None:
+        if word in self.DICT:
             raise ConfigError(
                 "Multiple definition of '{0}' in suggestions section".format(word)
             )
-        Suggestions.DICT[word] = replacements
+        self.DICT[word] = replacements
 
 
 class CapitalizationErrors:
+    def __init__(self) -> None:
+        # Set of wrongly capitalized words
+        self.SET: Set[str] = set()
+        # Reverse capitalization (íslendingur -> Íslendingur, Danskur -> danskur)
+        self.SET_REV: Set[str] = set()
 
-    # Set of wrongly capitalized words
-    SET: Set[str] = set()
-    # Reverse capitalization (íslendingur -> Íslendingur, Danskur -> danskur)
-    SET_REV: Set[str] = set()
-
-    @staticmethod
-    def emulate_case(s: str, template: str) -> str:
+    def emulate_case(self, s: str, template: str) -> str:
         """Return the string s but emulating the case of the template
         (lower/upper/capitalized)"""
         if template.isupper():
@@ -234,14 +248,14 @@ class CapitalizationErrors:
             return s.capitalize()
         return s
 
-    @staticmethod
-    def reverse_capitalization(word: str, *, split_on_hyphen: bool = False) -> str:
+    def reverse_capitalization(
+        self, word: str, *, split_on_hyphen: bool = False
+    ) -> str:
         """Return a word with its capitalization reversed (lower <-> upper case)"""
         if split_on_hyphen and "-" in word:
             # 'norður-kórea' -> 'Norður-Kórea'
             return "-".join(
-                CapitalizationErrors.reverse_capitalization(part)
-                for part in word.split("-")
+                self.reverse_capitalization(part) for part in word.split("-")
             )
         if word.islower():
             # Lowercase word
@@ -256,8 +270,7 @@ class CapitalizationErrors:
             raise ConfigError("'{0}' cannot have mixed capitalization".format(word))
         return word_rev
 
-    @staticmethod
-    def add(word: str) -> None:
+    def add(self, word: str) -> None:
         """Add the given (wrongly capitalized) word stem to the stem set"""
         # We support compound words such as 'félags- og barnamálaráðherra' here
         split_on_hyphen = False
@@ -271,7 +284,7 @@ class CapitalizationErrors:
         db = GreynirBin().get_db()
         # The suffix may not be in BÍN except as a compound, and in that
         # case we want its hyphenated lemma
-        suffix_rev = CapitalizationErrors.reverse_capitalization(
+        suffix_rev = self.reverse_capitalization(
             suffix, split_on_hyphen=split_on_hyphen
         )
         _, m = db.lookup_g(suffix_rev)
@@ -286,59 +299,53 @@ class CapitalizationErrors:
         if not prefix:
             # This might be something like 'barnamálaráðherra' which comes out
             # with a lemma of 'barnamála-ráðherra'
-            word = CapitalizationErrors.emulate_case(m[0].stofn, template=word)
+            word = self.emulate_case(m[0].stofn, template=word)
         else:
             # This might be something like 'félags- og barnamálaráðherra' which comes out
             # with a lemma of 'félags- og barnamála-ráðherra'
             word = prefix + m[0].stofn
-        if word in CapitalizationErrors.SET:
+        if word in self.SET:
             raise ConfigError(
                 "Multiple definition of '{0}' in capitalization_errors section".format(
                     word
                 )
             )
         # Construct the reverse casing of the word
-        word_rev = CapitalizationErrors.reverse_capitalization(
-            word, split_on_hyphen=split_on_hyphen
-        )
+        word_rev = self.reverse_capitalization(word, split_on_hyphen=split_on_hyphen)
         # Add the word and its reverse case to the set of errors
-        CapitalizationErrors.SET.add(word)
-        CapitalizationErrors.SET_REV.add(word_rev)
+        self.SET.add(word)
+        self.SET_REV.add(word_rev)
 
 
 class OwForms:
+    def __init__(self) -> None:
+        # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
+        self.DICT: Dict[str, Tuple[str, str, int, str, str]] = dict()
 
-    # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
-    DICT: Dict[str, Tuple[str, str, int, str, str]] = dict()
-
-    @staticmethod
-    def contains(word: str) -> bool:
+    def contains(self, word: str) -> bool:
         """Check whether the word form is in the error forms dictionary,
         either in its original casing or in a lower case form"""
-        d = OwForms.DICT
+        d = self.DICT
         if word.islower():
             return word in d
         return word in d or word.lower() in d
 
-    @staticmethod
-    def add(wrong_form: str, meaning: Tuple[str, str, int, str, str]) -> None:
-        OwForms.DICT[wrong_form] = meaning
+    def add(self, wrong_form: str, meaning: Tuple[str, str, int, str, str]) -> None:
+        self.DICT[wrong_form] = meaning
 
-    @staticmethod
-    def get_lemma(wrong_form: str) -> str:
-        return OwForms.DICT[wrong_form][0]
+    def get_lemma(self, wrong_form: str) -> str:
+        return self.DICT[wrong_form][0]
 
-    @staticmethod
-    def get_correct_form(wrong_form: str) -> str:
+    def get_correct_form(self, wrong_form: str) -> str:
         """Return a corrected form of the given word, attempting
         to emulate the lower/upper/title case of the word"""
         # First, try the original casing of the wrong form
-        c = OwForms.DICT.get(wrong_form)
+        c = self.DICT.get(wrong_form)
         if c is not None:
             # Found it: we're done
             return c[1]
         # Lookup a lower case version
-        c = OwForms.DICT.get(wrong_form.lower())
+        c = self.DICT.get(wrong_form.lower())
         if c is None:
             # Not found: can't correct
             return wrong_form
@@ -349,50 +356,43 @@ class OwForms:
             return form.upper()
         return form
 
-    @staticmethod
-    def get_id(wrong_form: str) -> int:
-        return OwForms.DICT[wrong_form][2]
+    def get_id(self, wrong_form: str) -> int:
+        return self.DICT[wrong_form][2]
 
-    @staticmethod
-    def get_category(wrong_form: str) -> str:
-        return OwForms.DICT[wrong_form][3]
+    def get_category(self, wrong_form: str) -> str:
+        return self.DICT[wrong_form][3]
 
-    @staticmethod
-    def get_tag(wrong_form: str) -> str:
-        return OwForms.DICT[wrong_form][4]
+    def get_tag(self, wrong_form: str) -> str:
+        return self.DICT[wrong_form][4]
 
 
 class CIDErrorForms:
+    def __init__(self) -> None:
+        # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
+        self.DICT: Dict[str, ErrorFormTuple] = dict()
 
-    # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
-    DICT: Dict[str, ErrorFormTuple] = dict()
-
-    @staticmethod
-    def contains(word: str) -> bool:
+    def contains(self, word: str) -> bool:
         """Check whether the word form is in the error forms dictionary,
         either in its original casing or in a lower case form"""
-        d = CIDErrorForms.DICT
+        d = self.DICT
         return word in d or word.lower() in d
 
-    @staticmethod
-    def add(wrong_form: str, meaning: ErrorFormTuple) -> None:
-        CIDErrorForms.DICT[wrong_form] = meaning
+    def add(self, wrong_form: str, meaning: ErrorFormTuple) -> None:
+        self.DICT[wrong_form] = meaning
 
-    @staticmethod
-    def get_lemma(wrong_form: str) -> str:
-        return CIDErrorForms.DICT[wrong_form][0]
+    def get_lemma(self, wrong_form: str) -> str:
+        return self.DICT[wrong_form][0]
 
-    @staticmethod
-    def get_correct_form(wrong_form: str) -> str:
+    def get_correct_form(self, wrong_form: str) -> str:
         """Return a corrected form of the given word, attempting
         to emulate the lower/upper/title case of the word"""
         # First, try the original casing of the wrong form
-        c = CIDErrorForms.DICT.get(wrong_form)
+        c = self.DICT.get(wrong_form)
         if c is not None:
             # Found it: we're done
             return c[1]
         # Lookup a lower case version
-        c = CIDErrorForms.DICT.get(wrong_form.lower())
+        c = self.DICT.get(wrong_form.lower())
         if c is None:
             # Not found: can't correct
             return wrong_form
@@ -403,52 +403,45 @@ class CIDErrorForms:
             return form.upper()
         return form
 
-    @staticmethod
-    def get_id(wrong_form: str) -> int:
-        return CIDErrorForms.DICT[wrong_form][2]
+    def get_id(self, wrong_form: str) -> int:
+        return self.DICT[wrong_form][2]
 
-    @staticmethod
-    def get_category(wrong_form: str) -> str:
-        return CIDErrorForms.DICT[wrong_form][3]
+    def get_category(self, wrong_form: str) -> str:
+        return self.DICT[wrong_form][3]
 
-    @staticmethod
-    def get_tag(wrong_form: str) -> str:
-        return CIDErrorForms.DICT[wrong_form][4]
+    def get_tag(self, wrong_form: str) -> str:
+        return self.DICT[wrong_form][4]
 
 
 class CDErrorForms:
+    def __init__(self) -> None:
+        # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
+        self.DICT: Dict[str, ErrorFormTuple] = dict()
 
-    # dict { wrong_word_form : (lemma, correct_word_form, id, cat, tag) }
-    DICT: Dict[str, ErrorFormTuple] = dict()
-
-    @staticmethod
-    def contains(word: str) -> bool:
+    def contains(self, word: str) -> bool:
         """Check whether the word form is in the error forms dictionary,
         either in its original casing or in a lower case form"""
-        d = CDErrorForms.DICT
+        d = self.DICT
         if word.islower():
             return word in d
         return word in d or word.lower() in d
 
-    @staticmethod
-    def add(wrong_form: str, meaning: ErrorFormTuple) -> None:
-        CDErrorForms.DICT[wrong_form] = meaning
+    def add(self, wrong_form: str, meaning: ErrorFormTuple) -> None:
+        self.DICT[wrong_form] = meaning
 
-    @staticmethod
-    def get_lemma(wrong_form: str) -> str:
-        return CDErrorForms.DICT[wrong_form][0]
+    def get_lemma(self, wrong_form: str) -> str:
+        return self.DICT[wrong_form][0]
 
-    @staticmethod
-    def get_correct_form(wrong_form: str) -> str:
+    def get_correct_form(self, wrong_form: str) -> str:
         """Return a corrected form of the given word, attempting
         to emulate the lower/upper/title case of the word"""
         # First, try the original casing of the wrong form
-        c = CDErrorForms.DICT.get(wrong_form)
+        c = self.DICT.get(wrong_form)
         if c is not None:
             # Found it: we're done
             return c[1]
         # Lookup a lower case version
-        c = CDErrorForms.DICT.get(wrong_form.lower())
+        c = self.DICT.get(wrong_form.lower())
         if c is None:
             # Not found: can't correct
             return wrong_form
@@ -459,33 +452,29 @@ class CDErrorForms:
             return form.upper()
         return form
 
-    @staticmethod
-    def get_id(wrong_form: str) -> int:
-        return CDErrorForms.DICT[wrong_form][2]
+    def get_id(self, wrong_form: str) -> int:
+        return self.DICT[wrong_form][2]
 
-    @staticmethod
-    def get_category(wrong_form: str) -> str:
-        return CDErrorForms.DICT[wrong_form][3]
+    def get_category(self, wrong_form: str) -> str:
+        return self.DICT[wrong_form][3]
 
-    @staticmethod
-    def get_tag(wrong_form: str) -> str:
-        return CDErrorForms.DICT[wrong_form][4]
+    def get_tag(self, wrong_form: str) -> str:
+        return self.DICT[wrong_form][4]
 
 
 class Morphemes:
+    def __init__(self) -> None:
+        # dict { morpheme : [ preferred PoS ] }
+        self.BOUND_DICT: Dict[str, List[str]] = {}
+        # dict { morpheme : [ excluded PoS ] }
+        self.FREE_DICT: Dict[str, List[str]] = {}
 
-    # dict { morpheme : [ preferred PoS ] }
-    BOUND_DICT: Dict[str, List[str]] = {}
-    # dict { morpheme : [ excluded PoS ] }
-    FREE_DICT: Dict[str, List[str]] = {}
-
-    @staticmethod
-    def add(morph: str, boundlist: List[str], freelist: List[str]) -> None:
+    def add(self, morph: str, boundlist: List[str], freelist: List[str]) -> None:
         if not boundlist:
             raise ConfigError("A definition of allowed PoS is necessary with morphemes")
-        Morphemes.BOUND_DICT[morph] = boundlist
+        self.BOUND_DICT[morph] = boundlist
         # The freelist may be empty
-        Morphemes.FREE_DICT[morph] = freelist
+        self.FREE_DICT[morph] = freelist
 
 
 class Ritmyndir:
@@ -493,127 +482,159 @@ class Ritmyndir:
     # dict { wrong_word_form : (lemma, id, cat, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg) }
     # þurrð;10963;kvk;þurðar;þurrðar;EFET;0;URE;;;;1745-1745;KLIM
     # þurrka;425063;so;þurkaði;þurrkaði;;4;VILLA;R4RR;;;;SKOLAVERK
-    DICT: Dict[str, RitmyndirTuple] = dict()
+    def __init__(self):
+        self.DICT: Dict[str, RitmyndirTuple] = dict()
 
-    @staticmethod
-    def contains(word: str) -> bool:
+    def contains(self, word: str) -> bool:
         """Check whether the word form is in the Ritmyndir dictionary"""
-        d = Ritmyndir.DICT
-        return word in d or word.lower() in d
+        return word in self.DICT or word.lower() in self.DICT
 
-    @staticmethod
-    def get_lemma(wrong_form: str) -> Optional[str]:
-        return Ritmyndir.get_entry(wrong_form, 0)
+    def get_lemma(self, wrong_form: str) -> Optional[str]:
+        return self.get_entry(wrong_form, 0)
 
-    @staticmethod
-    def get_id(wrong_form: str) -> Optional[int]:
-        return Ritmyndir.get_entry(wrong_form, 1)
+    def get_id(self, wrong_form: str) -> Optional[int]:
+        return self.get_entry(wrong_form, 1)
 
-    @staticmethod
-    def get_cat(wrong_form: str) -> str:
-        return Ritmyndir.get_entry(wrong_form, 2)
+    def get_cat(self, wrong_form: str) -> str:
+        return self.get_entry(wrong_form, 2)
 
-    @staticmethod
-    def get_correct_form(wrong_form: str) -> str:
-        return Ritmyndir.get_entry(wrong_form, 3)
+    def get_correct_form(self, wrong_form: str) -> str:
+        return self.get_entry(wrong_form, 3)
 
-    @staticmethod
-    def get_tag(wrong_form: str) -> str:
-        return Ritmyndir.get_entry(wrong_form, 4)
+    def get_tag(self, wrong_form: str) -> str:
+        return self.get_entry(wrong_form, 4)
 
-    @staticmethod
-    def get_eink(wrong_form: str) -> int:
-        eink = Ritmyndir.get_entry(wrong_form, 3)
+    def get_eink(self, wrong_form: str) -> int:
+        eink = self.get_entry(wrong_form, 3)
         if not eink:
             eink = 1
         return eink
 
-    @staticmethod
-    def get_malsnid(wrong_form: str) -> str:
-        return Ritmyndir.get_entry(wrong_form, 6).split(",")[0]
+    def get_malsnid(self, wrong_form: str) -> str:
+        return self.get_entry(wrong_form, 6).split(",")[0]
 
-    @staticmethod
-    def get_stafs(wrong_form: str) -> str:
-        return Ritmyndir.get_entry(wrong_form, 7).split(",")[0]
+    def get_stafs(self, wrong_form: str) -> str:
+        return self.get_entry(wrong_form, 7).split(",")[0]
 
-    @staticmethod
-    def get_aslatt(wrong_form: str) -> str:
-        return Ritmyndir.get_entry(wrong_form, 8).split(",")[0]
+    def get_aslatt(self, wrong_form: str) -> str:
+        return self.get_entry(wrong_form, 8).split(",")[0]
 
-    @staticmethod
-    def get_beyg(wrong_form: str) -> str:
-        return Ritmyndir.get_entry(wrong_form, 9).split(",")[0]
+    def get_beyg(self, wrong_form: str) -> str:
+        return self.get_entry(wrong_form, 9).split(",")[0]
 
-    @staticmethod
-    def get_code(wrong_form: str) -> str:
-        code = Ritmyndir.get_stafs(wrong_form)
+    def get_code(self, wrong_form: str) -> str:
+        code = self.get_stafs(wrong_form)
         if not code:
-            code = Ritmyndir.get_aslatt(wrong_form)
+            code = self.get_aslatt(wrong_form)
         if not code:
-            code = Ritmyndir.get_beyg(wrong_form)
+            code = self.get_beyg(wrong_form)
         if not code:
-            code = Ritmyndir.get_malsnid(wrong_form)
+            code = self.get_malsnid(wrong_form)
         if not code:
-            code = R_EINKUNN[Ritmyndir.get_eink(wrong_form)]
+            code = R_EINKUNN[self.get_eink(wrong_form)]
         if not code:
             code = "R001"
         return code
 
-    @staticmethod
-    def get_entry(wrong_form: str, index: int) -> Any:
-        entry = Ritmyndir.DICT.get(wrong_form, Ritmyndir.DICT.get(wrong_form.lower()))
+    def get_entry(self, wrong_form: str, index: int) -> Any:
+        entry = self.DICT.get(wrong_form, self.DICT.get(wrong_form.lower()))
         return entry[index] if entry else None
 
-    @staticmethod
-    def add(wrong_form: str, details: RitmyndirTuple) -> None:
+    def add(self, wrong_form: str, details: RitmyndirTuple) -> None:
         # TODO Same ritmynd can occur multiple times in the data from different references, how to handle?
         # TODO Also check if the same ritmynd has many different corrections in the data,
         # so we don't just overwrite former values. The DICT entries can be a list of corrections, using defaultdict()
-        Ritmyndir.DICT[wrong_form] = details
+        self.DICT[wrong_form] = details
 
 
 class RitmyndirDetails:
-    # "Ritmyndir error code" : ("ritregla/spelling rule", "category", "other detail" ) }
-    DICT: Dict[str, DetailsTuple] = dict()
+    def __init__(self) -> None:
+        # "Ritmyndir error code" : ("ritregla/spelling rule", "category", "other detail" ) }
+        self.DICT: Dict[str, DetailsTuple] = dict()
 
-    @staticmethod
-    def add(code: str, details: DetailsTuple) -> None:
-        RitmyndirDetails.DICT[code] = details
+    def add(self, code: str, details: DetailsTuple) -> None:
+        self.DICT[code] = details
 
 
 class IecNonwords:
-    # Dictionary structure: dict { wrong_word : (tuple of right words) }
-    DICT: Dict[str, Tuple[str, ...]] = dict()
+    def __init__(self) -> None:
+        # Dictionary structure: dict { wrong_word : (tuple of right words) }
+        self.DICT: Dict[str, Tuple[str, ...]] = dict()
 
-    @staticmethod
-    def add(word: str, corr: Tuple[str, ...]) -> None:
-        if word in IecNonwords.DICT:
+    def add(self, word: str, corr: Tuple[str, ...]) -> None:
+        if word in self.DICT:
             # Happens in the data, just skip it
             # raise ConfigError(
             #    "Multiple definition of '{0}' in IEC nonwords data".format(word)
             # )
             return
-        IecNonwords.DICT[word] = corr
+        self.DICT[word] = corr
 
 
 class Icesquer:
-    # Dictionary structure: dict { wrong_word : (tuple of right words) }
-    DICT: Dict[str, Tuple[str, ...]] = dict()
+    def __init__(self) -> None:
+        # Dictionary structure: dict { wrong_word : (tuple of right words) }
+        self.DICT: Dict[str, Tuple[str, ...]] = dict()
 
-    @staticmethod
-    def add(word: str, corr: Tuple[str, ...]) -> None:
-        if word in Icesquer.DICT:
+    def add(self, word: str, corr: Tuple[str, ...]) -> None:
+        if word in self.DICT:
             # Happens in the data, just skip it
             # raise ConfigError(
             #    "Multiple definition of '{0}' in IEC nonwords data".format(word)
             # )
             return
-        Icesquer.DICT[word] = corr
+        self.DICT[word] = corr
+
+
+class WrongFormers:
+    def __init__(self) -> None:
+        # Dictionary structure: dict { wrong_word : right_word }
+        self.DICT: Dict[str, Tuple[str, ...]] = dict()
+
+    def add(self, word: str, corr: Tuple[str, ...]) -> None:
+        if word in self.DICT:
+            # Happens in the data, just skip it
+            return
+        self.DICT[word] = corr
+
+
+class WrongFormersCID:
+    def __init__(self) -> None:
+        # Dictionary structure: dict { wrong_word : right_word }
+        self.DICT: Dict[str, Tuple[str, ...]] = dict()
+
+    def add(self, word: str, corr: Tuple[str, ...]) -> None:
+        if word in self.DICT:
+            # Happens in the data, just skip it
+            return
+        self.DICT[word] = corr
 
 
 class Settings:
 
     """Global settings"""
+
+    def __init__(self):
+        self.allowed_multiples = AllowedMultiples()
+        self.wrong_compounds = WrongCompounds()
+        self.split_compounds = SplitCompounds()
+        self.unique_errors = UniqueErrors()
+        self.multiword_errors = MultiwordErrors()
+        self.taboo_words = TabooWords()
+        self.suggestions = Suggestions()
+        self.capitalization_errors = CapitalizationErrors()
+        self.ow_forms = OwForms()
+        self.cid_error_forms = CIDErrorForms()
+        self.cd_error_forms = CDErrorForms()
+        self.morphemes = Morphemes()
+        self.ritmyndir = Ritmyndir()
+        self.ritmyndir_details = RitmyndirDetails()
+        self.iec_nonwords = IecNonwords()
+        self.icesquer = Icesquer()
+        self.tone_of_voice_words = ToneOfVoiceWords()
+        self.tone_of_voice_patterns = ToneOfVoicePatterns()
+        self.wrong_formers = WrongFormers()
+        self.wrong_formers_cid = WrongFormersCID()
 
     _lock = threading.Lock()
     loaded = False
@@ -621,8 +642,7 @@ class Settings:
 
     # Configuration settings from the GreynirCorrect.conf file
 
-    @staticmethod
-    def _handle_settings(s: str) -> None:
+    def _handle_settings(self, s: str) -> None:
         """Handle config parameters in the settings section"""
         a: List[str] = s.lower().split("=", maxsplit=1)
         par = a[0].strip().lower()
@@ -635,22 +655,20 @@ class Settings:
         except ValueError:
             raise ConfigError("Invalid parameter value: {0} = {1}".format(par, val))
 
-    @staticmethod
-    def _handle_allowed_multiples(s: str) -> None:
+    def _handle_allowed_multiples(self, s: str) -> None:
         """Handle config parameters in the allowed_multiples section"""
         assert s
         if len(s.split()) != 1:
             raise ConfigError(
                 "Only one word per line allowed in allowed_multiples section"
             )
-        if s in AllowedMultiples.SET:
+        if s in self.allowed_multiples.SET:
             raise ConfigError(
                 "'{0}' is repeated in allowed_multiples section".format(s)
             )
-        AllowedMultiples.add(s)
+        self.allowed_multiples.add(s)
 
-    @staticmethod
-    def _handle_wrong_compounds(s: str) -> None:
+    def _handle_wrong_compounds(self, s: str) -> None:
         """Handle config parameters in the wrong_compounds section"""
         a = s.lower().split(",", maxsplit=1)
         if len(a) != 2:
@@ -667,18 +685,16 @@ class Settings:
             raise ConfigError(
                 "Multiple words not allowed before comma in wrong_compounds section"
             )
-        WrongCompounds.add(word, tuple(parts))
+        self.wrong_compounds.add(word, tuple(parts))
 
-    @staticmethod
-    def _handle_split_compounds(s: str) -> None:
+    def _handle_split_compounds(self, s: str) -> None:
         """Handle config parameters in the split_compounds section"""
         parts = s.split()
         if len(parts) != 2:
             raise ConfigError("Missing word part(s) in split_compounds section")
-        SplitCompounds.add(parts[0], parts[1])
+        self.split_compounds.add(parts[0], parts[1])
 
-    @staticmethod
-    def _handle_unique_errors(s: str) -> None:
+    def _handle_unique_errors(self, s: str) -> None:
         """Handle config parameters in the unique_errors section"""
         a = s.lower().split(",", maxsplit=1)
         if len(a) != 2:
@@ -708,15 +724,13 @@ class Settings:
             raise ConfigError(
                 "Multiple words not allowed before the comma in unique_errors section"
             )
-        UniqueErrors.add(word, corr_t)
+        self.unique_errors.add(word, corr_t)
 
-    @staticmethod
-    def _handle_capitalization_errors(s: str) -> None:
+    def _handle_capitalization_errors(self, s: str) -> None:
         """Handle config parameters in the capitalization_errors section"""
-        CapitalizationErrors.add(s)
+        self.capitalization_errors.add(s)
 
-    @staticmethod
-    def _handle_taboo_words(s: str) -> None:
+    def _handle_taboo_words(self, s: str) -> None:
         """Handle config parameters in the taboo_words section"""
         # Start by parsing explanation string off the end (right hand side), if present
         lquote = s.find('"')
@@ -747,24 +761,64 @@ class Settings:
             raise ConfigError(
                 "Suggested replacement(s) should include a word category (_xx)"
             )
-        TabooWords.add(taboo, replacement, explanation)
+        self.taboo_words.add(taboo, replacement, explanation)
 
-    @staticmethod
-    def _handle_suggestions(s: str) -> None:
+    def _handle_tone_of_voice_words(self, s: str) -> None:
+        """Handle config parameters in the tone_of_voice section."""
+        # Start by parsing explanation string off the end (right hand side), if present
+        lquote = s.find('"')
+        rquote = s.rfind('"')
+        if (lquote >= 0) != (rquote >= 0):
+            raise ConfigError(
+                "Explanation string for a word should be enclosed in double quotes"
+            )
+        if lquote >= 0:
+            # Obtain explanation from within quotes
+            explanation = s[lquote + 1 : rquote].strip()
+            s = s[:lquote].rstrip()
+        else:
+            # No explanation
+            explanation = ""
+        if not s:
+            raise ConfigError("Expected a word to flag and a suggested replacement")
+        a = s.lower().split()
+        if len(a) > 2:
+            raise ConfigError("Expected a word to flag and a suggested replacement")
+        flagged_word = a[0].strip()
+        if len(a) == 2:
+            replacement = a[1].strip()
+        else:
+            replacement = flagged_word
+        # Check all replacement words, which are separated by slashes '/'
+        if any(r.count("_") != 1 for r in replacement.split("/")):
+            raise ConfigError(
+                "Suggested replacement(s) should include a word category (_xx)"
+            )
+        self.tone_of_voice_words.add(flagged_word, replacement, explanation)
+
+    def _handle_tone_of_voice_patterns(self, s: str) -> None:
+        """Handle module path for external patterns."""
+        # the string includes quotes, let's remove them
+        p = s.split("=")[1].strip().strip('"')
+        # Should only be a path to a python file
+        if not os.path.exists(p):
+            raise ConfigError("Not a valid path. Expected a path to a Python file")
+        self.tone_of_voice_patterns.add(p)
+
+    def _handle_suggestions(self, s: str) -> None:
         """Handle config parameters in the suggestions section"""
         a = s.lower().split()
         if len(a) < 2:
             raise ConfigError(
-                "Expected bad word and at least one suggested replacement"
+                "Expected flagged word and at least one suggested replacement"
             )
         if any(w.count("_") != 1 for w in a[1:]):
             raise ConfigError(
                 "Suggested replacements should include word category (_xx)"
             )
-        Suggestions.add(a[0].strip(), [w.strip() for w in a[1:]])
+        self.suggestions.add(a[0].strip(), [w.strip() for w in a[1:]])
 
-    @staticmethod
-    def _handle_multiword_errors(s: str) -> None:
+    def _handle_multiword_errors(self, s: str) -> None:
         """Handle config parameters in the multiword_errors section"""
         a = s.lower().split("$error", maxsplit=1)
         if len(a) != 2:
@@ -777,10 +831,9 @@ class Settings:
             raise ConfigError("Incomplete error specification for multiword phrase")
         if error[0] != "(" or error[-1] != ")":
             raise ConfigError("Error specification should be enclosed in parentheses")
-        MultiwordErrors.add(phrase, error[1:-1])
+        self.multiword_errors.add(phrase, error[1:-1])
 
-    @staticmethod
-    def _handle_ow_forms(s: str) -> None:
+    def _handle_ow_forms(self, s: str) -> None:
         """Handle config parameters in the ow_forms section"""
         split = s.strip().split(";")
         if len(split) != 6:
@@ -800,10 +853,9 @@ class Settings:
             split[4].strip(),  # Category (ordfl)
             split[5].strip(),  # Tag (beyging)
         )
-        OwForms.add(wrong_form, meaning)
+        self.ow_forms.add(wrong_form, meaning)
 
-    @staticmethod
-    def _handle_error_forms(s: str) -> None:
+    def _handle_error_forms(self, s: str) -> None:
         """Handle config parameters in the error_forms section"""
         split = s.strip().split(";")
         if len(split) != 7:
@@ -825,14 +877,13 @@ class Settings:
         )
         etype = split[6].strip()
         if etype == "cid":
-            CIDErrorForms.add(wrong_form, meaning)  # context-independent errors
+            self.cid_error_forms.add(wrong_form, meaning)  # context-independent errors
         elif etype == "cd":
-            CDErrorForms.add(wrong_form, meaning)  # context-dependent errors
+            self.cd_error_forms.add(wrong_form, meaning)  # context-dependent errors
         else:
             raise ConfigError("Wrong error type given, expected 'cid' or 'cd'")
 
-    @staticmethod
-    def _handle_morphemes(s: str) -> None:
+    def _handle_morphemes(self, s: str) -> None:
         """Process the contents of the [morphemes] section"""
         freelist: List[str] = []
         boundlist: List[str] = []
@@ -852,10 +903,9 @@ class Settings:
                     raise ConfigError(
                         "Attachment specification should start with '+' or '-'"
                     )
-        Morphemes.add(m, boundlist, freelist)
+        self.morphemes.add(m, boundlist, freelist)
 
-    @staticmethod
-    def _handle_ritmyndir(s: str) -> None:
+    def _handle_ritmyndir(self, s: str) -> None:
         """Handle data from Ritmyndir in Stórasnið in BÍN/DIM"""
         split = s.strip().split(";")
         if len(split) != 13:
@@ -886,10 +936,9 @@ class Settings:
             split[9].strip(),  # aslatt
             split[10].strip(),  # beyg
         )
-        Ritmyndir.add(wrong_form, meaning)
+        self.ritmyndir.add(wrong_form, meaning)
 
-    @staticmethod
-    def _handle_ritmyndir_details(s: str) -> None:
+    def _handle_ritmyndir_details(self, s: str) -> None:
         """Handle data on Ritmyndir categories, including references to the Icelandic Standards"""
         # "Ritmyndir error code" : ("ritregla/spelling rule", "category", "other detail" )
         split = s.split(":", maxsplit=1)
@@ -898,10 +947,9 @@ class Settings:
         rule = dsplit[0].strip().strip('"')
         cat = dsplit[1].strip().strip('"')
         det = dsplit[2].strip().strip('"')
-        RitmyndirDetails.DICT[code] = (rule, cat, det)
+        self.ritmyndir_details.DICT[code] = (rule, cat, det)
 
-    @staticmethod
-    def _handle_iec_nonwords(s: str) -> None:
+    def _handle_iec_nonwords(self, s: str) -> None:
         """Handle config parameters in the Icelandic Error Corpus Nonwords"""
         a = s.lower().split("\t")
         if len(a) != 2:
@@ -927,10 +975,9 @@ class Settings:
             # raise ConfigError(
             #    "Multiple words not allowed before the comma in unique_errors section"
             # )
-        IecNonwords.add(word, corr_t)
+        self.iec_nonwords.add(word, corr_t)
 
-    @staticmethod
-    def _handle_icesquer(s: str) -> None:
+    def _handle_icesquer(self, s: str) -> None:
         """Handle config parameters in the Icelandic Error Corpus Nonwords"""
         a = s.lower().split("\t")
         if len(a) != 2:
@@ -956,17 +1003,42 @@ class Settings:
             # raise ConfigError(
             #    "Multiple words not allowed before the comma in unique_errors section"
             # )
-        Icesquer.add(word, corr_t)
+        self.icesquer.add(word, corr_t)
 
-    @staticmethod
-    def read(fname: str) -> None:
+    def _handle_wrong_formers(self, s: str) -> None:
+        """Handle config parameters in the wrong_formers section"""
+        a = s.lower().split(",", maxsplit=1)
+        if len(a) != 2:
+            raise ConfigError("Expected comma between the word and its correction")
+        word = a[0].strip().strip('"')
+        correction = a[1].strip().strip('"')
+        if not word:
+            raise ConfigError("Expected word before the comma in wrong_formers section")
+        if not correction:
+            raise ConfigError("Expected word after the comma in wrong_formers section")
+        if len(word.split()) != 1 or len(correction.split()) != 1:
+            raise ConfigError("Expected one word on each side in wrong_formers")
+        self.wrong_formers.add(word, correction)
+
+    def _handle_wrong_formers_cid(self, s: str) -> None:
+        """Handle config parameters in the wrong_formers section"""
+        a = s.lower().split(",", maxsplit=1)
+        if len(a) != 2:
+            raise ConfigError("Expected comma between the word and its correction")
+        word = a[0].strip().strip('"')
+        correction = a[1].strip().strip('"')
+        if not word:
+            raise ConfigError("Expected word before the comma in wrong_formers section")
+        if not correction:
+            raise ConfigError("Expected word after the comma in wrong_formers section")
+        if len(word.split()) != 1 or len(correction.split()) != 1:
+            raise ConfigError("Expected one word on each side in wrong_formers")
+        self.wrong_formers_cid.add(word, correction)
+
+    def read(self, fname: str, external: bool = False) -> None:
         """Read configuration file"""
 
         with Settings._lock:
-
-            if Settings.loaded or UniqueErrors.DICT or AllowedMultiples.SET:
-                return
-
             CONFIG_HANDLERS = {
                 "settings": Settings._handle_settings,
                 "allowed_multiples": Settings._handle_allowed_multiples,
@@ -975,6 +1047,8 @@ class Settings:
                 "unique_errors": Settings._handle_unique_errors,
                 "capitalization_errors": Settings._handle_capitalization_errors,
                 "taboo_words": Settings._handle_taboo_words,
+                "tone_of_voice_words": Settings._handle_tone_of_voice_words,
+                "tone_of_voice_patterns": Settings._handle_tone_of_voice_patterns,
                 "suggestions": Settings._handle_suggestions,
                 "multiword_errors": Settings._handle_multiword_errors,
                 "morphemes": Settings._handle_morphemes,
@@ -986,12 +1060,17 @@ class Settings:
                 "icesquer": Settings._handle_icesquer,
                 "ritmyndir": Settings._handle_ritmyndir,
                 "ritmyndir_details": Settings._handle_ritmyndir_details,
+                "wrong_formers": Settings._handle_wrong_formers,
+                "wrong_formers_ci": Settings._handle_wrong_formers_cid,
             }
             handler = None  # Current section handler
 
             rdr = None
+
             try:
-                rdr = LineReader(fname, package_name=__name__)
+                # If an external path is given, use it to read the file
+                package_name = None if external else __name__
+                rdr = LineReader(fname, package_name=package_name)
                 for s in rdr.lines():
                     # Ignore comments
                     ix = s.find("#")
@@ -1012,7 +1091,7 @@ class Settings:
                         raise ConfigError("No handler for config line '{0}'".format(s))
                     # Call the correct handler depending on the section
                     try:
-                        handler(s)
+                        handler(self, s)
                     except ConfigError as e:
                         # Add file name and line number information to the exception
                         # if it's not already there

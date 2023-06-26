@@ -7,7 +7,6 @@ $ python diffchecker.py prufa.txt
 
 """
 from reynir_correct.wrappers import check_errors
-
 from typing import (
     Iterator,
     Iterable,
@@ -47,8 +46,8 @@ def main() -> None:
     options["all_errors"] = True
     # options["input"] = open("prufa.txt", "r")
     options["one_sent"] = False
-    # options["generate_suggestion_list"] = True
-    options["ignore_comments"] = False  # Only used here
+    options["generate_suggestion_list"] = True
+    options["ignore_comments"] = True  # Only used here
     options["generate_suggestion_list"] = False
     options["annotate_unparsed_sentences"] = True
     options["suppress_suggestions"] = False
@@ -57,6 +56,10 @@ def main() -> None:
     options["spaced"] = False
     options["print_all"] = True
     options["ignore_rules"] = set()
+    options["suggest_not_correct"] = False
+    options["extra_config"] = "config/ExtraWords.conf"
+    options["extra_tone_of_voice"] = True
+
     args = parser.parse_args()
     infile = args.infile
     if infile is sys.stdin and sys.stdin.isatty():

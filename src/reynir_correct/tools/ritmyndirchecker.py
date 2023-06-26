@@ -19,12 +19,13 @@ IGNORE = set(["GAM", "SO-ÞGF4ÞF", "OSB-BMYND", "SJALD", "STAD", "AV"])
 
 
 def main() -> None:
-
+    ritmyndir = Ritmyndir()
+    ritmyndir_details = RitmyndirDetails()
     allcodes: Set[str] = set()
-    for entry in Ritmyndir.DICT:
-        allcodes.add(Ritmyndir.get_code(entry))
+    for entry in ritmyndir.DICT:
+        allcodes.add(ritmyndir.get_code(entry))
     detcodes: Set[str] = set()
-    for keycode in RitmyndirDetails.DICT:
+    for keycode in ritmyndir_details.DICT:
         detcodes.add(keycode)
 
     # Compare

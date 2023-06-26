@@ -35,9 +35,16 @@
 """
 
 from typing import Iterable, cast
-import reynir_correct as rc
+import reynir_correct
 import tokenizer
 from reynir_correct.wrappers import test_spelling as check_errors
+import pytest
+
+
+# Global settings object for the tests
+settings = reynir_correct.Settings()
+settings.read("../reynir_correct/config/GreynirCorrect.conf")
+gc = reynir_correct.GreynirCorrect(settings=settings)
 
 
 def dump(tokens):
@@ -59,7 +66,9 @@ def gen_to_string(g):
 
 
 def roundtrip(s: str) -> str:
-    return rc.detokenize(cast(Iterable[tokenizer.Tok], rc.tokenize(s)))
+    return reynir_correct.detokenize(
+        cast(Iterable[tokenizer.Tok], reynir_correct.tokenize(s))
+    )
 
 
 def check(p):
@@ -71,7 +80,7 @@ def check(p):
     options[
         "print_all"
     ] = True  # If input is many sentences, one string (and token list) for all
-    return check_errors(**options)
+    return check_errors(gc.settings, **options)
 
 
 def test_correct(verbose=False):

@@ -62,6 +62,12 @@ Other categories currently covered are:
 +------------+----------------------------------------------------------------------------------------------+
 || ``U001``  |  Unknown word. Nothing more is known. Cannot be corrected, only pointed out.                 |
 +------------+----------------------------------------------------------------------------------------------+
+|| ``V001``  |  Single words not conforming to a particular tone of voice, with suggested                   |
+||           |  replacements.                                                                               |
++------------+----------------------------------------------------------------------------------------------+
+|| ``V002``  |  Phrases or grammatical patterns not conforming to a particular tone of voice, with          |
+||           |  suggested replacements.                                                                     |
++------------+----------------------------------------------------------------------------------------------+
 || ``W001``  |  Spelling suggestion. Replacement suggested.                                                 |
 +------------+----------------------------------------------------------------------------------------------+
 || ``W002``  |  Spelling suggestion. A list of suggestions is given.                                        |

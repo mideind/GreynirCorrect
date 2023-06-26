@@ -53,7 +53,6 @@ from typing import (
     cast,
 )
 
-from threading import Lock
 from functools import partial
 import os
 import json
@@ -69,11 +68,10 @@ from reynir.bintokenizer import ALL_CASES
 from reynir_correct.errtokenizer import emulate_case
 
 from .annotation import Annotation
-from reynir_correct.errtokenizer import emulate_case
 
 
 # The types involved in pattern processing
-AnnotationFunction = Callable[["PatternMatcher", SimpleTree], None]
+AnnotationFunction = Callable[[SimpleTree], None]
 PatternTuple = Tuple[
     Union[str, Set[str], FrozenSet[str]], str, AnnotationFunction, Optional[ContextDict]
 ]
@@ -161,24 +159,6 @@ class PatternMatcher:
     # * Match pattern expression, to be passed to match_pattern()
     # * Annotation function, called for each match
     # * Context dictionary to be passed to match_pattern()
-
-    PATTERNS: List[PatternTuple] = []
-
-    _LOCK = Lock()
-
-    ctx_af: ContextDict = cast(ContextDict, None)
-    ctx_að: ContextDict = cast(ContextDict, None)
-    ctx_noun_af: ContextDict = cast(ContextDict, None)
-    ctx_noun_af_obj: ContextDict = cast(ContextDict, None)
-    ctx_verb_01: ContextDict = cast(ContextDict, None)
-    ctx_verb_02: ContextDict = cast(ContextDict, None)
-    ctx_noun_að: ContextDict = cast(ContextDict, None)
-    ctx_subjsing: ContextDict = cast(ContextDict, None)
-    ctx_place_names: ContextDict = cast(ContextDict, None)
-    ctx_uncertain_verbs: ContextDict = cast(ContextDict, None)
-    ctx_confident_verbs: ContextDict = cast(ContextDict, None)
-    ctx_dir_loc: ContextDict = cast(ContextDict, None)
-
     def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         # Annotation list
         self._ann = ann
@@ -188,16 +168,27 @@ class PatternMatcher:
         self._tokens = sent.tokens
         # Terminal node list
         self._terminal_nodes = sent.terminal_nodes
-        # Avoid race conditions in multi-threaded scenarios
-        with self._LOCK:
-            if not self.PATTERNS:
-                # First instance: create the class-wide pattern list
-                self.create_patterns()
 
-    @classmethod
-    def get_wordform(
-        cls, word: str, lemma: str, cat: str, variants: Iterable[str]
-    ) -> str:
+        self.PATTERNS: List[PatternTuple] = []
+
+        self.ctx_af: ContextDict = cast(ContextDict, None)
+        self.ctx_að: ContextDict = cast(ContextDict, None)
+        self.ctx_noun_af: ContextDict = cast(ContextDict, None)
+        self.ctx_noun_af_obj: ContextDict = cast(ContextDict, None)
+        self.ctx_verb_01: ContextDict = cast(ContextDict, None)
+        self.ctx_verb_02: ContextDict = cast(ContextDict, None)
+        self.ctx_noun_að: ContextDict = cast(ContextDict, None)
+        self.ctx_subjsing: ContextDict = cast(ContextDict, None)
+        self.ctx_place_names: ContextDict = cast(ContextDict, None)
+        self.ctx_uncertain_verbs: ContextDict = cast(ContextDict, None)
+        self.ctx_confident_verbs: ContextDict = cast(ContextDict, None)
+        self.ctx_dir_loc: ContextDict = cast(ContextDict, None)
+
+        # First instance: create the class-wide pattern list
+        self.create_patterns()
+
+    @staticmethod
+    def get_wordform(word: str, lemma: str, cat: str, variants: Iterable[str]) -> str:
         """Get correct wordform from BinPackage,
         given a set of variants"""
         realvars: Union[Set[str], Iterable[str]]
@@ -1376,7 +1367,7 @@ class PatternMatcher:
         if "þt" in so.all_variants:
             # The past tense behaves differently, much less likely to be an error
             return
-        suggest = self.get_wordform(
+        suggest = PatternMatcher.get_wordform(
             realso.text.lower(), realso.lemma, realso.cat, so.all_variants
         )
         if not suggest:
@@ -1564,7 +1555,7 @@ class PatternMatcher:
         variants = set(so.all_variants) - {"vh"}
         variants.add("fh")
         so_text = so.text.lower()
-        suggest = self.get_wordform(so_text, so.lemma, so.cat, variants)
+        suggest = PatternMatcher.get_wordform(so_text, so.lemma, so.cat, variants)
         if suggest == so_text:
             return
         if not suggest:
@@ -1612,7 +1603,7 @@ class PatternMatcher:
         variants = set(so.all_variants) - {"fh"}
         variants.add("vh")
         so_text = so.text.lower()
-        suggest = self.get_wordform(so_text, so.lemma, so.cat, variants)
+        suggest = PatternMatcher.get_wordform(so_text, so.lemma, so.cat, variants)
         if not suggest or suggest == so_text:
             return
         text = (
@@ -1712,7 +1703,7 @@ class PatternMatcher:
         variants = set(so.all_variants) - {"et"}
         variants.add("ft")
         so_text = so.text.lower()
-        suggest = self.get_wordform(so_text, so.lemma, so.cat, variants)
+        suggest = PatternMatcher.get_wordform(so_text, so.lemma, so.cat, variants)
         if not suggest or suggest == so_text:
             return
         text = (
@@ -1769,7 +1760,7 @@ class PatternMatcher:
         variants = set(so.all_variants) - {"ft"}
         variants.add("et")
         so_text = so.text.lower()
-        suggest = self.get_wordform(so_text, so.lemma, so.cat, variants)
+        suggest = PatternMatcher.get_wordform(so_text, so.lemma, so.cat, variants)
         if not suggest or suggest == so_text:
             return
         text = (
@@ -1846,18 +1837,16 @@ class PatternMatcher:
             )
         )
 
-    @classmethod
-    def add_pattern(cls, p: PatternTuple) -> None:
+    def add_pattern(self, p: PatternTuple) -> None:
         """Validates and adds a pattern to the class global pattern list"""
         _, pattern, _, ctx = p
         if "%" in pattern:
             assert ctx is not None, "Missing context for pattern with %macro"
         else:
             assert ctx is None, "Unnecessary context given for pattern with no %macro"
-        cls.PATTERNS.append(p)
+        self.PATTERNS.append(p)
 
-    @classmethod
-    def create_patterns(cls) -> None:
+    def create_patterns(self) -> None:
         """Initialize the list of patterns and handling functions"""
 
         # Access the dictionary of verb+preposition attachment errors
@@ -1910,347 +1899,347 @@ class PatternMatcher:
             # Note that we use the own_lemma_mm property instead of own_lemma. This
             # means that the lambda condition matches middle voice stem forms,
             # such as 'dást' instead of 'dá'.
-            cls.ctx_af = {
+            self.ctx_af = {
                 "verb": lambda tree: (
                     tree.own_lemma_mm in verbs_af
                     and not (set(tree.variants) & {"1", "2"})
                 )
             }
             # Catch sentences such as 'Jón leitaði af kettinum'
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     verbs_af,  # Trigger lemma for this pattern
                     'VP > { VP >> { %verb } PP >> { P > { "af" } } }',
-                    cls.wrong_preposition_af,
-                    cls.ctx_af,
+                    self.wrong_preposition_af,
+                    self.ctx_af,
                 )
             )
             # Catch sentences such as 'Vissulega er hægt að brosa af þessu',
             # 'Friðgeir var leitandi af kettinum í allan dag'
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     verbs_af,  # Trigger lemma for this pattern
                     '. > { (NP-PRD | IP-INF) > { VP > { %verb } } PP >> { P > { "af" } } }',
-                    cls.wrong_preposition_af,
-                    cls.ctx_af,
+                    self.wrong_preposition_af,
+                    self.ctx_af,
                 )
             )
             # Catch "Það sem Jón spurði ekki af...", "Jón spyr (ekki) af því."
-            #    cls.add_pattern(
+            #    self.add_pattern(
             #        (
             #            "spyrja",  # Trigger lemma for this pattern
             #            "IP > { VP >> { 'spyrja' } ADVP > { 'af' } }",
-            #            cls.wrong_preposition_af,
-            #            cls.ctx_af,
+            #            self.wrong_preposition_af,
+            #            self.ctx_af,
             #        )
             #    )
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "spyrja",  # Trigger lemma for this pattern
                     "VP > { VP > { 'spyrja' } ADVP > { \"af\" } }",
-                    cls.wrong_preposition_spyrja_af,
+                    self.wrong_preposition_spyrja_af,
                     None,
                 )
             )
             # Catch "Jón spyr af því."
-            #    cls.add_pattern(
+            #    self.add_pattern(
             #        (
             #            "spyrja",  # Trigger lemma for this pattern
             #            "IP > { VP >> { 'spyrja' } PP > { 'af' } }",
-            #            cls.wrong_preposition_af,
+            #            self.wrong_preposition_af,
             #            None,
             #        )
             #    )
             # Catch "...vegna þess að dýr leita af öðrum smærri dýrum."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "leita",  # Trigger lemma for this pattern
                     "VP > { PP >> { 'leita' } PP > 'af' }",
-                    cls.wrong_preposition_af,
+                    self.wrong_preposition_af,
                     None,
                 )
             )
 
             # Catch "Þetta er mesta vitleysa sem ég hef orðið vitni af", "Hún varð vitni af því þegar kúturinn sprakk"
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "vitni",  # Trigger lemma for this pattern
                     "VP > { VP > { ('verða'|'vera') } NP > { \"vitni\" } ADVP > \"af\" }",
-                    cls.wrong_preposition_vitni_af,
+                    self.wrong_preposition_vitni_af,
                     None,
                 )
             )
             # Catch "Hún gerði grín af því.", "Þetta er mesta vitleysa sem ég hef gert grín af.", "...og gerir grín af sjálfum sér."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "grín",  # Trigger lemma for this pattern
                     # "IP",
                     "VP > { NP > { 'grín' } ( PP|ADVP ) > { \"af\" } }",
-                    cls.wrong_preposition_grin_af,
+                    self.wrong_preposition_grin_af,
                     None,
                 )
             )
             # Catch "Hann leiðir (ekki) líkur af því.", "Hann hefur aldrei leitt líkur af því."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
                     "VP > { VP > { 'leiða' } NP > { ('líkur' | 'rök' | 'rak') } PP > { \"af\" } }",
-                    cls.wrong_preposition_leida_af,
+                    self.wrong_preposition_leida_af,
                     None,
                 )
             )
             # Catch "Tíminn markar upphaf af því."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "upphaf",  # Trigger lemma for this pattern
                     "VP > { VP > { 'marka' } NP-OBJ > { 'upphaf' PP > { 'af' } } }",
-                    cls.wrong_preposition_marka_af,
+                    self.wrong_preposition_marka_af,
                     None,
                 )
             )
             # Catch "Það markar ekki upphaf af því."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     frozenset(
                         ("upphafinn", "upphaf")
                     ),  # Trigger lemma for this pattern
                     "VP > { VP > { 'marka' } NP > { ('upphafinn'|'upphaf') } PP > { 'af' } }",
-                    cls.wrong_preposition_marka_af,
+                    self.wrong_preposition_marka_af,
                     None,
                 )
             )
             # Catch "Það markar upphaf af því."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "upphaf",  # Trigger lemma for this pattern
                     "VP > { VP > { VP > { 'marka' } NP-SUBJ > { 'upphaf' } } PP > { 'af' } }",
-                    cls.wrong_preposition_marka_af,
+                    self.wrong_preposition_marka_af,
                     None,
                 )
             )
-            #    cls.add_pattern(
+            #    self.add_pattern(
             #        (
             #            "upphefja",  # Trigger lemma for this pattern
             #            "IP",
-            #            cls.wrong_preposition_marka_af,
+            #            self.wrong_preposition_marka_af,
             #            None,
             #        )
             #    )
             # Catch "Það hefur ekki markað upphafið af því."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "upphefja",  # Trigger lemma for this pattern
                     "VP > { NP > { 'markaður' } VP > { 'upphefja' } PP > { 'af' } }",
-                    cls.wrong_preposition_marka_af,
+                    self.wrong_preposition_marka_af,
                     None,
                 )
             )
             # Catch "Jón leggur hann (ekki) af velli.", "Jón hefur (ekki) lagt hann af velli."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     frozenset(
                         ("völlur", "vell", "velli")
                     ),  # Trigger lemmas for this pattern
                     'VP > { VP > { \'leggja\' } PP > { P > { "af" } NP > { "velli" } } }',
-                    cls.wrong_preposition_leggja_af,
+                    self.wrong_preposition_leggja_af,
                     None,
                 )
             )
             # Catch "Jón kann það (ekki) utan af."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "kunna",  # Trigger lemma for this pattern
                     "VP > { VP > { 'kunna' } ADVP > { 'utan' } ADVP > { 'af' } }",
-                    cls.wrong_preposition_utan_af,
+                    self.wrong_preposition_utan_af,
                     None,
                 )
             )
             # Catch "Honum varð af ósk sinni."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "ósk",  # Trigger lemma for this pattern
                     "(S-MAIN | IP) > { VP > { 'verða' } PP > { 'af' NP > { 'ósk' } } }",
-                    cls.wrong_preposition_verða_af,
+                    self.wrong_preposition_verða_af,
                     None,
                 )
             )
             # Catch "...en varð ekki af ósk sinni."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "ósk",  # Trigger lemma for this pattern
                     "IP > { VP > { VP > { 'verða' } PP > { P > { 'af' } NP > { 'ósk' } } } }",
-                    cls.wrong_preposition_verða_af,
+                    self.wrong_preposition_verða_af,
                     None,
                 )
             )
             # Catch "Ég varð (ekki) uppvís af athæfinu.", "Hann hafði (ekki) orðið uppvís af því."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "uppvís",  # Trigger lemma for this pattern
                     "VP > { VP > { 'verða' } NP > { 'uppvís' } PP > { 'af' } }",
-                    cls.wrong_preposition_uppvis_af,
+                    self.wrong_preposition_uppvis_af,
                     None,
                 )
             )
 
         if verbs_að:
             # Create matching patterns with a context that catches the að/af verbs.
-            cls.ctx_að = {
+            self.ctx_að = {
                 "verb": lambda tree: (
                     tree.own_lemma_mm in verbs_að
                     and not (set(tree.variants) & {"1", "2"})
                 )
             }
             # Catch sentences such as 'Jón heillaðist að kettinum'
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     verbs_að,  # Trigger lemmas for this pattern
                     'VP > { VP >> { %verb } PP >> { P > { "að" } } }',
-                    cls.wrong_preposition_að,
-                    cls.ctx_að,
+                    self.wrong_preposition_að,
+                    self.ctx_að,
                 )
             )
             # Catch sentences such as 'Vissulega er hægt að heillast að þessu'
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     verbs_að,  # Trigger lemma for this pattern
                     '(NP-PRD | IP-INF) > { VP > { %verb } } PP >> { P > { "að" } }',
-                    cls.wrong_preposition_að,
-                    cls.ctx_að,
+                    self.wrong_preposition_að,
+                    self.ctx_að,
                 )
             )
             # Catch "Þetta er fallegasta kona sem ég hef orðið heillaður að"
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "heilla",  # Trigger lemma for this pattern
                     "VP > { VP > [ .* ('verða' | 'vera') ] NP-PRD > [ .* 'heilla' .* ADVP > { \"að\" } ] }",
-                    cls.wrong_preposition_heillaður_að,
+                    self.wrong_preposition_heillaður_að,
                     None,
                 )
             )
             # Catch "Ég hef lengi verið heillaður að henni."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "heilla",  # Trigger lemma for this pattern
                     "NP > { NP >> { 'heilla' } PP > { 'að' } }",
-                    cls.wrong_preposition_heillaður_að,
+                    self.wrong_preposition_heillaður_að,
                     None,
                 )
             )
             # Catch "Ég er (ekki) hluti að heildinni.", "Við höfum öll verið hluti að heildinni."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "hluti",  # Trigger lemma for this pattern
                     "VP > { NP > { 'hluti' } PP > { \"að\" } }",
                     # "VP > { VP > { 'vera' NP-PRD > { 'hluti' } } PP > { 'að' } }",
-                    cls.wrong_preposition_hluti_að,
+                    self.wrong_preposition_hluti_að,
                     None,
                 )
             )
             # Catch "Þeir sögðu að ég hefði verið hluti að heildinni."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "hluti",  # Trigger lemma for this pattern
                     "NP > { 'hluti' PP > { \"að\" } }",
-                    cls.wrong_preposition_hluti_að,
+                    self.wrong_preposition_hluti_að,
                     None,
                 )
             )
             # Catch "Þeir sögðu að ég hefði verið hluti að heildinni."  # Two patterns to catch the same sentence due to variable parsing
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "hluti",  # Trigger lemma for this pattern
                     "VP > { CP >> { 'hluti' } PP > { \"að\" } }",
-                    cls.wrong_preposition_hluti_að,
+                    self.wrong_preposition_hluti_að,
                     None,
                 )
             )
             # Catch "Ég hef (ekki) áhyggjur að honum.", "Ég hef áhyggjur að því að honum líði illa."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "áhyggja",  # Trigger lemma for this pattern
                     "VP > { NP > { 'áhyggja' } PP > { \"að\" } }",
                     # "VP > { VP >> { 'áhyggja' } PP > { 'að' } }",
-                    cls.wrong_preposition_ahyggja_að,
+                    self.wrong_preposition_ahyggja_að,
                     None,
                 )
             )
             # Catch "Ég hafði ekki lagt mikið að mörkum."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     frozenset(("mörk", "mark")),  # Trigger lemmas for this pattern
                     'VP > { VP >> { \'leggja\' } PP > { "að" "mörkum" } }',
-                    cls.wrong_preposition_að_mörkum,
+                    self.wrong_preposition_að_mörkum,
                     None,
                 )
             )
             # Catch "Jón hefur látið gott að sér leiða."
-            # cls.add_pattern(
+            # self.add_pattern(
             #    (
             #        "leiða",  # Trigger lemma for this pattern
             #        "VP > { VP > { 'láta' } PP > { P > \"að\" } VP > { 'leiða' } }",
-            #        cls.wrong_preposition_að_leiða,
+            #        self.wrong_preposition_að_leiða,
             #        None,
             #    )
             # )
             # Catch "Ég lét gott að mér leiða."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
                     'VP > [ .* VP > { \'láta\' } NP ("að mér"|"að þér"|"að sér") \'leiða\']',
-                    cls.wrong_preposition_að_leiða,
+                    self.wrong_preposition_að_leiða,
                     None,
                 )
             )
             # Catch "Ég lét (ekki) gott að mér leiða." (In case of different parse)
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "leiður",  # Trigger lemma for this pattern
                     'VP > [ VP > [ .* \'láta\' .* ] NP > [ .* "gott" .* ] PP > [ "að" NP > [ ("mér"|"þér"|"sér"|"okkur") ] "leiða" ] ]',
-                    cls.wrong_preposition_að_leiða,
+                    self.wrong_preposition_að_leiða,
                     None,
                 )
             )
             # Catch "Hann lét (ekki) gott að sér leiða"
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
                     'VP > [ VP > [ .* \'láta\' .* ] .* NP > [ .* "gott" .* ] PP > [ "að" NP > [ ("mér"|"þér"|"sér"|"okkur") ] ] VP > { \'leiða\' } ]',
-                    cls.wrong_preposition_að_leiða,
+                    self.wrong_preposition_að_leiða,
                     None,
                 )
             )
             # Catch "...lét ég (ekki) gott að mér leiða"
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "leiða",  # Trigger lemma for this pattern
                     'VP > [ VP > [ .* \'láta\' .* ] .* IP > [ NP > [ .* "gott" PP > [ "að" NP > [ ("mér"|"þér"|"sér"|"okkur") ] ] ] VP > { \'leiða\' } ] ]',
-                    cls.wrong_preposition_að_leiða,
+                    self.wrong_preposition_að_leiða,
                     None,
                 )
             )
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     frozenset(
                         ("leiða", "leiður")
                     ),  # Trigger lemma for this pattern (probably a wrong parse)
                     'VP > [ .* \'láta\' .* NP-OBJ > [ .* "gott" .* ("að mér leiða" | "að sér leiða" | "að þér leiða") ] ]',
-                    cls.wrong_preposition_að_leiða,
+                    self.wrong_preposition_að_leiða,
                     None,
                 )
             )
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     frozenset(
                         ("leiða", "leiður")
                     ),  # Trigger lemma for this pattern (probably a wrong parse)
                     'VP > { IP-INF > { "að" "láta" } NP-PRD > { "gott" } PP > [ "að" ( "mér" | "þér" | "sér" ) "leiða" ] }',
-                    cls.wrong_preposition_að_leiða,
+                    self.wrong_preposition_að_leiða,
                     None,
                 )
             )
             # Catch "Hún á/fær/hlýtur (ekki) heiðurinn að þessu.", "Hún hafði (ekki) fengið/hlotið heiðurinn að þessu." ÞA: Including 'eiga' here causes double annotation
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "heiður",  # Trigger lemma for this pattern
                     (
@@ -2260,12 +2249,12 @@ class PatternMatcher:
                         "VP > [ VP-AUX? .* VP > { ( 'fá'|'hljóta' ) } .* NP-OBJ > { 'heiður' } PP > { P > { 'að' } NP } ] "
                         ") "
                     ),
-                    cls.wrong_preposition_heiður_að,
+                    self.wrong_preposition_heiður_að,
                     None,
                 )
             )
             # Catch "Hún á (ekki) mikið/fullt/helling/gommu... að börnum."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "eiga",  # Trigger lemma for this pattern
                     (
@@ -2275,102 +2264,102 @@ class PatternMatcher:
                         "VP > [ VP-AUX? .* VP > { 'eiga' } .* NP-OBJ > { PP > { P > { 'að' } NP } } ] "
                         ") "
                     ),
-                    cls.wrong_preposition_eiga_að,
+                    self.wrong_preposition_eiga_að,
                     None,
                 )
             )
             # Catch "Hún á (ekki) lítið að börnum."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "eiga",  # Trigger lemma for this pattern
                     "VP > { VP > { 'eiga' } ADVP > { 'lítið' } PP > { P > { 'að' } NP } }",
-                    cls.wrong_preposition_eiga_að,
+                    self.wrong_preposition_eiga_að,
                     None,
                 )
             )
             # Catch "Það er (ekki) til mikið að þessu."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "vera",  # Trigger lemma for this pattern
                     "VP > { VP > { 'vera' } NP > { NP >> { 'til' } PP > { 'að' } } }",
-                    cls.wrong_preposition_vera_til_að,
+                    self.wrong_preposition_vera_til_að,
                     None,
                 )
             )
             # Catch "Mikið er til að þessu."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "vera",  # Trigger lemma for this pattern
                     "( S|VP ) > { NP VP > { 'vera' } ADVP > { 'til' } PP > { 'að' } }",
-                    cls.wrong_preposition_vera_til_að,
+                    self.wrong_preposition_vera_til_að,
                     None,
                 )
             )
             # Catch "Ekki er mikið til að þessu."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "vera",  # Trigger lemma for this pattern
                     "VP > { VP > { 'vera' } ADVP > { 'til' } PP > { 'að' } }",
-                    cls.wrong_preposition_vera_til_að,
+                    self.wrong_preposition_vera_til_að,
                     None,
                 )
             )
             # Catch "Hún hefur (ekki) gagn að þessu.", "Hún hefur (ekki) haft gagn að þessu."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "gagn",  # Trigger lemma for this pattern
                     "VP > { NP > { 'gagn' } PP > { \"að\" } }",
-                    cls.wrong_preposition_gagn_að,
+                    self.wrong_preposition_gagn_að,
                     None,
                 )
             )
             # Catch "Hvaða gagn hef ég að þessu?"
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "gagn",  # Trigger lemma for this pattern
                     "S > { NP > { 'gagn' } IP > { VP > { VP > { 'hafa' } PP > { 'að' } } } }",
-                    cls.wrong_preposition_gagn_að,
+                    self.wrong_preposition_gagn_að,
                     None,
                 )
             )
             # Catch "Fréttir bárust (ekki) að slysinu."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "frétt",  # Trigger lemma for this pattern
                     "( IP|VP ) > { NP > { 'frétt' } VP > { PP > { P > { 'að' } } } }",
-                    cls.wrong_preposition_frettir_að,
+                    self.wrong_preposition_frettir_að,
                     None,
                 )
             )
             # Catch "Það bárust (ekki) fréttir að slysinu."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "frétt",  # Trigger lemma for this pattern
                     "NP > { 'frétt' PP > { P > { 'að' } } }",
-                    cls.wrong_preposition_frettir_að,
+                    self.wrong_preposition_frettir_að,
                     None,
                 )
             )
             # Catch "Hætta stafar (ekki) að þessu.", "Hætta hefur (ekki) stafað að þessu."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "stafa",  # Trigger lemma for this pattern
                     "VP > { VP >> { 'stafa' } ( PP|ADVP ) > { 'að' } }",
-                    cls.wrong_preposition_stafa_að,
+                    self.wrong_preposition_stafa_að,
                     None,
                 )
             )
             # Catch "Hún er (ekki) ólétt af sínu þriðja barni.", "Hún hefur (ekki) verið ólétt af sínu þriðja barni."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "óléttur",  # Trigger lemma for this pattern
                     "VP > { NP > { 'óléttur' } PP > { 'af' } }",
-                    cls.wrong_preposition_ólétt_af,
+                    self.wrong_preposition_ólétt_af,
                     None,
                 )
             )
             # Catch "Hún heyrði að lausa starfinu.", "Hún hefur (ekki) heyrt að lausa starfinu."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "heyra",  # Trigger lemma for this pattern
                     "( "
@@ -2378,12 +2367,12 @@ class PatternMatcher:
                     "| "
                     "VP > [ VP > { 'heyra' } .* NP > { PP > { 'að' } } .* ]"
                     ") ",
-                    cls.wrong_preposition_heyra_að,
+                    self.wrong_preposition_heyra_að,
                     None,
                 )
             )
             # Catch "Ég hef (ekki) gaman að henni.", "Ég hef aldrei haft gaman að henni."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "gaman",  # Trigger lemma for this pattern
                     "( "
@@ -2391,26 +2380,26 @@ class PatternMatcher:
                     "| "
                     "VP > [ .* VP > { 'hafa' } .* NP > { 'gaman' PP > { 'að' } } .* ]"
                     ")",
-                    cls.wrong_preposition_hafa_gaman_að,
+                    self.wrong_preposition_hafa_gaman_að,
                     None,
                 )
             )
             # Catch "Ég var valinn að henni.", "Ég hafði (ekki) verið valinn að henni."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "velja",  # Trigger lemma for this pattern
                     "VP > { VP > { 'velja' } PP > { 'að' } }",
                     # "NP-PRD > { NP-PRD > { 'velja' } PP > { 'að' } }",
-                    cls.wrong_preposition_valinn_að,
+                    self.wrong_preposition_valinn_að,
                     None,
                 )
             )
             # Catch "Ég var ekki valinn að henni.", "Þau voru sérstaklega valin að stjórninni."
-            cls.add_pattern(
+            self.add_pattern(
                 (
                     "valinn",  # Trigger lemma for this pattern
                     "VP > { NP > { 'valinn' } PP > { 'að' } }",
-                    cls.wrong_preposition_valinn_að,
+                    self.wrong_preposition_valinn_að,
                     None,
                 )
             )
@@ -2445,32 +2434,32 @@ class PatternMatcher:
         # whose corresponding token has a meaning with the 'bjóða' lemma.
         # The macro %noun is resolved by calling the function wrong_noun()
         # with the potentially matching tree node as an argument.
-        cls.ctx_verb_01 = {"verb": "@'bjóða'", "noun": partial(wrong_noun, NOUNS_01)}
-        cls.add_pattern(
+        self.ctx_verb_01 = {"verb": "@'bjóða'", "noun": partial(wrong_noun, NOUNS_01)}
+        self.add_pattern(
             (
                 "bjóða",  # Trigger lemma for this pattern
                 "VP > { VP > { %verb } NP-OBJ >> { %noun } }",
-                lambda self, match: self.wrong_verb_use(
+                lambda match: self.wrong_verb_use(
                     match,
                     "bíða",
-                    cls.ctx_verb_01,
+                    self.ctx_verb_01,
                 ),
-                cls.ctx_verb_01,
+                self.ctx_verb_01,
             )
         )
 
         NOUNS_02: FrozenSet[str] = frozenset(["haus_þgf", "þvottur_þgf"])
-        cls.ctx_verb_02 = {"verb": "@'hegna'", "noun": partial(wrong_noun, NOUNS_02)}
-        cls.add_pattern(
+        self.ctx_verb_02 = {"verb": "@'hegna'", "noun": partial(wrong_noun, NOUNS_02)}
+        self.add_pattern(
             (
                 "hegna",  # Trigger lemma for this pattern
                 "VP > { VP > { %verb } NP-OBJ >> { %noun } }",
-                lambda self, match: self.wrong_verb_use(
+                lambda match: self.wrong_verb_use(
                     match,
                     "hengja",
-                    cls.ctx_verb_02,
+                    self.ctx_verb_02,
                 ),
-                cls.ctx_verb_02,
+                self.ctx_verb_02,
             )
         )
 
@@ -2493,14 +2482,14 @@ class PatternMatcher:
         )
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
-        cls.ctx_noun_af = {"noun": partial(wrong_noun_af, NOUNS_AF)}
+        self.ctx_noun_af = {"noun": partial(wrong_noun_af, NOUNS_AF)}
         af_lemmas = set(n.split("_")[0] for n in NOUNS_AF)
-        cls.add_pattern(
+        self.add_pattern(
             (
                 af_lemmas,  # Trigger lemmas for this pattern
                 "PP > { P > { 'af' } NP > { %noun } }",
-                lambda self, match: self.wrong_af_use(match, cls.ctx_noun_af),
-                cls.ctx_noun_af,
+                lambda match: self.wrong_af_use(match, self.ctx_noun_af),
+                self.ctx_noun_af,
             )
         )
 
@@ -2527,30 +2516,30 @@ class PatternMatcher:
         )
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
-        cls.ctx_noun_af_obj = {"noun": partial(wrong_noun_af, NOUNS_AF_OBJ)}
+        self.ctx_noun_af_obj = {"noun": partial(wrong_noun_af, NOUNS_AF_OBJ)}
         af_lemmas = set(n.split("_")[0] for n in NOUNS_AF_OBJ)
-        cls.add_pattern(
+        self.add_pattern(
             (
                 af_lemmas,  # Trigger lemmas for this pattern
                 "NP > { %noun PP > { P > { 'af' } } }",
-                lambda self, match: self.wrong_af_use(match, cls.ctx_noun_af_obj),
-                cls.ctx_noun_af_obj,
+                lambda match: self.wrong_af_use(match, self.ctx_noun_af_obj),
+                self.ctx_noun_af_obj,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 af_lemmas,  # Trigger lemmas for this pattern
                 "VP > { VP >> { %noun } PP > { P > { 'af' } } }",
-                lambda self, match: self.wrong_af_use(match, cls.ctx_noun_af_obj),
-                cls.ctx_noun_af_obj,
+                lambda match: self.wrong_af_use(match, self.ctx_noun_af_obj),
+                self.ctx_noun_af_obj,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 af_lemmas,  # Trigger lemmas for this pattern
                 "VP > { PP > { NP > %noun } PP > { 'af' } }",
-                lambda self, match: self.wrong_af_use(match, cls.ctx_noun_af_obj),
-                cls.ctx_noun_af_obj,
+                lambda match: self.wrong_af_use(match, self.ctx_noun_af_obj),
+                self.ctx_noun_af_obj,
             )
         )
 
@@ -2576,14 +2565,14 @@ class PatternMatcher:
         }
         # The macro %noun is resolved by calling the function wrong_noun_að()
         # with the potentially matching tree node as an argument.
-        cls.ctx_noun_að = {"noun": partial(wrong_noun_að, NOUNS_AÐ)}
+        self.ctx_noun_að = {"noun": partial(wrong_noun_að, NOUNS_AÐ)}
         að_lemmas = set(n.split("_")[0] for n in NOUNS_AÐ)
-        cls.add_pattern(
+        self.add_pattern(
             (
                 að_lemmas,  # Trigger lemma for this pattern
                 "PP > { P > { 'að' } NP > { %noun } }",
-                lambda self, match: self.wrong_að_use(match, cls.ctx_noun_að),
-                cls.ctx_noun_að,
+                lambda match: self.wrong_að_use(match, self.ctx_noun_að),
+                self.ctx_noun_að,
             )
         )
 
@@ -2595,31 +2584,31 @@ class PatternMatcher:
             return lemma[0].isupper() if lemma else False
 
         # Check prepositions used with place names
-        cls.ctx_place_names = {"maybe_place": maybe_place}
-        cls.add_pattern(
+        self.ctx_place_names = {"maybe_place": maybe_place}
+        self.add_pattern(
             (
                 frozenset(("á", "í")),  # Trigger lemmas for this pattern
                 "PP > { P > ('á' | 'í') NP > %maybe_place }",
-                lambda self, match: self.check_pp_with_place(match),
-                cls.ctx_place_names,
+                lambda match: self.check_pp_with_place(match),
+                self.ctx_place_names,
             )
         )
         # Check use of 'bjóða e-m birginn' instead of 'bjóða e-m byrginn'
         # !!! TODO: This is a provisional placeholder for similar cases
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "birgir",  # Trigger lemma for this pattern
                 "VP > [ VP > { 'bjóða' } .* NP-IOBJ .* NP-OBJ > { \"birginn\" } ]",
-                cls.wrong_noun_with_verb,
+                self.wrong_noun_with_verb,
                 None,
             )
         )
         # Check use of "vera að" instead of a simple verb
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "vera",  # Trigger lemma for this pattern
                 "IP > {VP > [VP > { @'vera' } (ADVP|NP-SUBJ)? IP-INF > {TO > nhm}]}",
-                lambda self, match: self.vera_að(match),
+                lambda match: self.vera_að(match),
                 None,
             )
         )
@@ -2627,60 +2616,60 @@ class PatternMatcher:
         # Check mood in subclauses
 
         # Concessive clause - viðurkenningarsetning
-        cls.add_pattern(
+        self.add_pattern(
             (
                 frozenset(
                     ("þrátt fyrir", "þrátt", "þó", "þótt")
                 ),  # Trigger lemmas for this pattern
                 "CP-ADV-ACK > { IP >> {VP > so_fh} }",
-                lambda self, match: self.mood_ind("ACK", match),
+                lambda match: self.mood_ind("ACK", match),
                 None,
             )
         )
         # Relative clause - tilvísunarsetning
-        cls.add_pattern(
+        self.add_pattern(
             (
                 frozenset(("sem", "er")),  # Trigger lemmas for this pattern
                 "CP-REL > { IP >> {VP > so_vh} }",
-                lambda self, match: self.mood_sub("REL", match),
+                lambda match: self.mood_sub("REL", match),
                 None,
             )
         )
         # Temporal clause - tíðarsetning
-        cls.add_pattern(
+        self.add_pattern(
             (
                 frozenset(
                     ("áður", "eftir", "þangað", "þegar")
                 ),  # Trigger lemmas for this pattern
                 "CP-ADV-TEMP > { IP >> {VP > so_vh} }",
-                lambda self, match: self.mood_sub("TEMP/w", match),
+                lambda match: self.mood_sub("TEMP/w", match),
                 None,
             )
         )
         # Conditional clause - skilyrðissetning
-        cls.add_pattern(
+        self.add_pattern(
             (
                 frozenset(("ef", "svo")),  # Trigger lemmas for this pattern
                 "CP-ADV-COND > { IP >> {VP > so_vh} }",
-                lambda self, match: self.mood_sub("COND", match),
+                lambda match: self.mood_sub("COND", match),
                 None,
             )
         )
         # Purpose clause - tilgangssetning
-        cls.add_pattern(
+        self.add_pattern(
             (
                 frozenset(("til", "svo")),  # Trigger lemmas for this pattern
                 "CP-ADV-PURP > { IP >> {VP > so_fh} }",
-                lambda self, match: self.mood_ind("PURP", match),
+                lambda match: self.mood_ind("PURP", match),
                 None,
             )
         )
         # Article errors; demonstrative pronouns and nouns with an article
-        cls.add_pattern(
+        self.add_pattern(
             (
                 frozenset(("sá", "þessi")),  # Trigger lemmas for this pattern
                 "NP > [.* fn .* no_gr]",
-                lambda self, match: self.doubledefinite(match),
+                lambda match: self.doubledefinite(match),
                 None,
             )
         )
@@ -2698,371 +2687,371 @@ class PatternMatcher:
         VERBS = frozenset(("safna", "kaupa", "læsa", "geyma"))
         # The macro %verb is resolved by calling the function dir4loc()
         # with the potentially matching tree node as an argument.
-        cls.ctx_dir_loc = {"verb": partial(dir4loc, VERBS)}
-        cls.add_pattern(
+        self.ctx_dir_loc = {"verb": partial(dir4loc, VERBS)}
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP > { %verb } NP > { PP > { ADVP > { 'út' } P > { 'í' } NP > { 'búð' } } } }",
-                lambda self, match: self.dir_loc(match),
-                cls.ctx_dir_loc,
+                lambda match: self.dir_loc(match),
+                self.ctx_dir_loc,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
                 "VP > { VP > { %verb } ADVP > { 'saman' } PP > { ADVP > { 'inn' } P > { 'í' } NP } }",
-                lambda self, match: self.dir_loc(match),
-                cls.ctx_dir_loc,
+                lambda match: self.dir_loc(match),
+                self.ctx_dir_loc,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
                 "VP > { VP > { %verb } NP > { PP > { ADVP > { 'inn' } } } }",
-                lambda self, match: self.dir_loc(match),
-                cls.ctx_dir_loc,
+                lambda match: self.dir_loc(match),
+                self.ctx_dir_loc,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
                 "VP > { VP > { %verb } ADVP > { 'inn' } }",
-                lambda self, match: self.dir_loc(match),
-                cls.ctx_dir_loc,
+                lambda match: self.dir_loc(match),
+                self.ctx_dir_loc,
             )
         )
 
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "( PP|VP|IP ) > [ .* ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "( PP|VP|IP ) > [ .* VP > { 'hafa' } .* ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "NP > [ ( no_nf|pfn_nf ) PP > [ ADVP > { 'út' } PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] ] ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "( IP|NP|VP ) > { IP >> [ .* ADVP > { 'út' } ] PP > [ P > { ( 'í'|'á'|'um' ) } NP > ( no_þgf|pfn_þgf ) ] }",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > [ .* VP > { VP > [ 'vera' ] IP >> { ADVP > [ 'út' ] } } .* PP > [ P > [ 'á' ] NP > { ( no_þgf|pfn_þgf ) } ] .* ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > [ VP > [ 'gera' ] NP > [ .* PP > { ADVP > { 'út' } P > [ 'í' ] NP } ] ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "útá",  # Trigger lemma for this pattern
                 "PP > { P > { 'útá' } NP > { ( no_þgf|pfn_þgf ) } }",
-                lambda self, match: self.dir_loc_comp(match),
+                lambda match: self.dir_loc_comp(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "útí",  # Trigger lemma for this pattern
                 "PP > { P > { 'útí' } NP > { ( no_þgf|pfn_þgf ) } }",
-                lambda self, match: self.dir_loc_comp(match),
+                lambda match: self.dir_loc_comp(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
                 "( PP|VP|IP ) > [ .* ADVP > { 'inn' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } .* ]",
                 #    "( PP|VP|IP ) > [ .* ADVP > { 'inn' } .* PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } .* ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
                 "( IP|NP|VP ) > { IP >> [ .* ADVP > { 'inn' } ] PP > [ P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) ] }",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
                 "NP > { IP >> { VP > { 'vera' } ADVP > { 'inn' } } PP > [ P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) ] }",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
                 "VP > { VP > { 'verða' } ADVP > { 'inn' } PP > [ P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) ] }",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "geyma",  # Trigger lemma for this pattern
                 "VP > { VP > { 'geyma' } ADVP > { 'inn' } PP }",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inná",  # Trigger lemma for this pattern
                 "PP > { P > { 'inná' } NP > { ( no_þgf|pfn_þgf ) } }",
-                lambda self, match: self.dir_loc_comp(match),
+                lambda match: self.dir_loc_comp(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inní",  # Trigger lemma for this pattern
                 "VP > { VP > [ .* ] NP > { PP > { P > { 'inní' } NP > { ( no_þgf|pfn_þgf ) } } } }",
                 # "PP > { P > { 'inní' } NP > { ( no_þgf|pfn_þgf ) } }",
-                lambda self, match: self.dir_loc_comp(match),
+                lambda match: self.dir_loc_comp(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
                 "VP > [ VP > { ( 'verða'|'vera' ) } .* ADVP > { 'inn' } PP > { P > { 'á' } } ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
                 "VP > [ VP > { 'vera' } .* ADVP > { 'inn' } PP > { P > { 'í' } } ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
         # Catches "Ég hef upp á honum."
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "upp",  # Trigger lemma for this pattern
                 "( PP|VP|IP ) > [ VP > { ('standa'|'hafa') } .* ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { ( no_þgf|pfn_þgf ) } } ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
         # Catches "Það liggur í augum upp."
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "auga",  # Trigger lemma for this pattern
                 "VP > [ VP > [ 'liggja' ] PP > [ P > { ( 'í'|'á' ) } NP > { 'auga' } ] ADVP > [ 'upp' ] ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "teningur",  # Trigger lemma for this pattern
                 "PP > [ .* ADVP > { 'upp' } PP > { P > { ( 'í'|'á' ) } NP > { 'teningur' } } ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "upp",  # Trigger lemma for this pattern
                 "( IP|NP|VP ) > [ IP >> { ADVP > { 'upp' } } PP > [ P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) ] ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
 
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "upp",  # Trigger lemma for this pattern
                 "VP > [ VP >> { VP > { VP > { 'hafa' } ADVP > { 'upp' } } } PP > [ P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) ] .* ]",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "uppá",  # Trigger lemma for this pattern
                 "VP > { VP > { 'taka' } NP > { PP > { P > { 'uppá' } NP > { ( no_þgf|pfn_þgf|no_þf|pfn_þf ) } } } }",
-                lambda self, match: self.dir_loc_comp(match),
+                lambda match: self.dir_loc_comp(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "uppí",  # Trigger lemma for this pattern
                 "PP > { P > { 'uppí' } NP > { ( no_þgf|pfn_þgf ) } }",
-                lambda self, match: self.dir_loc_comp(match),
+                lambda match: self.dir_loc_comp(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "uppí",  # Trigger lemma for this pattern
                 "VP > { VP > { 'vera' } PP > { P > { 'uppí' } NP > { ( no_þf|pfn_þf ) } } }",
-                lambda self, match: self.dir_loc_comp(match),
+                lambda match: self.dir_loc_comp(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "niður",  # Trigger lemma for this pattern
                 "( PP|VP|IP ) > [ .* ADVP > { 'niður' } PP > { P > { ( 'í'|'á' ) } NP > ( no_þgf|pfn_þgf ) } ]",
-                lambda self, match: self.dir_loc_simple(match),
+                lambda match: self.dir_loc_simple(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "niður",  # Trigger lemma for this pattern
                 "VP > [ VP > { 'vera' } .* PP > { ADVP > { 'niður' } P > { 'í' } NP } ]",
-                lambda self, match: self.dir_loc_simple(match),
+                lambda match: self.dir_loc_simple(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "verða",  # Trigger lemma for this pattern
                 "VP > { VP > { 'verða' } NP > { ( pfn_þgf|abfn_þgf ) } NP > { 'út' 'um' } }",
-                lambda self, match: self.dir_loc_ut_um(match),
+                lambda match: self.dir_loc_ut_um(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "standa",  # Trigger lemma for this pattern
                 "IP > { ADVP > { 'upp' } VP > { VP > { 'vera' } NP > { 'standa' } } }",
-                lambda self, match: self.dir_loc_simple(match),
+                lambda match: self.dir_loc_simple(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP > [ 'vera' ] NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } }",
-                lambda self, match: self.dir_loc_simple(match),
+                lambda match: self.dir_loc_simple(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP > [ 'vera' ] NP > [ .* PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } ] }",
-                lambda self, match: self.dir_loc_ut_um(match),
+                lambda match: self.dir_loc_ut_um(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP PP >> { NP > { PP > { ADVP > { 'út' } PP > { P > { 'um' } NP } } } } }",
-                lambda self, match: self.dir_loc_ut_um(match),
+                lambda match: self.dir_loc_ut_um(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP > [ 'vera' ] ADVP > [ 'út' ] PP > { P > [ 'um' ] } }",
-                lambda self, match: self.dir_loc_ut_um(match),
+                lambda match: self.dir_loc_ut_um(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP > [ 'vera' .* ] NP > { 'út' 'um' } }",
-                lambda self, match: self.dir_loc_ut_um(match),
+                lambda match: self.dir_loc_ut_um(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "útum",  # Trigger lemma for this pattern
                 "VP > { VP > { 'vera' } NP > { 'útum' } }",
-                lambda self, match: self.dir_loc_ut_um(match),
+                lambda match: self.dir_loc_ut_um(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "útum",  # Trigger lemma for this pattern
                 "VP > { VP > { 'sækja' } PP > { 'um' } NP > { 'útum' } }",
-                lambda self, match: self.dir_loc_ut_um(match),
+                lambda match: self.dir_loc_ut_um(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP > [ 'vera' .* ] ADVP > { 'út' } PP > { P > { 'um' } NP } }",
-                lambda self, match: self.dir_loc_ut_um(match),
+                lambda match: self.dir_loc_ut_um(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "út",  # Trigger lemma for this pattern
                 "VP > { VP > { 'gera' } NP > [ .* PP > { ADVP > { 'út' } P > { 'í' } } ] }",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
                 "VP > { VP >> { ADVP > { 'hér' } } PP > { ADVP > { 'inn' } } }",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "Skagi",  # Trigger lemma for this pattern
                 "VP > { VP > { 'vera' } PP >> { PP > { ADVP > { 'upp' } P > { 'á' } NP > { 'Skagi' } } } }",
-                lambda self, match: self.dir_loc(match),
+                lambda match: self.dir_loc(match),
                 None,
             )
         )
 
-        cls.add_pattern(
+        self.add_pattern(
             (
                 "né",  # Trigger lemma for this pattern
                 " IP >> { 'né' } ",
-                lambda self, match: self.né(match),
+                lambda match: self.né(match),
                 None,
             )
         )
@@ -3082,30 +3071,30 @@ class PatternMatcher:
         NOUNS_NUM = frozenset(("þríeyki", "tvíeyki", "hluti", "hópur"))
         # The macro %noun is resolved by calling the function subjnum()
         # with the potentially matching tree node as an argument.
-        cls.ctx_subjsing = {"noun": partial(subjsing, NOUNS_NUM)}
+        self.ctx_subjsing = {"noun": partial(subjsing, NOUNS_NUM)}
 
-        cls.add_pattern(
+        self.add_pattern(
             (
                 NOUNS_NUM,  # Trigger lemmas for this pattern
                 "NP-SUBJ >> [ %noun .* 'og' ]",
-                lambda self, match: self.singsub("QUANT", match),
-                cls.ctx_subjsing,
+                lambda match: self.singsub("QUANT", match),
+                self.ctx_subjsing,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 NOUNS_NUM,  # Trigger lemmas for this pattern
                 "NP-SUBJ >> [ %noun .* NP-POSS >> { no_ft_ef } ]",
-                lambda self, match: self.singsub("GEN", match),
-                cls.ctx_subjsing,
+                lambda match: self.singsub("GEN", match),
+                self.ctx_subjsing,
             )
         )
-        cls.add_pattern(
+        self.add_pattern(
             (
                 NOUNS_NUM,
                 "NP-SUBJ >> [ %noun .* PP >> [ no_ft_ef  ]]",
-                lambda self, match: self.singsub("AF", match),
-                cls.ctx_subjsing,
+                lambda match: self.singsub("AF", match),
+                self.ctx_subjsing,
             )
         )
 
@@ -3138,4 +3127,4 @@ class PatternMatcher:
             if lemma_match(trigger):
                 for match in tree.all_matches(pattern, context):
                     # Call the annotation function for this match
-                    func(self, match)
+                    func(match)

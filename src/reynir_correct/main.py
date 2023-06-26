@@ -44,6 +44,7 @@ from typing import (
 import sys
 import argparse
 from .wrappers import check_errors
+from .settings import Settings
 
 
 # File types for UTF-8 encoded text files
@@ -137,6 +138,22 @@ parser.add_argument(
 )
 
 
+parser.add_argument(
+    "--tov_config",
+    nargs=1,
+    type=str,
+    help="Add additional use-specific rules in a configuration file to check for custom tone-of-voice issues. Uses the same format as the default GreynirCorrect.conf file",
+    default=False,
+)
+
+parser.add_argument(
+    "--suggest_not_correct",
+    help="Instead of directly changing the text, some stylistic errors are presented as suggestions only.",
+    action="store_true",
+    default=False,
+)
+
+
 def main() -> None:
     """Main function, called when the 'correct' command is invoked"""
 
@@ -156,10 +173,14 @@ def main() -> None:
         options["format"] = "json"
     elif args.csv:
         options["format"] = "csv"
+    if args.tov_config:
+        options["tov_config"] = args.tov_config[0]
     options["spaced"] = args.spaced
     options["normalize"] = args.normalize
     options["all_errors"] = args.all_errors or args.grammar
     options["sentence_prefilter"] = args.sentence_prefilter
+    options["suggest_not_correct"] = args.suggest_not_correct
+
     print(check_errors(**options), file=args.outfile)
 
 

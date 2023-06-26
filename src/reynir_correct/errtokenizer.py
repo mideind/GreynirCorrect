@@ -78,22 +78,7 @@ from reynir.bintokenizer import (
 from reynir.bindb import GreynirBin
 from reynir.binparser import BIN_Token, VariantHandler
 from islenska.basics import Ksnid
-
-from .settings import (
-    AllowedMultiples,
-    WrongCompounds,
-    SplitCompounds,
-    UniqueErrors,
-    MultiwordErrors,
-    CapitalizationErrors,
-    TabooWords,
-    CIDErrorForms,
-    Morphemes,
-    Ritmyndir,
-    RitmyndirDetails,
-    IecNonwords,
-    Settings,
-)
+from .settings import Settings
 from .spelling import Corrector
 
 
@@ -771,6 +756,46 @@ class TabooWarning(Error):
 
 
 @register_error_class
+class ToneOfVoiceWarning(Error):
+
+    """A ToneOfVoiceWarning marks a word that is not conforming to a particular tone of voice."""
+
+    # 001: Tone of voice word usage warning, with suggested replacement.
+
+    def __init__(
+        self,
+        code: str,
+        txt: str,
+        detail: Optional[str],
+        original: str,
+        suggest: Optional[str],
+        suggestlist: Optional[List[str]] = None,
+    ) -> None:
+        # Tone of voice word warnings start with "V"
+        super().__init__(
+            "V" + code, is_warning=True, original=original, suggest=suggest
+        )
+        self._txt = txt
+        self._detail = detail
+        self._suggestlist = suggestlist
+
+    @property
+    def description(self) -> str:
+        return self._txt
+
+    @property
+    def detail(self) -> Optional[str]:
+        return self._detail
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = super().to_dict()
+        d["detail"] = self.detail
+        d["suggest"] = self.suggest
+        d["suggestlist"] = self._suggestlist
+        return d
+
+
+@register_error_class
 class StyleWarning(Error):
 
     """A StyleWarning marks a word that is annotated with a
@@ -1000,6 +1025,7 @@ def parse_errors(
     db: GreynirBin,
     only_ci: bool,
     ignore_rules: FrozenSet[str],
+    settings: Settings,
 ) -> Iterator[CorrectToken]:
 
     """This tokenization phase is done before BÍN annotation
@@ -1045,7 +1071,6 @@ def parse_errors(
 
     token: CorrectToken = cast(CorrectToken, None)
     at_sentence_start = False
-
     try:
 
         # Maintain a one-token lookahead
@@ -1153,7 +1178,7 @@ def parse_errors(
                 and token.txt == next_token.txt
                 and token.kind == TOK.WORD
             ):
-                if token.txt.lower() in AllowedMultiples.SET:
+                if token.txt.lower() in settings.allowed_multiples.SET:
                     if "C004/w" not in ignore_rules:
                         next_token.set_error(
                             CompoundError(
@@ -1239,8 +1264,8 @@ def parse_errors(
                 continue
 
             # Splitting wrongly compounded words
-            if token.txt and token.txt.lower() in WrongCompounds.DICT:
-                correct_phrase = list(WrongCompounds.DICT[token.txt.lower()])
+            if token.txt and token.txt.lower() in settings.wrong_compounds.DICT:
+                correct_phrase = list(settings.wrong_compounds.DICT[token.txt.lower()])
                 # Make the split phrase emulate the case of
                 # the original token
                 if token.txt.isupper():
@@ -1279,17 +1304,17 @@ def parse_errors(
 
             # Unite wrongly split compounds, or at least suggest uniting them
             if token.txt and (
-                token.txt.lower() in SplitCompounds.DICT
-                or token.txt.lower() in Morphemes.BOUND_DICT
+                token.txt.lower() in settings.split_compounds.DICT
+                or token.txt.lower() in settings.morphemes.BOUND_DICT
             ):
                 if only_ci:
-                    if token.txt.lower() in SplitCompounds.DICT:
+                    if token.txt.lower() in settings.split_compounds.DICT:
                         # Don't want to correct
                         yield token
                         token = next_token
                         at_sentence_start = False
                         continue
-                    if token.txt.lower() in Morphemes.BOUND_DICT:
+                    if token.txt.lower() in settings.morphemes.BOUND_DICT:
                         # Only want to mark as an error, can't fix in CI-mode.
                         if "S007" not in ignore_rules:
                             token.set_error(
@@ -1325,7 +1350,7 @@ def parse_errors(
                     yield token
                     token = next_token
                     continue
-                next_stems = SplitCompounds.DICT.get(token.txt.lower())
+                next_stems = settings.split_compounds.DICT.get(token.txt.lower())
                 if not next_stems:
                     yield token
                     token = next_token
@@ -1365,7 +1390,7 @@ def parse_errors(
                         token = get()
                     at_sentence_start = False
                     continue
-                next_pos = Morphemes.BOUND_DICT.get(token.txt.lower())
+                next_pos = settings.morphemes.BOUND_DICT.get(token.txt.lower())
                 if not next_pos:
                     yield token
                     token = next_token
@@ -1512,25 +1537,30 @@ class MultiwordErrorStream(MatchingStream):
     and inserting replacement phrases when matches are found"""
 
     def __init__(
-        self, db: GreynirBin, token_ctor: TokenCtor, ignore_rules: FrozenSet[str]
+        self,
+        db: GreynirBin,
+        token_ctor: TokenCtor,
+        ignore_rules: FrozenSet[str],
+        settings,
     ) -> None:
-        super().__init__(MultiwordErrors.DICT)
+        super().__init__(settings.multiword_errors.DICT)
         self._token_ctor = token_ctor
         self._db = db
         self._ignore_rules = ignore_rules
+        self.multiword_errors = settings.multiword_errors
 
     def length(self, ix: int) -> int:
         """Return the length (word count) of the original phrase
         that is being replaced"""
-        return MultiwordErrors.get_phrase_length(ix)
+        return self.multiword_errors.get_phrase_length(ix)
 
     def match(self, tq: List[Tok], ix: int) -> Iterable[Tok]:
         """This is a complete match of an error phrase;
         yield the replacement phrase"""
-        if "P_" + MultiwordErrors.get_code(ix) in self._ignore_rules:
+        if "P_" + self.multiword_errors.get_code(ix) in self._ignore_rules:
             yield from tq
             return
-        replacement = MultiwordErrors.get_replacement(ix)
+        replacement = self.multiword_errors.get_replacement(ix)
         db = self._db
         token_ctor = self._token_ctor
         len_tq = len(tq)
@@ -1562,7 +1592,7 @@ class MultiwordErrorStream(MatchingStream):
             if i == 0:
                 ct.set_error(
                     PhraseError(
-                        MultiwordErrors.get_code(ix),
+                        self.multiword_errors.get_code(ix),
                         "Orðasambandið '{0}' var leiðrétt í '{1}'".format(
                             " ".join(t.txt for t in tq), repstring
                         ),
@@ -1584,6 +1614,7 @@ def handle_multiword_errors(
     db: GreynirBin,
     token_ctor: TokenCtor,
     ignore_rules: FrozenSet[str],
+    settings: Settings,
 ) -> Iterator[CorrectToken]:
 
     """Parse a stream of tokens looking for multiword phrases
@@ -1591,8 +1622,7 @@ def handle_multiword_errors(
     The algorithm implements N-token lookahead where N is the
     length of the longest phrase.
     """
-
-    mwes = MultiwordErrorStream(db, token_ctor, ignore_rules)
+    mwes = MultiwordErrorStream(db, token_ctor, ignore_rules, settings)
     tok_stream = cast(Iterator[Tok], token_stream)
     yield from cast(Iterator[CorrectToken], mwes.process(tok_stream))
 
@@ -1603,42 +1633,6 @@ def handle_multiword_errors(
 # Attn.: Make sure these errors are available as a prefix
 NOT_FORMERS = frozenset(("allra", "alhliða", "fjölnota", "margnota", "ótal"))
 
-# Tradition says these word parts should rather be used
-# Using them results in a context-dependent error
-# Attn.: Make sure these errors are available as a prefix
-WRONG_FORMERS: Mapping[str, str] = {
-    "akstur": "aksturs",
-    "athugana": "athugunar",
-    "ferminga": "fermingar",
-    "fjárfestinga": "fjárfestingar",
-    "forvarna": "forvarnar",
-    "heyrna": "heyrnar",
-    "kvartana": "kvörtunar",
-    "loftlags": "loftslags",
-    "næringa": "næringar",
-    "pantana": "pöntunar",
-    "ráðninga": "ráðningar",
-    "skráninga": "skráningar",
-    "Vestfjarðar": "Vestfjarða",
-    "ábendinga": "ábendingar",
-}
-
-# Using these word parts results in a context-independent error
-# Attn.: Make sure these errors are available in prefix.txt in BinPackage
-WRONG_FORMERS_CI: Mapping[str, str] = {
-    "Atlandshafs": "Atlantshafs",
-    "akríl": "akrýl",
-    "dísel": "dísil",
-    "eyrnar": "eyrna",
-    "feykna": "feikna",
-    "fjarskiptar": "fjarskipta",
-    "fyrna": "firna",
-    "griðar": "griða",  # griðarstaður
-    "kvenn": "kven",
-    "Lundúnar": "Lundúna",
-    "öldungar": "öldunga",
-}
-
 
 def fix_compound_words(
     token_stream: Iterable[CorrectToken],
@@ -1646,12 +1640,14 @@ def fix_compound_words(
     token_ctor: TokenCtor,
     only_ci: bool,
     ignore_rules: FrozenSet[str],
+    settings: Settings,
 ) -> Iterator[CorrectToken]:
 
     """Fix incorrectly compounded words"""
 
     at_sentence_start = False
-
+    WRONG_FORMERS = settings.wrong_formers.DICT
+    WRONG_FORMERS_CI = settings.wrong_formers_cid.DICT
     for token in token_stream:
         if token.kind == TOK.S_BEGIN:
             yield token
@@ -1694,7 +1690,6 @@ def fix_compound_words(
             yield token
             at_sentence_start = False
             continue
-
         # Compound word
         cw: List[str] = token.meanings[0].stofn.split("-")
         # Special case for the prefix "ótal" which the compounder
@@ -1726,12 +1721,12 @@ def fix_compound_words(
                 token = token_ctor.Word(suffix, m, token=token)
                 token.original = ""
 
-        elif cw0 in Morphemes.FREE_DICT:
+        elif cw0 in settings.morphemes.FREE_DICT:
             # Check which PoS, attachment depends on that
             at_sentence_start = False
             suffix = token.txt[len(cw0) :]
             prefix = emulate_case(cw0, template=token.txt)
-            freepos = Morphemes.FREE_DICT.get(cw0)
+            freepos = settings.morphemes.FREE_DICT.get(cw0)
             assert freepos is not None
             _, meanings2 = db.lookup_g(suffix, at_sentence_start)
             poses = set(m.ordfl for m in meanings2 if m.ordfl in freepos)
@@ -1776,7 +1771,6 @@ def fix_compound_words(
                             span=2,
                         )
                     )
-
         elif cw0 in WRONG_FORMERS_CI:
             if "C006" not in ignore_rules:
                 correct_former = WRONG_FORMERS_CI[cw0]
@@ -1830,6 +1824,7 @@ def lookup_unknown_words(
     suppress_suggestions: bool,
     generate_suggestion_list: bool,
     suggest_not_correct: bool,
+    settings: Settings,
 ) -> Iterator[CorrectToken]:
 
     """Try to identify unknown words in the token stream, for instance
@@ -1922,13 +1917,13 @@ def lookup_unknown_words(
         """Add an error with corresponding correct value and details given info in Ritmyndir"""
         # TODO At the moment the code assumes only one correct value is available in data
         lemma = token.txt
-        code = Ritmyndir.get_code(token.txt)
+        code = settings.ritmyndir.get_code(token.txt)
         if code in NEUTRAL_RITMYNDIR_CODES:
             # Not an error
             return token
         if code in ignore_rules:
             return token
-        corrected = Ritmyndir.get_correct_form(token.txt)
+        corrected = settings.ritmyndir.get_correct_form(token.txt)
         if (
             # Needed due to difference in title case for Icelandic and English in MWE
             token.txt[0].istitle()
@@ -1967,7 +1962,7 @@ def lookup_unknown_words(
         # text is the short version, about the category and the error.
         # details is the long version with references.
         try:
-            standref, cat, det = RitmyndirDetails.DICT[code]
+            standref, cat, det = settings.ritmyndir_details.DICT[code]
         except KeyError:
             return ("", "", [""])
         references: List[str] = []
@@ -2113,7 +2108,7 @@ def lookup_unknown_words(
 
         # Wrong word forms in Ritmyndir, more information than
         # in UniqueErrors
-        if Ritmyndir.contains(token.txt):
+        if settings.ritmyndir.contains(token.txt):
             rtok = add_ritmyndir_error(token)
             at_sentence_start = False
             # Update the context with the replaced token
@@ -2125,10 +2120,10 @@ def lookup_unknown_words(
         # BÍN annotations via the compounder
         # Examples: 'kvenær' -> 'hvenær', 'starfssemi' -> 'starfsemi'
         # !!! TODO: Handle upper/lowercase
-        if token.txt in UniqueErrors.DICT:
+        if token.txt in settings.unique_errors.DICT:
             # Note: corrected is a tuple
             rtok = token
-            corrected = UniqueErrors.DICT[token.txt]
+            corrected = settings.unique_errors.DICT[token.txt]
             assert isinstance(corrected, tuple)
             corrected_display = " ".join(corrected)
             if "S001" not in ignore_rules:
@@ -2146,9 +2141,9 @@ def lookup_unknown_words(
             continue
 
         # Similarly, check Icelandic Error Corpus Nonwords
-        if token.txt in IecNonwords.DICT:
+        if token.txt in settings.iec_nonwords.DICT:
             # Note: corrected is a tuple
-            corrected = IecNonwords.DICT[token.txt]
+            corrected = settings.iec_nonwords.DICT[token.txt]
             assert isinstance(corrected, tuple)
             corrected_display = " ".join(corrected)
             if "S001" not in ignore_rules:
@@ -2202,9 +2197,9 @@ def lookup_unknown_words(
         # !!! TODO: case (for instance, 'á' as a nominative of 'ær').
         # !!! TODO: We are not handling those here.
         # !!! TODO: Handle upper/lowercase
-        if not token.val and CIDErrorForms.contains(token.txt):
+        if not token.val and settings.cid_error_forms.contains(token.txt):
             rtok = token
-            corr_txt = CIDErrorForms.get_correct_form(token.txt)
+            corr_txt = settings.cid_error_forms.get_correct_form(token.txt)
             if "S002" not in ignore_rules:
                 rtok = replace_word(2, token, corr_txt, corr_txt)
             at_sentence_start = False
@@ -2354,12 +2349,12 @@ def fix_capitalization(
     token_ctor: TokenCtor,
     only_ci: bool,
     ignore_rules: FrozenSet[str],
+    settings: Settings,
 ) -> Iterator[CorrectToken]:
 
     """Annotate tokens with errors if they are capitalized incorrectly"""
-
-    stems = CapitalizationErrors.SET_REV
-    wrong_stems = CapitalizationErrors.SET
+    stems = settings.capitalization_errors.SET_REV
+    wrong_stems = settings.capitalization_errors.SET
 
     # This variable must be defined before is_wrong() because
     # the function closes over it
@@ -2583,6 +2578,7 @@ def late_fix_capitalization(
     only_ci: bool,
     ignore_rules: FrozenSet[str],
     suppress_suggestions: bool,
+    settings: Settings,
 ) -> Iterator[CorrectToken]:
 
     """Annotate final, coalesced tokens with errors
@@ -2610,8 +2606,7 @@ def late_fix_capitalization(
         return ct
 
     at_sentence_start = False
-    stems = CapitalizationErrors.SET
-
+    stems = settings.capitalization_errors.SET
     for token in token_stream:
         if token.kind == TOK.S_BEGIN:
             yield token
@@ -2825,81 +2820,124 @@ def late_fix_merges(
         yield token
 
 
-def check_taboo_words(token_stream: Iterable[CorrectToken]) -> Iterator[CorrectToken]:
-    """Annotate taboo words with warnings"""
+def create_template_dict(
+    settings, explanation: str, explanation_w_sugg: str, error_warning, words
+):
+    template_dict = {}
+    template_dict["explanation"] = explanation
+    template_dict["explanation_w_sugg"] = explanation_w_sugg
+    template_dict["error_warning"] = error_warning
+    template_dict["words"] = words
+    return template_dict
 
-    tdict = TabooWords.DICT
 
-    for token in token_stream:
-        # Check taboo words
-        if (  # type: ignore
-            token.val is not None and token.has_meanings and token.txt not in NOT_TABOO
-        ):
-            # We skip checks for tokens already containing an error, as the taboo word
-            # might be the system's invention.
-            # !!! TODO: This could be made more efficient if all
-            # !!! TODO: taboo word forms could be generated ahead of time
-            # !!! TODO: and checked via a set lookup
-            for m in token.meanings:
-                key = m.stofn.replace("-", "")
-                # First, look up the lemma + _ + word category
-                t = tdict.get(key + "_" + m.ordfl)
-                if t is None:
-                    # Then, look up the lemma only
-                    t = tdict.get(key)
-                if t is not None:
-                    # Taboo word
-                    replacement, detail = t
-                    # There can be multiple suggested replacements,
-                    # for instance 'þungunarrof_hk/meðgöngurof_hk'
-                    sw = replacement.split("/")
-                    suggestion = ""
-                    suggest = None
-                    sugglist: List[str] = []
-                    if len(sw) == 1 and sw[0].split("_")[0] == key:
-                        # We have a single suggested word, which is the same as the
-                        # taboo word: there is no suggestion, only a notification
-                        explanation = "Óheppilegt eða óviðurkvæmilegt orð"
-                    else:
-                        suggestion = ", ".join(f"'{w.split('_')[0]}'" for w in sw)
-                        # Trick to replace the last ", " with " eða ":
-                        # replace the first " ," with " aðe " in a reversed string,
-                        # then re-reverse it
-                        suggestion = suggestion[::-1].replace(" ,", " aðe ", 1)[::-1]
-                        explanation = (
-                            f"Óheppilegt eða óviðurkvæmilegt orð, "
-                            f"skárra væri t.d. {suggestion}"
-                        )
-                        suggest = sw[0].split("_")[0]
-                        sugglist = list(w.split("_")[0] for w in sw)
-                    if (
-                        token.error_code
-                        and token.original
-                        and token.error_code[0] == "W"
-                        and token.txt.strip() != token.original.strip()
-                    ):
-                        # The system seems to have used automatic methods to 'correct'
-                        # to a taboo word: remove the error
-                        orig = (
-                            token.original.strip()
-                            if token.original
-                            else token.txt.strip()
-                        )
-                        token.remove_error(orig)
-                    else:
-                        token.set_error(
-                            TabooWarning(
-                                "001",
-                                explanation,
-                                detail or None,
-                                token.txt,
-                                suggest,
-                                sugglist,
+def check_wording(
+    token_stream: Iterable[CorrectToken],
+    settings: Settings,
+    db: GreynirBin,
+    suggest_not_correct: bool,
+) -> Iterator[CorrectToken]:
+    """Annotate words to be flagged, with warnings. Here we check for both taboo words and
+    tone of voice issues as determined by an additional config, if given."""
+
+    taboo_data = create_template_dict(
+        settings,
+        "Óheppilegt eða óviðurkvæmilegt orð",
+        "Óheppilegt eða óviðurkvæmilegt orð, skárra væri t.d. ",
+        TabooWarning,
+        settings.taboo_words.DICT,
+    )
+
+    tone_of_voice_data = create_template_dict(
+        settings,
+        "Orðið er ekki í samræmi við raddblæ okkar",
+        "Orðið er ekki í samræmi við raddblæ okkar, í staðinn gætirðu notað ",
+        ToneOfVoiceWarning,
+        settings.tone_of_voice_words.DICT,
+    )
+
+    def handle_template_data(token_stream, tdict):
+        for token in token_stream:
+            # Check taboo words
+            if (  # type: ignore
+                token.val is not None
+                and token.has_meanings
+                and token.txt not in NOT_TABOO
+            ):
+                # We skip checks for tokens already containing an error, as the flagged word
+                # might be the system's invention.
+                for m in token.meanings:
+                    key = m.stofn.replace("-", "")
+                    # First, look up the lemma + _ + word category
+                    t = tdict["words"].get(key + "_" + m.ordfl)
+                    if t is None:
+                        # Then, look up the lemma only
+                        t = tdict["words"].get(key)
+                    if t is not None:
+                        # Flagged word
+                        replacement, detail = t
+                        # There can be multiple suggested replacements,
+                        # for instance 'þungunarrof_hk/meðgöngurof_hk'
+                        sw = replacement.split("/")
+                        suggestion = ""
+                        suggest = None
+
+                        suggest, sugg_cat = sw[0].split("_")
+                        sugglist: List[str] = []
+                        if len(sw) == 1 and sw[0].split("_")[0] == key:
+                            # We have a single suggested word, which is the same as the
+                            # flagged word: there is no suggestion, only a notification
+                            explanation = tdict["explanation"]
+                        else:
+                            suggestion = ", ".join(f"'{w.split('_')[0]}'" for w in sw)
+                            # Trick to replace the last ", " with " eða ":
+                            # replace the first " ," with " aðe " in a reversed string,
+                            # then re-reverse it
+                            suggestion = suggestion[::-1].replace(" ,", " aðe ", 1)[
+                                ::-1
+                            ]
+                            explanation = f'{tdict["explanation_w_sugg"]} {suggestion}'
+                            sugglist = list(w.split("_")[0] for w in sw)
+                        if (
+                            token.error_code
+                            and token.original
+                            and token.error_code[0] == "W"
+                            and token.txt.strip() != token.original.strip()
+                        ):
+                            # The system seems to have used automatic methods to 'correct'
+                            # to a flagged word: remove the error
+                            orig = (
+                                token.original.strip()
+                                if token.original
+                                else token.txt.strip()
                             )
-                        )
-                        # !!! TODO: Add correctly inflected suggestion here
-                    break
-        yield token
+                            token.remove_error(orig)
+                        else:
+                            beyging = token[2][0].beyging
+                            suggest_object = db.lookup_variants(
+                                suggest, sugg_cat, beyging, lemma=suggest
+                            )
+                            if suggest_object:
+                                bmynd = suggest_object[0].bmynd
+                                suggest = emulate_case(bmynd, template=token.txt)
+                            # Word not found in BÍN
+                            # else:
+                            token.set_error(
+                                tdict["error_warning"](
+                                    "001",
+                                    explanation,
+                                    detail or None,
+                                    token.txt,
+                                    suggest,
+                                    sugglist,
+                                )
+                            )
+                        break
+            yield token
+
+    token_stream = handle_template_data(token_stream, taboo_data)
+    token_stream = handle_template_data(token_stream, tone_of_voice_data)
+    yield from token_stream
 
 
 def check_style(
@@ -2928,6 +2966,7 @@ def check_style(
                 # Check whether we have a suggestion in BÍN
                 suggestion = None
                 suffix = ""
+
                 if k.millivisun:
                     # Cross-reference to another word
                     k_suggestions = db.lookup_id(k.millivisun)
@@ -3110,7 +3149,9 @@ class CorrectionPipeline(DefaultPipeline):
     # TOK (tokenizer.py) or Bin_TOK (bintokenizer.py)
     _token_ctor = cast(TokenConstructor, Correct_TOK)
 
-    def __init__(self, text_or_gen: StringIterable, **options: Any) -> None:
+    def __init__(
+        self, text_or_gen: StringIterable, settings: Settings, **options: Any
+    ) -> None:
         super().__init__(text_or_gen, **options)
         self._corrector: Optional[Corrector] = None
         # If only_ci is True, we only correct context-independent errors
@@ -3123,16 +3164,19 @@ class CorrectionPipeline(DefaultPipeline):
         self._generate_suggestion_list = options.pop("generate_suggestion_list", False)
         # Skip spelling suggestions
         self._suppress_suggestions = options.pop("suppress_suggestions", False)
-        # Only give suggestions, don't correct anything automatically
+        # Only give suggestions, don't correct everything automatically. Currently only applies to lookup_unknown_words and check_wording.
         self._suggest_not_correct = options.pop("suggest_not_correct", False)
         # Wordlist for words that should not be marked as errors or corrected
         self._ignore_wordlist = options.pop("ignore_wordlist", set())
         self._ignore_rules = options.pop("ignore_rules", set())
+        self.settings = settings
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """Add a correction pass just before BÍN annotation"""
         assert self._db is not None
-        return parse_errors(stream, self._db, self._only_ci, self._ignore_rules)
+        return parse_errors(
+            stream, self._db, self._only_ci, self._ignore_rules, self.settings
+        )
 
     def check_spelling(self, stream: TokenIterator) -> TokenIterator:
         """Attempt to resolve unknown words"""
@@ -3142,21 +3186,22 @@ class CorrectionPipeline(DefaultPipeline):
             self._corrector = Corrector(self._db)
         only_ci = self._only_ci
         ignore_rules = self._ignore_rules
+
         # Shenanigans to satisfy mypy
         token_ctor = cast(TokenCtor, self._token_ctor)
         ct_stream = cast(Iterator[CorrectToken], stream)
         # Fix compound words
         ct_stream = fix_compound_words(
-            ct_stream, self._db, token_ctor, only_ci, ignore_rules
+            ct_stream, self._db, token_ctor, only_ci, ignore_rules, self.settings
         )
         # Fix multiword error phrases
         if not only_ci:
             ct_stream = handle_multiword_errors(
-                ct_stream, self._db, token_ctor, ignore_rules
+                ct_stream, self._db, token_ctor, ignore_rules, self.settings
             )
         # Fix capitalization
         ct_stream = fix_capitalization(
-            ct_stream, self._db, token_ctor, only_ci, ignore_rules
+            ct_stream, self._db, token_ctor, only_ci, ignore_rules, self.settings
         )
         # Fix single-word errors
         ct_stream = lookup_unknown_words(
@@ -3169,10 +3214,15 @@ class CorrectionPipeline(DefaultPipeline):
             self._suppress_suggestions,
             self._generate_suggestion_list,
             self._suggest_not_correct,
+            self.settings,
         )
-        # Check taboo words
-        if not only_ci and "T001/w" not in ignore_rules and "T001" not in ignore_rules:
-            ct_stream = check_taboo_words(ct_stream)
+        # Check taboo words and tone of voice words
+        err_codes = {"T001/w", "T001", "V001/w", "V001"}
+        if not only_ci and all(code not in ignore_rules for code in err_codes):
+            ct_stream = check_wording(
+                ct_stream, self.settings, self._db, self._suggest_not_correct
+            )
+
         # Check context-independent style errors, indicated in BÍN
         ct_stream = check_style(ct_stream, self._db, ignore_rules)
         return ct_stream
@@ -3191,6 +3241,7 @@ class CorrectionPipeline(DefaultPipeline):
             self._only_ci,
             self._ignore_rules,
             self._suppress_suggestions,
+            self.settings,
         )
 
         ct_stream = late_fix_merges(
@@ -3199,8 +3250,10 @@ class CorrectionPipeline(DefaultPipeline):
         return ct_stream
 
 
-def tokenize(text_or_gen: StringIterable, **options: Any) -> Iterator[CorrectToken]:
+def tokenize(
+    text_or_gen: StringIterable, settings: Settings, **options: Any
+) -> Iterator[CorrectToken]:
     """Tokenize text using the correction pipeline,
     overriding a part of the default tokenization pipeline"""
-    pipeline = CorrectionPipeline(text_or_gen, **options)
+    pipeline = CorrectionPipeline(text_or_gen, settings, **options)
     return cast(Iterator[CorrectToken], pipeline.tokenize())

@@ -84,5 +84,3 @@ __all__ = (
     "__author__",
     "__copyright__",
 )
-
-Settings.read("config/GreynirCorrect.conf")

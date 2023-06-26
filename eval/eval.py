@@ -120,7 +120,12 @@ from reynir import _Sentence
 from tokenizer import detokenize, Tok, TOK
 
 from reynir_correct.annotation import Annotation
-from reynir_correct.checker import AnnotatedSentence, check as gc_check
+from reynir_correct.checker import (
+    GreynirCorrect,
+    Settings,
+    AnnotatedSentence,
+    check as gc_check,
+)
 
 
 # Disable Pylint warnings arising from Pylint not understanding the typing module
@@ -151,6 +156,10 @@ TypeFreqs = Counter[str]
 ErrTypeStatsDict = DefaultDict[str, TypeFreqs]
 
 CatResultDict = Dict[str, Union[int, float, str]]
+
+settings = Settings()
+settings.read(os.path.join("config", "GreynirCorrect.conf"))
+rc = GreynirCorrect(settings)
 
 # Create a lock to ensure that only one process outputs at a time
 OUTPUT_LOCK = multiprocessing.Lock()
@@ -1782,7 +1791,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 ]
             )
             # Pass it to GreynirCorrect
-            pg = [list(p) for p in gc_check(text, **options)]
+            pg = [list(p) for p in gc_check(text, rc=rc, **options)]
             s: Optional[_Sentence] = None
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 s = pg[0][0]
