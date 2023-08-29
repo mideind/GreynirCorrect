@@ -391,9 +391,13 @@ class GreynirCorrect(Greynir):
                 file_path = self.settings.tone_of_voice_patterns.PATH
                 module_name = os.path.splitext(os.path.basename(file_path))[0]
                 # Import the module
-                spec: Optional[ModuleSpec] = importlib.util.spec_from_file_location(module_name, file_path)
+                spec: Optional[ModuleSpec] = importlib.util.spec_from_file_location(
+                    module_name, file_path
+                )
                 if spec is None:
-                    raise FileNotFoundError(f"Could not find a spec for module '{module_name}' at '{file_path}'")
+                    raise FileNotFoundError(
+                        f"Could not find a spec for module '{module_name}' at '{file_path}'"
+                    )
                 assert isinstance(spec.loader, Loader)
                 module: ModuleType = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)

@@ -781,7 +781,7 @@ class Settings:
             explanation = ""
         if not s:
             raise ConfigError("Expected a word to flag and a suggested replacement")
-        a = s.lower().split()
+        a = s.split()  # not lower() here
         if len(a) > 2:
             raise ConfigError("Expected a word to flag and a suggested replacement")
         flagged_word = a[0].strip()
