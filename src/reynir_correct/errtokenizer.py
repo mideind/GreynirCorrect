@@ -2896,9 +2896,7 @@ def check_wording(
                             suggestion = suggestion[::-1].replace(" ,", " aðe ", 1)[
                                 ::-1
                             ]
-                            explanation = (
-                                f"{tdict['explanation_w_sugg']} {suggestion}"
-                            )
+                            explanation = f"{tdict['explanation_w_sugg']} {suggestion}"
                             sugglist = list(w.split("_")[0] for w in sw)
                         if (
                             token.error_code
