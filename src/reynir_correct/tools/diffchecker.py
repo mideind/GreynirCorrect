@@ -39,7 +39,6 @@ def gen(f: Iterator[str]) -> Iterable[str]:
 
 
 def main() -> None:
-
     options: Dict[str, Union[str, bool, Set[str]]] = {}
     options["format"] = "text"  # text, json, csv, m2
     options["annotations"] = True

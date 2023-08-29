@@ -151,9 +151,7 @@ def quote(s: str) -> str:
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def val(
-    t: CorrectToken, quote_word: bool = False
-) -> Union[None, str, float, Tuple[Any, ...], Sequence[Any]]:
+def val(t: CorrectToken, quote_word: bool = False) -> Union[None, str, float, Tuple[Any, ...], Sequence[Any]]:
     """Return the value part of the token t"""
     if t.val is None:
         return None
@@ -194,16 +192,22 @@ def val(
 
 class GreynirCorrectAPI:
     """A high level api for correcting Icelandic texts"""
-    
+
     def __init__(self, gc: GreynirCorrect):
         self.gc = gc
 
     @staticmethod
     def from_options(options: Dict[str, Any]) -> "GreynirCorrectAPI":
         settings = load_config(options.pop("tov_config", None))
-        do_flesch_analysis = options.pop("flesch", False),
-        do_rare_word_analysis = options.pop("rare_words", False),
-        pipeline = CorrectionPipeline("", settings, do_flesch_analysis=bool(do_flesch_analysis), do_rare_word_analysis=bool(do_rare_word_analysis), **options)
+        do_flesch_analysis = (options.pop("flesch", False),)
+        do_rare_word_analysis = (options.pop("rare_words", False),)
+        pipeline = CorrectionPipeline(
+            "",
+            settings,
+            do_flesch_analysis=bool(do_flesch_analysis),
+            do_rare_word_analysis=bool(do_rare_word_analysis),
+            **options,
+        )
         gc = GreynirCorrect(settings=settings, pipeline=pipeline, **options)
         return GreynirCorrectAPI(gc)
 
@@ -212,8 +216,6 @@ class GreynirCorrectAPI:
         # Avoid the strange interface of the pipeline
         self.gc.pipeline._text_or_gen = text
         return self.gc.pipeline.tokenize()  # type: ignore
-
-
 
 
 def check_errors(**options: Any) -> str:
@@ -296,7 +298,13 @@ def check_spelling(settings: Settings, **options: Any) -> str:
     return unistr
 
 
-def test_spelling(text: Iterable[str], api: GreynirCorrectAPI, spaced:bool=False, normalize:bool=False, print_all:bool=False) -> Tuple[str, TokenSumType]:
+def test_spelling(
+    text: Iterable[str],
+    api: GreynirCorrectAPI,
+    spaced: bool = False,
+    normalize: bool = False,
+    print_all: bool = False,
+) -> Tuple[str, TokenSumType]:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
     if spaced:
@@ -343,7 +351,12 @@ def sentence_stream(text: Iterable[str], api: GreynirCorrectAPI) -> Iterator[Lis
         yield curr_sent
 
 
-def test_grammar(text: Iterable[str], api: GreynirCorrectAPI, ignore_rules: Set, annotate_unparsed_sentences: bool = True) -> Tuple[str, TokenSumType]:
+def test_grammar(
+    text: Iterable[str],
+    api: GreynirCorrectAPI,
+    ignore_rules: Set,
+    annotate_unparsed_sentences: bool = True,
+) -> Tuple[str, TokenSumType]:
     """Do a full spelling and grammar check of the source text"""
 
     accumul: List[str] = []
@@ -354,7 +367,12 @@ def test_grammar(text: Iterable[str], api: GreynirCorrectAPI, ignore_rules: Set,
     for toklist in sentence_stream(text, api):
         # Invoke the spelling and grammar checker on the token list
         # Only contains options relevant to the grammar check
-        sent = check_tokens(toklist, rc, annotate_unparsed_sentences=annotate_unparsed_sentences, ignore_rules=ignore_rules)
+        sent = check_tokens(
+            toklist,
+            rc,
+            annotate_unparsed_sentences=annotate_unparsed_sentences,
+            ignore_rules=ignore_rules,
+        )
         if sent is None:
             # Should not happen?
             continue
@@ -406,9 +424,7 @@ def test_grammar(text: Iterable[str], api: GreynirCorrectAPI, ignore_rules: Set,
 def check_grammar(rc: GreynirCorrect) -> str:
     """Do a full spelling and grammar check of the source text"""
     inneroptions: Dict[str, Union[str, bool]] = {}
-    inneroptions["annotate_unparsed_sentences"] = rc._options.get(
-        "annotate_unparsed_sentences", True
-    )
+    inneroptions["annotate_unparsed_sentences"] = rc._options.get("annotate_unparsed_sentences", True)
     inneroptions["ignore_rules"] = rc._options.get("ignore_rules", set())
     sentence_results: List[Dict[str, Any]] = []
     sentence_classifier: Optional[SentenceClassifier] = None
@@ -430,10 +446,7 @@ def check_grammar(rc: GreynirCorrect) -> str:
                 # to be consistent with what the parser returns.
                 # TODO: use TOK.META_BEGIN when that PR is ready
                 tokens_no_meta = [t for t in raw_tokens if t.kind < TOK.S_SPLIT]
-                nice_tokens = [
-                    AnnTokenDict(k=d.kind, x=d.txt, o=d.original or d.txt)
-                    for d in tokens_no_meta
-                ]
+                nice_tokens = [AnnTokenDict(k=d.kind, x=d.txt, o=d.original or d.txt) for d in tokens_no_meta]
                 sentence_results.append(
                     {
                         "original": original_sentence,
@@ -452,9 +465,7 @@ def check_grammar(rc: GreynirCorrect) -> str:
             continue
 
         # Extract the annotation list (defensive programming here)
-        annotations: List[Annotation] = getattr(
-            annotated_sentence, "annotations", cast(List[Annotation], [])
-        )
+        annotations: List[Annotation] = getattr(annotated_sentence, "annotations", cast(List[Annotation], []))
         # Sort in ascending order by token start index, and then by end index
         # (more narrow/specific annotations before broader ones)
         annotations.sort(key=lambda ann: (ann.start, ann.end))
@@ -485,10 +496,7 @@ def check_grammar(rc: GreynirCorrect) -> str:
         tokens: List[AnnTokenDict]
         if annotated_sentence.tree is None:
             # Not parsed: use the raw token list
-            tokens = [
-                AnnTokenDict(k=d.kind, x=d.txt, o=d.original or d.txt)
-                for d in annotated_sentence.tokens
-            ]
+            tokens = [AnnTokenDict(k=d.kind, x=d.txt, o=d.original or d.txt) for d in annotated_sentence.tokens]
         else:
             # Successfully parsed: use the text from the terminals (where available)
             # since we have more info there, for instance on em/en dashes.
@@ -496,9 +504,7 @@ def check_grammar(rc: GreynirCorrect) -> str:
             assert annotated_sentence.terminals is not None
             token_map = {t.index: t.text for t in annotated_sentence.terminals}
             tokens = [
-                AnnTokenDict(
-                    k=d.kind, x=token_map.get(ix, d.txt), o=d.original or d.txt
-                )
+                AnnTokenDict(k=d.kind, x=token_map.get(ix, d.txt), o=d.original or d.txt)
                 for ix, d in enumerate(annotated_sentence.tokens)
             ]
 
@@ -516,9 +522,7 @@ def check_grammar(rc: GreynirCorrect) -> str:
         "annotations": rc._options.get("annotations", False),
         "print_all": rc._options.get("print_all", False),
     }
-    return format_output(
-        sentence_results, rc._options.get("format", "json"), extra_text_options
-    )
+    return format_output(sentence_results, rc._options.get("format", "json"), extra_text_options)
 
 
 def format_output(
@@ -546,9 +550,7 @@ def format_output(
     raise Exception(f"Tried to format with invalid format: {format_type}")
 
 
-def format_text(
-    sentence_results: List[Dict[str, Any]], extra_options: Dict[str, Any]
-) -> str:
+def format_text(sentence_results: List[Dict[str, Any]], extra_options: Dict[str, Any]) -> str:
     output: List[str] = []
     annlist: List[str] = []
     for result in sentence_results:
@@ -633,9 +635,7 @@ def format_m2(sentence_results: List[Dict[str, Any]]) -> str:
         accumul.append("S {0}".format(" ".join([t["x"] for t in result["tokens"]])))
         for ann in result["annotations"]:
             accumul.append(
-                "A {0} {1}|||{2}|||{3}|||REQUIRED|||-NONE-|||0".format(
-                    ann.start, ann.end, ann.code, ann.suggest
-                )
+                "A {0} {1}|||{2}|||{3}|||REQUIRED|||-NONE-|||0".format(ann.start, ann.end, ann.code, ann.suggest)
             )
         accumul.append("")
     return "\n".join(accumul)

@@ -130,7 +130,8 @@ class Flesch:
     def get_feedback(score: float) -> str:
         """Provide feedback on the score of the Result object. This is done by comparing the score to the
         Flesch reading ease score scale. The feedback has been slightly modified to fit Icelandic.
-        Icelandic tends to score lower than English and thus the scale has been adjusted to reflect this."""
+        Icelandic tends to score lower than English and thus the scale has been adjusted to reflect this.
+        """
         if score > 120:
             return "Mjög léttur eða ómarktækur texti."
         elif score > 90:
@@ -222,7 +223,8 @@ class RareWords:
 
         Rare words are defined as words which have a probability lower than the low_prob_cutoff.
         The probability of a word is calculated by looking up the word in the n-gram model.
-        This function is a convenience function which does not require the user to track the token stream."""
+        This function is a convenience function which does not require the user to track the token stream.
+        """
         stream = tokenizer.tokenize(text)
         rare = RareWords()
         stream = rare.track_token_stream(stream)

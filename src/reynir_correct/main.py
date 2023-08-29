@@ -72,9 +72,7 @@ parser.add_argument(
     help="Suppress more agressive error suggestions",
 )
 
-parser.add_argument(
-    "--spaced", "-sp", help="Separate tokens with spaces", action="store_true"
-)
+parser.add_argument("--spaced", "-sp", help="Separate tokens with spaces", action="store_true")
 
 # Determines the output format
 parser.add_argument(
@@ -158,7 +156,6 @@ parser.add_argument(
 )
 
 
-
 def from_args(args: argparse.Namespace) -> Dict[str, Union[str, bool]]:
     """Fill options with information from args"""
     format = args.format
@@ -180,6 +177,7 @@ def from_args(args: argparse.Namespace) -> Dict[str, Union[str, bool]]:
         "flesch": args.flesch,
         "rare_words": args.rare_words,
     }
+
 
 def main() -> None:
     """Main function, called when the 'correct' command is invoked"""

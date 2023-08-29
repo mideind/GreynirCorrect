@@ -414,13 +414,7 @@ class Corrector:
         """Return the associated word database"""
         return self._db
 
-    def lookup_word(
-        self,
-        word: str,
-        *,
-        at_sentence_start: bool = False,
-        auto_uppercase: bool = False
-    ) -> ResultTuple:
+    def lookup_word(self, word: str, *, at_sentence_start: bool = False, auto_uppercase: bool = False) -> ResultTuple:
         """Look up the given word in the associated word database"""
         return self._db.lookup_g(word, at_sentence_start, auto_uppercase)
 
@@ -475,17 +469,13 @@ class Corrector:
         at_sentence_start: bool,
     ) -> str:
         """Return best candidate or the original word if none are found"""
-        candidates = self.gen_candidates(
-            original_word, word, context, at_sentence_start
-        )
+        candidates = self.gen_candidates(original_word, word, context, at_sentence_start)
         if not candidates:
             # No good candidates
             return word
         # Find the candidate with the highest probability
         m = max(candidates, key=lambda t: t[1])
-        if m[1] < self._MIN_LOG_PROBABILITY and (
-            word in self.ngrams or original_word in self.ngrams
-        ):
+        if m[1] < self._MIN_LOG_PROBABILITY and (word in self.ngrams or original_word in self.ngrams):
             # Best candidate is very unlikely: return the original word
             # print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
             return word
@@ -516,11 +506,7 @@ class Corrector:
             if w in self._db or self.freq(w) >= self._KNOWN_WORD_MIN_FREQUENCY:
                 return True
             wt = w.title()
-            return (
-                False
-                if wt == w
-                else (wt in self._db or self.freq(wt) >= self._KNOWN_WORD_MIN_FREQUENCY)
-            )
+            return False if wt == w else (wt in self._db or self.freq(wt) >= self._KNOWN_WORD_MIN_FREQUENCY)
 
         def known(words: Iterable[str]) -> Iterable[str]:
             """Return a generator of words that are actually in the dictionary."""
@@ -553,9 +539,7 @@ class Corrector:
         #
         #     return {e2 for e1 in edits1(pairs) for e2 in sub_edits1(e1)}
 
-        def _gen_candidates(
-            original_word: str, word: str
-        ) -> Iterable[Tuple[str, float]]:
+        def _gen_candidates(original_word: str, word: str) -> Iterable[Tuple[str, float]]:
             """Generate candidates in order of generally decreasing likelihood"""
 
             def logprob_title(*args: str) -> float:
@@ -605,9 +589,7 @@ class Corrector:
                         if Settings.DEBUG:
                             print(
                                 "stupid_backoff() returning logprob of '{0}' "
-                                "which is {1:.3} + {2:.3} = {3:.3}".format(
-                                    cw, logprob(*cw), lamb, logprob(*cw) + lamb
-                                )
+                                "which is {1:.3} + {2:.3} = {3:.3}".format(cw, logprob(*cw), lamb, logprob(*cw) + lamb)
                             )
                         return logprob(*cw) + lamb
                     # Insignificant frequency: back off to a simpler context
@@ -655,27 +637,17 @@ class Corrector:
         at_sentence_start: bool,
     ) -> List[Tuple[str, float]]:
         """Remove unlikely candidates from list"""
-        candidates = self.gen_candidates(
-            original_word, word, context, at_sentence_start
-        )
+        candidates = self.gen_candidates(original_word, word, context, at_sentence_start)
         if not candidates:
             # No candidates beside the word itself: return an empty list
             # print(f"Candidate {word} is only candidate, returned list is empty")
             return []
         # Return the highest probability candidate
         if Settings.DEBUG:
-            for i, (c, log_prob) in enumerate(
-                sorted(candidates, key=lambda t: t[1], reverse=True)[0:5]
-            ):
-                print(
-                    "Candidate {0} for {1} is {2} with log_prob {3:.3f}".format(
-                        i + 1, word, c, log_prob
-                    )
-                )
+            for i, (c, log_prob) in enumerate(sorted(candidates, key=lambda t: t[1], reverse=True)[0:5]):
+                print("Candidate {0} for {1} is {2} with log_prob {3:.3f}".format(i + 1, word, c, log_prob))
         m = max(candidates, key=lambda t: t[1])
-        if m[1] < self._MIN_LOG_PROBABILITY and (
-            word in self.ngrams or original_word in self.ngrams
-        ):
+        if m[1] < self._MIN_LOG_PROBABILITY and (word in self.ngrams or original_word in self.ngrams):
             # Best candidate is very unlikely: return an empty list of suggestions
             # print(f"Best candidate {m[0]} is highly unlikely, returning an empty list")
             return []
@@ -719,26 +691,14 @@ class Corrector:
         # Return True if the lower case version is rare
         return self.logprob(wl) < self._RARE_THRESHOLD
 
-    def correct(
-        self,
-        word: str,
-        *,
-        context: Tuple[str, ...] = (),
-        at_sentence_start: bool = False
-    ) -> str:
+    def correct(self, word: str, *, context: Tuple[str, ...] = (), at_sentence_start: bool = False) -> str:
         """Correct a single word, keeping its case (lower/upper/title) intact.
         The optional context parameter contains a tuple of preceding
         words, used to enable a more accurate probability prediction."""
-        return self._case_of(word)(
-            self._correct(word, self._cast(word), context, at_sentence_start)
-        )
+        return self._case_of(word)(self._correct(word, self._cast(word), context, at_sentence_start))
 
     def suggest_list(
-        self,
-        word: str,
-        *,
-        context: Tuple[str, ...] = (),
-        at_sentence_start: bool = False
+        self, word: str, *, context: Tuple[str, ...] = (), at_sentence_start: bool = False
     ) -> List[Tuple[str, float]]:
         """Return a list of suggestions for a single word, keeping its case
         (lower/upper/title) intact. The optional context parameter contains
@@ -746,9 +706,7 @@ class Corrector:
         prediction."""
         return list(
             (self._case_of(word)(cased_cand[0]), cased_cand[1])
-            for cased_cand in self._best_list(
-                word, self._cast(word), context, at_sentence_start
-            )
+            for cased_cand in self._best_list(word, self._cast(word), context, at_sentence_start)
         )
 
     def __getitem__(self, word: str) -> str:
@@ -772,9 +730,7 @@ class Corrector:
                     result.append(token.txt)
                 else:
                     # Correct the word and return the result
-                    result.append(
-                        self.correct(token.txt, context=tuple(result[look_back:]))
-                    )
+                    result.append(self.correct(token.txt, context=tuple(result[look_back:])))
             elif token.txt:
                 result.append(token.txt)
             elif token.kind in {TOK.S_BEGIN, TOK.S_END}:
@@ -783,7 +739,6 @@ class Corrector:
 
 
 def test() -> None:
-
     with GreynirBin.get_db() as db:
         c = Corrector(db)
 
@@ -885,5 +840,4 @@ def test() -> None:
 
 
 if __name__ == "__main__":
-
     test()

@@ -68,9 +68,7 @@ class SentenceClassifier:
     _domain_prefix = "has_error "
 
     def __init__(self) -> None:
-        self.pipe = pipeline(
-            "text2text-generation", model=self._model_name, tokenizer="google/byt5-base"
-        )
+        self.pipe = pipeline("text2text-generation", model=self._model_name, tokenizer="google/byt5-base")
 
     @overload
     def classify(self, text: str) -> bool:
@@ -87,9 +85,7 @@ class SentenceClassifier:
             text = [text]
 
         pipe_result = self.pipe([self._domain_prefix + t for t in text])
-        result: List[bool] = [
-            r["generated_text"] == self._true_label for r in pipe_result
-        ]
+        result: List[bool] = [r["generated_text"] == self._true_label for r in pipe_result]
 
         return result[0] if len(result) == 1 else result
 

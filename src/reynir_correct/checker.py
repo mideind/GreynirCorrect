@@ -205,9 +205,7 @@ class GreynirCorrect(Greynir):
     _lock = Lock()
 
     def __init__(self, settings: Settings, pipeline: CorrectionPipeline, **options: Any) -> None:
-        self._annotate_unparsed_sentences = options.pop(
-            "annotate_unparsed_sentences", True
-        )
+        self._annotate_unparsed_sentences = options.pop("annotate_unparsed_sentences", True)
         self._ignore_rules: FrozenSet[str] = options.get("ignore_rules", set())
         super().__init__(**options)
         self._options = options
@@ -219,7 +217,7 @@ class GreynirCorrect(Greynir):
 
     def tokenize(self, text: StringIterable) -> Iterator[Tok]:
         """Use the correcting tokenizer instead of the normal one"""
-        # This is 
+        # This is
         self.pipeline._text_or_gen = text
         return self.pipeline.tokenize()
 
@@ -244,10 +242,7 @@ class GreynirCorrect(Greynir):
     def parser(self) -> Fast_Parser:
         """Override the parent class' construction of a parser instance"""
         with self._lock:
-            if (
-                GreynirCorrect._parser is None
-                or GreynirCorrect._parser.is_grammar_modified()[0]
-            ):
+            if GreynirCorrect._parser is None or GreynirCorrect._parser.is_grammar_modified()[0]:
                 # Initialize a singleton instance of the parser and the reducer.
                 # Both classes are re-entrant and thread safe.
                 GreynirCorrect._parser = edp = ErrorDetectingParser()
@@ -273,9 +268,7 @@ class GreynirCorrect(Greynir):
         token_to_terminal: Dict[int, int] = {}
         if parsed:
             token_to_terminal = {
-                tnode.index: ix
-                for ix, tnode in enumerate(sent.terminal_nodes)
-                if tnode.index is not None
+                tnode.index: ix for ix, tnode in enumerate(sent.terminal_nodes) if tnode.index is not None
             }
         grammar = self.parser.grammar
         # First, add token-level annotations and count words that occur in BÍN
@@ -339,11 +332,7 @@ class GreynirCorrect(Greynir):
                     ann.append(a)
         # Then, look at the whole sentence
         num_words = words_in_bin + words_not_in_bin
-        if (
-            num_words > 2
-            and words_in_bin / num_words < ICELANDIC_RATIO
-            and "E004" not in self._ignore_rules
-        ):
+        if num_words > 2 and words_in_bin / num_words < ICELANDIC_RATIO and "E004" not in self._ignore_rules:
             # The sentence contains less than 50% Icelandic
             # words: assume it's in a foreign language and discard the
             # token level annotations
@@ -367,9 +356,7 @@ class GreynirCorrect(Greynir):
                 err_index = sent.err_index or 0
                 start = max(0, err_index - 1)
                 end = min(len(sent.tokens), err_index + 2)
-                toktext = correct_spaces(
-                    " ".join(t.txt for t in sent.tokens[start:end] if t.txt)
-                )
+                toktext = correct_spaces(" ".join(t.txt for t in sent.tokens[start:end] if t.txt))
                 ann.append(
                     # E001: Unable to parse sentence
                     Annotation(
@@ -377,9 +364,7 @@ class GreynirCorrect(Greynir):
                         end=len(sent.tokens) - 1,
                         code="E001",
                         text="Ekki tókst að þátta setningu; mögulega felst villa í henni",  # Formerly "Málsgreinin fellur ekki að reglum"
-                        detail="Þáttun brást í kringum {0}. tóka ('{1}')".format(
-                            err_index + 1, toktext
-                        ),
+                        detail="Þáttun brást í kringum {0}. tóka ('{1}')".format(err_index + 1, toktext),
                     )
                 )
         else:
@@ -431,7 +416,6 @@ class GreynirCorrect(Greynir):
         return sent
 
 
-
 def create_rc_instance(rc: Optional[GreynirCorrect], **options: Any) -> GreynirCorrect:
     """Create a global GreynirCorrect instance if it doesn't exist already.
     If the rc argument is not None, it is returned as is."""
@@ -440,9 +424,7 @@ def create_rc_instance(rc: Optional[GreynirCorrect], **options: Any) -> GreynirC
     return rc
 
 
-def check_single(
-    sentence_text: str, rc: Optional[GreynirCorrect] = None, **options: Any
-) -> Optional[Sentence]:
+def check_single(sentence_text: str, rc: Optional[GreynirCorrect] = None, **options: Any) -> Optional[Sentence]:
     """Check and annotate a single sentence, given in plain text"""
     # Returns None if no sentence was parsed
     rc = create_rc_instance(rc, **options)
@@ -460,9 +442,7 @@ def check_tokens(
     return rc.parse_tokens(tokens, max_sent_tokens=max_sent_tokens)
 
 
-def check(
-    text: str, rc: Optional[GreynirCorrect] = None, **options: Any
-) -> Iterable[Paragraph]:
+def check(text: str, rc: Optional[GreynirCorrect] = None, **options: Any) -> Iterable[Paragraph]:
     """Return a generator of checked paragraphs of text,
     each being a generator of checked sentences with
     annotations"""
