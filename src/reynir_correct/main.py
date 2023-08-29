@@ -36,16 +36,11 @@
 
 """
 
-from typing import (
-    Dict,
-    Union,
-)
-
-import sys
 import argparse
-from .wrappers import check_errors
-from .settings import Settings
+import sys
+from typing import Dict, Union
 
+from .wrappers import check_errors
 
 # File types for UTF-8 encoded text files
 ReadFile = argparse.FileType("r", encoding="utf-8")
@@ -136,14 +131,23 @@ parser.add_argument(
     help="Run a heuristic filter on sentences to determine whether they are probably correct. Probably correct sentences will not go through the full parsing process.",
     action="store_true",
 )
-
+parser.add_argument(
+    "--flesch",
+    help="Calculate Flesch readability score for the input text",
+    action="store_true",
+)
+parser.add_argument(
+    "--rare_words",
+    help="Show rare words in the input text",
+    action="store_true",
+)
 
 parser.add_argument(
     "--tov_config",
     nargs=1,
     type=str,
     help="Add additional use-specific rules in a configuration file to check for custom tone-of-voice issues. Uses the same format as the default GreynirCorrect.conf file",
-    default=False,
+    default=None,
 )
 
 parser.add_argument(
@@ -153,6 +157,29 @@ parser.add_argument(
     default=False,
 )
 
+
+
+def from_args(args: argparse.Namespace) -> Dict[str, Union[str, bool]]:
+    """Fill options with information from args"""
+    format = args.format
+    if args.json:
+        format = "json"
+    elif args.csv:
+        format = "csv"
+    return {
+        "input": args.infile,
+        "output": args.outfile,
+        "suppress_suggestions": args.suppress_suggestions,
+        "format": format,
+        "spaced": args.spaced,
+        "normalize": args.normalize,
+        "all_errors": args.all_errors or args.grammar,
+        "sentence_prefilter": args.sentence_prefilter,
+        "tov_config": args.tov_config,
+        "suggest_not_correct": args.suggest_not_correct,
+        "flesch": args.flesch,
+        "rare_words": args.rare_words,
+    }
 
 def main() -> None:
     """Main function, called when the 'correct' command is invoked"""
@@ -164,24 +191,9 @@ def main() -> None:
         # Nothing we can do
         print("No input has been given, nothing can be returned")
         sys.exit(1)
-    options: Dict[str, Union[bool, str]] = {}
-    options["input"] = args.infile
-    if args.suppress_suggestions:
-        options["suppress_suggestions"] = args.suppress_suggestions
-    options["format"] = args.format
-    if args.json:
-        options["format"] = "json"
-    elif args.csv:
-        options["format"] = "csv"
-    if args.tov_config:
-        options["tov_config"] = args.tov_config[0]
-    options["spaced"] = args.spaced
-    options["normalize"] = args.normalize
-    options["all_errors"] = args.all_errors or args.grammar
-    options["sentence_prefilter"] = args.sentence_prefilter
-    options["suggest_not_correct"] = args.suggest_not_correct
+    options = from_args(args)
 
-    print(check_errors(**options), file=args.outfile)
+    print(check_errors(**options))
 
 
 if __name__ == "__main__":

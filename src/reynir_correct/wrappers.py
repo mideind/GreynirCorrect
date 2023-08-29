@@ -57,6 +57,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Iterator,
     Iterable,
@@ -80,7 +81,7 @@ from tokenizer import detokenize, text_from_tokens, normalized_text_from_tokens,
 from tokenizer.definitions import AmountTuple, NumberTuple
 
 from .errtokenizer import CorrectToken, Error
-from .errtokenizer import tokenize as errtokenize
+from .errtokenizer import tokenize as errtokenize, CorrectionPipeline
 from .annotation import Annotation
 from .checker import GreynirCorrect, check_tokens, load_config
 from .settings import Settings
@@ -191,10 +192,34 @@ def val(
     return t.val
 
 
+class GreynirCorrectAPI:
+    """A high level api for correcting Icelandic texts"""
+    
+    def __init__(self, gc: GreynirCorrect):
+        self.gc = gc
+
+    @staticmethod
+    def from_options(options: Dict[str, Any]) -> "GreynirCorrectAPI":
+        settings = load_config(options.pop("tov_config", None))
+        do_flesch_analysis = options.pop("flesch", False),
+        do_rare_word_analysis = options.pop("rare_words", False),
+        pipeline = CorrectionPipeline("", settings, do_flesch_analysis=bool(do_flesch_analysis), do_rare_word_analysis=bool(do_rare_word_analysis), **options)
+        gc = GreynirCorrect(settings=settings, pipeline=pipeline, **options)
+        return GreynirCorrectAPI(gc)
+
+    def correct_spelling(self, text: Iterable[str]) -> Iterable[CorrectToken]:
+        """Correct the text"""
+        # Avoid the strange interface of the pipeline
+        self.gc.pipeline._text_or_gen = text
+        return self.gc.pipeline.tokenize()  # type: ignore
+
+
+
+
 def check_errors(**options: Any) -> str:
     """Return a string in the chosen format and correction level
     using the spelling and grammar checker"""
-    rc = GreynirCorrect(load_config(options), **options)
+    rc = GreynirCorrect(load_config(options.pop("tov_config", None)), **options)
     input = options.get("input", None)
     if isinstance(input, str):
         options["input"] = [input]
@@ -271,21 +296,20 @@ def check_spelling(settings: Settings, **options: Any) -> str:
     return unistr
 
 
-def test_spelling(settings: Settings, **options: Any) -> Tuple[str, TokenSumType]:
+def test_spelling(text: Iterable[str], api: GreynirCorrectAPI, spaced:bool=False, normalize:bool=False, print_all:bool=False) -> Tuple[str, TokenSumType]:
     # Initialize sentence accumulator list
     # Function to convert a token list to output text
-    if options.get("spaced", False):
-        if options.get("normalize", False):
+    if spaced:
+        if normalize:
             to_text = normalized_text_from_tokens
         else:
             to_text = text_from_tokens
     else:
         to_text = partial(detokenize, normalize=True)
-    toks = sentence_stream(settings=settings, **options)
+    toks = sentence_stream(text, api)
     unisum: List[str] = []
     toksum: TokenSumType = []
     annlist: List[str] = []
-    print_all = options.get("print_all", False)
     for toklist in toks:
         unisum.append(to_text(toklist))
         if print_all:
@@ -303,14 +327,11 @@ def test_spelling(settings: Settings, **options: Any) -> Tuple[str, TokenSumType
     return unistr, toksum
 
 
-def sentence_stream(settings: Settings, **options: Any) -> Iterator[List[CorrectToken]]:
+def sentence_stream(text: Iterable[str], api: GreynirCorrectAPI) -> Iterator[List[CorrectToken]]:
     """Yield a stream of sentence token lists from the source text"""
     # Initialize sentence accumulator list
     curr_sent: List[CorrectToken] = []
-    gen = options.get("input", None)
-    if gen is None:
-        gen = sys.stdin
-    for t in errtokenize(gen, settings, **options):
+    for t in api.correct_spelling(text):
         # Normal shallow parse, one line per sentence,
         # tokens separated by spaces
         curr_sent.append(t)
@@ -322,23 +343,18 @@ def sentence_stream(settings: Settings, **options: Any) -> Iterator[List[Correct
         yield curr_sent
 
 
-def test_grammar(rc: GreynirCorrect, **options: Any) -> Tuple[str, TokenSumType]:
+def test_grammar(text: Iterable[str], api: GreynirCorrectAPI, ignore_rules: Set, annotate_unparsed_sentences: bool = True) -> Tuple[str, TokenSumType]:
     """Do a full spelling and grammar check of the source text"""
 
     accumul: List[str] = []
     offset = 0
     alltoks: TokenSumType = []
-    inneroptions: Dict[str, Union[str, bool]] = {}
-    inneroptions["annotate_unparsed_sentences"] = options.get(
-        "annotate_unparsed_sentences", True
-    )
-    inneroptions["ignore_rules"] = options.get("ignore_rules", set())
     annlist: List[str] = []
 
-    for toklist in sentence_stream(rc.settings, **options):
+    for toklist in sentence_stream(text, api):
         # Invoke the spelling and grammar checker on the token list
         # Only contains options relevant to the grammar check
-        sent = check_tokens(toklist, rc, **inneroptions)
+        sent = check_tokens(toklist, rc, annotate_unparsed_sentences=annotate_unparsed_sentences, ignore_rules=ignore_rules)
         if sent is None:
             # Should not happen?
             continue

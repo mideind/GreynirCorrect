@@ -47,53 +47,52 @@
 
 """
 
-from importlib.abc import Loader
-from typing import (
-    Any,
-    FrozenSet,
-    Mapping,
-    cast,
-    Iterable,
-    Iterator,
-    List,
-    Tuple,
-    Dict,
-    Type,
-    Optional,
-)
-from typing_extensions import TypedDict
-from importlib.machinery import ModuleSpec
-from types import ModuleType
 import importlib.util
 import os
 import sys
+from importlib.abc import Loader
+from importlib.machinery import ModuleSpec
 from threading import Lock
-from islenska.basics import Ksnid
+from types import ModuleType
+from typing import (
+    Any,
+    Dict,
+    FrozenSet,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Type,
+    cast,
+)
 
+from islenska.basics import Ksnid
 from reynir import (
-    Greynir,
-    correct_spaces,
     TOK,
-    Tok,
-    TokenList,
-    Sentence,
+    Greynir,
     Paragraph,
     ProgressFunc,
+    Sentence,
+    Tok,
+    TokenList,
+    correct_spaces,
 )
-from reynir.incparser import ICELANDIC_RATIO
-from reynir.reynir import DEFAULT_MAX_SENT_TOKENS, Job, ProgressFunc
-from reynir.bintokenizer import StringIterable
 from reynir.binparser import BIN_Grammar, BIN_Parser, VariantHandler
-from reynir.fastparser import (
-    Fast_Parser,
-    ffi,  # type: ignore
-)
+from reynir.bintokenizer import StringIterable
+from reynir.fastparser import ffi  # type: ignore
+from reynir.fastparser import Fast_Parser
+from reynir.incparser import ICELANDIC_RATIO
 from reynir.reducer import Reducer
+from reynir.reynir import DEFAULT_MAX_SENT_TOKENS, Job, ProgressFunc
+from typing_extensions import TypedDict
+
 from reynir_correct.settings import Settings
 
 from .annotation import Annotation
-from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
-from .errfinder import ErrorFinder, ErrorDetectionToken
+from .errfinder import ErrorDetectionToken, ErrorFinder
+from .errtokenizer import CorrectionPipeline, CorrectToken
 from .pattern import PatternMatcher
 
 
@@ -124,17 +123,17 @@ STYLE_WARNINGS: Mapping[str, str] = {
 }
 
 
-def load_config(options: Dict[str, Any]):
+def load_config(tov_config_path: Optional[str] = None) -> Settings:
     """Load the default configuration file and return a Settings object. Optionally load
     an additional config if given."""
     settings = Settings()
     settings.read(os.path.join("config", "GreynirCorrect.conf"))
-    if options.get("tov_config", False):
+    if tov_config_path is not None:
         # check whether the config path is valid:
         try:
-            settings.read(options["tov_config"], external=True)
+            settings.read(tov_config_path, external=True)
         except FileNotFoundError:
-            print("File not found: " + options["tov_config"])
+            print(f"File not found: {tov_config_path}")
             sys.exit(1)
     return settings
 
@@ -205,7 +204,7 @@ class GreynirCorrect(Greynir):
     _reducer = None
     _lock = Lock()
 
-    def __init__(self, settings: Settings, **options: Any) -> None:
+    def __init__(self, settings: Settings, pipeline: CorrectionPipeline, **options: Any) -> None:
         self._annotate_unparsed_sentences = options.pop(
             "annotate_unparsed_sentences", True
         )
@@ -215,11 +214,14 @@ class GreynirCorrect(Greynir):
         self.settings = settings
         # if options:
         #    raise ValueError(f"Unknown option(s) for GreynirCorrect: {options}")
+        # We create the pipeline here with an empty string as the text, but set it later.
+        self.pipeline = pipeline
 
     def tokenize(self, text: StringIterable) -> Iterator[Tok]:
         """Use the correcting tokenizer instead of the normal one"""
-        # The CorrectToken class is a duck-typing implementation of Tok
-        return tokenize_and_correct(text, settings=self.settings, **self._options)
+        # This is 
+        self.pipeline._text_or_gen = text
+        return self.pipeline.tokenize()
 
     @classmethod
     def _dump_token(cls, tok: Tok) -> Tuple[Any, ...]:
@@ -429,11 +431,12 @@ class GreynirCorrect(Greynir):
         return sent
 
 
+
 def create_rc_instance(rc: Optional[GreynirCorrect], **options: Any) -> GreynirCorrect:
     """Create a global GreynirCorrect instance if it doesn't exist already.
     If the rc argument is not None, it is returned as is."""
     if rc is None:
-        rc = GreynirCorrect(load_config(options), **options)
+        rc = GreynirCorrect(load_config(options.pop("tov_config", None), **options))
     return rc
 
 

@@ -80,7 +80,7 @@ from reynir.binparser import BIN_Token, VariantHandler
 from islenska.basics import Ksnid
 from .settings import Settings
 from .spelling import Corrector
-
+from .readability import Flesch, RareWords
 
 # Token constructor classes
 TokenCtor = Type["Correct_TOK"]
@@ -3150,7 +3150,12 @@ class CorrectionPipeline(DefaultPipeline):
     _token_ctor = cast(TokenConstructor, Correct_TOK)
 
     def __init__(
-        self, text_or_gen: StringIterable, settings: Settings, **options: Any
+        self,
+        text_or_gen: StringIterable, 
+        settings: Settings,
+        do_flesch_analysis: bool = False,
+        do_rare_word_analysis: bool = False,
+        **options: Any
     ) -> None:
         super().__init__(text_or_gen, **options)
         self._corrector: Optional[Corrector] = None
@@ -3170,6 +3175,14 @@ class CorrectionPipeline(DefaultPipeline):
         self._ignore_wordlist = options.pop("ignore_wordlist", set())
         self._ignore_rules = options.pop("ignore_rules", set())
         self.settings = settings
+        # If flesch_analysis is True, we add one more stage to the tokenization phases
+        self.flesch = Flesch()
+        if do_flesch_analysis:
+            self._phases.append(self.flesch.track_token_stream)
+        self.rare_words = RareWords()
+        if do_rare_word_analysis:
+            self._phases.append(self.rare_words.track_token_stream)
+
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """Add a correction pass just before BÍN annotation"""
@@ -3251,9 +3264,13 @@ class CorrectionPipeline(DefaultPipeline):
 
 
 def tokenize(
-    text_or_gen: StringIterable, settings: Settings, **options: Any
+    text_or_gen: StringIterable,
+    settings: Settings,
+    do_flesch_analysis: bool = False,
+    do_rare_word_analysis: bool = False,
+    **options: Any,
 ) -> Iterator[CorrectToken]:
     """Tokenize text using the correction pipeline,
     overriding a part of the default tokenization pipeline"""
-    pipeline = CorrectionPipeline(text_or_gen, settings, **options)
+    pipeline = CorrectionPipeline(text_or_gen, settings, do_flesch_analysis=do_flesch_analysis, do_rare_word_analysis=do_rare_word_analysis, **options)
     return cast(Iterator[CorrectToken], pipeline.tokenize())

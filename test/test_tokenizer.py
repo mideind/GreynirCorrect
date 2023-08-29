@@ -34,18 +34,12 @@
 
 """
 
-from typing import Iterable, cast
-import reynir_correct
 import tokenizer
-from reynir_correct.wrappers import test_spelling as check_errors
-import pytest
+from reynir_correct.wrappers import GreynirCorrectAPI, test_spelling as check_spelling
 
 
 # Global settings object for the tests
-settings = reynir_correct.Settings()
-settings.read("../reynir_correct/config/GreynirCorrect.conf")
-gc = reynir_correct.GreynirCorrect(settings=settings)
-
+api = GreynirCorrectAPI.from_options({one_sent=True})
 
 def dump(tokens):
     print(
@@ -65,22 +59,10 @@ def gen_to_string(g):
     return tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt))
 
 
-def roundtrip(s: str) -> str:
-    return reynir_correct.detokenize(
-        cast(Iterable[tokenizer.Tok], reynir_correct.tokenize(s))
-    )
-
 
 def check(p):
     """Return a corrected, normalized string form of the input along with the tokens"""
-    options: Dict[str, Union[str, bool]] = {}
-    options["spaced"] = False
-    options["input"] = [p]
-    options["one_sent"] = False
-    options[
-        "print_all"
-    ] = True  # If input is many sentences, one string (and token list) for all
-    return check_errors(gc.settings, **options)
+    return check_spelling(text=[p], api=api, spaced=False, print_all=True, one_sent=False)
 
 
 def test_correct(verbose=False):
