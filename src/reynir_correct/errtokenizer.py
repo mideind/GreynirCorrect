@@ -2456,7 +2456,7 @@ def late_fix_capitalization(
             and token.error_code == "Z002"
             and " " in token.txt
             and token.original
-            and not " " in token.error_original
+            and " " not in token.error_original
         ):
             # 'félags- og barnamálaráðherra datt':
             # The capitalization error in the first word of sentence has been corrected ('Félags-').
@@ -2612,7 +2612,7 @@ def late_fix_merges(
             and token.error
             and " " in token.txt
             and token.error_suggest
-            and not " " in token.error_suggest
+            and " " not in token.error_suggest
             and token.original
         ):
             # Error was added to the token before merging with another (fimm milljónir *kóna*)
@@ -2765,7 +2765,7 @@ def check_style(
             # Check whether the token meanings are all marked with
             # style warnings in BÍN
             _, k_meanings = db.lookup_ksnid(token.txt)
-            if k_meanings and all(style_warning(k) for k in k_meanings) and not "Y001/w" in ignore_rules:
+            if k_meanings and all(style_warning(k) for k in k_meanings) and "Y001/w" not in ignore_rules:
                 # Every meaning has a style warning in BÍN: Annotate it.
                 # We use the first meaning only, but theoretically there could
                 # be different annotations for different meanings.

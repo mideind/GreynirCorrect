@@ -71,7 +71,6 @@ from typing import (
 if TYPE_CHECKING:
     from .classifier import SentenceClassifier
 
-import sys
 import argparse
 import json
 from functools import partial
@@ -81,7 +80,7 @@ from tokenizer import detokenize, text_from_tokens, normalized_text_from_tokens,
 from tokenizer.definitions import AmountTuple, NumberTuple
 
 from .errtokenizer import CorrectToken, Error
-from .errtokenizer import tokenize as errtokenize, CorrectionPipeline
+from .errtokenizer import CorrectionPipeline
 from .annotation import Annotation
 from .checker import GreynirCorrect, check_tokens, load_config
 from .settings import Settings

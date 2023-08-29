@@ -50,7 +50,6 @@ from collections import defaultdict
 from reynir.basics import ConfigError, LineReader
 from reynir.bindb import GreynirBin
 from reynir.bintokenizer import StateDict
-import importlib.util
 
 
 ErrorFormTuple = Tuple[str, str, int, str, str]

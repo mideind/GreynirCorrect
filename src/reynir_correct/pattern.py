@@ -408,10 +408,8 @@ class PatternMatcher:
         """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal and nominal phrases
         vp = match.first_match("VP > { 'marka' }")
-        lemma = "marka"
         if vp is None:
             vp = match.first_match("NP > { 'markaður' }")
-            lemma = "markaður"
         np = match.first_match("NP >> { ( 'upphaf'|'upphafinn' ) }")
         if np is None:
             np = match.first_match("VP > { 'upphefja' }")
@@ -1054,10 +1052,8 @@ class PatternMatcher:
         """Handle a match of a suspect preposition pattern"""
         # Find the offending nominal phrase
         vp = match.first_match("VP > { 'velja' }")
-        lemma = "velja"
         if vp is None:
             vp = match.first_match("NP > { 'valinn' }")
-            lemma = "valinn"
         pp = match.first_match('P > { "að" }')
         if vp is None or pp is None:
             return
@@ -1287,7 +1283,7 @@ class PatternMatcher:
             f"'{realso.lemma}' svo hún verði '{suggest}'."
         )
         detail = (
-            f"Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
+            "Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
             "svokallað dvalarhorf ('Ég er ekki að skilja þetta')."
         )
         # TODO better original value!
@@ -1472,7 +1468,7 @@ class PatternMatcher:
         elif kind == "TEMP/w":
             sent_kind = "tíðarsetningum á borð við 'Z' í 'X gerði Y áður en Z'"
         elif kind == "REL":
-            detail = f"Í tilvísunarsetningum er aðeins framsöguháttur sagna tækur."
+            detail = "Í tilvísunarsetningum er aðeins framsöguháttur sagna tækur."
         else:
             return
         if not detail:
@@ -2927,7 +2923,7 @@ class PatternMatcher:
             """Context matching function for the %noun macro"""
             if not tree.is_terminal:
                 return False
-            if not "et" in tree.all_variants:
+            if "et" not in tree.all_variants:
                 return False
             lemma = tree.own_lemma
             if not lemma:

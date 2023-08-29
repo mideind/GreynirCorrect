@@ -834,7 +834,7 @@ class ErrorFinder(ParseForestNavigator):
         suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, so.cat, vars)
         return AnnotationDict(
             text=f"Sögn á að vera í fleirtölu líkt og frumlagið '{subject}'",
-            detail=f"Sögnin á að vera í fleirtölu, þrátt fyrir 'manns' í frumlagi.",
+            detail="Sögnin á að vera í fleirtölu, þrátt fyrir 'manns' í frumlagi.",
             start=start,
             end=end,
             original=so.tidy_text,
