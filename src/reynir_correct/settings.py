@@ -41,16 +41,15 @@
 
 """
 
-from typing import Dict, Set, List, Tuple, Mapping, Optional, Any
+from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
+
 import os
 import threading
-
 from collections import defaultdict
 
 from reynir.basics import ConfigError, LineReader
 from reynir.bindb import GreynirBin
 from reynir.bintokenizer import StateDict
-
 
 ErrorFormTuple = Tuple[str, str, int, str, str]
 # (lemma, id, cat, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg)
@@ -548,35 +547,29 @@ class Icesquer:
 
     def add(self, word: str, corr: Tuple[str, ...]) -> None:
         if word in self.DICT:
-            # Happens in the data, just skip it
-            # raise ConfigError(
-            #    "Multiple definition of '{0}' in IEC nonwords data".format(word)
-            # )
-            return
+            raise ConfigError(f"Multiple definition of '{word}' in IEC nonwords data")
         self.DICT[word] = corr
 
 
 class WrongFormers:
     def __init__(self) -> None:
         # Dictionary structure: dict { wrong_word : right_word }
-        self.DICT: Dict[str, Tuple[str, ...]] = dict()
+        self.DICT: Dict[str, str] = dict()
 
-    def add(self, word: str, corr: Tuple[str, ...]) -> None:
+    def add(self, word: str, corr: str) -> None:
         if word in self.DICT:
-            # Happens in the data, just skip it
-            return
+            raise ConfigError(f"Multiple definition of '{word}' in WrongFormers")
         self.DICT[word] = corr
 
 
 class WrongFormersCID:
     def __init__(self) -> None:
         # Dictionary structure: dict { wrong_word : right_word }
-        self.DICT: Dict[str, Tuple[str, ...]] = dict()
+        self.DICT: Dict[str, str] = dict()
 
-    def add(self, word: str, corr: Tuple[str, ...]) -> None:
+    def add(self, word: str, corr: str) -> None:
         if word in self.DICT:
-            # Happens in the data, just skip it
-            return
+            raise ConfigError(f"Multiple definition of '{word}' in WrongFormersCID")
         self.DICT[word] = corr
 
 
