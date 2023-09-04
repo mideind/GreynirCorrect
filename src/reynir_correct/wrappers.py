@@ -541,7 +541,7 @@ def format_text(
         if extra_options["annotations"]:
             for aann in result["annotations"]:
                 annlist.append(str(aann))
-            if annlist and not extra_options["print_all"]:
+            if annlist and extra_options["print_all"]:
                 txt = txt + "\n" + "\n".join(annlist)
                 annlist = []
         output.append(txt)
