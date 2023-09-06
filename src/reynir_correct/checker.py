@@ -100,7 +100,8 @@ from .annotation import Annotation
 from .errtokenizer import CorrectToken, tokenize as tokenize_and_correct
 from .errfinder import ErrorFinder, ErrorDetectionToken
 from .pattern import PatternMatcher
-#from .settings import tone_of_voice_words
+
+# from .settings import tone_of_voice_words
 
 
 # The type of a grammar check result
@@ -342,9 +343,8 @@ class GreynirCorrect(Greynir):
                     )
                     ann.append(a)
             elif (
-                    (abbrev:= getattr(t, "txt", "")) in Abbreviations.DICT 
-                    and "E006" not in self._ignore_rules
-                    ):
+                abbrev := getattr(t, "txt", "")
+            ) in Abbreviations.DICT and "E006" not in self._ignore_rules:
                 # We found an abbreviation and we want to write it out
                 # TODO handle TOK.Amount
                 annotate = True
@@ -365,7 +365,7 @@ class GreynirCorrect(Greynir):
                     assert original_terminal is not None
                     terminal = grammar.terminals[original_terminal]
                     assert isinstance(terminal, VariantHandler)
-                    if t.suggestion_does_not_match(terminal, bin_token):
+                    if t.suggestion_does_not_match(terminal, bin_token):  # type: ignore
                         # If this token is annotated with a spelling suggestion,
                         # do not add it unless it works grammatically
                         annotate = False
@@ -376,12 +376,10 @@ class GreynirCorrect(Greynir):
                         code="E006",
                         text="Skammstafanir ætti að skrifa út",
                         detail="Best er að skrifa skammstafanir út í formlegu máli.",
-                        references=list,
                         original=getattr(t, "original", ""),
                         suggest=getattr(t, "txt", ""),
                     )
                     ann.append(a)
-                
 
             elif "!" in getattr(t, "txt", "") and "E007" not in self._ignore_rules:
                 # Check for exclamation marks in sentence, we wan't to avoid those in professional texts.
@@ -392,7 +390,6 @@ class GreynirCorrect(Greynir):
                     code="E007",
                     text="Setning inniheldur upphrópunarmerki",
                     detail="Best er að forðast upphrópunarmerki í formlegu máli.",
-                    references=list,
                     original=getattr(t, "original", ""),
                     suggest=getattr(t, "txt", ""),
                 )
@@ -420,7 +417,7 @@ class GreynirCorrect(Greynir):
                     ),
                 )
             ]
-        elif (num_words >= 30 and "E005" not in self._ignore_rules):
+        elif num_words >= 30 and "E005" not in self._ignore_rules:
             # The sentence contains 30 words or more, and should be split into shorter
             # sentences to make the text easier to read.
             a = Annotation(
