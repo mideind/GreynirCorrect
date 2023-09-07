@@ -66,6 +66,7 @@ class Flesch:
     def is_a_word(tok: tokenizer.Tok) -> bool:
         """Determine if a token is a word for the Flesch metric."""
         if tok.kind < tokenizer.TOK.META_BEGIN:
+            # Punctuation marks are not counted as words
             if tok.kind > tokenizer.TOK.PUNCTUATION:
                 return True
         return False
@@ -75,7 +76,9 @@ class Flesch:
         """Calculate the Flesch reading ease score after tracking a token stream.
         See https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests."""
         # Magic numbers from the Flesch reading ease score formula - English
-        score = 206.835 - (1.015 * (num_words / num_sentences)) - 84.6 * (num_syllables / num_words)
+        # Icelandic tends to score lower than English and thus the scale has been adjusted to reflect this.
+        # Original formula: 206.835 - (1.015 * (num_words / num_sentences)) - 84.6 * (num_syllables / num_words)
+        score = 206.835 - (1.015 * (num_words / num_sentences)) - 70 * (num_syllables / num_words)
         return score
 
     @staticmethod
@@ -86,9 +89,11 @@ class Flesch:
         for tok in token_stream:
             if Flesch.is_a_word(tok):
                 num_words += 1
-                # We only count syllables in words, not in abbreviations, numbers, etc.
                 if tok.kind == tokenizer.TOK.WORD:
                     num_syllables += Flesch.count_syllables_in_word(tok.txt)
+                else:
+                    # All tokens that are numbers, abbreviations, etc. are counted as one syllable, as an approximation
+                    num_syllables += 1
             if Flesch.is_start_of_sentence(tok):
                 num_sentences += 1
         score = Flesch.get_score(num_sentences, num_words, num_syllables)
@@ -112,16 +117,18 @@ class Flesch:
             return "Mjög léttur eða ómarktækur texti."
         elif score > 90:
             return "Mjög léttur texti"
-        elif score > 70:
+        elif score > 80:
             return "Léttur texti"
+        elif score > 70:
+            return "Frekar léttur texti"
         elif score > 60:
             return "Meðalléttur texti"
         elif score > 50:
-            return "Meðalþungur texti"
+            return "Svolítið þungur texti"
         elif score > 30:
-            return "Nokkuð þungur texti"
-        elif score > 0:
             return "Þungur texti"
+        elif score > 0:
+            return "Mjög þungur texti"
         # Negative scores
         else:
             return "Mjög þungur eða ómarktækur texti."
@@ -152,6 +159,10 @@ class RareWords:
                 if prob < low_prob_cutoff:
                     lemma_set = self.bin.lookup_lemmas_and_cats(token.txt)
                     lemma = lemma_set.pop()[0] if lemma_set else token.txt
+                    # sometimes there are hyphens in the lemma
+                    if "-" in lemma and "-" not in token.txt:
+                        # remove the hyphen from the lemma
+                        lemma = lemma.replace("-", "")
                     rare_words_dict[lemma] = prob
         rare_words = sorted(rare_words_dict.items(), key=lambda x: x[1], reverse=False)[:max_words]
         return rare_words
@@ -186,7 +197,7 @@ if __name__ == "__main__":
 
         print(f"Flesch-læsileikastig: {flesch_score:.2f}")
         print(f"Flesch-umsögn: {Flesch.get_feedback(flesch_score)}")
-        print(f"Sjaldgæfustu {max_words} orðin í textanum:")
+        print("Sjaldgæfustu orð í textanum:")
         for word, prob in rare_words:
-            print(f"\t{word}: {prob:.8f}")
+            print(f"\t{word}: {prob:.20f}")
         print()
