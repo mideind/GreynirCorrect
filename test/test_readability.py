@@ -1,7 +1,6 @@
 from typing import Tuple
 
 import tokenizer
-
 from reynir_correct import readability
 
 
@@ -28,7 +27,7 @@ def test_count_syllables():
     ]
     for word, num_syllables in words_and_syllables:
         assert (
-            readability.Flesch._count_syllables_in_word(word) == num_syllables
+            readability.Flesch.count_syllables_in_word(word) == num_syllables
         ), f"Expected {num_syllables} syllables in {word}"
 
 

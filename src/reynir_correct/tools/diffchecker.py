@@ -6,16 +6,12 @@ To run for the file 'prufa.txt':
 $ python diffchecker.py prufa.txt
 
 """
-from reynir_correct.wrappers import check_errors
-from typing import (
-    Iterator,
-    Iterable,
-    Dict,
-    Set,
-    Union,
-)
-import sys
+from typing import Dict, Iterable, Iterator, Set, Union
+
 import argparse
+import sys
+
+from reynir_correct.wrappers import check_errors
 
 # File types for UTF-8 encoded text files
 ReadFile = argparse.FileType("r", encoding="utf-8")

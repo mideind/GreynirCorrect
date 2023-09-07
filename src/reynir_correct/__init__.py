@@ -30,33 +30,20 @@
 
 # Expose the reynir-correct API
 
-from reynir import Greynir, correct_spaces, mark_paragraphs, Sentence, Paragraph
+from reynir import Greynir, Paragraph, Sentence, correct_spaces, mark_paragraphs
 from tokenizer import detokenize
-from .settings import Settings
-
-# Token-level correction
-from .errtokenizer import (
-    CorrectionPipeline,
-    tokenize,
-    Correct_TOK,
-)
-
-# Grammar checking
-from .checker import (
-    GreynirCorrect,
-    check,
-    check_single,
-    check_with_stats,
-    check_with_custom_parser,
-    AnnotatedSentence,
-)
-
-from .wrappers import check_errors
 
 # Annotations
 from .annotation import Annotation
 
+# Grammar checking
+from .checker import AnnotatedSentence, GreynirCorrect
+
+# Token-level correction
+from .errtokenizer import Correct_TOK, CorrectionPipeline
+from .settings import Settings
 from .version import __version__
+from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, check_errors
 
 __author__ = "Miðeind ehf"
 __copyright__ = "(C) 2022 Miðeind ehf."
@@ -70,13 +57,11 @@ __all__ = (
     "detokenize",
     "Settings",
     "CorrectionPipeline",
-    "tokenize",
     "Correct_TOK",
     "GreynirCorrect",
-    "check",
-    "check_single",
-    "check_with_stats",
-    "check_with_custom_parser",
+    "GreynirCorrectAPI",
+    "CorrectionResult",
+    "CorrectedSentence",
     "check_errors",
     "AnnotatedSentence",
     "Annotation",

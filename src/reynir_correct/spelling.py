@@ -35,20 +35,18 @@
 
 """
 
-from typing import DefaultDict, List, Tuple, Set, Optional, Iterable, Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, DefaultDict, Iterable, List, Optional, Set, Tuple
 
 import math
 import re
 import time
-
 from collections import defaultdict
 from functools import lru_cache
 
-from reynir import tokenize, correct_spaces, TOK
+from icegrams.ngrams import MAX_ORDER, Ngrams
+from reynir import TOK, correct_spaces, tokenize
 from reynir.bindb import GreynirBin, ResultTuple
 from reynir.bintokenizer import StringIterable
-from icegrams.ngrams import Ngrams, MAX_ORDER
 
 if __name__ == "__main__":
     if not TYPE_CHECKING:

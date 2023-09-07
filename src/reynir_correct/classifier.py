@@ -45,29 +45,27 @@
 from typing import List, Union, overload
 
 
-try:
-    from transformers import pipeline  # type: ignore
-except:
-    import warnings
-
-    warningtext = (
-        "Tried to import the classifier module without the required packages installed.\n"
-        "The required packages are in the 'sentence_classifier' extra\n"
-        "Run 'pip install reynir-correct[sentence_classifier] to install them\n"
-        "\n"
-        "Alternatively, install the packages directly with\n"
-        "'pip install datasets transformers torch' or similar.\n"
-    )
-    warnings.warn(warningtext)
-    raise ImportError(warningtext)
-
-
 class SentenceClassifier:
     _model_name = "mideind/yfirlestur-icelandic-classification-byt5"
     _true_label = "1"
     _domain_prefix = "has_error "
 
     def __init__(self) -> None:
+        try:
+            from transformers import pipeline
+        except ImportError:
+            import warnings
+
+            warningtext = (
+                "Tried to import the classifier module without the required packages installed.\n"
+                "The required packages are in the 'sentence_classifier' extra\n"
+                "Run 'pip install reynir-correct[sentence_classifier] to install them\n"
+                "\n"
+                "Alternatively, install the packages directly with\n"
+                "'pip install datasets transformers torch' or similar.\n"
+            )
+            warnings.warn(warningtext)
+            raise ImportError(warningtext)
         self.pipe = pipeline("text2text-generation", model=self._model_name, tokenizer="google/byt5-base")
 
     @overload

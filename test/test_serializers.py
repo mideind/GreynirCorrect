@@ -39,9 +39,8 @@ def test_serializers():
     ]
 
     # Global settings object for the tests
-    settings = rc.Settings()
-    settings.read("../reynir_correct/config/GreynirCorrect.conf")
-    gc = rc.GreynirCorrect(settings=settings)
+    api = rc.GreynirCorrectAPI.from_options()
+    gc = api.gc
 
     job = gc.submit(sents, parse=True)
     for pg in job.paragraphs():
@@ -58,9 +57,7 @@ def test_serializers():
             assert sent.tree.flat_with_all_variants == new.tree.flat_with_all_variants
 
             cls = gc.__class__
-            assert json.loads(sent.dumps(cls, indent=2)) == json.loads(
-                new.dumps(cls, indent=2)
-            )
+            assert json.loads(sent.dumps(cls, indent=2)) == json.loads(new.dumps(cls, indent=2))
 
 
 if __name__ == "__main__":

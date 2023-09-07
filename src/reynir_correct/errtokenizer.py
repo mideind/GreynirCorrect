@@ -35,52 +35,52 @@
 """
 
 from typing import (
-    Mapping,
-    Sequence,
-    cast,
     Any,
-    TypeVar,
-    Type,
-    Union,
-    Tuple,
-    Set,
-    FrozenSet,
-    List,
     Dict,
+    FrozenSet,
     Iterable,
     Iterator,
+    List,
+    Mapping,
     Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
 )
 
 import re
 from abc import ABC, abstractmethod
 
+from islenska.basics import Ksnid
+from reynir import TOK, Tok
+from reynir.bindb import GreynirBin
+from reynir.binparser import BIN_Token, VariantHandler
+from reynir.bintokenizer import (
+    Bin_TOK,
+    DefaultPipeline,
+    MatchingStream,
+    StringIterable,
+    TokenConstructor,
+    TokenIterator,
+    load_token,
+)
 from tokenizer.abbrev import Abbreviations
 from tokenizer.definitions import (
+    UNICODE_REGEX,
+    UNICODE_REPLACEMENTS,
     BIN_Tuple,
     BIN_TupleList,
     NumberTuple,
     PersonNameList,
     ValType,
-    UNICODE_REPLACEMENTS,
-    UNICODE_REGEX,
 )
-from reynir import TOK, Tok
-from reynir.bintokenizer import (
-    Bin_TOK,
-    DefaultPipeline,
-    MatchingStream,
-    TokenConstructor,
-    load_token,
-    StringIterable,
-    TokenIterator,
-)
-from reynir.bindb import GreynirBin
-from reynir.binparser import BIN_Token, VariantHandler
-from islenska.basics import Ksnid
+
 from .settings import Settings
 from .spelling import Corrector
-from .readability import Flesch, RareWords
 
 # Token constructor classes
 TokenCtor = Type["Correct_TOK"]
@@ -808,8 +808,8 @@ class SpellingError(Error):
     by a much more likely word that exists in the dictionary."""
 
     # S001: Common errors that cannot be interpreted as other words, picked up by unique_errors. Should be corrected.
-    # S002: Less common errors that cannot be interpreted as other words, handled by spelling.py. Corrections should possibly
-    #       only be suggested.
+    # S002: Less common errors that cannot be interpreted as other words, handled by spelling.py.
+    #       Corrections should possibly only be suggested.
     # S003: Erroneously formed words picked up by ErrorForms.
     #       Should be corrected.
     # S004: Rare word, a more common one has been substituted.
@@ -2954,8 +2954,6 @@ class CorrectionPipeline(DefaultPipeline):
         self,
         text_or_gen: StringIterable,
         settings: Settings,
-        do_flesch_analysis: bool = False,
-        do_rare_word_analysis: bool = False,
         **options: Any,
     ) -> None:
         super().__init__(text_or_gen, **options)
@@ -2976,13 +2974,6 @@ class CorrectionPipeline(DefaultPipeline):
         self._ignore_wordlist = options.pop("ignore_wordlist", set())
         self._ignore_rules = options.pop("ignore_rules", set())
         self.settings = settings
-        # If flesch_analysis is True, we add one more stage to the tokenization phases
-        self.flesch = Flesch()
-        if do_flesch_analysis:
-            self._phases.append(self.flesch.track_token_stream)
-        self.rare_words = RareWords()
-        if do_rare_word_analysis:
-            self._phases.append(self.rare_words.track_token_stream)
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """Add a correction pass just before BÍN annotation"""
@@ -3049,22 +3040,3 @@ class CorrectionPipeline(DefaultPipeline):
 
         ct_stream = late_fix_merges(ct_stream, self._ignore_wordlist, self._ignore_rules)
         return ct_stream
-
-
-def tokenize(
-    text_or_gen: StringIterable,
-    settings: Settings,
-    do_flesch_analysis: bool = False,
-    do_rare_word_analysis: bool = False,
-    **options: Any,
-) -> Iterator[CorrectToken]:
-    """Tokenize text using the correction pipeline,
-    overriding a part of the default tokenization pipeline"""
-    pipeline = CorrectionPipeline(
-        text_or_gen,
-        settings,
-        do_flesch_analysis=do_flesch_analysis,
-        do_rare_word_analysis=do_rare_word_analysis,
-        **options,
-    )
-    return cast(Iterator[CorrectToken], pipeline.tokenize())

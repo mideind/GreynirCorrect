@@ -39,36 +39,22 @@
 
 """
 
-from typing import (
-    Iterable,
-    List,
-    Mapping,
-    Tuple,
-    Set,
-    FrozenSet,
-    Callable,
-    Dict,
-    Optional,
-    Union,
-    cast,
-)
+from typing import Callable, Dict, FrozenSet, Iterable, List, Mapping, Optional, Set, Tuple, Union, cast
 
-from functools import partial
-import os
 import json
+import os
+from functools import partial
 
 from islenska import Bin
-
-from reynir import Sentence, NounPhrase
+from reynir import NounPhrase, Sentence
+from reynir.bintokenizer import ALL_CASES
+from reynir.matcher import ContextDict
 from reynir.simpletree import SimpleTree
 from reynir.verbframe import VerbErrors
-from reynir.matcher import ContextDict
-from reynir.bintokenizer import ALL_CASES
 
 from reynir_correct.errtokenizer import emulate_case
 
 from .annotation import Annotation
-
 
 # The types involved in pattern processing
 AnnotationFunction = Callable[[SimpleTree], None]

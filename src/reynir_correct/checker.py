@@ -47,18 +47,7 @@
 
 """
 
-from typing import (
-    Any,
-    Dict,
-    FrozenSet,
-    Iterable,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    Tuple,
-    cast,
-)
+from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Tuple, cast
 from typing_extensions import TypedDict
 
 import importlib.util
@@ -86,17 +75,6 @@ from .annotation import Annotation
 from .errfinder import ErrorDetectionToken, ErrorFinder
 from .errtokenizer import CorrectionPipeline, CorrectToken
 from .pattern import PatternMatcher
-
-
-# The type of a grammar check result
-class CheckResult(TypedDict):
-    sentences: List["Sentence"]
-    num_sentences: int
-    num_parsed: int
-    num_tokens: int
-    ambiguity: float
-    parse_time: float
-
 
 # Style mark from BÍN:
 # NID = Niðrandi / disparaging
@@ -140,7 +118,6 @@ def style_warning(k: Ksnid) -> str:
 
 
 class ErrorDetectingGrammar(BIN_Grammar):
-
     """A subclass of BIN_Grammar that causes conditional sections in the
     Greynir.grammar file, demarcated using
     $if(include_errors)...$endif(include_errors),
@@ -153,12 +130,21 @@ class ErrorDetectingGrammar(BIN_Grammar):
 
 
 class AnnotatedSentence(Sentence):
-
     """A subclass that adds a list of Annotation instances to a Sentence object"""
 
     def __init__(self, job: Job, s: TokenList) -> None:
         super().__init__(job, s)
         self.annotations: List[Annotation] = []
+
+
+# The type of a grammar check result
+class CheckResult(TypedDict):
+    sentences: List[AnnotatedSentence]
+    num_sentences: int
+    num_parsed: int
+    num_tokens: int
+    ambiguity: float
+    parse_time: float
 
 
 class ErrorDetectingParser(Fast_Parser):
@@ -200,20 +186,15 @@ class GreynirCorrect(Greynir):
         self,
         settings: Settings,
         pipeline: CorrectionPipeline,
-        annotate_unparsed_sentences: bool,
-        ignore_rules: Optional[FrozenSet[str]],
         **options: Any,
     ) -> None:
-        self._annotate_unparsed_sentences = annotate_unparsed_sentences
-        self._ignore_rules: FrozenSet[str] = frozenset(ignore_rules or [])
         super().__init__(**options)
         self.settings = settings
-        # We create the pipeline here with an empty string as the text, but set it later.
         self.pipeline = pipeline
 
     def tokenize(self, text: StringIterable) -> Iterator[Tok]:
         """Use the correcting tokenizer instead of the normal one"""
-        # This is
+        # This is a bit of a hack: we set the pipeline's text_or_gen
         self.pipeline._text_or_gen = text
         return self.pipeline.tokenize()
 
@@ -328,7 +309,7 @@ class GreynirCorrect(Greynir):
                     ann.append(a)
         # Then, look at the whole sentence
         num_words = words_in_bin + words_not_in_bin
-        if num_words > 2 and words_in_bin / num_words < ICELANDIC_RATIO and "E004" not in self._ignore_rules:
+        if num_words > 2 and words_in_bin / num_words < ICELANDIC_RATIO:
             # The sentence contains less than 50% Icelandic
             # words: assume it's in a foreign language and discard the
             # token level annotations
@@ -345,25 +326,24 @@ class GreynirCorrect(Greynir):
                 )
             ]
         elif not parsed:
-            if self._annotate_unparsed_sentences and "E001" not in self._ignore_rules:
-                # If the sentence couldn't be parsed,
-                # put an annotation on it as a whole.
-                # In this case, we keep the token-level annotations.
-                err_index = sent.err_index or 0
-                start = max(0, err_index - 1)
-                end = min(len(sent.tokens), err_index + 2)
-                toktext = correct_spaces(" ".join(t.txt for t in sent.tokens[start:end] if t.txt))
-                ann.append(
-                    # E001: Unable to parse sentence
-                    Annotation(
-                        start=0,
-                        end=len(sent.tokens) - 1,
-                        code="E001",
-                        # Formerly "Málsgreinin fellur ekki að reglum"
-                        text="Ekki tókst að þátta setningu; mögulega felst villa í henni",
-                        detail="Þáttun brást í kringum {0}. tóka ('{1}')".format(err_index + 1, toktext),
-                    )
+            # If the sentence couldn't be parsed,
+            # put an annotation on it as a whole.
+            # In this case, we keep the token-level annotations.
+            err_index = sent.err_index or 0
+            start = max(0, err_index - 1)
+            end = min(len(sent.tokens), err_index + 2)
+            toktext = correct_spaces(" ".join(t.txt for t in sent.tokens[start:end] if t.txt))
+            ann.append(
+                # E001: Unable to parse sentence
+                Annotation(
+                    start=0,
+                    end=len(sent.tokens) - 1,
+                    code="E001",
+                    # Formerly "Málsgreinin fellur ekki að reglum"
+                    text="Ekki tókst að þátta setningu; mögulega felst villa í henni",
+                    detail="Þáttun brást í kringum {0}. tóka ('{1}')".format(err_index + 1, toktext),
                 )
+            )
         else:
             # Successfully parsed:
             # Add annotations for error-marked nonterminals from the grammar
@@ -400,11 +380,9 @@ class GreynirCorrect(Greynir):
             else:
                 # Check the next pair
                 i += 1
-        # Remove ignored annotations
-        ann = [a for a in ann if a.code not in self._ignore_rules]
         return ann
 
-    def create_sentence(self, job: Job, s: TokenList) -> Sentence:
+    def create_sentence(self, job: Job, s: TokenList) -> AnnotatedSentence:
         """Create a fresh sentence object and annotate it
         before returning it to the client"""
         sent = AnnotatedSentence(job, s)
@@ -412,16 +390,13 @@ class GreynirCorrect(Greynir):
         sent.annotations = self.annotate(sent)
         return sent
 
-    def parse_all_tokens(
-        self, tokens: Iterable[Tok], *, progress_func: ProgressFunc = None, max_sent_tokens: int = ...
-    ) -> CheckResult:
+    def parse_all_tokens(self, tokens: Iterable[Tok], *, progress_func: ProgressFunc = None) -> CheckResult:
         """Parse all tokens in the given iterable."""
         job = _Job(
             self,
             tokens,
             parse=True,
             progress_func=progress_func,
-            max_sent_tokens=max_sent_tokens,
         )
         # Iterating through the sentences in the job causes
         # them to be parsed and their statistics collected

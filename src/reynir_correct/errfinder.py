@@ -38,24 +38,14 @@
 
 """
 
-from typing import (
-    Mapping,
-    Tuple,
-    List,
-    Dict,
-    Any,
-    Callable,
-    Union,
-    Optional,
-    cast,
-)
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union, cast
 from typing_extensions import Protocol, TypedDict
 
 import re
 
-from reynir import correct_spaces, Tok, TOK, Sentence
-from reynir.fastparser import ParseForestNavigator, Node
+from reynir import TOK, Sentence, Tok, correct_spaces
 from reynir.binparser import BIN_Terminal, BIN_Token
+from reynir.fastparser import Node, ParseForestNavigator
 from reynir.settings import VerbSubjects
 from reynir.simpletree import SimpleTree
 from reynir.verbframe import VerbErrors, VerbFrame
@@ -316,7 +306,9 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self.node_span(node)
         return AnnotationDict(
             text="'{0}' er sennilega ofaukið".format(txt),
-            detail="Yfirleitt nægir að nota 'en' í þessu samhengi, 'heldur en' telst frekar óformlegt. Það á þó stundum rétt hjá sér í löngum setningum ef langt er frá upphaflega samanburðarliðnum til seinni samanburðarliðarins til að auka skýrleika textans.",
+            detail="Yfirleitt nægir að nota 'en' í þessu samhengi, 'heldur en' telst frekar óformlegt. "
+            "Það á þó stundum rétt hjá sér í löngum setningum ef langt er frá upphaflega samanburðarliðnum til seinni "
+            "samanburðarliðarins til að auka skýrleika textans.",
             original=orig_txt,
             start=start,
             end=end,
@@ -606,7 +598,8 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self.node_span(node)
         return AnnotationDict(
             text="'né' gæti átt að vera 'eða'",
-            detail="'né' er hluti af margorða samtengingunni 'hvorki né' en getur ekki staðið ein og sér sem aðaltenging.",
+            detail="'né' er hluti af margorða samtengingunni 'hvorki né' en getur ekki "
+            "staðið ein og sér sem aðaltenging.",
             original="né",
             start=start,
             end=end,

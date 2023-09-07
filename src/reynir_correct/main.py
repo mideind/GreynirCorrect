@@ -36,9 +36,10 @@
 
 """
 
+from typing import Dict, Union
+
 import argparse
 import sys
-from typing import Dict, Union
 
 from .wrappers import check_errors
 
@@ -165,7 +166,6 @@ def from_args(args: argparse.Namespace) -> Dict[str, Union[str, bool]]:
         format = "csv"
     return {
         "input": args.infile,
-        "output": args.outfile,
         "suppress_suggestions": args.suppress_suggestions,
         "format": format,
         "spaced": args.spaced,
@@ -191,7 +191,7 @@ def main() -> None:
         sys.exit(1)
     options = from_args(args)
 
-    print(check_errors(**options))
+    print(check_errors(**options), file=args.outfile)
 
 
 if __name__ == "__main__":
