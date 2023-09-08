@@ -166,6 +166,7 @@ WRONG_ABBREVS: Mapping[str, str] = {
     "Þmt.": "Þ.m.t.",
     "ca": "ca.",
     "Ca": "Ca.",
+    "kr": "kr.",
 }
 
 
@@ -2663,7 +2664,6 @@ def check_wording(
 ) -> Iterator[CorrectToken]:
     """Annotate words to be flagged, with warnings. Here we check for both taboo words and
     tone of voice issues as determined by an additional config, if given."""
-
     taboo_data = create_template_dict(
         settings,
         "Óheppilegt eða óviðurkvæmilegt orð",
@@ -2675,7 +2675,7 @@ def check_wording(
     tone_of_voice_data = create_template_dict(
         settings,
         "Orðið er ekki í samræmi við raddblæ okkar",
-        "Orðið er ekki í samræmi við raddblæ okkar, í staðinn gætirðu notað ",
+        "Orðið er ekki í samræmi við raddblæ okkar, í staðinn gætirðu notað",
         ToneOfVoiceWarning,
         settings.tone_of_voice_words.DICT,
     )

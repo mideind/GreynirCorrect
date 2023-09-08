@@ -43,7 +43,6 @@ def main() -> None:
     options["one_sent"] = False
     options["generate_suggestion_list"] = True
     options["ignore_comments"] = True  # Only used here
-    options["generate_suggestion_list"] = False
     options["annotate_unparsed_sentences"] = True
     options["suppress_suggestions"] = False
     options["replace_html_escapes"] = True
