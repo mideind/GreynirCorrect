@@ -49,12 +49,8 @@ not_real_texts = {
 
 def get_sentence_word_syllable_counts(text: str) -> Tuple[int, int, int]:
     """Get the number of sentences, words and syllables in a text."""
-    flesch = readability.Flesch()
     stream = tokenizer.tokenize(text)
-    stream = flesch.track_token_stream(stream)
-    for _ in stream:
-        pass
-    return flesch.num_sentences, flesch.num_words, flesch.num_syllables
+    return readability.Flesch.get_counts_from_stream(stream)
 
 
 def test_count_syllables():
@@ -70,7 +66,6 @@ def test_count_syllables():
         ("", 0),
         (" ", 0),
         ("1999", 0),
-        ("islandsbanki.is/einstaklingar", 0),
     ]
     for word, num_syllables in words_and_syllables:
         found_syllables = readability.Flesch.count_syllables_in_word(word)

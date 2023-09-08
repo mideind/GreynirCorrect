@@ -82,7 +82,7 @@ class Flesch:
         return score
 
     @staticmethod
-    def get_score_from_stream(token_stream: Iterable[tokenizer.Tok]) -> float:
+    def get_counts_from_stream(token_stream: Iterable[tokenizer.Tok]) -> Tuple[int, int, int]:
         num_words = 0
         num_sentences = 0
         num_syllables = 0
@@ -96,13 +96,18 @@ class Flesch:
                     num_syllables += 1
             if Flesch.is_start_of_sentence(tok):
                 num_sentences += 1
-        score = Flesch.get_score(num_sentences, num_words, num_syllables)
-        return score
+        return num_sentences, num_words, num_syllables
+
+    @staticmethod
+    def get_score_from_stream(token_stream: Iterable[tokenizer.Tok]) -> float:
+        """Calculate the Flesch reading ease score after tracking a token stream.
+        See https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests."""
+        num_sentences, num_words, num_syllables = Flesch.get_counts_from_stream(token_stream)
+        return Flesch.get_score(num_sentences, num_words, num_syllables)
 
     @staticmethod
     def get_score_from_text(text: str) -> float:
         """Calculate the Flesch reading ease score of a text.
-        This function is a convenience function which does not require the user to track the token stream.
         See https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests."""
         stream = tokenizer.tokenize(text)
         return Flesch.get_score_from_stream(stream)
