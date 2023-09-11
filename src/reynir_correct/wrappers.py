@@ -286,9 +286,7 @@ class GreynirCorrectAPI:
 
         return self.sentence_prefilter.classify(original_sentence)
 
-    def _correct_grammar(
-        self, token_corrected_tokens: Iterable[CorrectToken], ignore_rules: Optional[Set] = None
-    ) -> CheckResult:
+    def _correct_grammar(self, token_corrected_tokens: Iterable[CorrectToken]) -> CheckResult:
         results = self.gc.parse_all_tokens(token_corrected_tokens)
         return results
 
