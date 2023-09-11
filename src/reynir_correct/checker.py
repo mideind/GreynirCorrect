@@ -44,9 +44,9 @@
     E002: A nonterminal tagged with 'error' is present in the parse tree.
     E003: An impersonal verb occurs with an incorrect subject case.
     E004: The sentence is probably not in Icelandic.
-	E005: The sentence is probably too long.
-	E006: Abbreviations that should be written in full in formal texts.
-	E007: Sentence contains exclamation marks, inappropriate in formal texts.
+    E005: The sentence is probably too long.
+    E006: Abbreviations that should be written in full in formal texts.
+    E007: Sentence contains exclamation marks, inappropriate in formal texts.
 
 """
 
