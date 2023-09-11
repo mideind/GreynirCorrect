@@ -207,6 +207,6 @@ if __name__ == "__main__":
         print(f"Flesch-læsileikastig: {flesch_score:.2f}")
         print(f"Flesch-umsögn: {Flesch.get_feedback(flesch_score)}")
         print("Sjaldgæfustu orð í textanum:")
-        for word, prob in rare_words:
-            print(f"\t{word}: {prob:.20f}")
+        for word, _ in rare_words:
+            print(f"\t{word}")
         print()
