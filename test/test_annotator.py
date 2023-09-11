@@ -59,6 +59,7 @@
 
 
 import pytest
+
 import reynir_correct
 
 from .utils import check_sentence
@@ -69,8 +70,6 @@ def api() -> reynir_correct.GreynirCorrectAPI:
     """Provide a module-scoped GreynirCorrect instance as a test fixture"""
     r = reynir_correct.GreynirCorrectAPI.from_options()
     yield r
-    # Do teardown here
-    r.__class__.cleanup()
 
 
 def dump(tokens):
