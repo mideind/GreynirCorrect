@@ -458,6 +458,22 @@ class GreynirCorrect(Greynir):
         sent.annotations = self.annotate(sent)
         return sent
 
+    def parse_all_token_iter(
+        self, tokens: Iterable[Tok], *, progress_func: ProgressFunc = None
+    ) -> Iterable[AnnotatedSentence]:
+        """Parse all tokens in the given iterable, returning iterable sentences."""
+        job = _Job(
+            self,
+            tokens,
+            parse=True,
+            progress_func=progress_func,
+        )
+        # Iterating through the sentences in the job causes
+        # them to be parsed and their statistics collected
+        for sent in job:
+            sent = cast(AnnotatedSentence, sent)
+            yield sent
+
     def parse_all_tokens(self, tokens: Iterable[Tok], *, progress_func: ProgressFunc = None) -> CheckResult:
         """Parse all tokens in the given iterable."""
         job = _Job(
