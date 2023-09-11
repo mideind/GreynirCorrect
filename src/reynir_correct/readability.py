@@ -103,7 +103,11 @@ class Flesch:
         """Calculate the Flesch reading ease score after tracking a token stream.
         See https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests."""
         num_sentences, num_words, num_syllables = Flesch.get_counts_from_stream(token_stream)
-        return Flesch.get_score(num_sentences, num_words, num_syllables)
+        try:
+            score = Flesch.get_score(num_sentences, num_words, num_syllables)
+        except ZeroDivisionError:
+            score = -1.0  # invalid score
+        return score
 
     @staticmethod
     def get_score_from_text(text: str) -> float:
