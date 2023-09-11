@@ -273,7 +273,7 @@ class GreynirCorrect(Greynir):
             # the submitted text, including ones that are not understood
             # by the parser, such as quotation marks and exotic punctuation
             annotate = False
-            if getattr(t, "error_code", None) is not None:
+            if getattr(t, "error_code", "") != "":
                 # This is a CorrectToken instance (or a duck typing equivalent)
                 assert isinstance(t, CorrectToken)  # Satisfy Mypy
                 annotate = True
