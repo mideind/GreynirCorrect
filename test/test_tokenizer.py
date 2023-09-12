@@ -34,17 +34,13 @@
 
 """
 
-from typing import Iterable, cast
-import reynir_correct
 import tokenizer
-from reynir_correct.wrappers import test_spelling as check_errors
-import pytest
+from reynir_correct import GreynirCorrectAPI
 
+from .utils import correct_spelling_format
 
 # Global settings object for the tests
-settings = reynir_correct.Settings()
-settings.read("../reynir_correct/config/GreynirCorrect.conf")
-gc = reynir_correct.GreynirCorrect(settings=settings)
+api = GreynirCorrectAPI.from_options(one_sent=True, all_errors=False)
 
 
 def dump(tokens):
@@ -65,30 +61,16 @@ def gen_to_string(g):
     return tokenizer.correct_spaces(" ".join(t.txt for t in g if t.txt))
 
 
-def roundtrip(s: str) -> str:
-    return reynir_correct.detokenize(
-        cast(Iterable[tokenizer.Tok], reynir_correct.tokenize(s))
-    )
-
-
 def check(p):
     """Return a corrected, normalized string form of the input along with the tokens"""
-    options: Dict[str, Union[str, bool]] = {}
-    options["spaced"] = False
-    options["input"] = [p]
-    options["one_sent"] = False
-    options[
-        "print_all"
-    ] = True  # If input is many sentences, one string (and token list) for all
-    return check_errors(gc.settings, **options)
+    return correct_spelling_format(text=[p], api=api, spaced=False)
 
 
 def test_correct(verbose=False):
     """Test the spelling and grammar correction module"""
 
     s, g = check(
-        "Kexið er gott báðumegin, sagði sagði Cthulhu og rak sig uppundir þakið. "
-        "Það var aldrey aftaka veður í gær."
+        "Kexið er gott báðumegin, sagði sagði Cthulhu og rak sig uppundir þakið. " "Það var aldrey aftaka veður í gær."
     )
 
     assert len(g) == 24
@@ -163,9 +145,7 @@ def test_allowed_multiples(verbose=False):
 def test_wrong_compounds(verbose=False):
     """Check wrong_compounds"""
 
-    s, g = check(
-        "Það voru allskonar kökur á borðinu en ég vildi samt vera annarsstaðar."
-    )
+    s, g = check("Það voru allskonar kökur á borðinu en ég vildi samt vera annarsstaðar.")
 
     assert "allskonar" not in s
     assert "alls konar" in s
@@ -261,10 +241,7 @@ def test_capitalization_errors(verbose=False):
     assert "fjármála- og efnahagsráðherra" in s
     assert "fjármálaráðherra" in s
 
-    s, g = check(
-        "Íslenskir menn drápu Danska menn og Gyðinga í evrópu gegn mótmælum "
-        "Eistneskra sjálfstæðismanna."
-    )
+    s, g = check("Íslenskir menn drápu Danska menn og Gyðinga í evrópu gegn mótmælum " "Eistneskra sjálfstæðismanna.")
 
     assert s.startswith("Íslenskir ")
     assert "Danska" not in s
@@ -279,9 +256,7 @@ def test_capitalization_errors(verbose=False):
     assert "sjálfstæðismanna" not in s
     assert "Sjálfstæðismanna" in s
 
-    s, g = check(
-        "finnar finna Finna hvar sem þeir leita en finnarnir fóru " "og hittu finnana."
-    )
+    s, g = check("finnar finna Finna hvar sem þeir leita en finnarnir fóru " "og hittu finnana.")
     assert s.startswith("Finnar ")
     assert "finnarnir" not in s
     assert "Finnarnir" in s
@@ -305,10 +280,7 @@ def test_capitalization_errors(verbose=False):
     assert "Marxismann" not in s
     assert "marxismann" in s
 
-    s, g = check(
-        "30. Desember á ég afmæli en ég held upp á það 20. JÚLÍ "
-        "af því að mamma á afmæli þriðja Janúar."
-    )
+    s, g = check("30. Desember á ég afmæli en ég held upp á það 20. JÚLÍ " "af því að mamma á afmæli þriðja Janúar.")
     assert "Desember" not in s
     assert "desember" in s
     assert "JÚLÍ" in s
@@ -496,7 +468,6 @@ def test_complex(verbose=False):
 
 
 if __name__ == "__main__":
-
     test_correct(verbose=True)
     test_allowed_multiples(verbose=True)
     test_split_compounds(verbose=True)

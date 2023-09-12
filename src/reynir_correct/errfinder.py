@@ -38,24 +38,14 @@
 
 """
 
-from typing import (
-    Mapping,
-    Tuple,
-    List,
-    Dict,
-    Any,
-    Callable,
-    Union,
-    Optional,
-    cast,
-)
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union, cast
 from typing_extensions import Protocol, TypedDict
 
 import re
 
-from reynir import correct_spaces, Tok, TOK, Sentence
-from reynir.fastparser import ParseForestNavigator, Node
+from reynir import TOK, Sentence, Tok, correct_spaces
 from reynir.binparser import BIN_Terminal, BIN_Token
+from reynir.fastparser import Node, ParseForestNavigator
 from reynir.settings import VerbSubjects
 from reynir.simpletree import SimpleTree
 from reynir.verbframe import VerbErrors, VerbFrame
@@ -80,9 +70,7 @@ class AnnotationDict(TypedDict):
 AnnotationTuple2 = Tuple[str, str]
 AnnotationTuple4 = Tuple[str, int, int, str]
 AnnotationTuple6 = Tuple[str, str, int, int, str, str]
-AnnotationReturn = Union[
-    None, str, AnnotationTuple2, AnnotationTuple4, AnnotationTuple6, AnnotationDict
-]
+AnnotationReturn = Union[None, str, AnnotationTuple2, AnnotationTuple4, AnnotationTuple6, AnnotationDict]
 AnnotationFunc = Callable[[str, str, Node], AnnotationReturn]
 
 
@@ -218,18 +206,14 @@ class ErrorDetectionToken(BIN_Token):
         """Returns True if the given subject type/case is allowed
         for this verb or if it is an erroneous subject
         which we can flag"""
-        return subj in cls._VERB_SUBJECTS.get(
-            verb, set()
-        ) or subj in cls._VERB_ERROR_SUBJECTS.get(verb, dict())
+        return subj in cls._VERB_SUBJECTS.get(verb, set()) or subj in cls._VERB_ERROR_SUBJECTS.get(verb, dict())
 
     @classmethod
     def verb_matches_arguments(cls, key: str) -> bool:
         """Return True if the given arguments are allowed for this verb
         or if these are erroneous arguments which we can flag"""
         # This function overrides BIN_Token.verb_matches_arguments()
-        return VerbFrame.matches_arguments(key) or VerbFrame.matches_error_arguments(
-            key
-        )
+        return VerbFrame.matches_arguments(key) or VerbFrame.matches_error_arguments(key)
 
 
 class ErrorFinder(ParseForestNavigator):
@@ -248,8 +232,7 @@ class ErrorFinder(ParseForestNavigator):
     _NON_OP_VERB_FORMS: Mapping[str, Tuple[str, str]] = {
         "lýst": (
             "líst",
-            "'Lýst' á sennilega að vera 'líst', þ.e. sögnin 'að líta(st)' "
-            "í stað sagnarinnar 'að ljósta'.",
+            "'Lýst' á sennilega að vera 'líst', þ.e. sögnin 'að líta(st)' " "í stað sagnarinnar 'að ljósta'.",
         ),
     }
 
@@ -312,9 +295,7 @@ class ErrorFinder(ParseForestNavigator):
 
         first, last = self.node_span(node)
         text_func: Callable[[Tok], str] = (lambda t: t.txt) if original_case else text
-        return correct_spaces(
-            " ".join(text_func(t) for t in self._tokens[first : last + 1] if t.txt)
-        )
+        return correct_spaces(" ".join(text_func(t) for t in self._tokens[first : last + 1] if t.txt))
 
     # Functions used to explain grammar errors associated with
     # nonterminals with error tags in the grammar
@@ -325,7 +306,9 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self.node_span(node)
         return AnnotationDict(
             text="'{0}' er sennilega ofaukið".format(txt),
-            detail="Yfirleitt nægir að nota 'en' í þessu samhengi, 'heldur en' telst frekar óformlegt. Það á þó stundum rétt hjá sér í löngum setningum ef langt er frá upphaflega samanburðarliðnum til seinni samanburðarliðarins til að auka skýrleika textans.",
+            detail="Yfirleitt nægir að nota 'en' í þessu samhengi, 'heldur en' telst frekar óformlegt. "
+            "Það á þó stundum rétt hjá sér í löngum setningum ef langt er frá upphaflega samanburðarliðnum til seinni "
+            "samanburðarliðarins til að auka skýrleika textans.",
             original=orig_txt,
             start=start,
             end=end,
@@ -338,10 +321,7 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self.node_span(node)
         return AnnotationDict(
             text="'síðan' er sennilega ofaukið",
-            detail=(
-                "Yfirleitt er óþarfi að nota orðið 'síðan' í samhengi á borð við "
-                "'fyrir tveimur dögum (síðan)'"
-            ),
+            detail=("Yfirleitt er óþarfi að nota orðið 'síðan' í samhengi á borð við " "'fyrir tveimur dögum (síðan)'"),
             start=start,
             end=end,
             original=emulate_case("síðan", template=orig_txt),
@@ -358,10 +338,7 @@ class ErrorFinder(ParseForestNavigator):
             orig = self.node_text(ch0, original_case=True)
         return AnnotationDict(
             text="'{0}' á sennilega að vera 'fyrst'".format(orig),
-            detail=(
-                "Rétt er að nota 'fyrst að' fremur en 'víst að' "
-                " til að tengja saman atburð og forsendu."
-            ),
+            detail=("Rétt er að nota 'fyrst að' fremur en 'víst að' " " til að tengja saman atburð og forsendu."),
             start=start,
             end=end,
             original=orig,
@@ -380,8 +357,7 @@ class ErrorFinder(ParseForestNavigator):
         return AnnotationDict(
             text="'{0}' á sennilega að vera '{0} að'".format(txt),
             detail=(
-                "Rétt er að nota samtenginguna 'að' í þessu samhengi, "
-                "til dæmis 'allt frá því að Anna hóf námið'."
+                "Rétt er að nota samtenginguna 'að' í þessu samhengi, " "til dæmis 'allt frá því að Anna hóf námið'."
             ),
             start=start,
             end=end,
@@ -434,10 +410,7 @@ class ErrorFinder(ParseForestNavigator):
             correct = ""
         return AnnotationDict(
             text="Tvípunktur er óþarfi",
-            detail=(
-                "Óþarft er að hafa tvípunkt milli forsetningar og nafnliðarins "
-                "sem hún stýrir falli á."
-            ),
+            detail=("Óþarft er að hafa tvípunkt milli forsetningar og nafnliðarins " "sem hún stýrir falli á."),
             start=start,
             end=end,
             original=txt,
@@ -465,8 +438,7 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self.node_span(node)
         return AnnotationDict(
             text=f"Á líklega að vera '{correct}'",
-            detail=f"Fornafnið '{lemma}' er ritað '{correct}' "
-            "í þágufalli, eintölu, kvenkyni.",
+            detail=f"Fornafnið '{lemma}' er ritað '{correct}' " "í þágufalli, eintölu, kvenkyni.",
             start=start,
             end=end,
             original=txt,
@@ -480,17 +452,14 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self.node_span(node)
         return AnnotationDict(
             text=f"Á líklega að vera '{correct}'",
-            detail=f"Fornafnið '{lemma}' er ritað '{correct}' "
-            "í eignarfalli, eintölu, kvenkyni.",
+            detail=f"Fornafnið '{lemma}' er ritað '{correct}' " "í eignarfalli, eintölu, kvenkyni.",
             start=start,
             end=end,
             original=txt,
             suggest=correct,
         )
 
-    def singular_error(
-        self, txt: str, variants: str, node: Node, detail: str
-    ) -> AnnotationReturn:
+    def singular_error(self, txt: str, variants: str, node: Node, detail: str) -> AnnotationReturn:
         """Annotate a mismatch between singular and plural
         in subject vs. verb"""
         tnode = self._terminal_nodes[node.start]
@@ -512,15 +481,9 @@ class ErrorFinder(ParseForestNavigator):
             start, end = so.span
             vars = set(so.all_variants) - {"ft"}
             vars.add("et")
-            suggest = PatternMatcher.get_wordform(
-                so.text.lower(), so.lemma, so.cat, vars
-            )
+            suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, so.cat, vars)
             return AnnotationDict(
-                text=(
-                    "Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(
-                        so.tidy_text
-                    )
-                ),
+                text=("Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(so.tidy_text)),
                 detail=detail,
                 start=start,
                 end=end,
@@ -548,9 +511,7 @@ class ErrorFinder(ParseForestNavigator):
         subjtext = self.node_text(ch1) + " " + self.node_text(ch2)
         vars = set(verb.all_variants) - {"ft"}
         vars.add("et")
-        suggestion = PatternMatcher.get_wordform(
-            verb.text.lower(), verb.lemma, verb.cat, vars
-        )
+        suggestion = PatternMatcher.get_wordform(verb.text.lower(), verb.lemma, verb.cat, vars)
         return AnnotationDict(
             text=f"Sögnin '{verb.tidy_text}' á sennilega að vera í eintölu eins og frumlagið '{subjtext}'",
             detail=f"Orðið '{self.node_text(ch1)}' stjórnar tölu sagnarinnar svo hún á að vera í eintölu.",
@@ -566,8 +527,7 @@ class ErrorFinder(ParseForestNavigator):
             txt,
             variants,
             node,
-            f"Nafnliðurinn '{txt}' er í eintölu "
-            f"og með honum á því að vera sögn í eintölu.",
+            f"Nafnliðurinn '{txt}' er í eintölu " f"og með honum á því að vera sögn í eintölu.",
         )
 
     def VillaEinkunn(self, txt: str, variants: str, node: Node) -> AnnotationDict:
@@ -582,14 +542,10 @@ class ErrorFinder(ParseForestNavigator):
         correct_pronoun = self.cast_to_case(correct_case, p)
         start, end = self.node_span(pronoun_node)
         return AnnotationDict(
-            text="'{0}' á sennilega að vera '{1}'".format(
-                wrong_pronoun, correct_pronoun
-            ),
+            text="'{0}' á sennilega að vera '{1}'".format(wrong_pronoun, correct_pronoun),
             detail=(
                 "Fornafnið '{0}' á að vera í {1}falli, eins og "
-                "nafnliðurinn sem fylgir á eftir".format(
-                    wrong_pronoun, CASE_NAMES[correct_case]
-                )
+                "nafnliðurinn sem fylgir á eftir".format(wrong_pronoun, CASE_NAMES[correct_case])
             ),
             start=start,
             end=end,
@@ -604,10 +560,7 @@ class ErrorFinder(ParseForestNavigator):
         _, end = ch2.span
         return AnnotationDict(
             text="'{0}' er að öllum líkindum ofaukið".format(ch1.text),
-            detail=(
-                "Oft fer betur á að rita 'og', 'og einnig', 'og jafnframt' "
-                " eða 'og auk þess' í stað 'sem og'."
-            ),
+            detail=("Oft fer betur á að rita 'og', 'og einnig', 'og jafnframt' " " eða 'og auk þess' í stað 'sem og'."),
             start=start,
             end=end,
             original=txt,
@@ -619,10 +572,7 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self.node_span(node)
         return AnnotationDict(
             text="'{0}' er að öllum líkindum ofaukið".format(txt),
-            detail=(
-                "'að' er yfirleitt ofaukið í samtengingum á "
-                "borð við 'áður en', 'síðan', 'enda þótt' o.s.frv."
-            ),
+            detail=("'að' er yfirleitt ofaukið í samtengingum á " "borð við 'áður en', 'síðan', 'enda þótt' o.s.frv."),
             start=start,
             end=end,
             original=txt,
@@ -648,7 +598,8 @@ class ErrorFinder(ParseForestNavigator):
         start, end = self.node_span(node)
         return AnnotationDict(
             text="'né' gæti átt að vera 'eða'",
-            detail="'né' er hluti af margorða samtengingunni 'hvorki né' en getur ekki staðið ein og sér sem aðaltenging.",
+            detail="'né' er hluti af margorða samtengingunni 'hvorki né' en getur ekki "
+            "staðið ein og sér sem aðaltenging.",
             original="né",
             start=start,
             end=end,
@@ -662,8 +613,7 @@ class ErrorFinder(ParseForestNavigator):
         return AnnotationDict(
             text="'{0}' á sennilega að vera '{1}' (eða 'þótt')".format(txt, suggestion),
             detail=(
-                "Réttara er að nota samtenginguna 'að' í samhengi á borð við "
-                "'jafnvel þó að von sé á sólskini'."
+                "Réttara er að nota samtenginguna 'að' í samhengi á borð við " "'jafnvel þó að von sé á sólskini'."
             ),
             start=start,
             end=end,
@@ -671,9 +621,7 @@ class ErrorFinder(ParseForestNavigator):
             suggest=suggestion,
         )
 
-    def VillaÍTölu(
-        self, txt: str, variants: str, node: Node
-    ) -> Optional[AnnotationDict]:
+    def VillaÍTölu(self, txt: str, variants: str, node: Node) -> Optional[AnnotationDict]:
         # Sögn á að vera í sömu tölu og frumlag
         children = list(node.enum_child_nodes())
         ch0, ch1 = children
@@ -695,9 +643,7 @@ class ErrorFinder(ParseForestNavigator):
         origin = subject
         if so is None:
             return AnnotationDict(
-                text="Sögnin á sennilega að vera í {1} eins og frumlagið '{0}'".format(
-                    subject, number
-                ),
+                text="Sögnin á sennilega að vera í {1} eins og frumlagið '{0}'".format(subject, number),
                 detail=detail,
                 start=start,
                 end=end,
@@ -729,9 +675,7 @@ class ErrorFinder(ParseForestNavigator):
             suggest=suggest,
         )
 
-    def VillaFsMeðFallstjórn(
-        self, txt: str, variants: str, node: Node
-    ) -> Optional[AnnotationDict]:
+    def VillaFsMeðFallstjórn(self, txt: str, variants: str, node: Node) -> Optional[AnnotationDict]:
         # Forsetningin z á að stýra x-falli en ekki y-falli
         tnode = self._terminal_nodes[node.start]
         pp = tnode.enclosing_tag("PP")
@@ -772,9 +716,7 @@ class ErrorFinder(ParseForestNavigator):
         #    ),
         # )
 
-    def AðvörunSvigaInnihaldNl(
-        self, txt: str, variants: str, node: Node
-    ) -> AnnotationDict:
+    def AðvörunSvigaInnihaldNl(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         """Explanatory noun phrase in a different case than the noun phrase
         that it explains"""
         np = self._simple_tree(node)
@@ -858,9 +800,7 @@ class ErrorFinder(ParseForestNavigator):
             suggest=suggestion,
         )
 
-    def VillaManns(
-        self, txt: str, variants: str, node: Node
-    ) -> Optional[AnnotationDict]:
+    def VillaManns(self, txt: str, variants: str, node: Node) -> Optional[AnnotationDict]:
         # Sögn á að vera í fleirtölu, líkt og frumlagið
         child = list(node.enum_child_nodes())
         ch0node = child[0]
@@ -887,7 +827,7 @@ class ErrorFinder(ParseForestNavigator):
         suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, so.cat, vars)
         return AnnotationDict(
             text=f"Sögn á að vera í fleirtölu líkt og frumlagið '{subject}'",
-            detail=f"Sögnin á að vera í fleirtölu, þrátt fyrir 'manns' í frumlagi.",
+            detail="Sögnin á að vera í fleirtölu, þrátt fyrir 'manns' í frumlagi.",
             start=start,
             end=end,
             original=so.tidy_text,
@@ -980,10 +920,7 @@ class ErrorFinder(ParseForestNavigator):
         self._ann.append(
             Annotation(
                 text="Betra væri '{0}'".format(correct),
-                detail=(
-                    "Æskilegt er að rita lágar raðtölur "
-                    "með bókstöfum fremur en tölustöfum."
-                ),
+                detail=("Æskilegt er að rita lágar raðtölur " "með bókstöfum fremur en tölustöfum."),
                 start=node.start,
                 end=node.start,
                 code="number4word",
@@ -999,9 +936,7 @@ class ErrorFinder(ParseForestNavigator):
         tnode = self._terminal_nodes[node.start]
         verb = tnode.lemma
 
-        def annotate_wrong_subject_case(
-            subj_case_abbr: str, correct_case_abbr: str
-        ) -> None:
+        def annotate_wrong_subject_case(subj_case_abbr: str, correct_case_abbr: str) -> None:
             """Create an annotation that describes a verb having a subject
             in the wrong case"""
             wrong_case = CASE_NAMES[subj_case_abbr]
@@ -1030,9 +965,7 @@ class ErrorFinder(ParseForestNavigator):
                             text="Á líklega að vera '{0}'".format(correct_np),
                             detail="Sögnin 'að {0}' er {3}. "
                             "Frumlag hennar á að vera "
-                            "í {1}falli í stað {2}falls.".format(
-                                verb, correct_case, wrong_case, personal
-                            ),
+                            "í {1}falli í stað {2}falls.".format(verb, correct_case, wrong_case, personal),
                             original=subj_text,
                             suggest=correct_np,
                         )
@@ -1047,13 +980,10 @@ class ErrorFinder(ParseForestNavigator):
                         start=index,
                         end=index,
                         code=code,
-                        text="Frumlag sagnarinnar 'að {0}' "
-                        "á að vera í {1}falli".format(verb, correct_case),
+                        text="Frumlag sagnarinnar 'að {0}' " "á að vera í {1}falli".format(verb, correct_case),
                         detail="Sögnin 'að {0}' er {3}. "
                         "Frumlag hennar á að vera "
-                        "í {1}falli í stað {2}falls.".format(
-                            verb, correct_case, wrong_case, personal
-                        ),
+                        "í {1}falli í stað {2}falls.".format(verb, correct_case, wrong_case, personal),
                         original=verb,
                         suggest=None,  # No suggest value available
                     )
@@ -1066,9 +996,7 @@ class ErrorFinder(ParseForestNavigator):
             index = token.index
             self._ann.append(
                 Annotation(
-                    text="Sögnin '{0}' á sennilega að vera '{1}'".format(
-                        verb.lower(), correct
-                    ),
+                    text="Sögnin '{0}' á sennilega að vera '{1}'".format(verb.lower(), correct),
                     detail=detail,
                     start=index,
                     end=index,
@@ -1104,9 +1032,7 @@ class ErrorFinder(ParseForestNavigator):
                         Annotation(
                             text="Á líklega að vera '{0}'".format(correct_np),
                             detail="Andlag sagnarinnar {0} á að vera "
-                            "í {1}falli í stað {2}falls.".format(
-                                verb, correct_case, wrong_case
-                            ),
+                            "í {1}falli í stað {2}falls.".format(verb, correct_case, wrong_case),
                             start=start,
                             end=end,
                             code=code,
@@ -1121,12 +1047,9 @@ class ErrorFinder(ParseForestNavigator):
                 index = node.token.index
                 self._ann.append(
                     Annotation(
-                        text="Andlag sagnarinnar 'að {0}' "
-                        "á að vera í {1}falli".format(verb, correct_case),
+                        text="Andlag sagnarinnar 'að {0}' " "á að vera í {1}falli".format(verb, correct_case),
                         detail="Andlag sagnarinnar {0} á að vera "
-                        "í {1}falli í stað {2}falls.".format(
-                            verb, correct_case, wrong_case
-                        ),
+                        "í {1}falli í stað {2}falls.".format(verb, correct_case, wrong_case),
                         start=index,
                         end=index,
                         code=code,
@@ -1175,9 +1098,7 @@ class ErrorFinder(ParseForestNavigator):
                 # so_subj_nh_none or similar:
                 # hidden subject ('Í raun þyrfti að yfirfara alla ferla')
                 return
-            assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
-                "Unknown case in " + terminal.name
-            )
+            assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, "Unknown case in " + terminal.name
 
             # Check whether this is a verb form that is forbidden from
             # impersonal use, such as 'lýst' which cannot be used impersonally
@@ -1260,9 +1181,7 @@ class ErrorFinder(ParseForestNavigator):
                 elif len(ann) == 4:
                     ann_text, start, end, suggestion = cast(AnnotationTuple4, ann)
                 elif len(ann) == 6:
-                    ann_text, ann_detail, start, end, original, suggestion = cast(
-                        AnnotationTuple6, ann
-                    )
+                    ann_text, ann_detail, start, end, original, suggestion = cast(AnnotationTuple6, ann)
             else:
                 if not ann:
                     # Empty or no dict: this means that upon closer inspection,

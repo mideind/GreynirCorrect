@@ -41,17 +41,15 @@
 
 """
 
-from typing import Dict, Set, List, Tuple, Mapping, Optional, Any
+from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
+
 import os
 import threading
-
 from collections import defaultdict
 
 from reynir.basics import ConfigError, LineReader
 from reynir.bindb import GreynirBin
 from reynir.bintokenizer import StateDict
-import importlib.util
-
 
 ErrorFormTuple = Tuple[str, str, int, str, str]
 # (lemma, id, cat, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg)
@@ -86,15 +84,12 @@ class WrongCompounds:
 
     def add(self, word: str, parts: Tuple[str, ...]) -> None:
         if word in self.DICT:
-            raise ConfigError(
-                "Multiple definition of '{0}' in wrong_compounds section".format(word)
-            )
+            raise ConfigError("Multiple definition of '{0}' in wrong_compounds section".format(word))
         assert isinstance(parts, tuple)
         self.DICT[word] = parts
 
 
 class SplitCompounds:
-
     # Dict of the form { first_part : set(second_part_stem) }
     def __init__(self) -> None:
         self.DICT: Dict[str, Set[str]] = defaultdict(set)
@@ -102,24 +97,19 @@ class SplitCompounds:
     def add(self, first_part: str, second_part_stem: str) -> None:
         if first_part in self.DICT and second_part_stem in self.DICT[first_part]:
             raise ConfigError(
-                "Multiple definition of '{0}' in split_compounds section".format(
-                    first_part + " " + second_part_stem
-                )
+                "Multiple definition of '{0}' in split_compounds section".format(first_part + " " + second_part_stem)
             )
         self.DICT[first_part].add(second_part_stem)
 
 
 class UniqueErrors:
-
     # Dictionary structure: dict { wrong_word : (tuple of right words) }
     def __init__(self) -> None:
         self.DICT: Dict[str, Tuple[str, ...]] = dict()
 
     def add(self, word: str, corr: Tuple[str, ...]) -> None:
         if word in self.DICT:
-            raise ConfigError(
-                "Multiple definition of '{0}' in unique_errors section".format(word)
-            )
+            raise ConfigError("Multiple definition of '{0}' in unique_errors section".format(word))
         self.DICT[word] = corr
 
 
@@ -135,11 +125,7 @@ class MultiwordErrors:
 
     def add(self, words: Tuple[str, ...], error: str) -> None:
         if words in self.ERROR_DICT:
-            raise ConfigError(
-                "Multiple definition of '{0}' in multiword_errors section".format(
-                    " ".join(words)
-                )
-            )
+            raise ConfigError("Multiple definition of '{0}' in multiword_errors section".format(" ".join(words)))
         self.ERROR_DICT[words] = error
 
         # Add to phrase list
@@ -181,9 +167,7 @@ class TabooWords:
 
     def add(self, word: str, replacement: str, explanation: str) -> None:
         if word in self.DICT:
-            raise ConfigError(
-                "Multiple definition of '{0}' in taboo_words section".format(word)
-            )
+            raise ConfigError("Multiple definition of '{0}' in taboo_words section".format(word))
         db = GreynirBin.get_db()
         a = word.split("_")
         _, m = db.lookup_g(a[0])
@@ -199,9 +183,7 @@ class ToneOfVoiceWords:
 
     def add(self, word: str, replacement: str, explanation: str) -> None:
         if word in self.DICT:
-            raise ConfigError(
-                "Multiple definition of '{0}' in tone_of_voice section".format(word)
-            )
+            raise ConfigError("Multiple definition of '{0}' in tone_of_voice section".format(word))
         db = GreynirBin.get_db()
         a = word.split("_")
         _, m = db.lookup_g(a[0])
@@ -226,9 +208,7 @@ class Suggestions:
 
     def add(self, word: str, replacements: List[str]) -> None:
         if word in self.DICT:
-            raise ConfigError(
-                "Multiple definition of '{0}' in suggestions section".format(word)
-            )
+            raise ConfigError("Multiple definition of '{0}' in suggestions section".format(word))
         self.DICT[word] = replacements
 
 
@@ -248,15 +228,11 @@ class CapitalizationErrors:
             return s.capitalize()
         return s
 
-    def reverse_capitalization(
-        self, word: str, *, split_on_hyphen: bool = False
-    ) -> str:
+    def reverse_capitalization(self, word: str, *, split_on_hyphen: bool = False) -> str:
         """Return a word with its capitalization reversed (lower <-> upper case)"""
         if split_on_hyphen and "-" in word:
             # 'norður-kórea' -> 'Norður-Kórea'
-            return "-".join(
-                self.reverse_capitalization(part) for part in word.split("-")
-            )
+            return "-".join(self.reverse_capitalization(part) for part in word.split("-"))
         if word.islower():
             # Lowercase word
             word_rev = word.capitalize()
@@ -284,9 +260,7 @@ class CapitalizationErrors:
         db = GreynirBin().get_db()
         # The suffix may not be in BÍN except as a compound, and in that
         # case we want its hyphenated lemma
-        suffix_rev = self.reverse_capitalization(
-            suffix, split_on_hyphen=split_on_hyphen
-        )
+        suffix_rev = self.reverse_capitalization(suffix, split_on_hyphen=split_on_hyphen)
         _, m = db.lookup_g(suffix_rev)
         # Only consider lemmas
         m = [mm for mm in m if mm.stofn == mm.ordmynd]
@@ -305,11 +279,7 @@ class CapitalizationErrors:
             # with a lemma of 'félags- og barnamála-ráðherra'
             word = prefix + m[0].stofn
         if word in self.SET:
-            raise ConfigError(
-                "Multiple definition of '{0}' in capitalization_errors section".format(
-                    word
-                )
-            )
+            raise ConfigError("Multiple definition of '{0}' in capitalization_errors section".format(word))
         # Construct the reverse casing of the word
         word_rev = self.reverse_capitalization(word, split_on_hyphen=split_on_hyphen)
         # Add the word and its reverse case to the set of errors
@@ -478,11 +448,10 @@ class Morphemes:
 
 
 class Ritmyndir:
-
     # dict { wrong_word_form : (lemma, id, cat, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg) }
     # þurrð;10963;kvk;þurðar;þurrðar;EFET;0;URE;;;;1745-1745;KLIM
     # þurrka;425063;so;þurkaði;þurrkaði;;4;VILLA;R4RR;;;;SKOLAVERK
-    def __init__(self):
+    def __init__(self) -> None:
         self.DICT: Dict[str, RitmyndirTuple] = dict()
 
     def contains(self, word: str) -> bool:
@@ -578,35 +547,29 @@ class Icesquer:
 
     def add(self, word: str, corr: Tuple[str, ...]) -> None:
         if word in self.DICT:
-            # Happens in the data, just skip it
-            # raise ConfigError(
-            #    "Multiple definition of '{0}' in IEC nonwords data".format(word)
-            # )
-            return
+            raise ConfigError(f"Multiple definition of '{word}' in IEC nonwords data")
         self.DICT[word] = corr
 
 
 class WrongFormers:
     def __init__(self) -> None:
         # Dictionary structure: dict { wrong_word : right_word }
-        self.DICT: Dict[str, Tuple[str, ...]] = dict()
+        self.DICT: Dict[str, str] = dict()
 
-    def add(self, word: str, corr: Tuple[str, ...]) -> None:
+    def add(self, word: str, corr: str) -> None:
         if word in self.DICT:
-            # Happens in the data, just skip it
-            return
+            raise ConfigError(f"Multiple definition of '{word}' in WrongFormers")
         self.DICT[word] = corr
 
 
 class WrongFormersCID:
     def __init__(self) -> None:
         # Dictionary structure: dict { wrong_word : right_word }
-        self.DICT: Dict[str, Tuple[str, ...]] = dict()
+        self.DICT: Dict[str, str] = dict()
 
-    def add(self, word: str, corr: Tuple[str, ...]) -> None:
+    def add(self, word: str, corr: str) -> None:
         if word in self.DICT:
-            # Happens in the data, just skip it
-            return
+            raise ConfigError(f"Multiple definition of '{word}' in WrongFormersCID")
         self.DICT[word] = corr
 
 
@@ -659,13 +622,9 @@ class Settings:
         """Handle config parameters in the allowed_multiples section"""
         assert s
         if len(s.split()) != 1:
-            raise ConfigError(
-                "Only one word per line allowed in allowed_multiples section"
-            )
+            raise ConfigError("Only one word per line allowed in allowed_multiples section")
         if s in self.allowed_multiples.SET:
-            raise ConfigError(
-                "'{0}' is repeated in allowed_multiples section".format(s)
-            )
+            raise ConfigError("'{0}' is repeated in allowed_multiples section".format(s))
         self.allowed_multiples.add(s)
 
     def _handle_wrong_compounds(self, s: str) -> None:
@@ -676,15 +635,11 @@ class Settings:
         word = a[0].strip().strip('"')
         parts = a[1].strip().strip('"').split()
         if not word:
-            raise ConfigError(
-                "Expected word before the comma in wrong_compounds section"
-            )
+            raise ConfigError("Expected word before the comma in wrong_compounds section")
         if len(parts) < 2:
             raise ConfigError("Missing word part(s) in wrong_compounds section")
         if len(word.split()) != 1:
-            raise ConfigError(
-                "Multiple words not allowed before comma in wrong_compounds section"
-            )
+            raise ConfigError("Multiple words not allowed before comma in wrong_compounds section")
         self.wrong_compounds.add(word, tuple(parts))
 
     def _handle_split_compounds(self, s: str) -> None:
@@ -701,29 +656,21 @@ class Settings:
             raise ConfigError("Expected comma between error word and its correction")
         word = a[0].strip()
         if len(word) < 3:
-            raise ConfigError(
-                "Expected nonempty word before comma in unique_errors section"
-            )
+            raise ConfigError("Expected nonempty word before comma in unique_errors section")
         if word[0] != '"' or word[-1] != '"':
             raise ConfigError("Expected word in double quotes in unique_errors section")
         word = word[1:-1]
         corr = a[1].strip()
         if len(corr) < 3:
-            raise ConfigError(
-                "Expected nonempty word after comma in unique_errors section"
-            )
+            raise ConfigError("Expected nonempty word after comma in unique_errors section")
         if corr[0] != '"' or corr[-1] != '"':
-            raise ConfigError(
-                "Expected word in double quotes after comma in unique_errors section"
-            )
+            raise ConfigError("Expected word in double quotes after comma in unique_errors section")
         corr = corr[1:-1]
         corr_t = tuple(corr.split())
         if not word:
             raise ConfigError("Expected word before the comma in unique_errors section")
         if len(word.split()) != 1:
-            raise ConfigError(
-                "Multiple words not allowed before the comma in unique_errors section"
-            )
+            raise ConfigError("Multiple words not allowed before the comma in unique_errors section")
         self.unique_errors.add(word, corr_t)
 
     def _handle_capitalization_errors(self, s: str) -> None:
@@ -736,9 +683,7 @@ class Settings:
         lquote = s.find('"')
         rquote = s.rfind('"')
         if (lquote >= 0) != (rquote >= 0):
-            raise ConfigError(
-                "Explanation string for taboo word should be enclosed in double quotes"
-            )
+            raise ConfigError("Explanation string for taboo word should be enclosed in double quotes")
         if lquote >= 0:
             # Obtain explanation from within quotes
             explanation = s[lquote + 1 : rquote].strip()
@@ -758,9 +703,7 @@ class Settings:
             replacement = taboo
         # Check all replacement words, which are separated by slashes '/'
         if any(r.count("_") != 1 for r in replacement.split("/")):
-            raise ConfigError(
-                "Suggested replacement(s) should include a word category (_xx)"
-            )
+            raise ConfigError("Suggested replacement(s) should include a word category (_xx)")
         self.taboo_words.add(taboo, replacement, explanation)
 
     def _handle_tone_of_voice_words(self, s: str) -> None:
@@ -769,9 +712,7 @@ class Settings:
         lquote = s.find('"')
         rquote = s.rfind('"')
         if (lquote >= 0) != (rquote >= 0):
-            raise ConfigError(
-                "Explanation string for a word should be enclosed in double quotes"
-            )
+            raise ConfigError("Explanation string for a word should be enclosed in double quotes")
         if lquote >= 0:
             # Obtain explanation from within quotes
             explanation = s[lquote + 1 : rquote].strip()
@@ -781,7 +722,7 @@ class Settings:
             explanation = ""
         if not s:
             raise ConfigError("Expected a word to flag and a suggested replacement")
-        a = s.lower().split()
+        a = s.split()  # not lower() here
         if len(a) > 2:
             raise ConfigError("Expected a word to flag and a suggested replacement")
         flagged_word = a[0].strip()
@@ -791,9 +732,7 @@ class Settings:
             replacement = flagged_word
         # Check all replacement words, which are separated by slashes '/'
         if any(r.count("_") != 1 for r in replacement.split("/")):
-            raise ConfigError(
-                "Suggested replacement(s) should include a word category (_xx)"
-            )
+            raise ConfigError("Suggested replacement(s) should include a word category (_xx)")
         self.tone_of_voice_words.add(flagged_word, replacement, explanation)
 
     def _handle_tone_of_voice_patterns(self, s: str) -> None:
@@ -809,13 +748,9 @@ class Settings:
         """Handle config parameters in the suggestions section"""
         a = s.lower().split()
         if len(a) < 2:
-            raise ConfigError(
-                "Expected flagged word and at least one suggested replacement"
-            )
+            raise ConfigError("Expected flagged word and at least one suggested replacement")
         if any(w.count("_") != 1 for w in a[1:]):
-            raise ConfigError(
-                "Suggested replacements should include word category (_xx)"
-            )
+            raise ConfigError("Suggested replacements should include word category (_xx)")
         self.suggestions.add(a[0].strip(), [w.strip() for w in a[1:]])
 
     def _handle_multiword_errors(self, s: str) -> None:
@@ -859,15 +794,11 @@ class Settings:
         """Handle config parameters in the error_forms section"""
         split = s.strip().split(";")
         if len(split) != 7:
-            raise ConfigError(
-                "Expected wrong form;lemma;correct form;id;category;tag;errortype"
-            )
+            raise ConfigError("Expected wrong form;lemma;correct form;id;category;tag;errortype")
         wrong_form = split[0].strip()
         correct_form = split[2].strip()
         if wrong_form == correct_form:
-            raise ConfigError(
-                "Wrong form identical to correct form for '{0}'".format(wrong_form)
-            )
+            raise ConfigError("Wrong form identical to correct form for '{0}'".format(wrong_form))
         meaning: ErrorFormTuple = (
             split[1].strip(),  # Lemma (stofn)
             correct_form,  # Correct form (ordmynd)
@@ -889,9 +820,7 @@ class Settings:
         boundlist: List[str] = []
         spl = s.split()
         if len(spl) < 2:
-            raise ConfigError(
-                "Expected at least a prefix and an attachment specification"
-            )
+            raise ConfigError("Expected at least a prefix and an attachment specification")
         m = spl[0]
         for pos in spl[1:]:
             if pos:
@@ -900,9 +829,7 @@ class Settings:
                 elif pos.startswith("-"):
                     freelist.append(pos[1:])
                 else:
-                    raise ConfigError(
-                        "Attachment specification should start with '+' or '-'"
-                    )
+                    raise ConfigError("Attachment specification should start with '+' or '-'")
         self.morphemes.add(m, boundlist, freelist)
 
     def _handle_ritmyndir(self, s: str) -> None:
@@ -958,14 +885,10 @@ class Settings:
             return
         word = a[0].strip()
         if len(word) < 1:
-            raise ConfigError(
-                "Expected nonempty word before comma in unique_errors section"
-            )
+            raise ConfigError("Expected nonempty word before comma in unique_errors section")
         corr = a[1].strip()
         if len(corr) < 1:
-            raise ConfigError(
-                "Expected nonempty word after comma in unique_errors section"
-            )
+            raise ConfigError("Expected nonempty word after comma in unique_errors section")
         corr_t = tuple(corr.split())
         if not word:
             raise ConfigError("Expected word before the comma in unique_errors section")
@@ -986,14 +909,10 @@ class Settings:
             return
         word = a[0].strip()
         if len(word) < 1:
-            raise ConfigError(
-                "Expected nonempty word before comma in unique_errors section"
-            )
+            raise ConfigError("Expected nonempty word before comma in unique_errors section")
         corr = a[1].split(";")[0].strip()  # TODO Only the first value for now
         if len(corr) < 1:
-            raise ConfigError(
-                "Expected nonempty word after comma in unique_errors section"
-            )
+            raise ConfigError("Expected nonempty word after comma in unique_errors section")
         corr_t = tuple(corr.split())
         if not word:
             raise ConfigError("Expected word before the comma in unique_errors section")

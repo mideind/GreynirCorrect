@@ -6,16 +6,12 @@ To run for the file 'prufa.txt':
 $ python diffchecker.py prufa.txt
 
 """
-from reynir_correct.wrappers import check_errors
-from typing import (
-    Iterator,
-    Iterable,
-    Dict,
-    Set,
-    Union,
-)
-import sys
+from typing import Dict, Iterable, Iterator, Set, Union
+
 import argparse
+import sys
+
+from reynir_correct.wrappers import check_errors
 
 # File types for UTF-8 encoded text files
 ReadFile = argparse.FileType("r", encoding="utf-8")
@@ -39,7 +35,6 @@ def gen(f: Iterator[str]) -> Iterable[str]:
 
 
 def main() -> None:
-
     options: Dict[str, Union[str, bool, Set[str]]] = {}
     options["format"] = "text"  # text, json, csv, m2
     options["annotations"] = True
@@ -48,7 +43,6 @@ def main() -> None:
     options["one_sent"] = False
     options["generate_suggestion_list"] = True
     options["ignore_comments"] = True  # Only used here
-    options["generate_suggestion_list"] = False
     options["annotate_unparsed_sentences"] = True
     options["suppress_suggestions"] = False
     options["replace_html_escapes"] = True

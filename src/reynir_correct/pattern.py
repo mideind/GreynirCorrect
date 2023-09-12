@@ -39,42 +39,26 @@
 
 """
 
-from typing import (
-    Iterable,
-    List,
-    Mapping,
-    Tuple,
-    Set,
-    FrozenSet,
-    Callable,
-    Dict,
-    Optional,
-    Union,
-    cast,
-)
+from typing import Callable, Dict, FrozenSet, Iterable, List, Mapping, Optional, Set, Tuple, Union, cast
 
-from functools import partial
-import os
 import json
+import os
+from functools import partial
 
 from islenska import Bin
-
-from reynir import Sentence, NounPhrase
+from reynir import NounPhrase, Sentence
+from reynir.bintokenizer import ALL_CASES
+from reynir.matcher import ContextDict
 from reynir.simpletree import SimpleTree
 from reynir.verbframe import VerbErrors
-from reynir.matcher import ContextDict
-from reynir.bintokenizer import ALL_CASES
 
 from reynir_correct.errtokenizer import emulate_case
 
 from .annotation import Annotation
 
-
 # The types involved in pattern processing
 AnnotationFunction = Callable[[SimpleTree], None]
-PatternTuple = Tuple[
-    Union[str, Set[str], FrozenSet[str]], str, AnnotationFunction, Optional[ContextDict]
-]
+PatternTuple = Tuple[Union[str, Set[str], FrozenSet[str]], str, AnnotationFunction, Optional[ContextDict]]
 
 BIN = Bin()
 
@@ -105,9 +89,7 @@ class IcelandicPlaces:
     _SUFFIXES = tuple(_SUFFIX2PREP.keys())
 
     ICELOC_PREP: Optional[Dict[str, str]] = None
-    ICELOC_PREP_JSONPATH = os.path.join(
-        os.path.dirname(__file__), "resources", "iceloc_prep.json"
-    )
+    ICELOC_PREP_JSONPATH = os.path.join(os.path.dirname(__file__), "resources", "iceloc_prep.json")
 
     @classmethod
     def _load_json(cls) -> None:
@@ -222,10 +204,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'{0} af' á sennilega að vera '{0} að'".format(vp.tidy_text)
-        detail = (
-            "Sögnin '{0}' tekur yfirleitt með sér "
-            "forsetninguna 'að', ekki 'af'.".format(vp.tidy_text)
-        )
+        detail = "Sögnin '{0}' tekur yfirleitt með sér " "forsetninguna 'að', ekki 'af'.".format(vp.tidy_text)
         suggest = pp_af.substituted_text(pp_af, "að")
         if suggest == pp_af.tidy_text:
             # No need to annotate, no changes were made
@@ -258,10 +237,7 @@ class PatternMatcher:
             return
         start, end = pp_að.span
         text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
-        detail = (
-            "Sögnin '{0}' tekur yfirleitt með sér "
-            "forsetninguna 'af', ekki 'að'.".format(vp.tidy_text)
-        )
+        detail = "Sögnin '{0}' tekur yfirleitt með sér " "forsetninguna 'af', ekki 'að'.".format(vp.tidy_text)
         suggest = pp_að.substituted_text(pp_að, "af")
         if suggest == pp_að.tidy_text:
             # No need to annotate, no changes were made
@@ -296,9 +272,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "Í '{0}' á 'af' sennilega að vera 'að'".format(vp.tidy_text)
-        detail = (
-            "Í samhenginu 'að spyrja að e-u' er notuð " "forsetningin 'að', ekki 'af'."
-        )
+        detail = "Í samhenginu 'að spyrja að e-u' er notuð " "forsetningin 'að', ekki 'af'."
         suggest = pp_af.substituted_text(pp, "að")
         if suggest == pp_af.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -331,10 +305,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'verða vitni af' á sennilega að vera 'verða vitni að'"
-        detail = (
-            "Í samhenginu 'verða vitni að e-u' er notuð "
-            "forsetningin 'að', ekki 'af'."
-        )
+        detail = "Í samhenginu 'verða vitni að e-u' er notuð " "forsetningin 'að', ekki 'af'."
         suggest = pp_af.substituted_text(pp_af, "að")
         if suggest == pp_af.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -368,9 +339,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'gera grín af' á sennilega að vera 'gera grín að'"
-        detail = (
-            "Í samhenginu 'gera grín að e-u' er notuð " "forsetningin 'að', ekki 'af'."
-        )
+        detail = "Í samhenginu 'gera grín að e-u' er notuð " "forsetningin 'að', ekki 'af'."
         suggest = pp_af.substituted_text(pp_af, "að")
         if suggest == pp_af.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -404,10 +373,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'leiða {0} af' á sennilega að vera 'leiða {0} að'".format(np.tidy_text)
-        detail = (
-            "Í samhenginu 'leiða {0} af e-u' er notuð "
-            "forsetningin 'að', ekki 'af'.".format(np.tidy_text)
-        )
+        detail = "Í samhenginu 'leiða {0} af e-u' er notuð " "forsetningin 'að', ekki 'af'.".format(np.tidy_text)
         suggest = pp_af.substituted_text(pp_af, "að")
         if suggest == pp_af.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -428,10 +394,8 @@ class PatternMatcher:
         """Handle a match of a suspect preposition pattern"""
         # Find the offending verbal and nominal phrases
         vp = match.first_match("VP > { 'marka' }")
-        lemma = "marka"
         if vp is None:
             vp = match.first_match("NP > { 'markaður' }")
-            lemma = "markaður"
         np = match.first_match("NP >> { ( 'upphaf'|'upphafinn' ) }")
         if np is None:
             np = match.first_match("VP > { 'upphefja' }")
@@ -447,10 +411,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'marka upphaf af' á sennilega að vera 'marka upphaf að'"
-        detail = (
-            "Í samhenginu 'marka upphaf að e-u' er notuð "
-            "forsetningin 'að', ekki 'af'."
-        )
+        detail = "Í samhenginu 'marka upphaf að e-u' er notuð " "forsetningin 'að', ekki 'af'."
         suggest = pp_af.substituted_text(pp_af, "að")
         if suggest == pp_af.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -487,10 +448,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'leggja af velli' á sennilega að vera 'leggja að velli'"
-        detail = (
-            "Í samhenginu 'leggja einhvern að velli' er notuð "
-            "forsetningin 'að', ekki 'af'."
-        )
+        detail = "Í samhenginu 'leggja einhvern að velli' er notuð " "forsetningin 'að', ekki 'af'."
         suggest = pp_af.substituted_text(pp_af, "að")
         if suggest == pp_af.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -523,10 +481,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'utan af' á sennilega að vera 'utan að'"
-        detail = (
-            "Í samhenginu 'kunna eitthvað utan að' er notuð "
-            "forsetningin 'að', ekki 'af'."
-        )
+        detail = "Í samhenginu 'kunna eitthvað utan að' er notuð " "forsetningin 'að', ekki 'af'."
         suggest = pp_af.substituted_text(pp_af, "að")
         if suggest == pp_af.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -561,10 +516,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'uppvís af' á sennilega að vera 'uppvís að'"
-        detail = (
-            "Í samhenginu 'verða uppvís að einhverju' er notuð "
-            "forsetningin 'að', ekki 'af'."
-        )
+        detail = "Í samhenginu 'verða uppvís að einhverju' er notuð " "forsetningin 'að', ekki 'af'."
         suggest = pp_af.substituted_text(pp_af, "að")
         if suggest == pp_af.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -603,9 +555,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'af ósk' á sennilega að vera 'að ósk'"
-        detail = (
-            "Í samhenginu 'að verða að ósk' er notuð " "forsetningin 'að', ekki 'af'."
-        )
+        detail = "Í samhenginu 'að verða að ósk' er notuð " "forsetningin 'að', ekki 'af'."
         suggest = pp_af.substituted_text(pp_af, "að")
         if suggest == pp_af.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -656,10 +606,7 @@ class PatternMatcher:
             return
         start, end = pp_að.span
         text = "'{0} að' á sennilega að vera '{0} af'".format(np.tidy_text)
-        detail = (
-            "Í samhenginu 'hafa áhyggjur af e-u' er notuð "
-            "forsetningin 'af', ekki 'að'."
-        )
+        detail = "Í samhenginu 'hafa áhyggjur af e-u' er notuð " "forsetningin 'af', ekki 'að'."
         suggest = pp_að.substituted_text(pp_að, "af")
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -718,10 +665,7 @@ class PatternMatcher:
         start, end = pp_að.span
         suggest = self.suggestion_complex(match, "leggja", "að")
         text = f"'{pp_að.tidy_text}' á sennilega að vera '{suggest}'"
-        detail = (
-            "Í samhenginu 'leggja e-ð af mörkum' er notuð "
-            "forsetningin 'af', ekki 'að'."
-        )
+        detail = "Í samhenginu 'leggja e-ð af mörkum' er notuð " "forsetningin 'af', ekki 'að'."
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
             return
@@ -750,10 +694,7 @@ class PatternMatcher:
         suggest = pp_að.substituted_text(pp_að, "af")
         whole = self.suggestion_complex(match, "láta", "að")
         text = f"'{match.tidy_text}' á sennilega að vera '{whole}'"
-        detail = (
-            "Í samhenginu 'láta gott af sér leiða' er notuð "
-            "forsetningin 'af', ekki 'að'."
-        )
+        detail = "Í samhenginu 'láta gott af sér leiða' er notuð " "forsetningin 'af', ekki 'að'."
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
             return
@@ -785,10 +726,7 @@ class PatternMatcher:
         whole = self.suggestion_complex(match, "heiður", "að")
         suggest = pp_að.substituted_text(pp_að, "af")
         text = f"'{match.tidy_text}' á sennilega að vera '{whole}'"
-        detail = (
-            "Í samhenginu 'fá/hljóta heiðurinn af' er notuð "
-            "forsetningin 'af', ekki 'að'."
-        )
+        detail = "Í samhenginu 'fá/hljóta heiðurinn af' er notuð " "forsetningin 'af', ekki 'að'."
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
             return
@@ -832,10 +770,7 @@ class PatternMatcher:
         suggest = pp_að.substituted_text(pp_að, "af")
         whole = self.suggestion_complex(match, "eiga", "að")
         text = f"'{match.tidy_text}' á sennilega að vera '{whole}'"
-        detail = (
-            f"Orðasambandið '{match.tidy_text}' tekur yfirleitt með sér "
-            f"forsetninguna 'af', ekki 'að'."
-        )
+        detail = f"Orðasambandið '{match.tidy_text}' tekur yfirleitt með sér " f"forsetninguna 'af', ekki 'að'."
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
             return
@@ -863,10 +798,7 @@ class PatternMatcher:
             return
         start, end = pp_að.span
         text = "'til að' á sennilega að vera 'til af'"
-        detail = (
-            "Orðasambandið 'vera mikið/lítið til af e-u' innifelur "
-            "yfirleitt forsetninguna 'af', ekki 'að'."
-        )
+        detail = "Orðasambandið 'vera mikið/lítið til af e-u' innifelur " "yfirleitt forsetninguna 'af', ekki 'að'."
         suggest = pp_að.substituted_text(pp_að, "af")
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -895,10 +827,7 @@ class PatternMatcher:
             return
         start, end = pp_að.span
         text = "'gagn að' á sennilega að vera 'gagn af'"
-        detail = (
-            "Orðasambandið 'að hafa gagn af e-u' tekur yfirleitt með sér "
-            "forsetninguna 'af', ekki 'að'."
-        )
+        detail = "Orðasambandið 'að hafa gagn af e-u' tekur yfirleitt með sér " "forsetninguna 'af', ekki 'að'."
         suggest = pp_að.substituted_text(pp_að, "af")
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -929,10 +858,7 @@ class PatternMatcher:
         start, end = pp_að.span
         # Calculate the start and end token indices, spanning both phrases
         text = "'að' á sennilega að vera 'af'"
-        detail = (
-            "Orðasambandið 'fréttir berast af e-u' tekur yfirleitt með sér "
-            "forsetninguna 'af', ekki 'að'."
-        )
+        detail = "Orðasambandið 'fréttir berast af e-u' tekur yfirleitt með sér " "forsetninguna 'af', ekki 'að'."
         suggest = pp_að.substituted_text(pp_að, "af")
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -970,10 +896,7 @@ class PatternMatcher:
             text = "'{0}' á sennilega að vera '{1}'".format(match.tidy_text, whole)
         else:
             text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
-        detail = (
-            "Orðasambandið 'að stafa af e-u' tekur yfirleitt með sér "
-            "forsetninguna 'af', ekki 'að'."
-        )
+        detail = "Orðasambandið 'að stafa af e-u' tekur yfirleitt með sér " "forsetninguna 'af', ekki 'að'."
         if suggest == pp_að.tidy_text:
             # No need to annotate, no changes were made
             return
@@ -1003,10 +926,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "'{0} af' á sennilega að vera '{0} að'".format(np.tidy_text)
-        detail = (
-            "Orðasambandið 'að vera ólétt/ur að e-u' tekur yfirleitt með sér "
-            "forsetninguna 'að', ekki 'af'."
-        )
+        detail = "Orðasambandið 'að vera ólétt/ur að e-u' tekur yfirleitt með sér " "forsetninguna 'að', ekki 'af'."
         suggest = pp_af.substituted_text(pp_af, "að")
         if suggest == pp_af.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -1039,10 +959,7 @@ class PatternMatcher:
         suggest = pp_að.substituted_text(pp_að, "af")
         whole = self.suggestion_complex(match, "heyra", "að")
         text = "'{0}' á sennilega að vera '{1}'".format(match.tidy_text, whole)
-        detail = (
-            "Orðasambandið 'að heyra af e-u' tekur yfirleitt með sér "
-            "forsetninguna 'af', ekki 'að'."
-        )
+        detail = "Orðasambandið 'að heyra af e-u' tekur yfirleitt með sér " "forsetninguna 'af', ekki 'að'."
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
             return
@@ -1072,10 +989,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_að.span
         text = "'gaman að' á sennilega að vera 'gaman af'"
-        detail = (
-            "Orðasambandið 'að hafa gaman af e-u' tekur yfirleitt með sér "
-            "forsetninguna 'af', ekki 'að'."
-        )
+        detail = "Orðasambandið 'að hafa gaman af e-u' tekur yfirleitt með sér " "forsetninguna 'af', ekki 'að'."
         suggest = pp_að.substituted_text(pp_að, "af")
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -1103,9 +1017,7 @@ class PatternMatcher:
             return
         start, end = pp_að.span
         text = "'heillaður að' á sennilega að vera 'heillaður af'"
-        detail = (
-            "Í samhenginu 'heillaður af e-u' er notuð " "forsetningin 'af', ekki 'að'."
-        )
+        detail = "Í samhenginu 'heillaður af e-u' er notuð " "forsetningin 'af', ekki 'að'."
         suggest = pp_að.substituted_text(pp_að, "af")
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -1126,10 +1038,8 @@ class PatternMatcher:
         """Handle a match of a suspect preposition pattern"""
         # Find the offending nominal phrase
         vp = match.first_match("VP > { 'velja' }")
-        lemma = "velja"
         if vp is None:
             vp = match.first_match("NP > { 'valinn' }")
-            lemma = "valinn"
         pp = match.first_match('P > { "að" }')
         if vp is None or pp is None:
             return
@@ -1138,15 +1048,10 @@ class PatternMatcher:
             return
         start, end = pp_að.span
         if " að " in vp.tidy_text:
-            text = "'{0}' á sennilega að vera '{1}'".format(
-                vp.tidy_text, vp.tidy_text.replace(" að ", " af ")
-            )
+            text = "'{0}' á sennilega að vera '{1}'".format(vp.tidy_text, vp.tidy_text.replace(" að ", " af "))
         else:
             text = "'{0} að' á sennilega að vera '{0} af'".format(vp.tidy_text)
-        detail = (
-            "Orðasambandið 'að vera valin/n af e-m' tekur yfirleitt með sér "
-            "forsetninguna 'af', ekki 'að'."
-        )
+        detail = "Orðasambandið 'að vera valin/n af e-m' tekur yfirleitt með sér " "forsetninguna 'af', ekki 'að'."
         suggest = pp_að.substituted_text(pp_að, "af")
         if suggest == pp_að.tidy_text or not suggest:
             # No need to annotate, no changes were made
@@ -1178,10 +1083,7 @@ class PatternMatcher:
         start, end = pp_að.span
         suggest = match.substituted_text(pp_að, "af")
         text = "Hér á líklega að vera forsetningin 'af' í stað 'að'."
-        detail = (
-            f"Í samhenginu '{match.tidy_text}' er rétt að nota "
-            f"forsetninguna 'af' í stað 'að'."
-        )
+        detail = f"Í samhenginu '{match.tidy_text}' er rétt að nota " f"forsetninguna 'af' í stað 'að'."
         if suggest == match.tidy_text:
             # No need to annotate, no changes were made
             return
@@ -1274,13 +1176,9 @@ class PatternMatcher:
             return
         start, end = min(vp.span[0], np.span[0]), max(vp.span[1], np.span[1])
         # noun = next(ch for ch in np.leaves if ch.tcat == "no").own_lemma
-        text = "Hér á líklega að vera sögnin '{0}' í stað '{1}'.".format(
-            correct_verb, verb
-        )
-        detail = (
-            "Í samhenginu '{0}' er rétt að nota sögnina '{1}' í stað '{2}'.".format(
-                match.tidy_text, correct_verb, verb
-            )
+        text = "Hér á líklega að vera sögnin '{0}' í stað '{1}'.".format(correct_verb, verb)
+        detail = "Í samhenginu '{0}' er rétt að nota sögnina '{1}' í stað '{2}'.".format(
+            match.tidy_text, correct_verb, verb
         )
         suggest = ""
         # TODO get better suggest value
@@ -1310,11 +1208,7 @@ class PatternMatcher:
         # Calculate the start and end token indices, spanning both phrases
         start, end = pp_af.span
         text = "Hér á líklega að vera forsetningin 'að' í stað 'af'."
-        detail = (
-            "Í samhenginu '{0}' er rétt að nota forsetninguna 'að' í stað 'af'.".format(
-                match.tidy_text
-            )
-        )
+        detail = "Í samhenginu '{0}' er rétt að nota forsetninguna 'að' í stað 'af'.".format(match.tidy_text)
         suggest = pp_af.substituted_text(pp_af, "að")
         if suggest == pp_af.tidy_text:
             # No need to annotate, no changes were made
@@ -1367,9 +1261,7 @@ class PatternMatcher:
         if "þt" in so.all_variants:
             # The past tense behaves differently, much less likely to be an error
             return
-        suggest = PatternMatcher.get_wordform(
-            realso.text.lower(), realso.lemma, realso.cat, so.all_variants
-        )
+        suggest = PatternMatcher.get_wordform(realso.text.lower(), realso.lemma, realso.cat, so.all_variants)
         if not suggest:
             return
         text = (
@@ -1377,7 +1269,7 @@ class PatternMatcher:
             f"'{realso.lemma}' svo hún verði '{suggest}'."
         )
         detail = (
-            f"Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
+            "Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
             "svokallað dvalarhorf ('Ég er ekki að skilja þetta')."
         )
         # TODO better original value!
@@ -1400,9 +1292,7 @@ class PatternMatcher:
         adv = match.first_match("( 'inn'|'út'|'upp' )")
         if adv is None:
             return
-        pp = match.first_match(
-            "PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_þgf|no_þf|pfn_þgf|pfn_þf ) } }"
-        )
+        pp = match.first_match("PP > { P > { ( 'í'|'á'|'um' ) } NP > { ( no_þgf|no_þf|pfn_þgf|pfn_þf ) } }")
         if pp is None:
             return
         start, end = min(adv.span[0], pp.span[0]), max(adv.span[1], pp.span[1])
@@ -1419,10 +1309,8 @@ class PatternMatcher:
             assert False
         correction = adv.tidy_text + "i"
         text = f"Hér á líklega að vera '{correction}' í stað '{adv.tidy_text}'"
-        detail = (
-            "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-                narrow_match, correction, adv.tidy_text
-            )
+        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+            narrow_match, correction, adv.tidy_text
         )
         if correction == adv.tidy_text:
             # No need to annotate, no changes were made
@@ -1489,10 +1377,8 @@ class PatternMatcher:
             else:
                 context = advp.tidy_text + " " + pp.tidy_text
         text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = (
-            "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-                context, correction, advp.tidy_text
-            )
+        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+            context, correction, advp.tidy_text
         )
         if correction == advp.tidy_text:
             # No need to annotate, no changes were made
@@ -1519,10 +1405,8 @@ class PatternMatcher:
         else:
             correction = advp.tidy_text + "i"
         text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
-        detail = (
-            "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
-                match.tidy_text, correction, advp.tidy_text
-            )
+        detail = "Í samhenginu '{0}' er rétt að nota atviksorðið '{1}' í stað '{2}'.".format(
+            match.tidy_text, correction, advp.tidy_text
         )
         if correction == advp.tidy_text:
             # No need to annotate, no changes were made
@@ -1560,10 +1444,7 @@ class PatternMatcher:
             return
         if not suggest:
             return
-        text = (
-            f"Hér á líklega að nota framsöguhátt sagnarinnar '{so_text}', "
-            f"þ.e. '{suggest}'."
-        )
+        text = f"Hér á líklega að nota framsöguhátt sagnarinnar '{so_text}', " f"þ.e. '{suggest}'."
         detail = ""
         sent_kind = ""
         if kind == "COND":
@@ -1573,7 +1454,7 @@ class PatternMatcher:
         elif kind == "TEMP/w":
             sent_kind = "tíðarsetningum á borð við 'Z' í 'X gerði Y áður en Z'"
         elif kind == "REL":
-            detail = f"Í tilvísunarsetningum er aðeins framsöguháttur sagna tækur."
+            detail = "Í tilvísunarsetningum er aðeins framsöguháttur sagna tækur."
         else:
             return
         if not detail:
@@ -1606,10 +1487,7 @@ class PatternMatcher:
         suggest = PatternMatcher.get_wordform(so_text, so.lemma, so.cat, variants)
         if not suggest or suggest == so_text:
             return
-        text = (
-            f"Hér er réttara að nota viðtengingarhátt "
-            f"sagnarinnar '{so.lemma}', þ.e. '{suggest}'."
-        )
+        text = f"Hér er réttara að nota viðtengingarhátt " f"sagnarinnar '{so.lemma}', þ.e. '{suggest}'."
         if kind == "ACK":
             detail = (
                 "Í viðurkenningarsetningum á borð við 'Z' í dæminu "
@@ -1661,10 +1539,7 @@ class PatternMatcher:
         if not v:
             return
         suggest = v[0].bmynd.replace("-", "")
-        text = (
-            f"Hér ætti annaðhvort að sleppa '{fn.tidy_text}' eða "
-            f"breyta '{no.tidy_text}' í '{suggest}'."
-        )
+        text = f"Hér ætti annaðhvort að sleppa '{fn.tidy_text}' eða " f"breyta '{no.tidy_text}' í '{suggest}'."
         detail = (
             "Hér er notuð tvöföld ákveðni, þ.e. ábendingarfornafn á undan "
             "nafnorði með greini. Það er ekki í samræmi við viðtekinn málstaðal."
@@ -1706,10 +1581,7 @@ class PatternMatcher:
         suggest = PatternMatcher.get_wordform(so_text, so.lemma, so.cat, variants)
         if not suggest or suggest == so_text:
             return
-        text = (
-            f"Hér er réttara að nota fleirtölu "
-            f"sagnarinnar '{so.lemma}', þ.e. '{suggest}'."
-        )
+        text = f"Hér er réttara að nota fleirtölu " f"sagnarinnar '{so.lemma}', þ.e. '{suggest}'."
         if kind == "GEN":
             nogen = match.first_match("NP-POSS > { no_ft_ef }")
             if nogen is None:
@@ -1763,10 +1635,7 @@ class PatternMatcher:
         suggest = PatternMatcher.get_wordform(so_text, so.lemma, so.cat, variants)
         if not suggest or suggest == so_text:
             return
-        text = (
-            f"Hér er réttara að nota eintölu "
-            f"sagnarinnar '{so.lemma}', þ.e. '{suggest}'."
-        )
+        text = f"Hér er réttara að nota eintölu " f"sagnarinnar '{so.lemma}', þ.e. '{suggest}'."
         if kind == "GEN":
             nogen = match.first_match("NP-POSS > { no_ft_ef }")
             if nogen is None:
@@ -1778,7 +1647,9 @@ class PatternMatcher:
             noaf = match.first_match("PP >> { no_ft_þgf }")
             if noaf is None:
                 return
-            detail = f"Tala sagnarinnar '{so.lemma}' stjórnast af tölu '{no.lemma}', ekki '{noaf.lemma}' í forsetningarlið."
+            detail = (
+                f"Tala sagnarinnar '{so.lemma}' stjórnast af tölu '{no.lemma}', ekki '{noaf.lemma}' í forsetningarlið."
+            )
         else:
             return
 
@@ -1807,10 +1678,7 @@ class PatternMatcher:
         if c is None:
             return
         start, end = c.span[0], c.span[1]
-        if (
-            match.root.first_match("'hvorki'") is not None
-            or "eitt né neitt" in match.root.text
-        ):
+        if match.root.first_match("'hvorki'") is not None or "eitt né neitt" in match.root.text:
             # Check to see if VillaNé (P_NT_Né) has been activated
             # and should be deleted
             for ann in self._ann:
@@ -1824,7 +1692,9 @@ class PatternMatcher:
                 return
         correction = "eða"
         text = "'né' gæti átt að vera 'eða'"
-        detail = "'né' er hluti af margorða samtengingunni 'hvorki né' en getur ekki staðið eitt og sér sem aukatenging."
+        detail = (
+            "'né' er hluti af margorða samtengingunni 'hvorki né' en getur ekki staðið eitt og sér sem aukatenging."
+        )
         self._ann.append(
             Annotation(
                 start=start,
@@ -1859,7 +1729,6 @@ class PatternMatcher:
         verbs_að: Set[str] = set()
 
         for verb, d in prep_errors.items():
-
             if "_" in verb:
                 # At this point, we're not interested in composites ('birgja_sig' etc.)
                 continue
@@ -1900,10 +1769,7 @@ class PatternMatcher:
             # means that the lambda condition matches middle voice stem forms,
             # such as 'dást' instead of 'dá'.
             self.ctx_af = {
-                "verb": lambda tree: (
-                    tree.own_lemma_mm in verbs_af
-                    and not (set(tree.variants) & {"1", "2"})
-                )
+                "verb": lambda tree: (tree.own_lemma_mm in verbs_af and not (set(tree.variants) & {"1", "2"}))
             }
             # Catch sentences such as 'Jón leitaði af kettinum'
             self.add_pattern(
@@ -2000,9 +1866,7 @@ class PatternMatcher:
             # Catch "Það markar ekki upphaf af því."
             self.add_pattern(
                 (
-                    frozenset(
-                        ("upphafinn", "upphaf")
-                    ),  # Trigger lemma for this pattern
+                    frozenset(("upphafinn", "upphaf")),  # Trigger lemma for this pattern
                     "VP > { VP > { 'marka' } NP > { ('upphafinn'|'upphaf') } PP > { 'af' } }",
                     self.wrong_preposition_marka_af,
                     None,
@@ -2037,9 +1901,7 @@ class PatternMatcher:
             # Catch "Jón leggur hann (ekki) af velli.", "Jón hefur (ekki) lagt hann af velli."
             self.add_pattern(
                 (
-                    frozenset(
-                        ("völlur", "vell", "velli")
-                    ),  # Trigger lemmas for this pattern
+                    frozenset(("völlur", "vell", "velli")),  # Trigger lemmas for this pattern
                     'VP > { VP > { \'leggja\' } PP > { P > { "af" } NP > { "velli" } } }',
                     self.wrong_preposition_leggja_af,
                     None,
@@ -2085,10 +1947,7 @@ class PatternMatcher:
         if verbs_að:
             # Create matching patterns with a context that catches the að/af verbs.
             self.ctx_að = {
-                "verb": lambda tree: (
-                    tree.own_lemma_mm in verbs_að
-                    and not (set(tree.variants) & {"1", "2"})
-                )
+                "verb": lambda tree: (tree.own_lemma_mm in verbs_að and not (set(tree.variants) & {"1", "2"}))
             }
             # Catch sentences such as 'Jón heillaðist að kettinum'
             self.add_pattern(
@@ -2220,9 +2079,7 @@ class PatternMatcher:
             )
             self.add_pattern(
                 (
-                    frozenset(
-                        ("leiða", "leiður")
-                    ),  # Trigger lemma for this pattern (probably a wrong parse)
+                    frozenset(("leiða", "leiður")),  # Trigger lemma for this pattern (probably a wrong parse)
                     'VP > [ .* \'láta\' .* NP-OBJ > [ .* "gott" .* ("að mér leiða" | "að sér leiða" | "að þér leiða") ] ]',
                     self.wrong_preposition_að_leiða,
                     None,
@@ -2230,9 +2087,7 @@ class PatternMatcher:
             )
             self.add_pattern(
                 (
-                    frozenset(
-                        ("leiða", "leiður")
-                    ),  # Trigger lemma for this pattern (probably a wrong parse)
+                    frozenset(("leiða", "leiður")),  # Trigger lemma for this pattern (probably a wrong parse)
                     'VP > { IP-INF > { "að" "láta" } NP-PRD > { "gott" } PP > [ "að" ( "mér" | "þér" | "sér" ) "leiða" ] }',
                     self.wrong_preposition_að_leiða,
                     None,
@@ -2477,9 +2332,7 @@ class PatternMatcher:
                 return False
             return (lemma + "_" + case) in nouns
 
-        NOUNS_AF: FrozenSet[str] = frozenset(
-            ("beiðni_þgf", "siður_þgf", "tilefni_þgf", "fyrirmynd_þgf")
-        )
+        NOUNS_AF: FrozenSet[str] = frozenset(("beiðni_þgf", "siður_þgf", "tilefni_þgf", "fyrirmynd_þgf"))
         # The macro %noun is resolved by calling the function wrong_noun_af()
         # with the potentially matching tree node as an argument.
         self.ctx_noun_af = {"noun": partial(wrong_noun_af, NOUNS_AF)}
@@ -2618,9 +2471,7 @@ class PatternMatcher:
         # Concessive clause - viðurkenningarsetning
         self.add_pattern(
             (
-                frozenset(
-                    ("þrátt fyrir", "þrátt", "þó", "þótt")
-                ),  # Trigger lemmas for this pattern
+                frozenset(("þrátt fyrir", "þrátt", "þó", "þótt")),  # Trigger lemmas for this pattern
                 "CP-ADV-ACK > { IP >> {VP > so_fh} }",
                 lambda match: self.mood_ind("ACK", match),
                 None,
@@ -2638,9 +2489,7 @@ class PatternMatcher:
         # Temporal clause - tíðarsetning
         self.add_pattern(
             (
-                frozenset(
-                    ("áður", "eftir", "þangað", "þegar")
-                ),  # Trigger lemmas for this pattern
+                frozenset(("áður", "eftir", "þangað", "þegar")),  # Trigger lemmas for this pattern
                 "CP-ADV-TEMP > { IP >> {VP > so_vh} }",
                 lambda match: self.mood_sub("TEMP/w", match),
                 None,
@@ -3060,7 +2909,7 @@ class PatternMatcher:
             """Context matching function for the %noun macro"""
             if not tree.is_terminal:
                 return False
-            if not "et" in tree.all_variants:
+            if "et" not in tree.all_variants:
                 return False
             lemma = tree.own_lemma
             if not lemma:

@@ -1,0 +1,10 @@
+[tool.ruff]
+line-length = 120
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+known_future_library = ["typing", "typing_extensions"]  # This forces these imports to placed at the top
+profile = "black"
+line_length = 120
