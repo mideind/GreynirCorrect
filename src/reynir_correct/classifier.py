@@ -52,7 +52,7 @@ class SentenceClassifier:
 
     def __init__(self) -> None:
         try:
-            from transformers import pipeline
+            from transformers import pipeline  # type: ignore
         except ImportError:
             import warnings
 

@@ -451,7 +451,7 @@ class Ritmyndir:
     # dict { wrong_word_form : (lemma, id, cat, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg) }
     # þurrð;10963;kvk;þurðar;þurrðar;EFET;0;URE;;;;1745-1745;KLIM
     # þurrka;425063;so;þurkaði;þurrkaði;;4;VILLA;R4RR;;;;SKOLAVERK
-    def __init__(self):
+    def __init__(self) -> None:
         self.DICT: Dict[str, RitmyndirTuple] = dict()
 
     def contains(self, word: str) -> bool:

@@ -2680,7 +2680,7 @@ def check_wording(
         settings.tone_of_voice_words.DICT,
     )
 
-    def handle_template_data(token_stream, tdict):
+    def handle_template_data(token_stream, tdict) -> Iterator[CorrectToken]:
         for token in token_stream:
             # Check taboo words
             if token.val is not None and token.has_meanings and token.txt not in NOT_TABOO:  # type: ignore

@@ -484,7 +484,7 @@ class GreynirCorrect(Greynir):
         )
         # Iterating through the sentences in the job causes
         # them to be parsed and their statistics collected
-        sentences = [sent for sent in job]
+        sentences = [cast(AnnotatedSentence, sent) for sent in job]
         return CheckResult(
             sentences=sentences,
             num_sentences=job.num_sentences,
