@@ -379,8 +379,8 @@ def check_errors(**options: Any) -> str:
         text_results += f"\nFlesch score: {flesch_score:.2f} ({flesch_feedback})"
     if results.rare_words is not None:
         text_results += "\nRare words:\n"
-        for word, prob in results.rare_words:
-            text_results += f"\t{word}: {prob:.8f}\n"
+        for word, _prob in results.rare_words:
+            text_results += f"\t{word}\n"
     return text_results
 
 
