@@ -335,6 +335,13 @@ class GreynirCorrectAPI:
             sentences=corrected_sentences,
             flesch_result=flesch_result,
             rare_words=rare_words,
+            parse_result_stats=ParseResultStats(
+                num_sentences=check_result["num_sentences"],
+                num_parsed=check_result["num_parsed"],
+                num_tokens=check_result["num_tokens"],
+                ambiguity=check_result["ambiguity"],
+                parse_time=check_result["parse_time"],
+            ),
         )
         # Filter annotations based on ignore rules
         result.filter_annotations(ignore_rules or set())
