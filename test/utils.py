@@ -21,14 +21,14 @@ def check_sentence(
 
     def check_sent(sent: reynir_correct.CorrectedSentence) -> None:
         assert sent is not None
-        if sent.terminals is None and not is_foreign:
+        if not sent.parsed and not is_foreign:
             # If the sentence should not parse, call
             # check_sentence with annotations=None
             assert annotations is None
             return
         assert annotations is not None
         if not is_foreign:
-            assert sent.terminals is not None
+            assert sent.parsed
         # Compile a list of error annotations, omitting warnings
         assert sent.annotations is not None
         sent_errors = [a for a in sent.annotations if not a.code.endswith("/w")]
@@ -57,7 +57,7 @@ def check_sentence(
         assert isinstance(sent, reynir_correct.CorrectedSentence)
         check_sent(sent)
     # Test presevation of original token text
-    assert len("".join([tok.original or "" for sent in result.sentences for tok in sent.tokens])) == len(s)
+    assert "".join([tok.original or "" for sent in result.sentences for tok in sent.tokens]) == s
 
 
 def correct_spelling_format(
