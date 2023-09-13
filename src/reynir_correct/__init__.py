@@ -41,6 +41,7 @@ from .checker import AnnotatedSentence, GreynirCorrect
 
 # Token-level correction
 from .errtokenizer import Correct_TOK, CorrectionPipeline
+from .readability import Flesch, RareWords
 from .settings import Settings
 from .version import __version__
 from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, check_errors
@@ -56,6 +57,8 @@ __all__ = (
     "Paragraph",
     "detokenize",
     "Settings",
+    "Flesch",
+    "RareWords",
     "CorrectionPipeline",
     "Correct_TOK",
     "GreynirCorrect",
