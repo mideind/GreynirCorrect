@@ -177,7 +177,7 @@ class CorrectedSentence:
     @staticmethod
     def from_parser_sentence(sentence: AnnotatedSentence) -> "CorrectedSentence":
         """Create a CorrectedSentence from a parser sentence"""
-        tokens = sentence.tokens
+        tokens = sentence.correct_tokens
         parsed = False
         if sentence.tree is not None and sentence.terminals is not None:
             # Successfully parsed: use the text from the terminals (where available)
