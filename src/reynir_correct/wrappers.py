@@ -178,7 +178,6 @@ class CorrectedSentence:
     def from_parser_sentence(sentence: AnnotatedSentence) -> "CorrectedSentence":
         """Create a CorrectedSentence from a parser sentence"""
         tokens = sentence.tokens
-        tokens = cast(List[CorrectToken], tokens)
         parsed = False
         if sentence.tree is not None and sentence.terminals is not None:
             # Successfully parsed: use the text from the terminals (where available)
@@ -609,7 +608,7 @@ def format_csv(results: CorrectionResult) -> str:
 def format_m2(results: CorrectionResult) -> str:
     accumul: List[str] = []
     for result in results.sentences:
-        accumul.append("S {0}".format(" ".join([t["x"] for t in result.tokens])))
+        accumul.append("S {0}".format(" ".join([t.txt for t in result.tokens])))
         for ann in result.annotations or []:
             accumul.append(
                 "A {0} {1}|||{2}|||{3}|||REQUIRED|||-NONE-|||0".format(ann.start, ann.end, ann.code, ann.suggest)

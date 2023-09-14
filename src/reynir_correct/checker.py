@@ -138,6 +138,8 @@ class AnnotatedSentence(Sentence):
     def __init__(self, job: Job, s: TokenList) -> None:
         super().__init__(job, s)
         self.annotations: List[Annotation] = []
+        # TODO: The Tok class needs to return generic type hints
+        self.tokens: List[CorrectToken] = [cast(CorrectToken, t) for t in self.tokens]  # type: ignore
 
 
 # The type of a grammar check result
