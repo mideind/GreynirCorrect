@@ -65,7 +65,7 @@ from functools import partial
 from tokenizer import TOK, calculate_indexes, detokenize, normalized_text_from_tokens, text_from_tokens
 from tokenizer.definitions import AmountTuple, NumberTuple
 
-from reynir_correct.readability import Flesch, RareWords
+from reynir_correct.readability import FleschKincaidScorer, RareWordsFinder
 
 from .annotation import Annotation
 from .checker import AnnotatedSentence, CheckResult, GreynirCorrect, load_config
@@ -235,7 +235,7 @@ class GreynirCorrectAPI:
         gc: GreynirCorrect,
         sentence_prefilter: Optional[SentenceClassifier] = None,
         do_flesch: bool = False,
-        rare_word_analyser: Optional[RareWords] = None,
+        rare_word_analyser: Optional[RareWordsFinder] = None,
         do_grammar_check: bool = True,
     ):
         self.gc = gc
@@ -261,7 +261,7 @@ class GreynirCorrectAPI:
             pipeline=pipeline,
             **options,
         )
-        rare_word_analyser = RareWords() if do_rare_word_analysis else None
+        rare_word_analyser = RareWordsFinder() if do_rare_word_analysis else None
         do_grammar_check = options.get("all_errors", True)
         if options.get("sentence_prefilter", False):
             # Only construct the classifier model if we need it
@@ -318,8 +318,8 @@ class GreynirCorrectAPI:
         corrected_tokens = list(corrected_tokens)
         flesch_result = None
         if self.do_flesch:
-            flesch_score = Flesch.get_score_from_stream(corrected_tokens)
-            flesch_feedback = Flesch.get_feedback(flesch_score)
+            flesch_score = FleschKincaidScorer.get_score_from_stream(corrected_tokens)
+            flesch_feedback = FleschKincaidScorer.get_feedback(flesch_score)
             flesch_result = (flesch_score, flesch_feedback)
         rare_words = None
         if self.rare_word_analyser is not None:

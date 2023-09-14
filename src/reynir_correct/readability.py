@@ -44,12 +44,13 @@ diphtong_pattern = re.compile(r"(ei|ey|au)")
 vowel_pattern = re.compile(r"[aeiouyáéíóúýöæ]")
 
 
-class Flesch:
-    """The Flesch class calculates the Flesch reading ease score of a given text."""
+class FleschKincaidScorer:
+    """Calculate the FleschKincaid reading ease score of a given text."""
 
     @staticmethod
     def count_syllables_in_word(word: str) -> int:
-        """Count the number of syllables in an Icelandic word, by counting the number of vowels in the word. This is done by first replacing diphtongs with a single character, then counting the number of vowels."""
+        """Count the number of syllables in an Icelandic word, by counting the number of vowels in the word.
+        This is done by first replacing diphtongs with a single character, then counting the number of vowels."""
         word = word.lower()
         # replace diphtongs with a single character
         word = diphtong_pattern.sub("a", word)
@@ -87,14 +88,14 @@ class Flesch:
         num_sentences = 0
         num_syllables = 0
         for tok in token_stream:
-            if Flesch.is_a_word(tok):
+            if FleschKincaidScorer.is_a_word(tok):
                 num_words += 1
                 if tok.kind == tokenizer.TOK.WORD:
-                    num_syllables += Flesch.count_syllables_in_word(tok.txt)
+                    num_syllables += FleschKincaidScorer.count_syllables_in_word(tok.txt)
                 else:
                     # All tokens that are numbers, abbreviations, etc. are counted as one syllable, as an approximation
                     num_syllables += 1
-            if Flesch.is_start_of_sentence(tok):
+            if FleschKincaidScorer.is_start_of_sentence(tok):
                 num_sentences += 1
         return num_sentences, num_words, num_syllables
 
@@ -102,9 +103,9 @@ class Flesch:
     def get_score_from_stream(token_stream: Iterable[tokenizer.Tok]) -> float:
         """Calculate the Flesch reading ease score after tracking a token stream.
         See https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests."""
-        num_sentences, num_words, num_syllables = Flesch.get_counts_from_stream(token_stream)
+        num_sentences, num_words, num_syllables = FleschKincaidScorer.get_counts_from_stream(token_stream)
         try:
-            score = Flesch.get_score(num_sentences, num_words, num_syllables)
+            score = FleschKincaidScorer.get_score(num_sentences, num_words, num_syllables)
         except ZeroDivisionError:
             score = -1.0  # invalid score
         return score
@@ -114,7 +115,7 @@ class Flesch:
         """Calculate the Flesch reading ease score of a text.
         See https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests."""
         stream = tokenizer.tokenize(text)
-        return Flesch.get_score_from_stream(stream)
+        return FleschKincaidScorer.get_score_from_stream(stream)
 
     @staticmethod
     def get_feedback(score: float) -> str:
@@ -143,8 +144,8 @@ class Flesch:
             return "Mjög þungur eða ómarktækur texti."
 
 
-class RareWords:
-    """The RareWords class is used to find the rare words in a text.
+class RareWordsFinder:
+    """Find rare words in a text.
 
     Rare words are defined as words which have a probability lower than the low_prob_cutoff.
     The probability of a word is calculated by looking up the word in an n-gram model.
@@ -200,12 +201,12 @@ if __name__ == "__main__":
         max_words = 10
         low_prob_cutoff = 0.00000005
 
-        flesch_score = Flesch.get_score_from_text(text)
-        rare = RareWords()
+        flesch_score = FleschKincaidScorer.get_score_from_text(text)
+        rare = RareWordsFinder()
         rare_words = rare.get_rare_words_from_text(text, max_words, low_prob_cutoff)
 
         print(f"Flesch-læsileikastig: {flesch_score:.2f}")
-        print(f"Flesch-umsögn: {Flesch.get_feedback(flesch_score)}")
+        print(f"Flesch-umsögn: {FleschKincaidScorer.get_feedback(flesch_score)}")
         print("Sjaldgæfustu orð í textanum:")
         for word, _ in rare_words:
             print(f"\t{word}")
