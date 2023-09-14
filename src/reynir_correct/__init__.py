@@ -40,14 +40,14 @@ from .annotation import Annotation
 from .checker import AnnotatedSentence, GreynirCorrect
 
 # Token-level correction
-from .errtokenizer import Correct_TOK, CorrectionPipeline
+from .errtokenizer import Correct_TOK, CorrectionPipeline, CorrectToken
 from .readability import Flesch, RareWords
 from .settings import Settings
 from .version import __version__
-from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, check_errors
+from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, ParseResultStats, check_errors
 
 __author__ = "Miðeind ehf"
-__copyright__ = "(C) 2022 Miðeind ehf."
+__copyright__ = "(C) 2023 Miðeind ehf."
 
 __all__ = (
     "Greynir",
@@ -57,10 +57,12 @@ __all__ = (
     "Paragraph",
     "detokenize",
     "Settings",
+    "ParseResultStats",
     "Flesch",
     "RareWords",
     "CorrectionPipeline",
     "Correct_TOK",
+    "CorrectToken",
     "GreynirCorrect",
     "GreynirCorrectAPI",
     "CorrectionResult",
