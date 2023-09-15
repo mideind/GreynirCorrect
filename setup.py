@@ -4,7 +4,7 @@
 
     Setup.py
 
-    Copyright (C) 2022 Miðeind ehf.
+    Copyright (C) 2023 Miðeind ehf.
     Original author: Vilhjálmur Þorsteinsson
 
     This software is licensed under the MIT License:
@@ -32,7 +32,7 @@
     This module sets up the GreynirCorrect package and installs the
     'correct' command-line utility.
 
-    This package requires Python >= 3.7, and supports PyPy >= 3.7.
+    This package requires Python >= 3.8, and supports PyPy >= 3.8.
 
 """
 
@@ -47,16 +47,14 @@ from setuptools import find_packages  # type: ignore
 from setuptools import setup  # type: ignore
 
 
-if sys.version_info < (3, 7):
-    print("GreynirCorrect requires Python >= 3.7")
+if sys.version_info < (3, 8):
+    print("GreynirCorrect requires Python >= 3.8")
     sys.exit(1)
 
 
 def read(*names: str, **kwargs: str):
     try:
-        return io.open(
-            join(dirname(__file__), *names), encoding=kwargs.get("encoding", "utf8")
-        ).read()
+        return io.open(join(dirname(__file__), *names), encoding=kwargs.get("encoding", "utf8")).read()
     except (IOError, OSError):
         return ""
 
@@ -71,9 +69,7 @@ setup(
     license="MIT",
     description="A spelling and grammar corrector for Icelandic",
     long_description="{0}\n{1}".format(
-        re.compile("^.. start-badges.*^.. end-badges", re.M | re.S).sub(
-            "", read("README.rst")
-        ),
+        re.compile("^.. start-badges.*^.. end-badges", re.M | re.S).sub("", read("README.rst")),
         re.sub(":[a-z]+:`~?(.*?)`", r"``\1``", read("CHANGELOG.rst")),
     ),
     author="Miðeind ehf",
@@ -98,7 +94,6 @@ setup(
         "Natural Language :: Icelandic",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",

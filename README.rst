@@ -1,8 +1,8 @@
 
 .. image:: https://img.shields.io/badge/License-MIT-yellow.svg
     :target: https://opensource.org/licenses/MIT
-.. image:: https://img.shields.io/badge/python-3.7-blue.svg
-    :target: https://www.python.org/downloads/release/python-370/
+.. image:: https://img.shields.io/badge/python-3.8-blue.svg
+    :target: https://www.python.org/downloads/release/python-380/
 .. image:: https://img.shields.io/pypi/v/reynir-correct
     :target: https://pypi.org/project/reynir-correct/
 .. image:: https://shields.io/github/v/release/mideind/GreynirCorrect?display_name=tag
@@ -18,7 +18,7 @@ GreynirCorrect: Spelling and grammar correction for Icelandic
 Overview
 ********
 
-**GreynirCorrect** is a Python 3 (>= 3.7) package and command line tool for
+**GreynirCorrect** is a Python 3 (>= 3.8) package and command line tool for
 **checking and correcting spelling and grammar** in Icelandic text.
 
 GreynirCorrect relies on the `Greynir <https://pypi.org/project/reynir/>`__ package,
@@ -183,7 +183,7 @@ An overview of error codes is available `here <https://github.com/mideind/Greyni
 Prerequisites
 *************
 
-GreynirCorrect runs on CPython 3.7 or newer, and on PyPy 3.7 or newer. It has
+GreynirCorrect runs on CPython 3.8 or newer, and on PyPy 3.8 or newer. It has
 been tested on Linux, macOS and Windows. The
 `PyPi package <https://pypi.org/project/reynir-correct/>`_
 includes binary wheels for common environments, but if the setup on your OS
@@ -199,7 +199,7 @@ requires compilation from sources, you may need
 Installation
 ************
 
-To install this package (assuming you have Python >= 3.7 with ``pip`` installed):
+To install this package (assuming you have Python >= 3.8 with ``pip`` installed):
 
 .. code-block:: bash
 
@@ -397,7 +397,7 @@ Copyright and License
    :align: right
    :alt: Miðeind ehf.
 
-**Copyright © 2022 Miðeind ehf.**
+**Copyright © 2023 Miðeind ehf.**
 
 GreynirCorrect's original author is *Vilhjálmur Þorsteinsson*.
 
