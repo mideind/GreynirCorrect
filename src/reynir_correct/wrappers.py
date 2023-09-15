@@ -65,7 +65,7 @@ from functools import partial
 from tokenizer import TOK, calculate_indexes, detokenize, normalized_text_from_tokens, text_from_tokens
 from tokenizer.definitions import AmountTuple, NumberTuple
 
-from reynir_correct.readability import FleschKincaidScorer, RareWordsFinder
+from reynir_correct.readability import FleschKincaidFeedback, FleschKincaidScorer, RareWordsFinder
 
 from .annotation import Annotation
 from .checker import AnnotatedSentence, CheckResult, GreynirCorrect, load_config
@@ -221,7 +221,7 @@ class ParseResultStats:
 class CorrectionResult:
     sentences: List[CorrectedSentence]
     parse_result_stats: Optional[ParseResultStats] = None
-    flesch_result: Optional[Tuple[float, str]] = None
+    flesch_result: Optional[Tuple[float, FleschKincaidFeedback]] = None
     rare_words: Optional[List[Tuple[str, float]]] = None
 
     def filter_annotations(self, ignore_rules: Set[str]) -> None:
