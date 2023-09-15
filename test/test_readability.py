@@ -91,35 +91,35 @@ def test_count_sentences_words_syllables():
 
 def test_flesch_score_range():
     for text in text_dict:
-        assert readability.FleschKincaidScorer().get_score_from_text(text) > 0
-        assert readability.FleschKincaidScorer().get_score_from_text(text) < 100
+        assert readability.FleschKincaidScorer.get_score_from_text(text) > 0
+        assert readability.FleschKincaidScorer.get_score_from_text(text) < 100
 
-    assert readability.FleschKincaidScorer().get_score_from_text(
+    assert readability.FleschKincaidScorer.get_score_from_text(
         easy_text1
-    ) > readability.FleschKincaidScorer().get_score_from_text(
+    ) > readability.FleschKincaidScorer.get_score_from_text(
         medium_text1
     ), "Expected easy text to be easier than medium text"
-    assert readability.FleschKincaidScorer().get_score_from_text(
+    assert readability.FleschKincaidScorer.get_score_from_text(
         medium_text1
-    ) > readability.FleschKincaidScorer().get_score_from_text(
+    ) > readability.FleschKincaidScorer.get_score_from_text(
         medium_hard_text
     ), "Expected medium text to be easier than medium hard text"
-    assert readability.FleschKincaidScorer().get_score_from_text(
+    assert readability.FleschKincaidScorer.get_score_from_text(
         medium_text2
-    ) > readability.FleschKincaidScorer().get_score_from_text(
+    ) > readability.FleschKincaidScorer.get_score_from_text(
         medium_hard_text
     ), "Expected medium text to be easier than medium hard text"
-    assert readability.FleschKincaidScorer().get_score_from_text(
+    assert readability.FleschKincaidScorer.get_score_from_text(
         medium_hard_text
-    ) > readability.FleschKincaidScorer().get_score_from_text(
+    ) > readability.FleschKincaidScorer.get_score_from_text(
         hard_text1
     ), "Expected medium hard text to be easier than hard text"
 
 
 def test_flesch_score_against_estimate():
     for text in text_dict:
-        flesch_score = readability.FleschKincaidScorer().get_score_from_text(text)
-        feedback = readability.FleschKincaidScorer().get_feedback(flesch_score)
+        flesch_score = readability.FleschKincaidScorer.get_score_from_text(text)
+        feedback = readability.FleschKincaidScorer.get_feedback(flesch_score)
 
         assert (
             flesch_score > text_dict[text][0]
@@ -130,8 +130,8 @@ def test_flesch_score_against_estimate():
         ), f"Expected text to be harder than estimate: {text_dict[text][1]}, was {flesch_score}. Feedback: {feedback}. First sentence: {text.split('.')[0]}"
 
     for text in not_real_texts:
-        flesch_score = readability.FleschKincaidScorer().get_score_from_text(text)
-        feedback = readability.FleschKincaidScorer().get_feedback(flesch_score)
+        flesch_score = readability.FleschKincaidScorer.get_score_from_text(text)
+        feedback = readability.FleschKincaidScorer.get_feedback(flesch_score)
 
         assert (
             flesch_score > not_real_texts[text][0]

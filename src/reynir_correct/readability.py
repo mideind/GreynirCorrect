@@ -32,9 +32,13 @@
     A high score indicates that the text is easy to read, while a low score
     indicates that the text is difficult to read.
 """
+
+from __future__ import annotations
 from typing import Dict, Iterable, List, Tuple
 
+import math
 import re
+from enum import Enum
 
 import tokenizer
 from icegrams.ngrams import Ngrams
@@ -44,8 +48,60 @@ diphtong_pattern = re.compile(r"(ei|ey|au)")
 vowel_pattern = re.compile(r"[aeiouyáéíóúýöæ]")
 
 
+class FleschKincaidFeedback(Enum):
+    """The Flesch-Kincaid feedback of a text."""
+
+    VERY_EASY_OR_INVALID = (120, "Mjög léttur eða ómarktækur texti.")
+    VERY_EASY = (90, "Mjög léttur texti")
+    EASY = (80, "Léttur texti")
+    FAIRLY_EASY = (70, "Frekar léttur texti")
+    STANDARD = (60, "Meðalléttur texti")
+    FAIRLY_DIFFICULT = (50, "Svolítið þungur texti")
+    DIFFICULT = (30, "Þungur texti")
+    VERY_DIFFICULT = (0, "Mjög þungur texti")
+    VERY_DIFFICULT_OR_INVALID = (-math.inf, "Mjög þungur eða ómarktækur texti.")
+
+    def __ge__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value >= other.value
+        return NotImplemented
+
+    def __gt__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value > other.value
+        return NotImplemented
+
+    def __le__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value <= other.value
+        return NotImplemented
+
+    def __lt__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value < other.value
+        return NotImplemented
+
+    def __init__(self, score: float, feedback: str):
+        self.score = score
+        self.feedback = feedback
+
+    def __str__(self):
+        return self.feedback
+
+    @staticmethod
+    def from_score(score: float) -> FleschKincaidFeedback:
+        """Provide feedback on the score. This is done by comparing the score to the
+        Flesch-Kincaid reading ease score scale. The feedback has been slightly modified to fit Icelandic.
+        Icelandic tends to score lower than English and thus the scale has been adjusted to reflect this.
+        """
+        for feedback in FleschKincaidFeedback:
+            if score >= feedback.score:
+                return feedback
+        raise ValueError(f"Invalid score: {score}")
+
+
 class FleschKincaidScorer:
-    """Calculate the FleschKincaid reading ease score of a given text."""
+    """Calculate the Flesch-Kincaid reading ease score of a given text."""
 
     @staticmethod
     def count_syllables_in_word(word: str) -> int:
@@ -65,7 +121,7 @@ class FleschKincaidScorer:
 
     @staticmethod
     def is_a_word(tok: tokenizer.Tok) -> bool:
-        """Determine if a token is a word for the Flesch metric."""
+        """Determine if a token is a word for the Flesch-Kincaid metric."""
         if tok.kind < tokenizer.TOK.META_BEGIN:
             # Punctuation marks are not counted as words
             if tok.kind > tokenizer.TOK.PUNCTUATION:
@@ -74,9 +130,9 @@ class FleschKincaidScorer:
 
     @staticmethod
     def get_score(num_sentences: int, num_words: int, num_syllables: int) -> float:
-        """Calculate the Flesch reading ease score after tracking a token stream.
+        """Calculate the Flesch-Kincaid reading ease score after tracking a token stream.
         See https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests."""
-        # Magic numbers from the Flesch reading ease score formula - English
+        # Magic numbers from the Flesch-Kincaid reading ease score formula - English
         # Icelandic tends to score lower than English and thus the scale has been adjusted to reflect this.
         # Original formula: 206.835 - (1.015 * (num_words / num_sentences)) - 84.6 * (num_syllables / num_words)
         score = 206.835 - (1.015 * (num_words / num_sentences)) - 70 * (num_syllables / num_words)
@@ -88,20 +144,23 @@ class FleschKincaidScorer:
         num_sentences = 0
         num_syllables = 0
         for tok in token_stream:
-            if FleschKincaidScorer.is_a_word(tok):
+            if FleschKincaidScorer.is_start_of_sentence(tok):
+                num_sentences += 1
+            elif FleschKincaidScorer.is_a_word(tok):
                 num_words += 1
                 if tok.kind == tokenizer.TOK.WORD:
                     num_syllables += FleschKincaidScorer.count_syllables_in_word(tok.txt)
                 else:
                     # All tokens that are numbers, abbreviations, etc. are counted as one syllable, as an approximation
                     num_syllables += 1
-            if FleschKincaidScorer.is_start_of_sentence(tok):
-                num_sentences += 1
+            else:
+                # All other tokens are ignored
+                pass
         return num_sentences, num_words, num_syllables
 
     @staticmethod
     def get_score_from_stream(token_stream: Iterable[tokenizer.Tok]) -> float:
-        """Calculate the Flesch reading ease score after tracking a token stream.
+        """Calculate the Flesch-Kincaid reading ease score after tracking a token stream.
         See https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests."""
         num_sentences, num_words, num_syllables = FleschKincaidScorer.get_counts_from_stream(token_stream)
         try:
@@ -112,36 +171,18 @@ class FleschKincaidScorer:
 
     @staticmethod
     def get_score_from_text(text: str) -> float:
-        """Calculate the Flesch reading ease score of a text.
+        """Calculate the Flesch-Kincaid reading ease score of a text.
         See https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests."""
         stream = tokenizer.tokenize(text)
         return FleschKincaidScorer.get_score_from_stream(stream)
 
     @staticmethod
-    def get_feedback(score: float) -> str:
+    def get_feedback(score: float) -> FleschKincaidFeedback:
         """Provide feedback on the score of the Result object. This is done by comparing the score to the
-        Flesch reading ease score scale. The feedback has been slightly modified to fit Icelandic.
+        Flesch-Kincaid reading ease score scale. The feedback has been slightly modified to fit Icelandic.
         Icelandic tends to score lower than English and thus the scale has been adjusted to reflect this.
         """
-        if score > 120:
-            return "Mjög léttur eða ómarktækur texti."
-        elif score > 90:
-            return "Mjög léttur texti"
-        elif score > 80:
-            return "Léttur texti"
-        elif score > 70:
-            return "Frekar léttur texti"
-        elif score > 60:
-            return "Meðalléttur texti"
-        elif score > 50:
-            return "Svolítið þungur texti"
-        elif score > 30:
-            return "Þungur texti"
-        elif score > 0:
-            return "Mjög þungur texti"
-        # Negative scores
-        else:
-            return "Mjög þungur eða ómarktækur texti."
+        return FleschKincaidFeedback.from_score(score)
 
 
 class RareWordsFinder:

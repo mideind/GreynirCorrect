@@ -57,7 +57,7 @@ def check_sentence(
         assert isinstance(sent, reynir_correct.CorrectedSentence)
         check_sent(sent)
     # Test presevation of original token text
-    assert "".join([tok.original or "" for sent in result.sentences for tok in sent.tokens]) == s
+    assert "".join(tok.original or "" for sent in result.sentences for tok in sent.tokens) == s
 
 
 def correct_spelling_format(
@@ -127,7 +127,7 @@ def correct_grammar_format(
                 del cleantoklist[xann.start + 1 : xann.end + 1]
         txt = detokenize(cleantoklist, normalize=True)
         if print_annotations and not print_all:
-            txt = txt + "\n" + "\n".join([str(ann) for ann in a])
+            txt = txt + "\n" + "\n".join(str(ann) for ann in a)
         accumul.append(txt)
 
     accumstr = "\n".join(accumul)

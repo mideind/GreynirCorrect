@@ -52,7 +52,7 @@
     ignore_rules: A list of error codes that should be ignored in the annotation process.
 """
 
-
+from __future__ import annotations
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, cast
 from typing_extensions import TypedDict
 
@@ -175,7 +175,7 @@ class CorrectedSentence:
     annotations: Optional[List[Annotation]] = None
 
     @staticmethod
-    def from_parser_sentence(sentence: AnnotatedSentence) -> "CorrectedSentence":
+    def from_parser_sentence(sentence: AnnotatedSentence) -> CorrectedSentence:
         """Create a CorrectedSentence from a parser sentence"""
         tokens = sentence.correct_tokens
         parsed = False
@@ -191,18 +191,21 @@ class CorrectedSentence:
 
     def filter_annotations(self, ignore_rules: Set[str]) -> None:
         """Remove ignored annotations"""
-        if self.annotations is None:
+        # If there are no annotations, or no ignore rules, we return early
+        if self.annotations is None or not ignore_rules:
             return
         ann = [a for a in self.annotations if a.code not in ignore_rules]
         self.annotations = ann
 
     def original_str(self) -> str:
         """Return the original text of the sentence"""
-        return "".join([t.original or t.txt for t in self.tokens])
+        return "".join(t.original or t.txt for t in self.tokens)
 
-    def corrected_str(self) -> str:
-        """Return the corrected text of the sentence"""
-        return apply_annotations(self.tokens, self.annotations or [])
+    def corrected_str(self, apply_annotations: bool = False) -> str:
+        """Return the corrected text of the sentence, with annotation suggestions applied if requested"""
+        if apply_annotations:
+            return fully_correct_sentence(self.tokens, self.annotations or [])
+        return detokenize(self.tokens)
 
 
 @dataclass
@@ -235,7 +238,7 @@ class GreynirCorrectAPI:
         gc: GreynirCorrect,
         sentence_prefilter: Optional[SentenceClassifier] = None,
         do_flesch: bool = False,
-        rare_word_analyser: Optional[RareWordsFinder] = None,
+        rare_word_analyzer: Optional[RareWordsFinder] = None,
         do_grammar_check: bool = True,
     ):
         self.gc = gc
@@ -243,10 +246,10 @@ class GreynirCorrectAPI:
         self.sentence_prefilter = sentence_prefilter
         self.do_flesch = do_flesch
         # If it's defined, it will be used
-        self.rare_word_analyser = rare_word_analyser
+        self.rare_word_analyzer = rare_word_analyzer
 
     @staticmethod
-    def from_options(**options) -> "GreynirCorrectAPI":
+    def from_options(**options) -> GreynirCorrectAPI:
         """Create a GreynirCorrectAPI from the given options"""
         settings = load_config(options.pop("tov_config", None))
         do_flesch_analysis = bool(options.pop("flesch", False))
@@ -261,7 +264,7 @@ class GreynirCorrectAPI:
             pipeline=pipeline,
             **options,
         )
-        rare_word_analyser = RareWordsFinder() if do_rare_word_analysis else None
+        rare_word_analyzer = RareWordsFinder() if do_rare_word_analysis else None
         do_grammar_check = options.get("all_errors", True)
         if options.get("sentence_prefilter", False):
             # Only construct the classifier model if we need it
@@ -272,7 +275,7 @@ class GreynirCorrectAPI:
                 gc,
                 sentence_prefilter=sentence_classifier,
                 do_flesch=do_flesch_analysis,
-                rare_word_analyser=rare_word_analyser,
+                rare_word_analyzer=rare_word_analyzer,
                 do_grammar_check=do_grammar_check,
             )
 
@@ -280,7 +283,7 @@ class GreynirCorrectAPI:
             gc,
             sentence_prefilter=None,
             do_flesch=do_flesch_analysis,
-            rare_word_analyser=rare_word_analyser,
+            rare_word_analyzer=rare_word_analyzer,
             do_grammar_check=do_grammar_check,
         )
 
@@ -299,7 +302,7 @@ class GreynirCorrectAPI:
         """Classify a sentence as probably correct or not."""
         if self.sentence_prefilter is None:
             raise ValueError("Sentence classifier not initialized - did you forget to set sentence_prefilter=True?")
-        original_sentence = "".join([t.original or t.txt for t in corrected_tokens])
+        original_sentence = "".join(t.original or t.txt for t in corrected_tokens)
 
         return self.sentence_prefilter.classify(original_sentence)
 
@@ -322,9 +325,9 @@ class GreynirCorrectAPI:
             flesch_feedback = FleschKincaidScorer.get_feedback(flesch_score)
             flesch_result = (flesch_score, flesch_feedback)
         rare_words = None
-        if self.rare_word_analyser is not None:
+        if self.rare_word_analyzer is not None:
             # TODO: support setting max_words and low_prob_cutoff on function call
-            rare_words = self.rare_word_analyser.get_rare_words_from_stream(
+            rare_words = self.rare_word_analyzer.get_rare_words_from_stream(
                 [tok for tok in corrected_tokens if tok.kind == TOK.WORD], max_words=10, low_prob_cutoff=0.00000005
             )
         if not self.do_grammar_check:
@@ -399,7 +402,7 @@ def check_errors(**options: Any) -> str:
     # Add the Flesch score and rare words at the end of the output
     if results.flesch_result is not None:
         flesch_score, flesch_feedback = results.flesch_result
-        text_results += f"\nFlesch score: {flesch_score:.2f} ({flesch_feedback})"
+        text_results += f"\nFlesch-Kincaid score: {flesch_score:.2f} ({flesch_feedback})"
     if results.rare_words is not None:
         text_results += "\nRare words:\n"
         for word, _prob in results.rare_words:
@@ -478,8 +481,8 @@ def format_spelling(
     return unistr
 
 
-def apply_annotations(tokens: List[CorrectToken], annotations: List[Annotation]) -> str:
-    """Apply the annotations to the tokens and return the corrected text"""
+def fully_correct_sentence(tokens: List[CorrectToken], annotations: List[Annotation]) -> str:
+    """Fully correct a sentence by applying the annotations to the tokens and return the text"""
     # Sort in ascending order by token start index, and then by end index
     # (more narrow/specific annotations before broader ones)
     annotations.sort(key=lambda ann: (ann.start, ann.end), reverse=True)
@@ -527,16 +530,16 @@ def format_output(
     elif format == "m2":
         return format_m2(results)
 
-    raise Exception(f"Tried to format with invalid format: {format}")
+    raise ValueError(f"Tried to format with invalid format: {format}")
 
 
 def format_text(results: CorrectionResult, print_annotations: bool = False) -> str:
     output: List[str] = []
     for result in results.sentences:
-        txt = apply_annotations(result.tokens, result.annotations or [])
+        txt = fully_correct_sentence(result.tokens, result.annotations or [])
 
         if print_annotations:
-            txt = txt + "\n" + "\n".join([str(ann) for ann in result.annotations or []])
+            txt = txt + "\n" + "\n".join(str(ann) for ann in result.annotations or [])
         output.append(txt)
 
     return "\n".join(output)
@@ -573,7 +576,7 @@ def format_json(results: CorrectionResult) -> str:
         # The offset for the next sentence is the end of the last annotation + 1
         ard = AnnResultDict(
             original=result.original_str(),
-            corrected=result.corrected_str(),
+            corrected=result.corrected_str(apply_annotations=True),
             tokens=[
                 AnnTokenDict(k=tok.kind, x=tok.txt, o=tok.original or "", i=index + offset)
                 for tok, index in zip(result.tokens, char_indexes)
@@ -608,7 +611,7 @@ def format_csv(results: CorrectionResult) -> str:
 def format_m2(results: CorrectionResult) -> str:
     accumul: List[str] = []
     for result in results.sentences:
-        accumul.append("S {0}".format(" ".join([t.txt for t in result.tokens])))
+        accumul.append("S {0}".format(" ".join(t.txt for t in result.tokens)))
         for ann in result.annotations or []:
             accumul.append(
                 "A {0} {1}|||{2}|||{3}|||REQUIRED|||-NONE-|||0".format(ann.start, ann.end, ann.code, ann.suggest)

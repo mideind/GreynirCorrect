@@ -41,7 +41,7 @@ from .checker import AnnotatedSentence, GreynirCorrect
 
 # Token-level correction
 from .errtokenizer import Correct_TOK, CorrectionPipeline, CorrectToken
-from .readability import FleschKincaidScorer, RareWordsFinder
+from .readability import FleschKincaidFeedback, FleschKincaidScorer, RareWordsFinder
 from .settings import Settings
 from .version import __version__
 from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, ParseResultStats, check_errors
@@ -59,6 +59,7 @@ __all__ = (
     "Settings",
     "ParseResultStats",
     "FleschKincaidScorer",
+    "FleschKincaidFeedback",
     "RareWordsFinder",
     "CorrectionPipeline",
     "Correct_TOK",
