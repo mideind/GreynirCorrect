@@ -138,6 +138,8 @@ class AnnotatedSentence(Sentence):
     def __init__(self, job: Job, s: TokenList) -> None:
         super().__init__(job, s)
         self.annotations: List[Annotation] = []
+        # Convert the list of tokens to a list of CorrectToken instances, avoids many casts
+        self.correct_tokens: List[CorrectToken] = cast(List[CorrectToken], self.tokens)
 
 
 # The type of a grammar check result
