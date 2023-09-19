@@ -661,7 +661,7 @@ class Corrector:
             # We don't use .istitle() and .title() because
             # they consider apostrophes to be word separators
             return lambda s: s[0].upper() + s[1:]
-        return str
+        return str  # noqa
 
     def _cast(self, word: str) -> str:
         """Cast the word to lowercase and correct accents"""

@@ -2972,7 +2972,7 @@ class CorrectionPipeline(DefaultPipeline):
         self._suggest_not_correct = options.pop("suggest_not_correct", False)
         # Wordlist for words that should not be marked as errors or corrected
         self._ignore_wordlist = options.pop("ignore_wordlist", set())
-        self._ignore_rules = options.pop("ignore_rules", set())
+        self._ignore_rules = cast(frozenset, options.pop("ignore_rules", frozenset()))
         self.settings = settings
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:

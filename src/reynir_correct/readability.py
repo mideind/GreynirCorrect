@@ -31,6 +31,7 @@
     This module implements the Flesch reading ease score for Icelandic text.
     A high score indicates that the text is easy to read, while a low score
     indicates that the text is difficult to read.
+
 """
 
 from __future__ import annotations
@@ -190,7 +191,8 @@ class RareWordsFinder:
 
     Rare words are defined as words which have a probability lower than the low_prob_cutoff.
     The probability of a word is calculated by looking up the word in an n-gram model.
-    The class is designed to be used with the tokenizer module and maintains an internal state which needs to be reset manually.
+    The class is designed to be used with the tokenizer module and maintains an internal
+    state which needs to be reset manually.
     """
 
     def __init__(self):
@@ -200,7 +202,8 @@ class RareWordsFinder:
     def get_rare_words_from_stream(
         self, tok_stream: Iterable[tokenizer.Tok], max_words: int, low_prob_cutoff: float
     ) -> List[Tuple[str, float]]:
-        """Tracks the probability of each word in a token stream. This is done by yielding the tokens in the token stream."""
+        """Tracks the probability of each word in a token stream.
+        This is done by yielding the tokens in the token stream."""
         rare_words_dict: Dict[str, float] = {}
         for token in tok_stream:
             # Only consider words, not punctuation, numbers, etc.
