@@ -2,7 +2,7 @@
 """
     Greynir: Natural language processing for Icelandic
 
-    Setup.py
+    setup.py
 
     Copyright (C) 2023 Miðeind ehf.
     Original author: Vilhjálmur Þorsteinsson
@@ -59,13 +59,9 @@ def read(*names: str, **kwargs: str):
         return ""
 
 
-# Load version string from file
-__version__ = "[missing]"
-exec(open(join("src", "reynir_correct", "version.py")).read())
-
 setup(
     name="reynir-correct",
-    version=__version__,
+    version="4.0.0",  # Remember to update in __init__.py as well
     license="MIT",
     description="A spelling and grammar corrector for Icelandic",
     long_description="{0}\n{1}".format(
