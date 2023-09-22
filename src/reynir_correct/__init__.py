@@ -47,7 +47,7 @@ from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, Pa
 
 __author__ = "Miðeind ehf"
 __copyright__ = "(C) 2023 Miðeind ehf."
-__version__ = "4.0.0"  # Remember to update in setup.py as well
+__version__ = "4.0.0"  # Remember to update in pyproject.toml as well
 
 __all__ = (
     "Greynir",

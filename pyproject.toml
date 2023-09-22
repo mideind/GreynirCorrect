@@ -35,12 +35,21 @@ dependencies = ["reynir>=3.5.3", "icegrams>=1.1.2", "typing_extensions"]
 Repository = "https://github.com/mideind/GreynirCorrect"
 
 [project.optional-dependencies]
-# Dev dependencies
-dev = []
+# dev dependencies
+dev = ["pytest"]
+# sentence_classifier dependencies
+sentence_classifier = ["transformers", "datasets", "torch"]
+
+[project.scripts]
+# 'correct' command line tool
+correct = "reynir_correct.main:main"
 
 # *** Configuration of tools ***
 
 [tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
 where = ["src"]
 
 [tool.pytest.ini_options]
