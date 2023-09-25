@@ -82,7 +82,11 @@ parser.add_argument(
     nargs="?",
     type=str,
     default="text",
-    help="Determine output format.\ntext: Corrected text only.\ncsv: One token per line in CSV format.\njson: One token per line in JSON format.\nm2: M2 format, GEC standard.",
+    help="""Determine output format.
+text: Corrected text only.
+csv: One token per line in CSV format.
+json: One token per line in JSON format.
+m2: M2 format, GEC standard.""",
 )
 
 # Determines whether we supply only token-level annotations or also sentence-level annotations
@@ -127,7 +131,8 @@ parser.add_argument(
 
 parser.add_argument(
     "--sentence_prefilter",
-    help="Run a heuristic filter on sentences to determine whether they are probably correct. Probably correct sentences will not go through the full parsing process.",
+    help="""Run a heuristic filter on sentences to determine whether they are probably
+correct. Probably correct sentences will not go through the full parsing process.""",
     action="store_true",
 )
 parser.add_argument(
@@ -145,7 +150,8 @@ parser.add_argument(
     "--tov_config",
     nargs=1,
     type=str,
-    help="Add additional use-specific rules in a configuration file to check for custom tone-of-voice issues. Uses the same format as the default GreynirCorrect.conf file",
+    help="""Add additional use-specific rules in a configuration file to check for custom
+tone-of-voice issues. Uses the same format as the default GreynirCorrect.conf file""",
     default=None,
 )
 

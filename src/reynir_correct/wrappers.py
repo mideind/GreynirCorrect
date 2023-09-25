@@ -294,7 +294,7 @@ class GreynirCorrectAPI:
         # TODO: The pipeline needs a refactoring.
         # We use some hacks here to avoid having to rewrite the pipeline at this point.
         self.gc.pipeline._text_or_gen = text
-        self.gc.pipeline._ignore_rules = ignore_rules or set()
+        self.gc.pipeline._ignore_rules = cast(frozenset, ignore_rules or frozenset())
         self.gc.pipeline._suppress_suggestions = suppress_suggestions
         return self.gc.pipeline.tokenize()  # type: ignore
 

@@ -1841,7 +1841,8 @@ def lookup_unknown_words(
         return token
 
     def get_details(code: str, txt: str, correct: str, lemma: str) -> Tuple[str, str, List[str]]:
-        """Return short and detailed descriptions for the error category plus a link to grammar references where possible"""
+        """Return short and detailed descriptions for the error category
+        plus a link to grammar references where possible"""
         # text is the short version, about the category and the error.
         # details is the long version with references.
         try:
@@ -2497,7 +2498,12 @@ def late_fix_capitalization(
                                 suggest=correct,
                             )
                         )
-            if suppress_suggestions and token.error_code == "Z001" and isinstance(token.val, list) and any(v.ordfl == "lo" for v in token.val):  # type: ignore
+            if (
+                suppress_suggestions
+                and token.error_code == "Z001"
+                and isinstance(token.val, list)
+                and any(v.ordfl == "lo" for v in token.val)
+            ):
                 orig = token.original.strip() if token.original else token.txt
                 token.remove_error(orig)
 
@@ -2968,11 +2974,12 @@ class CorrectionPipeline(DefaultPipeline):
         self._generate_suggestion_list = options.pop("generate_suggestion_list", False)
         # Skip spelling suggestions
         self._suppress_suggestions = options.pop("suppress_suggestions", False)
-        # Only give suggestions, don't correct everything automatically. Currently only applies to lookup_unknown_words and check_wording.
+        # Only give suggestions, don't correct everything automatically.
+        # Currently only applies to lookup_unknown_words and check_wording.
         self._suggest_not_correct = options.pop("suggest_not_correct", False)
         # Wordlist for words that should not be marked as errors or corrected
         self._ignore_wordlist = options.pop("ignore_wordlist", set())
-        self._ignore_rules = options.pop("ignore_rules", set())
+        self._ignore_rules = cast(frozenset, options.pop("ignore_rules", frozenset()))
         self.settings = settings
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:

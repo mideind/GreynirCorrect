@@ -43,11 +43,11 @@ from .checker import AnnotatedSentence, GreynirCorrect
 from .errtokenizer import Correct_TOK, CorrectionPipeline, CorrectToken
 from .readability import FleschKincaidFeedback, FleschKincaidScorer, RareWordsFinder
 from .settings import Settings
-from .version import __version__
 from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, ParseResultStats, check_errors
 
 __author__ = "Miðeind ehf"
 __copyright__ = "(C) 2023 Miðeind ehf."
+__version__ = "4.0.0"  # Remember to update in pyproject.toml as well
 
 __all__ = (
     "Greynir",
