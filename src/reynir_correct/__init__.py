@@ -28,8 +28,9 @@
 
 """
 
-# Expose the reynir-correct API
+import importlib.metadata
 
+# Expose the reynir-correct API
 from reynir import Greynir, Paragraph, Sentence, correct_spaces, mark_paragraphs
 from tokenizer import detokenize
 
@@ -47,7 +48,7 @@ from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, Pa
 
 __author__ = "Miðeind ehf"
 __copyright__ = "(C) 2023 Miðeind ehf."
-__version__ = "4.0.0"  # Remember to update in pyproject.toml as well
+__version__ = importlib.metadata.version("reynir-correct")
 
 __all__ = (
     "Greynir",
