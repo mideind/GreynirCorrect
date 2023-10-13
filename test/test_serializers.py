@@ -5,7 +5,7 @@
 
     Tests for JSON serialization of sentences
 
-    Copyright (C) 2021 by Miðeind ehf.
+    Copyright (C) 2022 by Miðeind ehf.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -37,7 +37,11 @@ def test_serializers():
         "morguninn eftir vakknaði ég kl. 07:30.",
         "Ég var firstur á fætur en þuríður Hálfdánardóttir var numer 2.",
     ]
-    gc = rc.GreynirCorrect()
+
+    # Global settings object for the tests
+    api = rc.GreynirCorrectAPI.from_options()
+    gc = api.gc
+
     job = gc.submit(sents, parse=True)
     for pg in job.paragraphs():
         for sent in pg:

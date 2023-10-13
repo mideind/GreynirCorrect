@@ -5,7 +5,7 @@
 
     Evaluation of spelling and grammar correction
 
-    Copyright (C) 2021 Miðeind ehf.
+    Copyright (C) 2022 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -87,6 +87,7 @@
 """
 
 from typing import (
+    TYPE_CHECKING,
     Dict,
     List,
     Optional,
@@ -105,18 +106,26 @@ from collections import defaultdict
 from datetime import datetime
 import glob
 import random
-import heapq
 import argparse
 import xml.etree.ElementTree as ET
-import multiprocessing
 
-# import multiprocessing.dummy as multiprocessing
+if TYPE_CHECKING:
+    # For some reason, types seem to be missing from the multiprocessing module
+    # but not from multiprocessing.dummy
+    import multiprocessing.dummy as multiprocessing
+else:
+    import multiprocessing
 
-import reynir_correct as gc
 from reynir import _Sentence
 from tokenizer import detokenize, Tok, TOK
 
-from reynir_correct.checker import AnnotatedSentence
+from reynir_correct.annotation import Annotation
+from reynir_correct.checker import (
+    GreynirCorrect,
+    Settings,
+    AnnotatedSentence,
+    check as gc_check,
+)
 
 
 # Disable Pylint warnings arising from Pylint not understanding the typing module
@@ -135,7 +144,9 @@ SentenceStatsDict = DefaultDict[str, Union[float, int]]
 CategoryStatsDict = DefaultDict[str, SentenceStatsDict]
 
 # This tuple should agree with the parameters of the add_sentence() function
-StatsTuple = Tuple[str, int, bool, bool, int, int, int, int, int, int, int, int]
+StatsTuple = Tuple[
+    str, int, bool, bool, int, int, int, int, int, int, int, int, int, int, int, int
+]
 
 # Counter of tp, tn, right_corr, wrong_corr, right_span, wrong_span
 TypeFreqs = Counter[str]
@@ -146,11 +157,15 @@ ErrTypeStatsDict = DefaultDict[str, TypeFreqs]
 
 CatResultDict = Dict[str, Union[int, float, str]]
 
+settings = Settings()
+settings.read(os.path.join("config", "GreynirCorrect.conf"))
+rc = GreynirCorrect(settings)
+
 # Create a lock to ensure that only one process outputs at a time
 OUTPUT_LOCK = multiprocessing.Lock()
 
 # Content categories in iceErrorCorpus, embedded within the file paths
-CATEGORIES = (
+GENRES = (
     "essays",
     "onlineNews",
     "wikipedia",
@@ -207,7 +222,7 @@ OUT_OF_SCOPE = {
     "have",
     "ice4fw",  # íslenskt orð notað í stað erlends      Demókrata öldungarþings herferðarnefndina > Democratic Senatorial Campaign Committee
     "ind4def",  # óákveðið fyrir ákveðið    grammar gítartakta > gítartaktana
-    # "ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
+    "ind4sub",  # framsöguháttur fyrir vh.  grammar Þrátt fyrir að konfúsíanismi er upprunninn > Þrátt fyrir að konfúsíanismi sé upprunninn
     "indef-pro",  # óákveðið fornafn    grammar enginn > ekki neinn
     "interr-pro",
     "it4nonit",  # skáletrað fyrir óskáletrað       Studdi Isma'il > Studdi Isma'il
@@ -256,6 +271,7 @@ OUT_OF_SCOPE = {
     "reflexive4pro",  # afturbeygt fornafn í stað persónufornafns   grammar gegnum líkama sinn > gegnum líkama hans
     "simple4cont",  # nútíð í stað vera að + nafnh. grammar ók > var að aka
     "square4bracket",  # hornklofi fyrir sviga  punctuation [börnin] > (börnin)
+    "sub4ind",
     "style",  # stíll   style   urðu ekkert frægir > urðu ekki frægir
     "syntax-other",
     "tense4perfect",
@@ -265,6 +281,7 @@ OUT_OF_SCOPE = {
     "v3-subordinate",
     "wording",  # orðalag   wording ...gerðum allt í raun... > ...gerðum í raun allt...
     "word4number",
+    "wrong-prep",
     "xxx",  # unclassified  unclassified
     "zzz",  # to revisit    unannotated
 }
@@ -287,526 +304,19 @@ NAMES = {
     "false_negatives": "False negatives",
     "right_corr": "Right correction",
     "wrong_corr": "Wrong correction",
+    "ctp": "True positives - error correction",
+    "ctn": "True negatives - error correction",
+    "cfp": "False positives - error correction",
+    "cfn": "False negatives - error correction",
     "right_span": "Right span",
     "wrong_span": "Wrong span",
 }
 
-# Supercategories according to SÍM and corresponding subcategories
-# Errors go into the first possible category. Error categories that
-# can both be independent and dependent of context go under the former.
-SIMCATEGORIES = {
-    "context-independent": [
-        "caps4low",
-        "number-fail",
-        "lower4upper-proper",
-        "lower4upper-acro",
-        "though",
-        "compound-collocation",
-        "compound-nonword",
-        "nonword",
-        "swapped-letters",
-        "letter-rep",
-        "missing-letter",
-        "missing-letters",
-        "missing-accent",
-        "wrong-accent",
-        "merged-words",
-        "split-word",
-        "extra-accent",
-        "extra-letter",
-        "ngnk",
-        "i4y",
-        "y4i",
-        "í4ý",
-        "ý4í",
-        "n4nn",
-        "nn4n",
-        "pronun-writing",
-        "kv4hv",
-        "hv4kv",
-        "bad-contraction",
-        "fw",
-        "foreign-error",
-        "abbreviation-period",
-        "abbreviation",
-    ],
-    "context-dependent": [
-        "lower4upper-initial",
-        "upper4lower-common",
-        "upper4lower-proper",
-        "upper4lower-noninitial",
-        "low4caps",
-        "collocation",
-        "collocation-idiom",
-        "missing-word",
-        "missing-words",
-        "missing-prep",
-        "split-compound",
-        "split-words",
-        "missing-dash",
-        "missing-space",
-        "extra-space",
-        "extra-word",
-        "extra-words",
-        "extra-prep",
-        "repeat-word",
-        "repeat-word-split",
-        "name-error",
-        "gendered",
-        "number4word",
-        "word4number",
-    ],
-    "grammar": [
-        "agreement",
-        "agreement-concord",
-        "agreement-pred",
-        "agreement-pro",
-        "case-verb",
-        "case-prep",
-        "case-adj",
-        "case-collocation",
-        "ind4def",
-        "def4ind",
-        "ind4sub",
-        "sub4ind",
-        "verb-inflection",
-        "nominal-inflection",
-        "numeral-inflection",
-        "pro-inflection",
-        "plural4singular",
-        "singular4plural",
-        "conjunction",
-        "adjective-inflection",
-        "dative-sub",
-        "dir4loc",
-        "loc4dir",
-        "mid4act",
-        "act4mid",
-        "mid4pass",
-        "pass4mid",
-        "act4pass",
-        "pass4act",
-        "passive",
-        "new-passive",
-        "each",
-        "noun4pro",
-        "pro4noun",
-        "reflexive4pro",
-        "pro4reflexive",
-        "reflexive4noun",
-        "pres4past",
-        "past4pres",
-        "tense4perfect",
-        "perfect4tense",
-        "pers4dem",
-        "dem-pro",
-        "missing-dem-pro",
-        "extra-dem-pro",
-        "indef-pro",
-        "marked4unmarked",
-        "adj4adv",
-        "adv4adj",
-        "have",
-        "cont4simple",
-        "missing-inf-part",
-        "want",
-        "dem4pers",
-        "nom4acc-sub",
-        "acc4nom-sub",
-        "simple4cont",
-        "extra-inf-part",
-        "gen-escape",
-        "genitive",
-        "dem4noun",
-        "noun4dem",
-        "geta",
-        "adj4noun",
-        "noun4adj",
-        "extra-sub",
-        "missing-fin-verb",
-        "missing-sub",
-        "missing-obj",
-        "að4af",
-        "af4að",
-        "wrong-prep",
-        "interr-pro",
-        "hypercorr",
-        "v3",
-        "v3-subordinate",
-        "syntax-other",
-        "aux",
-    ],
-    "style": [
-        "wording",
-        "extra-number",
-        "symbol4number",
-        "number4symbol",
-        "style",
-        "unicelandic",
-        "taboo-word",
-        "loan-syntax",
-        "u4y",
-        "fw4ice",
-        "ice4fw",
-        "nonit4it",
-        "it4nonit",
-        "extra-munu",
-        "words4abbreviation",
-        "abbreviation4words",
-        "symbol4word",
-        "extra-symbol",
-        "dep",
-        "þar4það",
-        "context",
-        "foreign-name",
-    ],
-    "punctuation": [
-        "bracket4comma",
-        "bracket4period",
-        "bracket4square",
-        "colon4comma",
-        "colon4period",
-        "comma-plus-conjunction",
-        "comma4bracket",
-        "comma4colon",
-        "comma4conjunction",
-        "comma4dash",
-        "comma4ex",
-        "comma4period",
-        "comma4qm",
-        "comma4semicolon",
-        "conjunction-drop",
-        "conjunction4comma",
-        "conjunction4period",
-        "conjunction4qm",
-        "conjunction4semicolon",
-        "endash4colon",
-        "endash4comma",
-        "endash4period",
-        "endash4semicolon",
-        "endash4word",
-        "date-abbreviation",
-        "date-period",
-        "dots4comma",
-        "dots4period",
-        "double-punctuation",
-        "ex4comma",
-        "ex4period",
-        "extra-abbreviation",
-        "extra-bracket",
-        "extra-brackets",
-        "extra-colon",
-        "extra-comma",
-        "extra-commas",
-        "extra-conjunction",
-        "extra-endash",
-        "extra-hyphen",
-        "extra-period",
-        "extra-punctuation",
-        "extra-qm",
-        "extra-quot",
-        "extra-quots",
-        "extra-semicolon",
-        "extra-square",
-        "hyphen4colon",
-        "hyphen4comma",
-        "hyphen4endash",
-        "hyphen4period",
-        "hyphen4semicolon",
-        "hyphen4word",
-        "iteration-colon",
-        "misplaced-quot",
-        "missing-bracket",
-        "missing-colon",
-        "missing-comma",
-        "missing-commas",
-        "missing-conjunction",
-        "missing-ex",
-        "missing-endash",
-        "missing-hyphen",
-        "missing-period",
-        "missing-qm",
-        "missing-quot",
-        "missing-quots",
-        "missing-semicolon",
-        "missing-slash",
-        "missing-square",
-        "missing-symbol",
-        "nonsup4sup",
-        "ordinal-period",
-        "period-plus-conjunction",
-        "period4colon",
-        "period4comma",
-        "period4conjunction",
-        "period4endash",
-        "period4ex",
-        "period4qm",
-        "period4semicolon",
-        "qm4comma",
-        "qm4ex",
-        "qm4period",
-        "semicolon4colon",
-        "semicolon4comma",
-        "semicolon4period",
-        "slash4dash",
-        "slash4hyphen",
-        "slash4or",
-        "square4bracket",
-        "word4endash",
-        "word4symbol",
-        "wrong-dash",
-        "wrong-quot",
-        "wrong-quots",
-    ],
-}
-
-# Supercategories in iceErrorCorpus and corresponding subcategories
-SUPERCATEGORIES = {
-    "capitalization": [
-        "lower4upper-initial",
-        "lower4upper-proper",
-        "lower4upper-acro",
-        "upper4lower-common",
-        "upper4lower-proper",
-        "upper4lower-noninitial",
-        "caps4low",
-    ],
-    "collocation": ["collocation", "collocation-idiom", "though",],
-    "grammar": [
-        "agreement",
-        "agreement-concord",
-        "agreement-pred",
-        "agreement-pro",
-        "case-verb",
-        "case-prep",
-        "case-adj",
-        "case-collocation",
-        "ind4def",
-        "def4ind",
-        "ind4sub",
-        "sub4ind",
-        "verb-inflection",
-        "nominal-inflection",
-        "numeral-inflection",
-        "pro-inflection",
-        "plural4singular",
-        "singular4plural",
-        "conjunction",
-        "adjective-inflection",
-        "dative-sub",
-        "dir4loc",
-        "loc4dir",
-        "mid4act",
-        "act4mid",
-        "mid4pass",
-        "pass4mid",
-        "act4pass",
-        "pass4act",
-        "passive",
-        "new-passive",
-        "each",
-        "noun4pro",
-        "pro4noun",
-        "reflexive4pro",
-        "pro4reflexive",
-        "pres4past",
-        "past4pres",
-        "tense4perfect",
-        "perfect4tense",
-        "pers4dem",
-        "dem-pro",
-        "missing-dem-pro",
-        "extra-dem-pro",
-        "indef-pro",
-        "marked4unmarked",
-        "adj4adv",
-        "adv4adj",
-        "have",
-        "cont4simple",
-        "missing-inf-part",
-        "want",
-        "dem4pers",
-        "nom4acc-sub",
-        "acc4nom-sub",
-        "simple4cont",
-        "extra-inf-part",
-        "gen-escape",
-        "genitive",
-        "dem4noun",
-        "noun4dem",
-        "geta",
-        "adj4noun",
-        "noun4adj",
-        "extra-sub",
-        "missing-fin-verb",
-        "missing-sub",
-        "missing-obj",
-        "að4af",
-        "af4að",
-        "wrong-prep",
-        "interr-pro",
-        "hypercorr",
-    ],
-    "syntax": ["v3", "v3-subordinate", "syntax-other",],
-    "nonword": ["compound-collocation", "compound-nonword", "nonword",],
-    "omission": ["missing-word", "missing-words", "missing-prep",],
-    "typo": [
-        "swapped-letters",
-        "letter-rep",
-        "missing-letter",
-        "missing-accent",
-        "wrong-accent",
-        "extra-accent",
-        "extra-letter",
-        "extra-letters",
-    ],
-    "punctuation": [
-        "comma4period",
-        "comma4qm",
-        "comma4colon",
-        "double-punctuation",
-        "extra-abbreviation",
-        "extra-dash",
-        "iteration-colon",
-        "missing-colon",
-        "missing-comma",
-        "missing-commas",
-        "missing-period",
-        "missing-qm",
-        "missing-conjunction",
-        "missing-quot",
-        "missing-quots",
-        "misplaced-quot",
-        "wrong-quots",
-        "extra-quot",
-        "extra-quots",
-        "extra-punctuation",
-        "extra-comma",
-        "extra-period",
-        "period4comma",
-        "period4colon",
-        "period4conjunction",
-        "conjunction4period",
-        "conjunction4comma",
-        "comma4conjunction",
-        "period4qm",
-        "period-plus-conjunction",
-        "comma-plus-conjunction",
-        "abbreviation-period",
-        "comma4ex",
-        "period4ex",
-        "semicolon4colon",
-        "extra-semicolon",
-        "ordinal-period",
-        "conjunction-drop",
-        "extra-conjunction",
-        "semicolon4comma",
-        "conjunction4qm",
-        "missing-slash",
-        "comma4bracket",
-        "qm4comma",
-        "missing-ex",
-        "qm4ex",
-        "qm4period",
-        "bracket4square",
-        "square4bracket",
-        "dash4comma",
-        "date-period",
-        "comma4semicolon",
-        "word4dash",
-        "dash4word",
-        "missing-semicolon",
-        "abbreviation",
-        "slash4or",
-        "dash4period",
-        "ex4comma",
-        "colon4period",
-        "colon4comma",
-        "ex4period",
-        "extra-colon",
-        "bracket4comma",
-        "extra-qm",
-        "comma4dash",
-        "dash4semicolon",
-        "wrong-dash",
-        "dash4colon",
-        "dots4comma",
-        "missing-symbol",
-        "dots4period",
-        "extra-square",
-        "bracket4period",
-        "word4symbol",
-        "nonsup4sup",
-        "semicolon4period",
-        "period4semicolon",
-        "period4dash",
-        "missing-square",
-        "slash4dash",
-        "extra-commas",
-        "conjunction4semicolon",
-        "missing-bracket",
-        "extra-bracket",
-        "date-abbreviation",
-    ],
-    "spacing": [
-        "merged-words",
-        "split-compound",
-        "split-word",
-        "split-words",
-        "missing-dash",
-        "missing-space",
-        "extra-space",
-    ],
-    "insertion": [
-        "extra-word",
-        "extra-words",
-        "extra-prep",
-        "repeat-word",
-        "repeat-word-split",
-    ],
-    "wording": ["wording", "aux",],
-    "spelling": [
-        "ngnk",
-        "i4y",
-        "y4i",
-        "í4ý",
-        "ý4í",
-        "n4nn",
-        "nn4n",
-        "pronun-writing",
-        "kv4hv",
-        "hv4kv",
-        "name-error",
-        "bad-contraction",
-    ],
-    "foreign": ["fw", "foreign-error",],
-    "exclusion": ["gendered",],
-    "numbers": [
-        "number4word",
-        "word4number",
-        "extra-number",
-        "symbol4number",
-        "number4symbol",
-        "number-fail",
-    ],
-    "style": [
-        "style",
-        "unicelandic",
-        "taboo-word",
-        "loan-syntax",
-        "u4y",
-        "fw4ice",
-        "ice4fw",
-        "nonit4it",
-        "it4nonit",
-        "extra-munu",
-        "words4abbreviation",
-        "abbreviation4words",
-    ],
-    "other": ["symbol4word", "extra-symbol", "dep", "þar4það",],
-    "lexical": ["context",],
-    "unnannotated": ["zzz", "xxx",],
-}
+# Three levels: Supercategories, subcategories and error codes
+# supercategory: {subcategory : [error code]}
+SUPERCATEGORIES: DefaultDict[str, DefaultDict[str, List[str]]] = defaultdict(
+    lambda: defaultdict(list)
+)
 
 GCtoIEC = {
     "A001": ["abbreviation-period"],
@@ -816,18 +326,22 @@ GCtoIEC = {
     "Z003": ["upper4lower-common"],
     "Z004": ["upper4lower-common"],
     "Z005": ["upper4lower-common"],
+    "Z005/w": ["upper4lower-common"],
     "Z006": ["lower4upper-acro"],
-    # "E001" : ["XXX"],
-    # "E002" : ["XXX"],
-    # "E003" : ["XXX"],
+    "E001": ["No responding iEC category"],
+    "E002": ["No responding iEC category"],
+    "E003": ["No responding iEC category"],
     "E004": ["fw"],
     "C001": ["repeat-word"],
     "C002": ["merged-words"],
     "C003": ["split-compound", "split-word", "split-words"],
     "C004": ["repeat-word"],
+    "C004/w": ["repeat-word"],
     "C005": ["split-compound", "split-word", "split-words"],
+    "C005/w": ["split-compound", "split-word", "split-words"],
+    "Y001/w": ["style", "wording", "context"],
     "C006": ["compound-nonword"],
-    "P_NT_Að_w": ["extra-conjunction"],
+    "P_NT_Að/w": ["extra-conjunction"],
     "P_NT_AnnaðHvort": ["conjunction"],
     "P_NT_Annaðhvort": ["conjunction"],
     "P_NT_Annara": ["pro-inflection"],
@@ -840,23 +354,29 @@ GCtoIEC = {
     "P_NT_FjöldiHluti": ["agreement"],
     "P_NT_FráÞvíAð": ["missing-conjunction"],
     "P_NT_FsMeðFallstjórn": ["case-prep"],
-    "P_NT_Heldur_w": ["conjunction"],
+    "P_NT_Heldur/w": ["conjunction"],
     "P_NT_ÍTölu": ["plural4singular", "singular4plural"],
-    "P_NT_Komma_w": ["extra-comma"],
+    "P_NT_Komma/w": ["extra-comma"],
     "P_NT_Né": ["conjunction"],
-    "P_NT_Sem_w": ["extra-conjunction"],
-    "P_NT_Síðan_w": ["extra-word"],
-    "P_NT_Síðastliðinn": ["split-compound"],
+    "P_NT_Sem/w": ["extra-conjunction"],
+    "P_NT_SemOg/w": ["extra-conjunction"],
+    "P_NT_Síðan/w": ["extra-word"],
+    "P_NT_SíðastLiðinn": ["split-compound"],
     "P_NT_SvigaInnihaldNl": ["case-verb", "case-prep", "case-adj"],
     "P_NT_TvípunkturFs": ["extra-colon"],
     "P_NT_VantarKommu": ["missing-comma"],
     "P_NT_VístAð": ["conjunction"],
+    "P_VeraAð": ["cont4simple"],
     "P_NT_ÞóAð": ["conjunction"],
     "P_redundant_word": ["extra-word"],
     "P_wrong_person": ["verb-inflection"],
     "P_wrong_phrase": ["wording"],
     "P_wrong_word": ["wording"],
     "P_wrong_case": ["case-noun"],
+    "P_wrong_gender": ["agreement-concord"],
+    "P_wrong_number": ["agreement-concord"],
+    "P_wrong_form": ["agreement-concord"],
+    "P_transposition": ["swapped-letters"],
     "P_WRONG_CASE_nf_þf": ["case-verb"],
     "P_WRONG_CASE_nf_þgf": ["case-verb"],
     "P_WRONG_CASE_nf_ef": ["case-verb"],
@@ -872,28 +392,204 @@ GCtoIEC = {
     "P_WRONG_NOUN_WITH_VERB": ["collocation"],
     "P_WRONG_OP_FORM": ["verb-inflection"],
     "P_WRONG_PLACE_PP": ["wrong-prep"],
-    "P_yi": ["i4y"],
     "P_aðaf": ["að4af"],
+    "P_afað": ["af4að"],
+    "P_kvhv": ["kv4hv"],
+    "P_hvkv": ["hv4kv"],
+    "P_nn": ["n4nn"],
+    "P_n": ["nn4n"],
+    "P_yi": ["y4i"],
+    "P_iy": ["i4y"],
+    "P_yyii": ["ý4í"],
+    "P_iiyy": ["í4ý"],
     "P_WRONG_PREP_AÐ": ["að4af"],
     "P_WRONG_PREP_AF": ["af4að"],
     "P_WRONG_VERB_USE": ["collocation"],
     "P_DIR_LOC": ["dir4loc"],
+    "P_MOOD_ACK": ["ind4sub-conj"],
+    "P_MOOD_REL": ["ind4sub-conj"],
+    "P_MOOD_TEMP": ["sub4ind-conj"],
+    "P_MOOD_TEMP/w": ["sub4ind-conj"],
+    "P_MOOD_COND": ["sub4ind-conj"],
+    "P_MOOD_PURP": ["sub4ind-conj"],
+    "P_Né": ["extra-conjunction"],
+    "P_DOUBLE_DEFINITE": ["extra-dem-pro"],
     "X_number4word": ["number4word"],
     "N001": ["wrong-quot"],
     "N002": ["extra-punctuation"],
+    "N002/w": ["extra-punctuation"],
     "N003": ["extra-punctuation"],
     "S001": ["nonword"],
     "S002": ["nonword"],
     "S003": ["nonword"],
     "S004": ["nonword"],
+    "S005": ["nonword"],  # No better information available, most likely this
+    "S006": ["nonword"],
     "T001": ["taboo-word"],
-    "T001_w": ["taboo-word"],
+    "T001/w": ["taboo-word"],
     "U001": ["fw"],
-    "U001_w": ["fw"],
-    "W001_w": ["nonword"],
+    "U001/w": ["fw"],
+    "W001/w": ["nonword"],
+    "1ORD42": ["nonword", "merged-words"],
+    "2ORD41": ["nonword", "split-word", "split-words"],
+    "ANDA4ENDA": ["nonword", "nominal-inflection"],
+    "ARI4NI": ["nonword", "adjective-inflection"],
+    "ASLAUKABRODD": ["nonword", "extra-accent", "wrong-accent"],
+    "ASLAUKASTAF": ["nonword", "extra-letter", "extra-letters"],
+    "ASLBRODDVANTAR": ["nonword", "missing-accent", "wrong-accent"],
+    "ASLSTAFVANTAR": ["nonword", "missing-letter", "missing-letters"],
+    "ASLVITLSTAF": ["nonword", "letter-rep"],
+    "ASLVIXL": ["nonword", "swapped-letters"],
+    "ASLVIXLBRODD": ["nonword", "wrong-accent"],
+    "AUKAG": ["nonword", "extra-letter"],
+    "AUKAJ": ["nonword", "adjective-inflection"],
+    "AUKARÞFFT": ["nonword", "nominal-inflection", "extra-letter"],
+    "B4P": ["nonword", "letter-rep"],
+    "BAND-OF": ["nonword", "extra-hyphen"],
+    "BAND-VANT": ["nonword", "missing-hyphen"],
+    "BEYGSJALD": [
+        "nonword",
+        "nominal-inflection",
+        "verb-inflection",
+        "adjective-inflection",
+        "numeral-inflection",
+    ],
+    "BEYGVILLA": [
+        "nonword",
+        "nominal-inflection",
+        "verb-inflection",
+        "adjective-inflection",
+        "numeral-inflection",
+    ],
+    "CE4CJE": ["nonword", "nominal-inflection"],
+    "CJE4CE": ["nonword", "extra-letter"],
+    "CÉ4CE": ["nonword", "extra-accent"],
+    "DN4NN": ["nonword", "letter-rep"],
+    "E4EI": ["nonword", "missing-letter"],
+    "EBEYG": ["nonword", "nominal-inflection"],
+    "EFINGU": ["nonword", "nominal-inflection"],
+    "EI4E": ["nonword", "extra-letter"],
+    "EI4EY": ["nonword", "i4y"],
+    "EKKIORD": ["nonword"],
+    "ETVILLA": ["nonword", "nominal-inflection"],
+    "EY4EI": ["nonword", "y4i"],
+    "F4FF": ["nonword", "missing-letter"],
+    "F4V": ["nonword", "letter-rep"],
+    "FS4PS": ["nonword", "letter-rep"],
+    "FT4PT": ["nonword", "letter-rep"],
+    "FTVILLA": ["nonword", "nominal-inflection"],
+    "G4J": ["nonword", "letter-rep"],
+    "G4K": ["nonword", "letter-rep"],
+    "GGÐ4GÐ": ["nonword", "extra-letter"],
+    "GL4GGL": ["nonword", "missing-letter"],
+    "GMVILLA": ["nonword", "verb-inflection"],
+    "GN4GGN": ["nonword", "missing-letter"],
+    "GN4NG": ["nonword", "swapped-letters"],
+    "GST4GGST": ["nonword", "missing-letter"],
+    "GV4GGV": ["nonword", "missing-letter"],
+    "GVANTAR": ["nonword", "missing-letter"],
+    "GÐ4GGÐ": ["nonword", "missing-letter"],
+    "HA4LAG": ["nonword", "upper4lower-common"],
+    "HK4KVK": ["nonword", "nominal-inflection"],
+    "HV4KV": ["nonword", "hv4kv"],
+    "I4Y": ["nonword", "i4y"],
+    "I4Í": ["nonword", "i4í"],
+    "J4G": ["nonword", "letter-rep"],
+    "J4GJ": ["nonword", "extra-letter"],
+    "JE4É": ["nonword", "extra-letter"],
+    "JVANTAR": ["nonword", "missing-letter"],
+    "JÉ4JE": ["nonword", "extra-accent"],
+    "KKN4KN": ["nonword", "extra-letter"],
+    "KKT4KT": ["nonword", "extra-letter"],
+    "KN4KKN": ["nonword", "missing-letter"],
+    "KT4GT": ["nonword", "letter-rep"],
+    "KT4KKT": ["nonword", "missing-letter"],
+    "KV4HV": ["nonword", "kv4hv"],
+    "KV4HV-FNSP": ["nonword", "kv4hv"],
+    "KVK4HK": ["nonword", "nominal-inflection"],
+    "KVK4KK": ["nonword", "nominal-inflection"],
+    "LAG4HA": ["nonword", "lower4upper-proper"],
+    "LG4GL": ["nonword", "swapped-letters"],
+    "LLJ4LJ": ["nonword", "extra-letter"],
+    "LLST4LST": ["nonword", "extra-letter"],
+    "LLT4LT": ["nonword", "extra-letter"],
+    "LS4LLS": ["nonword", "missing-letter"],
+    "LST4LLST": ["nonword", "missing-letter"],
+    "LT4LLT": ["nonword", "missing-letter"],
+    "M4FN": ["nonword", "pronun-writing"],
+    "M4MM": ["nonword", "missing-letter"],
+    "MIÐSTIGV": ["nonword", "adjective-inflection"],
+    "MM4M": ["nonword", "extra-letter"],
+    "N4NN-END": ["nonword", "nominal-inflection"],
+    "N4NN-ORD": ["nonword", "nominal-inflection"],
+    "N4NN-SAM": ["nonword", "nominal-inflection"],
+    "NG4GN": ["nonword", "swapped-letters"],
+    "NGNK": ["nonword", "swapped-letters"],
+    "NN4N-END": ["nonword", "nominal-inflection", "adjective-inflection"],
+    "NN4N-ORD": ["nonword", "nominal-inflection"],
+    "NN4N-SAM": ["nonword", "nominal-inflection"],
+    "O4Ó": ["nonword", "missing-accent"],
+    "O4Ó-NGNK": ["nonword", "missing-accent"],
+    "OF-U": ["nonword", "letter-rep"],
+    "P4B": ["nonword", "letter-rep"],
+    "P4Þ": ["nonword", "letter-rep"],
+    "PL4FL": ["nonword", "letter-rep"],
+    "PPL4PL": ["nonword", "extra-letter"],
+    "PPN4PN": ["nonword", "extra-letter"],
+    "PS4PPS": ["nonword", "missing-letter"],
+    "PT4PPT": ["nonword", "missing-letter"],
+    "R4RR": ["nonword", "missing-letter"],
+    "RFTGR": ["nonword", "missing-letter"],
+    "RN4RFN": ["nonword", "pronun-writing"],
+    "RN4RÐN": ["nonword", "pronun-writing"],
+    "RR4R": ["nonword", "extra-letter"],
+    "RS4RFS": ["nonword", "pronun-writing"],
+    "SAMS-V": ["nonword", "compound-collocation"],
+    "SK4STK": ["nonword", "pronun-writing"],
+    "SKSTV": ["nonword", "missing-hyphen"],
+    "SL4RSL": ["nonword", "pronun-writing"],
+    "SN-TALA-GR": ["nonword", "compound-collocation"],
+    # "SO-ÞGF4ÞF": [""],
+    "SPMYNDV": ["nonword", "bad-contraction"],
+    "SST4ST": ["nonword", "pronun-writing"],
+    "ST4RST": ["nonword", "pronun-writing"],
+    "ST4SKT": ["nonword", "pronun-writing"],
+    "S4AR-EF": ["nonword", "nominal-inflection"],
+    "S-EFGR": ["nonword", "nominal-inflection"],
+    "STAFAGERD": ["nonword"],  # No corresponding category in iEC?
+    "STAFS-ERL": ["nonword", "fw4ice"],
+    "STAFSVVIXL": ["nonword", "swapped-letters"],
+    "STK4SK": ["nonword", "pronun-writing"],
+    "STN4SN": ["nonword", "pronun-writing"],
+    "T4TT": ["nonword", "missing-letter"],
+    "TOKV": ["nonword", "fw4ice"],  # No corresponding category in iEC?
+    "TTN4TN": ["nonword", "pronun-writing", "extra-letter"],
+    "U4Y": ["nonword", "u4y"],
+    "U4Ú": ["nonword", "missing-accent"],
+    "V4F": ["nonword", "letter-rep"],
+    "VANTAR-J-FT": ["nonword", "nominal-inflection"],
+    "Y4I": ["nonword", "y4i"],
+    "Z4S": ["nonword", "letter-rep"],
+    "É4JE": ["nonword", "pronun-writing"],
+    "Í4I": ["nonword", "í4i"],
+    "Í4Ý": ["nonword", "í4ý"],
+    "Ý4Y": ["nonword", "ý4y"],
+    "Ý4Í": ["nonword", "ý4í"],
+    # Malsnid errors
+    "URE": ["style", "wording", "context"],
+    "VILLA": ["style", "wording", "context"],
+    # Einkunn errors
+    "R000": ["style"],
+    "R002": ["style"],
+    "R003": ["style"],
+    "R004": ["style"],
+    "R005": ["style"],
 }
+# Value given to float metrics when there is none available
+# to avoid magic numbers
+NO_RESULTS = -1.0
 
-GCSKIPCODES = frozenset(("E001", "C005", "Z002", "W001"))
+GCSKIPCODES = frozenset(["E001"])
 
 # Define the command line arguments
 
@@ -934,7 +630,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-r", "--randomize", action="store_true", help="process a random subset of files",
+    "-r",
+    "--randomize",
+    action="store_true",
+    help="process a random subset of files",
 )
 
 parser.add_argument(
@@ -954,7 +653,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-x", "--exclude", action="store_true", help="Exclude sentences marked exclude",
+    "-x",
+    "--exclude",
+    action="store_true",
+    help="Exclude sentences marked for exclusion",
 )
 
 parser.add_argument(
@@ -970,6 +672,10 @@ parser.add_argument(
     "--analysis",
     action="store_true",
     help="Create an analysis report for token results",
+)
+
+parser.add_argument(
+    "-f", "--catfile", type=str, default="iceErrorCorpus/errorCodes.tsv"
 )
 
 # This boolean global is set to True for quiet output,
@@ -989,17 +695,17 @@ ANALYSIS = False
 
 
 def element_text(element: ET.Element) -> str:
-    """ Return the text of the given element,
-        including all its subelements, if any """
+    """Return the text of the given element,
+    including all its subelements, if any"""
     return "".join(element.itertext())
 
 
 class Stats:
 
-    """ A container for key statistics on processed files and sentences """
+    """A container for key statistics on processed files and sentences"""
 
     def __init__(self) -> None:
-        """ Initialize empty defaults for the stats collection """
+        """Initialize empty defaults for the stats collection"""
         self._starttime = datetime.utcnow()
         self._files: Dict[str, int] = defaultdict(int)
         # We employ a trick to make the defaultdicts picklable between processes:
@@ -1016,13 +722,17 @@ class Stats:
         self._fn: DefaultDict[str, int] = defaultdict(int)
         self._right_corr: DefaultDict[str, int] = defaultdict(int)
         self._wrong_corr: DefaultDict[str, int] = defaultdict(int)
+        self._ctp: DefaultDict[str, int] = defaultdict(int)
+        self._ctn: DefaultDict[str, int] = defaultdict(int)
+        self._cfp: DefaultDict[str, int] = defaultdict(int)
+        self._cfn: DefaultDict[str, int] = defaultdict(int)
         self._right_span: DefaultDict[str, int] = defaultdict(int)
         self._wrong_span: DefaultDict[str, int] = defaultdict(int)
         # reference error code : freq - for hypotheses with the unparsable error code
         self._tp_unparsables: DefaultDict[str, int] = defaultdict(int)
 
     def add_file(self, category: str) -> None:
-        """ Add a processed file in a given content category """
+        """Add a processed file in a given content category"""
         self._files[category] += 1
 
     def add_result(
@@ -1034,7 +744,7 @@ class Stats:
         ups: Dict[str, int],
         errtypefreqs: ErrTypeStatsDict,
     ) -> None:
-        """ Add the result of a process() call to the statistics collection """
+        """Add the result of a process() call to the statistics collection"""
         for sent_result in stats:
             self.add_sentence(*sent_result)
         for k, v in true_positives.items():
@@ -1060,10 +770,14 @@ class Stats:
         fn: int,
         right_corr: int,
         wrong_corr: int,
+        ctp: int,
+        ctn: int,
+        cfp: int,
+        cfn: int,
         right_span: int,
         wrong_span: int,
     ) -> None:
-        """ Add a processed sentence in a given content category """
+        """Add a processed sentence in a given content category"""
         d = self._sentences[category]
         d["count"] += 1
         d["num_tokens"] += num_tokens
@@ -1087,9 +801,14 @@ class Stats:
         d["tn"] += tn
         d["fp"] += fp
         d["fn"] += fn
-        # Stats for error correction
+        # Stats for error correction ratio
         d["right_corr"] += right_corr
         d["wrong_corr"] += wrong_corr
+        # Stats for error correction for sentence
+        d["ctp"] += ctp
+        d["ctn"] += ctn
+        d["cfp"] += cfp
+        d["cfn"] += cfn
         # Stats for error span
         d["right_span"] += right_span
         d["wrong_span"] += wrong_span
@@ -1097,7 +816,7 @@ class Stats:
         # Causes of unparsable sentences
 
     def output(self, cores: int) -> None:
-        """ Write the statistics to stdout """
+        """Write the statistics to stdout"""
 
         # Accumulate standard output in a buffer, for writing in one fell
         # swoop at the end (after acquiring the output lock)
@@ -1108,8 +827,8 @@ class Stats:
             cast(int, d["count"]) for d in self._sentences.values()
         )
 
-        def output_duration() -> None:
-            """ Calculate the duration of the processing """
+        def output_duration() -> None:  # type: ignore
+            """Calculate the duration of the processing"""
             dur = int((datetime.utcnow() - self._starttime).total_seconds())
             h = dur // 3600
             m = (dur % 3600) // 60
@@ -1122,20 +841,20 @@ class Stats:
             bprint(f"Processing started at {str(self._starttime)[0:19]}")
             bprint(f"Total processing time {h}h {m:02}m {s:02}s, using {cores} cores")
             bprint(f"\nFiles processed:            {sum(self._files.values()):6}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 bprint(f"   {c:<13}:           {self._files[c]:6}")
             # Total number of tokens processed
             num_tokens = sum(d["num_tokens"] for d in self._sentences.values())
             bprint(f"\nTokens processed:           {num_tokens:6}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 bprint(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
             # Total number of sentences processed
             bprint(f"\nSentences processed:        {num_sentences:6}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 bprint(f"   {c:<13}:           {self._sentences[c]['count']:6}")
 
         def perc(n: int, whole: int) -> str:
-            """ Return a percentage of total sentences, formatted as 3.2f """
+            """Return a percentage of total sentences, formatted as 3.2f"""
             if whole == 0:
                 return "N/A"
             return f"{100.0*n/whole:3.2f}"
@@ -1143,14 +862,14 @@ class Stats:
         def write_basic_value(
             val: int, bv: str, whole: int, errwhole: Optional[int] = None
         ) -> None:
-            """ Write basic values for sentences and their freqs to stdout """
+            """Write basic values for sentences and their freqs to stdout"""
             if errwhole:
                 bprint(
                     f"\n{NAMES[bv]+':':<20}        {val:6} {perc(val, whole):>6}% / {perc(val, errwhole):>6}%"
                 )
             else:
                 bprint(f"\n{NAMES[bv]+':':<20}        {val:6} {perc(val, whole):>6}%")
-            for c in CATEGORIES:
+            for c in GENRES:
                 bprint(f"   {c:<13}:           {self._sentences[c][bv]:6}")
 
         def calc_PRF(
@@ -1165,7 +884,7 @@ class Stats:
             recs: str,
             precs: str,
         ) -> None:
-            """ Calculate precision, recall, F1-score and F0.5-score """
+            """Calculate precision, recall and F0.5-score"""
             # Recall
             if tp + fn == 0:
                 result = "N/A"
@@ -1174,7 +893,7 @@ class Stats:
                 recall = tp / (tp + fn)
                 result = f"{recall:1.4f}"
             bprint(f"\nRecall:                     {result}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 d = self._sentences[c]
                 denominator = d[tps] + d[fns]
                 if denominator == 0:
@@ -1190,7 +909,7 @@ class Stats:
                 precision = tp / (tp + fp)
                 result = f"{precision:1.4f}"
             bprint(f"\nPrecision:                  {result}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 d = self._sentences[c]
                 denominator = d[tps] + d[fps]
                 if denominator == 0:
@@ -1198,27 +917,6 @@ class Stats:
                 else:
                     p = d[precs] = d[tps] / denominator
                     bprint(f"   {c:<13}:           {p:1.4f}")
-            # F1 score
-            if precision + recall > 0.0:
-                f1 = 2 * precision * recall / (precision + recall)
-                result = f"{f1:1.4f}"
-            else:
-                f1 = 0.0
-                result = "N/A"
-            bprint(f"\nF1 score:                   {result}")
-            for c in CATEGORIES:
-                d = self._sentences[c]
-                if recs not in d or precs not in d:
-                    bprint(f"   {c:<13}:              N/A")
-                    continue
-                rc = d[recs]
-                p = d[precs]
-                if p + rc > 0.0:
-                    f1 = 2 * p * rc / (p + rc)
-                    bprint(f"   {c:<13}:           {f1:1.4f}")
-                else:
-                    bprint(f"   {c:<13}:           N/A")
-
             # F0.5 score
             if precision + recall > 0.0:
                 f05 = 1.25 * (precision * recall) / (0.25 * precision + recall)
@@ -1228,7 +926,7 @@ class Stats:
                 result = "N/A"
 
             bprint(f"\nF0.5 score:                   {result}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 d = self._sentences[c]
                 if recs not in d or precs not in d:
                     bprint(f"   {c:<13}:              N/A")
@@ -1237,14 +935,14 @@ class Stats:
                 p = d[precs]
                 if p + rc > 0.0:
                     f05 = 1.25 * (p * rc) / (0.25 * p + rc)
-                    bprint(f"   {c:<13}:           {f1:1.4f}")
+                    bprint(f"   {c:<13}:           {f05:1.4f}")
                 else:
                     bprint(f"   {c:<13}:           N/A")
 
         def calc_recall(
             right: int, wrong: int, rights: str, wrongs: str, recs: str
         ) -> None:
-            """ Calculate precision for binary classification """
+            """Calculate precision for binary classification"""
             # Recall
             if right + wrong == 0:
                 result = "N/A"
@@ -1253,7 +951,7 @@ class Stats:
                 recall = right / (right + wrong)
                 result = f"{recall:1.4f}"
             bprint(f"\nRecall:                     {result}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 d = self._sentences[c]
                 denominator = d[rights] + d[wrongs]
                 if denominator == 0:
@@ -1263,53 +961,73 @@ class Stats:
                     bprint(f"   {c:<13}:           {rc:1.4f}")
 
         def calc_error_category_metrics(cat: str) -> CatResultDict:
-            """ Calculates precision, recall, f1-score and f0.5-score for a single error category
-                N = Number of errors in category z in reference corpus, 
-                Nall =  number of tokens
-                TP = Errors correctly classified as category z
-                FP = Errors (or non-errors) incorrectly classified as category z
-                FN = Errors in category z in reference but not hypothesis
-                Recall = TPz/(TPz+FPz)
-                Precision = TPz/(TPz+FNz)
-                F1-score = 2*(P*R)/(P+R)
-                F0.5-score = 1.25*(P*R)/(0.25*P+R)
+            """Calculates precision, recall and f0.5-score for a single error code
+            N = Number of errors in category z in reference corpus,
+            Nall =  number of tokens
+            TP = Errors correctly classified as category z
+            FP = Errors (or non-errors) incorrectly classified as category z
+            FN = Errors in category z in reference but not hypothesis
+            Recall = TPz/(TPz+FPz)
+            Precision = TPz/(TPz+FNz)
+            F0.5-score = 1.25*(P*R)/(0.25*P+R)
             """
             catdict: CatResultDict = {k: v for k, v in self._errtypes[cat].items()}
             tp = cast(int, catdict.get("tp", 0))
             fn = cast(int, catdict.get("fn", 0))
             fp = cast(int, catdict.get("fp", 0))
-            recall: float = 0.0
-            precision: float = 0.0
+            recall: float = NO_RESULTS
+            precision: float = NO_RESULTS
+            ctp = cast(int, catdict.get("ctp", 0))
+            cfn = cast(int, catdict.get("cfn", 0))
+            cfp = cast(int, catdict.get("cfp", 0))
+            crecall: float = NO_RESULTS
+            cprecision: float = NO_RESULTS
             catdict["freq"] = tp + fn
             if tp + fn + fp == 0:  # No values in category
-                catdict["recall"] = "N/A"
-                catdict["precision"] = "N/A"
-                catdict["f1score"] = "N/A"
-                catdict["f05score"] = "N/A"
+                catdict["recall"] = NO_RESULTS
+                catdict["precision"] = NO_RESULTS
+                catdict["f05score"] = NO_RESULTS
+                catdict["crecall"] = NO_RESULTS
+                catdict["cprecision"] = NO_RESULTS
+                catdict["cf05score"] = NO_RESULTS
             else:
+                # Error detection metrics
                 # Recall
                 if tp + fn != 0:
                     recall = catdict["recall"] = tp / (tp + fn)
                 # Precision
                 if tp + fp != 0:
                     precision = catdict["precision"] = tp / (tp + fp)
-                # F1 score and F0.5 score
+                # F0.5 score
                 if recall + precision > 0.0:
-                    catdict["f1score"] = 2 * precision * recall / (precision + recall)
                     catdict["f05score"] = (
                         1.25 * (precision * recall) / (0.25 * precision + recall)
                     )
                 else:
-                    catdict["f1score"] = 0.0
-                    catdict["f05score"] = 0.0
-                # Correction recall
+                    catdict["f05score"] = NO_RESULTS
+                # Error correction metrics
+                # Recall
+                if ctp + cfn != 0:
+                    crecall = catdict["crecall"] = ctp / (ctp + cfn)
+                # Precision
+                if ctp + cfp != 0:
+                    cprecision = catdict["cprecision"] = ctp / (ctp + cfp)
+                # F0.5 score
+                if crecall + cprecision > 0.0:
+                    catdict["cf05score"] = (
+                        1.25 * (cprecision * crecall) / (0.25 * cprecision + crecall)
+                    )
+                else:
+                    catdict["cf05score"] = NO_RESULTS
+
+                # Correction recall (not used)
                 right_corr = cast(int, catdict.get("right_corr", 0))
                 if right_corr > 0:
                     catdict["corr_rec"] = right_corr / (
                         right_corr + cast(int, catdict.get("wrong_corr", 0))
                     )
                 else:
-                    catdict["corr_rec"] = "N/A"
+                    catdict["corr_rec"] = -1.0
                 # Span recall
                 right_span = cast(int, catdict.get("right_span", 0))
                 if right_span > 0:
@@ -1317,11 +1035,11 @@ class Stats:
                         right_span + cast(int, catdict.get("wrong_span", 0))
                     )
                 else:
-                    catdict["span_rec"] = "N/A"
+                    catdict["span_rec"] = NO_RESULTS
             return catdict
 
-        def output_sentence_scores() -> None:
-            """ Calculate and write sentence scores to stdout """
+        def output_sentence_scores() -> None:  # type: ignore
+            """Calculate and write sentence scores to stdout"""
 
             # Total number of true negatives found
             bprint(f"\nResults for error detection for whole sentences")
@@ -1356,7 +1074,7 @@ class Stats:
                     + "%"
                 )
             bprint(f"\nTrue/false split: {result:>16}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 d = self._sentences[c]
                 num_sents = d["count"]
                 true_results = cast(int, d["true_positives"] + d["true_negatives"])
@@ -1367,7 +1085,7 @@ class Stats:
                     result = f"{100.0*true_results/num_sents:3.2f}%/{100.0*false_results/num_sents:3.2f}%"
                 bprint(f"   {c:<13}: {result:>16}")
 
-            # Precision, recall, F1-score, F0.5-score
+            # Precision, recall, F0.5-score
             calc_PRF(
                 true_positives,
                 true_negatives,
@@ -1382,29 +1100,29 @@ class Stats:
             )
 
             # Most common false negative error types
-            total = sum(self._false_negatives.values())
-            if total > 0:
-                bprint(f"\nMost common false negative error types")
-                bprint(f"--------------------------------------\n")
-                for index, (xtype, cnt) in enumerate(
-                    heapq.nlargest(
-                        20, self._false_negatives.items(), key=lambda x: x[1]
-                    )
-                ):
-                    bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
+            # total = sum(self._false_negatives.values())
+            # if total > 0:
+            #    bprint(f"\nMost common false negative error types")
+            #    bprint(f"--------------------------------------\n")
+            #    for index, (xtype, cnt) in enumerate(
+            #        heapq.nlargest(
+            #            20, self._false_negatives.items(), key=lambda x: x[1]
+            #        )
+            #    ):
+            #        bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/total:3.2f}%)")
 
             # Most common error types in unparsable sentences
-            tot = sum(self._tp_unparsables.values())
-            if tot > 0:
-                bprint(f"\nMost common error types for unparsable sentences")
-                bprint(f"------------------------------------------------\n")
-                for index, (xtype, cnt) in enumerate(
-                    heapq.nlargest(20, self._tp_unparsables.items(), key=lambda x: x[1])
-                ):
-                    bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
+            # tot = sum(self._tp_unparsables.values())
+            # if tot > 0:
+            #    bprint(f"\nMost common error types for unparsable sentences")
+            #    bprint(f"------------------------------------------------\n")
+            #    for index, (xtype, cnt) in enumerate(
+            #        heapq.nlargest(20, self._tp_unparsables.items(), key=lambda x: x[1])
+            #    ):
+            #        bprint(f"{index+1:3}. {xtype} ({cnt}, {100.0*cnt/tot:3.2f}%)")
 
-        def output_token_scores() -> None:
-            """ Calculate and write token scores to stdout """
+        def output_token_scores() -> None:  # type: ignore
+            """Calculate and write token scores to stdout"""
 
             bprint(f"\n\nResults for error detection within sentences")
 
@@ -1412,7 +1130,7 @@ class Stats:
                 cast(int, d["num_tokens"]) for d in self._sentences.values()
             )
             bprint(f"\nTokens processed:           {num_tokens:6}")
-            for c in CATEGORIES:
+            for c in GENRES:
                 bprint(f"   {c:<13}:           {self._sentences[c]['num_tokens']:6}")
 
             tp = sum(cast(int, d["tp"]) for d in self._sentences.values())
@@ -1474,36 +1192,26 @@ class Stats:
             )
 
         def output_error_cat_scores() -> None:
-            """ Calculate and write scores for each error category to stdout """
+            """Calculate and write scores for each error category to stdout"""
             bprint(f"\n\nResults for each error category in order by frequency")
             freqdict: Dict[str, int] = dict()
-            microf1: float = 0.0
             microf05: float = 0.0
             nfreqs: int = 0
-            microf1all: float = 0.0
-            microf05all: float = 0.0
-            nfreqsall: int = 0
             resultdict: Dict[str, CatResultDict] = dict()
 
             # Iterate over category counts
             for cat in self._errtypes.keys():
-                # Get recall, precision, F1 and F0.5; recall for correction and span
+                # Get recall, precision and F0.5; recall for correction and span
                 catdict = resultdict[cat] = calc_error_category_metrics(cat)
 
                 # Collect micro scores, both overall and for in-scope categories
                 freq = cast(int, catdict["freq"])
                 assert isinstance(freq, int)
-                f1score = cast(float, catdict["f1score"])
                 f05score = cast(float, catdict["f05score"])
-                assert isinstance(f1score, float)
                 assert isinstance(f05score, float)
                 if cat not in OUT_OF_SCOPE:
-                    microf1 += f1score * freq
                     microf05 += f05score * freq
                     nfreqs += freq
-                microf1all += f1score * freq
-                microf05all += f05score * freq
-                nfreqsall += freq
 
                 # Create freqdict for sorting error categories by frequency
                 freqdict[cat] = freq
@@ -1514,14 +1222,15 @@ class Stats:
                 bprint("{} (in_scope={})".format(k, k not in OUT_OF_SCOPE))
                 bprint(
                     "\tTP, FP, FN: {}, {}, {}".format(
-                        rk.get("tp", 0), rk.get("fp", 0), rk.get("fn", 0),
+                        rk.get("tp", 0),
+                        rk.get("fp", 0),
+                        rk.get("fn", 0),
                     )
                 )
                 bprint(
-                    "\tRe, Pr, F1: {:3.2f}, {:3.2f}, {:3.2f}|{:3.2f}".format(
+                    "\tRe, Pr, F0.5: {:3.2f}, {:3.2f}, {:3.2f}".format(
                         cast(float, rk.get("recall", 0.0)) * 100.0,
                         cast(float, rk.get("precision", 0.0)) * 100.0,
-                        cast(float, rk.get("f1score", 0.0)) * 100.0,
                         cast(float, rk.get("f05score", 0.0)) * 100.0,
                     )
                 )
@@ -1538,100 +1247,363 @@ class Stats:
                         )
                     )
 
-            # Micro F1-score
-            # Results for in-scope categories and all categories
-            if nfreqs != 0:
-                bprint(
-                    "Micro F1-score: {:3.2f}  ({:3.2f})".format(
-                        microf1 / nfreqs * 100.0, microf1all / nfreqsall * 100.0
-                    )
-                )
-            else:
-                bprint(f"Micro F1-score: N/A")
             # Micro F0.5-score
             # Results for in-scope categories and all categories
             if nfreqs != 0:
                 bprint(
-                    "Micro F0.5-score: {:3.2f}  ({:3.2f})".format(
-                        microf05 / nfreqs * 100.0, microf05all / nfreqsall * 100.0
+                    "F0.5-score: {:3.2f}".format(
+                        microf05 / nfreqs * 100.0,
                     )
                 )
             else:
-                bprint(f"Micro F0.5-score: N/A")
+                bprint(f"F0.5-score: N/A")
 
-        def output_supercategory_scores(errorcats: Dict[str, List[str]]) -> None:
-            """ Results for each SÍM category
-                (context-dependent, context-independent, grammar, style) """
-            for entry, catlist in errorcats.items():
-                microf1 = 0.0
-                microf05 = 0.0
-                nfreqs = 0
-                microf1all = 0.0
-                microf05all = 0.0
-                nfreqsall = 0
-                correcs = 0.0
-                correcsall = 0.0
-                # microrec = 0.0
-                # microrecall = 0.0
-                # microprec = 0.0
-                # microprecall = 0.0
-                # TODO taka saman corr_rec og span_rec; skoða hvernig fæ F-skor,
-                # svipað og fyrir hitt, þegar er ekki með TN inni
-                bprint("\n{}:".format(entry.capitalize()))
-                for cat in catlist:
-                    et = calc_error_category_metrics(cat)
-                    if et.get("f1score", "N/A") == "N/A":
-                        continue
-                    freq = cast(int, et["freq"])
-                    if cat not in OUT_OF_SCOPE:
-                        microf1 += cast(float, et["f1score"]) * freq
-                        microf05 += cast(float, et["f05score"]) * freq
-                        if et["corr_rec"] != "N/A":
-                            correcs += cast(float, et["corr_rec"]) * freq
-                        nfreqs += freq
-                        bprint(
-                            "\t{}   {:3.2f}|{:3.2f}|{:>6}".format(
-                                cat,
-                                cast(float, et["f1score"]) * 100.0,
-                                cast(float, et["f05score"]) * 100.0,
-                                freq,
+        def output_supercategory_scores():
+            """Error detection results for each supercategory in iEC given
+            in SUPERCATEGORIES, each subcategory, and error code"""
+            bprint("Supercategory: frequency, F-score")
+            bprint("\tSubcategory: frequency, F-score")
+            bprint(
+                "\t\tError code: frequency, (recall, precision, F-score), (tp, fn, fp)| correct recall"
+            )
+            totalfreq = 0
+            totalf = 0.0
+            for supercat in SUPERCATEGORIES:
+                # supercategory: {subcategory : error code}
+                # entry = supercategory, catlist = {subcategory : error code}
+                superblob = ""
+                superfreq = 0
+                superf = 0.0
+
+                for subcat in SUPERCATEGORIES[supercat]:
+                    subblob = ""
+                    subfreq = 0
+                    subf = 0.0
+                    for code in SUPERCATEGORIES[supercat][subcat]:
+                        if code not in OUT_OF_SCOPE:
+                            et = calc_error_category_metrics(code)
+                            if et["f05score"] == "N/A":
+                                continue
+                            freq = cast(int, et["freq"])
+                            fscore = cast(float, et["f05score"])
+                            # codework
+                            subblob = (
+                                subblob
+                                + "\t\t{} {}  ({:3.2f}, {:3.2f}, {:3.2f}) ({},{},{})| {}\n".format(
+                                    code,
+                                    freq,
+                                    cast(float, et["recall"]) * 100.0
+                                    if "recall" in et
+                                    else 0.0,
+                                    cast(float, et["precision"]) * 100.0
+                                    if "precision" in et
+                                    else 0.0,
+                                    fscore * 100.0,
+                                    cast(int, et["tp"]) if "tp" in et else 0,
+                                    cast(int, et["fn"]) if "fn" in et else 0,
+                                    cast(int, et["fp"]) if "fp" in et else 0,
+                                    cast(float, et["corr_rec"])
+                                    if "corr_rec" in et
+                                    else 0.0,
+                                )
                             )
+                            # subwork
+                            subfreq += freq
+                            subf += fscore * freq * 100.0
+                    if subfreq != 0:
+                        subblob = (
+                            "\t{}   {} {}\n".format(
+                                subcat.capitalize(), subfreq, subf / subfreq
+                            )
+                            + subblob
                         )
-                    microf1all += cast(float, et["f1score"]) * freq
-                    microf05all += cast(float, et["f05score"]) * freq
-                    if et.get("corr_rec", "N/A") != "N/A":
-                        correcsall += cast(float, et["corr_rec"]) * freq
-                    nfreqsall += freq
-                if nfreqs != 0:
-                    bprint(
-                        "Micro F1-score: {:3.2f}  ({:3.2f})".format(
-                            microf1 / nfreqs * 100.0, microf1all / nfreqsall * 100.0
+                    else:
+                        subblob = (
+                            "\t{}    0    N/A\n".format(subcat.capitalize()) + subblob
                         )
-                    )
-                    bprint(
-                        "Micro F0.5-score: {:3.2f}  ({:3.2f})".format(
-                            microf05 / nfreqs * 100.0, microf05all / nfreqsall * 100.0
+                    # superwork
+                    # freq, f05
+                    superblob += subblob
+                    superfreq += subfreq
+                    superf += subf  # TODO is this correct?
+                if superfreq != 0:
+                    superblob = (
+                        "\n{}   {} {}\n".format(
+                            supercat.capitalize(), superfreq, superf / superfreq
                         )
-                    )
-                    bprint(
-                        "Error correction recall: {:3.2f} ({:3.2f})".format(
-                            correcs / nfreqs * 100.0, correcsall / nfreqsall * 100.0
-                        )
+                        + superblob
                     )
                 else:
-                    bprint(f"Micro F1-score: N/A")
-                    bprint(f"Micro F0.5-score: N/A")
-                    bprint(f"Error correction recall: N/A")
+                    superblob = (
+                        "\n{}    0    N/A\n".format(supercat.capitalize()) + superblob
+                    )
+                totalfreq += superfreq
+                totalf += superf  # TODO is this correct?
+                bprint("".join(superblob))
+            bprint("Total frequency: {}".format(totalfreq))
+            bprint("Total F-score: {}".format(totalf / totalfreq))
 
-        output_duration()
-        output_sentence_scores()
-        output_token_scores()
-        output_error_cat_scores()
+        def output_all_scores():
+            """Results for each supercategory in iEC given in SUPERCATEGORIES, each subcategory, and error code, in tsv format."""
+            bprint(
+                "Category\tfrequency\ttp\tfn\tfp\trecall\tprecision\tF-score\tctp\tcfn\tcfp\tcrecall\tcprecision\tCF-score"
+            )
+            totalfreq = 0
+            totaltp = 0
+            totalfn = 0
+            totalfp = 0
+            totalrecall = 0.0
+            totalprecision = 0.0
+            totalf = 0.0
+            totalctp = 0
+            totalcfn = 0
+            totalcfp = 0
+            totalcrecall = 0.0
+            totalcprecision = 0.0
+            totalcf = 0.0
+            for supercat in SUPERCATEGORIES:
+                # supercategory: {subcategory : error code}
+                # entry = supercategory, catlist = {subcategory : error code}
+                superfreq = 0
+                supertp = 0
+                superfn = 0
+                superfp = 0
+                superrecall = 0.0
+                superprecision = 0.0
+                superf = 0.0
+                superctp = 0
+                supercfn = 0
+                supercfp = 0
+                supercrecall = 0.0
+                supercprecision = 0.0
+                supercf = 0.0
+                superblob = ""
+                for subcat in SUPERCATEGORIES[supercat]:
+                    subfreq = 0
+                    subtp = 0
+                    subfn = 0
+                    subfp = 0
+                    subrecall = 0.0
+                    subprecision = 0.0
+                    subf = 0.0
+                    subctp = 0
+                    subcfn = 0
+                    subcfp = 0
+                    subcrecall = 0.0
+                    subcprecision = 0.0
+                    subcf = 0.0
+                    subblob = ""
+                    for code in SUPERCATEGORIES[supercat][subcat]:
+                        if code not in OUT_OF_SCOPE:
+                            et = calc_error_category_metrics(code)
+                            freq = cast(int, et["freq"])
+                            fscore = cast(float, et["f05score"])
+                            cfscore = cast(float, et["cf05score"])
+                            # codework
+                            subblob = (
+                                subblob
+                                + "{}\t{}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\n".format(
+                                    code,
+                                    freq,
+                                    cast(int, et["tp"]) if "tp" in et else 0,
+                                    cast(int, et["fn"]) if "fn" in et else 0,
+                                    cast(int, et["fp"]) if "fp" in et else 0,
+                                    cast(float, et["recall"]) * 100.0
+                                    if ("recall" in et and float(et["recall"]) > 0.0)
+                                    else NO_RESULTS,  # Or "N/A", but that messes with the f-string formatting
+                                    cast(float, et["precision"]) * 100.0
+                                    if (
+                                        "precision" in et
+                                        and float(et["precision"]) > 0.0
+                                    )
+                                    else NO_RESULTS,
+                                    fscore * 100.0 if fscore > 0.0 else NO_RESULTS,
+                                    cast(int, et["ctp"]) if "ctp" in et else 0,
+                                    cast(int, et["cfn"]) if "cfn" in et else 0,
+                                    cast(int, et["cfp"]) if "cfp" in et else 0,
+                                    cast(float, et["crecall"]) * 100.0
+                                    if ("crecall" in et and float(et["crecall"]) > 0.0)
+                                    else NO_RESULTS,
+                                    cast(float, et["cprecision"]) * 100.0
+                                    if (
+                                        "cprecision" in et
+                                        and float(et["cprecision"]) > 0.0
+                                    )
+                                    else NO_RESULTS,
+                                    cfscore * 100.0 if cfscore > 0.0 else NO_RESULTS,
+                                )
+                            )
+                            # subwork
+                            subfreq += freq
+                            subtp += cast(int, et["tp"]) if "tp" in et else 0
+                            subfn += cast(int, et["fn"]) if "fn" in et else 0
+                            subfp += cast(int, et["fp"]) if "fp" in et else 0
+                            subrecall += (
+                                cast(float, et["recall"]) * freq * 100.0
+                                if ("recall" in et and float(et["recall"]) > 0.0)
+                                else 0.0
+                            )
+                            subprecision += (
+                                cast(float, et["precision"]) * freq * 100.0
+                                if ("precision" in et and float(et["precision"]) > 0.0)
+                                else 0.0
+                            )
+                            subf += fscore * freq * 100.0 if fscore > 0.0 else 0.0
+                            subctp += cast(int, et["ctp"]) if "ctp" in et else 0
+                            subcfn += cast(int, et["cfn"]) if "cfn" in et else 0
+                            subcfp += cast(int, et["cfp"]) if "cfp" in et else 0
+                            subcrecall += (
+                                cast(float, et["crecall"]) * freq * 100.0
+                                if ("crecall" in et and float(et["crecall"]) > 0.0)
+                                else 0.0
+                            )
+                            subcprecision += (
+                                cast(float, et["cprecision"]) * freq * 100.0
+                                if (
+                                    "cprecision" in et and float(et["cprecision"]) > 0.0
+                                )
+                                else 0.0
+                            )
+                            subcf += cfscore * freq * 100.0 if cfscore > 0.0 else 0.0
+
+                    if subfreq != 0:
+                        subblob = (
+                            "\n{}\t{}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\n".format(
+                                subcat.capitalize(),
+                                subfreq,
+                                subtp,
+                                subfn,
+                                subfp,
+                                subrecall / subfreq,
+                                subprecision / subfreq,
+                                subf / subfreq,
+                                subctp,
+                                subcfn,
+                                subcfp,
+                                subcrecall / subfreq,
+                                subcprecision / subfreq,
+                                subcf / subfreq,
+                            )
+                            + subblob
+                        )
+                    else:
+                        subblob = (
+                            "\n{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                                subcat.capitalize(),
+                                subfreq,
+                                subtp,
+                                subfn,
+                                subfp,
+                                NO_RESULTS,
+                                NO_RESULTS,
+                                NO_RESULTS,
+                                subctp,
+                                subcfn,
+                                subcfp,
+                                NO_RESULTS,
+                                NO_RESULTS,
+                                NO_RESULTS,
+                            )
+                            + subblob
+                        )
+
+                    # superwork
+                    superblob += subblob
+                    superfreq += subfreq
+                    supertp += subtp
+                    superfn += subfn
+                    superfp += subfp
+                    superrecall += subrecall
+                    superprecision += subprecision
+                    superf += subf
+                    superctp += subctp
+                    supercfn += subcfn
+                    supercfp += subcfp
+                    supercrecall += subcrecall
+                    supercprecision += subcprecision
+                    supercf += subcf
+                if superfreq != 0:
+                    superblob = (
+                        "\n{}\t{}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\n".format(
+                            supercat.capitalize(),
+                            superfreq,
+                            supertp,
+                            superfn,
+                            superfp,
+                            superrecall / superfreq,
+                            superprecision / superfreq,
+                            superf / superfreq,
+                            superctp,
+                            supercfn,
+                            supercfp,
+                            supercrecall / superfreq,
+                            supercprecision / superfreq,
+                            supercf / superfreq,
+                        )
+                        + superblob
+                    )
+                else:
+                    superblob = (
+                        "\n{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                            supercat.capitalize(),
+                            superfreq,
+                            supertp,
+                            superfn,
+                            superfp,
+                            NO_RESULTS,
+                            NO_RESULTS,
+                            NO_RESULTS,
+                            superctp,
+                            supercfn,
+                            supercfp,
+                            NO_RESULTS,
+                            NO_RESULTS,
+                            NO_RESULTS,
+                        )
+                        + superblob
+                    )
+                totalfreq += superfreq
+                totaltp += supertp
+                totalfn += superfn
+                totalfp += superfp
+                totalrecall += superrecall
+                totalprecision += superprecision
+                totalf += superf
+                totalctp += superctp
+                totalcfn += supercfn
+                totalcfp += supercfp
+                totalcrecall += supercrecall
+                totalcprecision += supercprecision
+                totalcf += supercf
+
+                bprint("".join(superblob))
+            bprint(
+                "\n{}\t{}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\t{}\t{}\t{}\t{:3.2f}\t{:3.2f}\t{:3.2f}\n".format(
+                    "Total",
+                    totalfreq,
+                    totaltp,
+                    totalfn,
+                    totalfp,
+                    totalrecall / totalfreq,
+                    totalprecision / totalfreq,
+                    totalf / totalfreq,
+                    totalctp,
+                    totalcfn,
+                    totalcfp,
+                    totalcrecall / totalfreq,
+                    totalcprecision / totalfreq,
+                    totalcf / totalfreq,
+                )
+            )
+
+        # output_duration()
+        # output_sentence_scores()
+        # output_token_scores()
+        # output_error_cat_scores()
 
         bprint(f"\n\nResults for iEC-categories:")
-        output_supercategory_scores(SUPERCATEGORIES)
-        bprint(f"\n\nResults for SÍM-categories:")
-        output_supercategory_scores(SIMCATEGORIES)
+        # output_supercategory_scores()
+        output_all_scores()
 
         # Print the accumulated output before exiting
         for s in buffer:
@@ -1639,8 +1611,8 @@ class Stats:
 
 
 def correct_spaces(tokens: List[Tuple[str, str]]) -> str:
-    """ Returns a string with a reasonably correct concatenation
-        of the tokens, where each token is a (tag, text) tuple. """
+    """Returns a string with a reasonably correct concatenation
+    of the tokens, where each token is a (tag, text) tuple."""
     return detokenize(
         Tok(TOK.PUNCTUATION if tag == "c" else TOK.WORD, txt, None)
         for tag, txt in tokens
@@ -1653,18 +1625,18 @@ buffer: List[str] = []
 
 
 def bprint(s: str):
-    """ Buffered print: accumulate output for printing at the end """
+    """Buffered print: accumulate output for printing at the end"""
     buffer.append(s)
 
 
 def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
 
-    """ Process a single error corpus file in TEI XML format.
-        This function is called within a multiprocessing pool
-        and therefore usually executes in a child process, separate
-        from the parent process. It should thus not modify any
-        global state, and arguments and return values should be
-        picklable. """
+    """Process a single error corpus file in TEI XML format.
+    This function is called within a multiprocessing pool
+    and therefore usually executes in a child process, separate
+    from the parent process. It should thus not modify any
+    global state, and arguments and return values should be
+    picklable."""
 
     # Unpack arguments
     fpath, category = fpath_and_category
@@ -1679,12 +1651,12 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
     # Statistics about processed sentences. These data will
     # be returned back to the parent process.
     stats: List[StatsTuple] = []
-    # Counter of iceErrorCorpus error types (xtypes) encountered
+    # Counter of iceErrorCorpus error codes (xtypes) encountered
     true_positives: Dict[str, int] = defaultdict(int)
     false_negatives: Dict[str, int] = defaultdict(int)
-    # Counter of iceErrorCorpus error types in unparsable sentences
+    # Counter of iceErrorCorpus error codes in unparsable sentences
     ups: Dict[str, int] = defaultdict(int)
-    # Stats for each error type (xtypes)
+    # Stats for each error code (xtypes)
     errtypefreqs: ErrTypeStatsDict = ErrTypeStatsDict(TypeFreqs().copy)
 
     try:
@@ -1712,7 +1684,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 exc = sent.attrib.get("exclude", "")
                 if exc:
                     continue
-            check = False  # When args.single, checking single error category
+            check = False  # When args.single, checking single error code
             # Sentence identifier (index)
             index = sent.attrib.get("n", "")
             tokens: List[Tuple[str, str]] = []
@@ -1809,8 +1781,17 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             if not text:
                 # Nothing to do: drop this and go to the next sentence
                 continue
+            # print(text)
+            options = {}
+            options["annotate_unparsed_sentences"] = True  # True is default
+            options["suppress_suggestions"] = False  # False is default
+            options["ignore_rules"] = set(
+                [
+                    "",
+                ]
+            )
             # Pass it to GreynirCorrect
-            pg = [list(p) for p in gc.check(text)]
+            pg = [list(p) for p in gc_check(text, rc=rc, **options)]
             s: Optional[_Sentence] = None
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 s = pg[0][0]
@@ -1835,7 +1816,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 bprint("000: *** Sentence identifier is missing ('n' attribute) ***")
 
             def sentence_results(
-                hyp_annotations: List[gc.Annotation], ref_annotations: List[ErrorDict]
+                hyp_annotations: List[Annotation], ref_annotations: List[ErrorDict]
             ) -> Tuple[bool, bool]:
                 gc_error = False
                 ice_error = False
@@ -1890,19 +1871,35 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             gc_error, ice_error = sentence_results(s.annotations, errors)
 
             def token_results(
-                hyp_annotations: Iterable[gc.Annotation],
+                hyp_annotations: Iterable[Annotation],
                 ref_annotations: Iterable[ErrorDict],
-            ) -> Tuple[int, int, int, int, int, int, int]:
-                """ Calculate statistics on annotations at the token span level """
+            ) -> Tuple[int, int, int, int, int, int, int, int, int, int]:
+                """Calculate statistics on annotations at the token span level"""
                 tp, fp, fn = 0, 0, 0  # tn comes from len(tokens)-(tp+fp+fn) later on
                 right_corr, wrong_corr = 0, 0
+                ctp, cfp, cfn = (
+                    0,
+                    0,
+                    0,
+                )  # ctn comes from len(tokens)-(ctp+cfp+cfn) later on
                 right_span, wrong_span = 0, 0
                 if not hyp_annotations and not ref_annotations:
                     # No need to go any further
-                    return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
+                    return (
+                        tp,
+                        fp,
+                        fn,
+                        right_corr,
+                        wrong_corr,
+                        ctp,
+                        cfp,
+                        cfn,
+                        right_span,
+                        wrong_span,
+                    )
                 y = iter(hyp_annotations)  # GreynirCorrect annotations
                 x = iter(ref_annotations)  # iEC annotations
-                ytok: Optional[gc.Annotation] = None
+                ytok: Optional[Annotation] = None
                 xtok: Optional[ErrorDict] = None
 
                 if ANALYSIS:
@@ -1954,9 +1951,9 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             if ysugg and xsugg and ysugg.intersection(xsugg):
                                 samespan = True
 
-                        # iEC error subcategory
+                        # iEC error code
                         xtype = cast(str, xtok["xtype"])
-                        # By default, use iEC error category
+                        # By default, use iEC error code
                         # on the GreynirCorrect side as well
                         ytype = xtype
                         if ytok.code in GCtoIEC:
@@ -1969,6 +1966,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                                 # we're going to get an error for
                                 # a wrong annotation type anyway, as ytype != xtype.
                                 ytype = GCtoIEC[ytok.code][0]
+                        else:
+                            print("Error tag {} is not supported".format(ytok.code))
 
                         if ANALYSIS:
                             analysisblob.append(
@@ -1988,7 +1987,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             xtok = None
                             xtok = next(x)
                             continue
-                        if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
+                        if ytok.code in GCSKIPCODES:
                             # Skip these errors, shouldn't be compared.
                             if ANALYSIS:
                                 analysisblob.append(
@@ -2017,9 +2016,13 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             if ycorr == xtok["corrected"]:
                                 right_corr += 1
                                 errtypefreqs[xtype]["right_corr"] += 1
+                                ctp += 1
+                                errtypefreqs[xtype]["ctp"] += 1
                             else:
                                 wrong_corr += 1
                                 errtypefreqs[xtype]["wrong_corr"] += 1
+                                cfn += 1
+                                errtypefreqs[xtype]["cfn"] += 1
                             xspanlast = xspan
                             xtok, ytok = None, None
                             xtok = next(x)
@@ -2031,6 +2034,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             # Extraneous GC annotation before next iEC annotation
                             fp += 1
                             errtypefreqs[ytype]["fp"] += 1
+                            cfp += 1
+                            errtypefreqs[ytype]["cfp"] += 1
                             if ANALYSIS:
                                 analysisblob.append("\t          FP: {}".format(ytype))
                             ytok = None
@@ -2041,6 +2046,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             # iEC annotation with no corresponding GC annotation
                             fn += 1
                             errtypefreqs[xtype]["fn"] += 1
+                            cfn += 1
+                            errtypefreqs[xtype]["cfn"] += 1
                             if ANALYSIS:
                                 analysisblob.append("\t          FN: {}".format(xtype))
                             xspanlast = xspan
@@ -2060,7 +2067,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     analysisblob.append("\tDumping rest of GC errors:")
                 while ytok is not None:
                     # This is a remaining GC annotation: false positive
-                    if ytok.code in GCSKIPCODES or ytok.code.endswith("/w"):
+                    if ytok.code in GCSKIPCODES:
                         # Skip these errors, shouldn't be a part of the results.
                         if ANALYSIS:
                             analysisblob.append(
@@ -2071,6 +2078,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     fp += 1
                     ytype = GCtoIEC[ytok.code][0] if ytok.code in GCtoIEC else ytok.code
                     errtypefreqs[ytype]["fp"] += 1
+                    cfp += 1
+                    errtypefreqs[ytype]["cfp"] += 1
                     if ANALYSIS:
                         analysisblob.append("\t          FP: {}".format(ytype))
                     ytok = next(y, None)
@@ -2099,16 +2108,39 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                             analysisblob.append("\t          FN: {}".format(xtype))
                         fn += 1
                         errtypefreqs[xtype]["fn"] += 1
+                        cfn += 1
+                        errtypefreqs[xtype]["cfn"] += 1
                         xspanlast = xspan
                         xtok = next(x, None)
 
-                return tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span
+                return (
+                    tp,
+                    fp,
+                    fn,
+                    right_corr,
+                    wrong_corr,
+                    ctp,
+                    cfp,
+                    cfn,
+                    right_span,
+                    wrong_span,
+                )
 
             assert isinstance(s, AnnotatedSentence)
-            tp, fp, fn, right_corr, wrong_corr, right_span, wrong_span = token_results(
-                s.annotations, errors
-            )
+            (
+                tp,
+                fp,
+                fn,
+                right_corr,
+                wrong_corr,
+                ctp,
+                cfp,
+                cfn,
+                right_span,
+                wrong_span,
+            ) = token_results(s.annotations, errors)
             tn = len(tokens) - tp - fp - fn
+            ctn = len(tokens) - ctp - cfp - cfn
             # Collect statistics into the stats list, to be returned
             # to the parent process
             if stats is not None:
@@ -2124,6 +2156,10 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                         fn,
                         right_corr,
                         wrong_corr,
+                        ctp,
+                        ctn,
+                        cfp,
+                        cfn,
                         right_span,
                         wrong_span,
                     )
@@ -2153,8 +2189,20 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
     )
 
 
+def initialize_cats(catfile: str) -> None:
+    first = True
+    with open(catfile, "r") as cfile:
+        for row in cfile:
+            split = row.split("\t")
+            if first:
+                first = False
+            else:
+                s0, s1, s2 = [s.strip() for s in split[0:3]]
+                SUPERCATEGORIES[s0][s1].append(s2)
+
+
 def main() -> None:
-    """ Main program """
+    """Main program"""
     # Parse the command line arguments
     args = parser.parse_args()
 
@@ -2188,12 +2236,15 @@ def main() -> None:
     path: str = args.path
     # When running measurements only, we use _TEST_PATH as the default,
     # otherwise _DEV_PATH
+
+    initialize_cats(args.catfile)
+
     if path is None:
         path = _TEST_PATH if args.measure else _DEV_PATH
 
     def gen_files() -> Iterable[Tuple[str, str]]:
-        """ Generate tuples with the file paths and categories
-            to be processed by the multiprocessing pool """
+        """Generate tuples with the file paths and categories
+        to be processed by the multiprocessing pool"""
         count = 0
         it: Iterable[str]
         if args.randomize and max_count > 0:
@@ -2203,19 +2254,17 @@ def main() -> None:
         else:
             it = glob.iglob(path, recursive=True)
         for fpath in it:
-            # Find out which category the file belongs to by
+            # Find out which genre the file belongs to by
             # inference from the file name
-            for category in CATEGORIES:
-                if category in fpath:
+            for genre in GENRES:
+                if genre in fpath:
                     break
             else:
-                assert (
-                    False
-                ), f"File path does not contain a recognized category: {fpath}"
-            # Add the file to the statistics under its category
-            stats.add_file(category)
+                assert False, f"File path does not contain a recognized genre: {fpath}"
+            # Add the file to the statistics under its genre
+            stats.add_file(genre)
             # Yield the file information to the multiprocessing pool
-            yield fpath, category
+            yield fpath, genre
             count += 1
             # If there is a limit on the number of processed files,
             # and we're done, stop the generator

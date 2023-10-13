@@ -71,6 +71,21 @@ coverage.xml
 # Measurement results
 eval*.out
 test*.out
+eval/results/
+
+# Extra test files
+test/extras/
+test/spantest.py
+
+# Error analysis
+eval/examples_iEC/
+eval/examples_GC/
+
+# Extra resources
+src/reynir_correct/resources/*.csv
+src/reynir_correct/resources/*.py
+src/reynir_correct/resources/*.txt
+src/reynir_correct/resources/*/*.csv
 
 # Symlink to iceErrorCorpus for evaluation
 eval/iceErrorCorpus
@@ -98,6 +113,7 @@ target/
 .venv
 env/
 venv/
+venv
 ENV/
 env.bak/
 venv.bak/

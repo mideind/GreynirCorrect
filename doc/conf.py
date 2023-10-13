@@ -47,9 +47,9 @@ master_doc = "index"
 
 # General information about the project.
 year = datetime.now().year
-project = u"GreynirCorrect"
-copyright = u"{0} Miðeind ehf".format(year)
-author = u"Miðeind ehf."
+project = "GreynirCorrect"
+copyright = "{0} Miðeind ehf".format(year)
+author = "Miðeind ehf."
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -116,7 +116,7 @@ html_theme_options = {
 html_static_path = ["_static"]
 
 # Set the favicon
-html_favicon = "_static/greynir-favicon-32x32.png"
+html_favicon = "_static/yfirlestur-favicon-32x32.png"
 
 # -- Options for HTMLHelp output ------------------------------------------
 
@@ -142,8 +142,11 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (
-        master_doc, "Greynir.tex", "GreynirCorrect Documentation",
-        u"Miðeind ehf.", "manual"
+        master_doc,
+        "Greynir.tex",
+        "GreynirCorrect Documentation",
+        "Miðeind ehf.",
+        "manual",
     )
 ]
 
@@ -152,11 +155,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (
-        master_doc, "greynir", "GreynirCorrect Documentation", [author], 1
-    )
-]
+man_pages = [(master_doc, "greynir", "GreynirCorrect Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -175,4 +174,3 @@ texinfo_documents = [
         "NLP",
     )
 ]
-

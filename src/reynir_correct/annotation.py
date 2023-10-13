@@ -4,7 +4,7 @@
 
     Annotation class definition
 
-    Copyright (C) 2021 Miðeind ehf.
+    Copyright (C) 2022 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -34,12 +34,12 @@
 
 """
 
-from typing import Optional
+from typing import List, Optional
 
 
 class Annotation:
 
-    """ An annotation of a span of a token list for a sentence """
+    """An annotation of a span of a token list for a sentence"""
 
     def __init__(
         self,
@@ -49,8 +49,10 @@ class Annotation:
         code: str,
         text: str,
         detail: Optional[str] = None,
+        references: List[str] = [],
         original: Optional[str] = None,
         suggest: Optional[str] = None,
+        suggestlist: Optional[List[str]] = None,
         is_warning: bool = False,
     ) -> None:
         assert isinstance(start, int)
@@ -74,61 +76,79 @@ class Annotation:
         # it before displaying it.
         self._suggest = suggest
         self._original = original
+        self._suggestlist = suggestlist
+        self._references = references
 
     def __str__(self) -> str:
-        """ Return a string representation of this annotation """
+        """Return a string representation of this annotation"""
         if self._original and self._suggest:
             orig_sugg = f" | '{self._original}' -> '{self._suggest}'"
         else:
             orig_sugg = ""
-        return "{0:03}-{1:03}: {2:6} {3}{4}".format(
-            self._start, self._end, self._code, self._text, orig_sugg,
+        return "{0:03}-{1:03}: {2:6} {3}{4} | {5}".format(
+            self._start,
+            self._end,
+            self._code,
+            self._text,
+            orig_sugg,
+            self._suggestlist,
         )
 
     @property
     def start(self) -> int:
-        """ The index of the first token to which the annotation applies """
+        """The index of the first token to which the annotation applies"""
         return self._start
 
     @property
     def end(self) -> int:
-        """ The index of the last token to which the annotation applies """
+        """The index of the last token to which the annotation applies"""
         return self._end
 
     @property
     def code(self) -> str:
-        """ A code for the annotation type, usually an error or warning code """
+        """A code for the annotation type, usually an error or warning code"""
         # If the code ends with "/w", it is a warning
         return self._code
 
     @property
     def is_warning(self) -> bool:
-        """ Return True if this annotation is a warning only """
+        """Return True if this annotation is a warning only"""
         return self._code.endswith("/w")
 
     @property
     def is_error(self) -> bool:
-        """ Return True if this annotation is an error """
+        """Return True if this annotation is an error"""
         return not self._code.endswith("/w")
 
     @property
     def text(self) -> str:
-        """ A description of the annotation """
+        """A description of the annotation"""
         return self._text
 
     @property
     def detail(self) -> Optional[str]:
-        """ A detailed description of the annotation, possibly including
-            links within <a>...</a> tags """
+        """A detailed description of the annotation, possibly including
+        links within <a>...</a> tags"""
         return self._detail
 
     @property
     def original(self) -> Optional[str]:
-        """ The original text for the error """
+        """The original text for the error"""
         return self._original
 
     @property
     def suggest(self) -> Optional[str]:
-        """ A suggested correction for the token span, as a text string
-            containing tokens delimited by spaces """
+        """A suggested correction for the token span, as a text string
+        containing tokens delimited by spaces"""
         return self._suggest
+
+    @property
+    def suggestlist(self) -> Optional[List[str]]:
+        """A list of suggested corrections for the token span, as a list
+        of text strings containing tokens delimited by spaces"""
+        return self._suggestlist
+
+    @property
+    def references(self) -> List[str]:
+        """A list of references to the Icelandic Standards"""
+        return self._references

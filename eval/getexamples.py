@@ -5,7 +5,7 @@
 
     Collection of error category examples
 
-    Copyright (C) 2021 Miðeind ehf.
+    Copyright (C) 2022 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -41,6 +41,14 @@
     $ cd GreynirCorrect/eval
     $ ln -s ../../iceErrorCorpus/ .
 
+    To run the program:
+
+    $ python getexamples.py
+
+    To only get examples from iceErrorCorpus (not GreynirCorrect):
+
+    $ python getexamples.py -r
+
 """
 
 from collections import defaultdict
@@ -50,15 +58,16 @@ import argparse
 
 from typing import (
     List,
-    Optional, TYPE_CHECKING,
+    Optional,
+    TYPE_CHECKING,
     Union,
     Tuple,
     Iterable,
     cast,
     DefaultDict,
 )
-import reynir_correct as gc
-from reynir_correct import Annotation, AnnotatedSentence
+from reynir_correct.annotation import Annotation
+from reynir_correct.checker import AnnotatedSentence, GreynirCorrect, Settings, check
 from tokenizer import detokenize, Tok, TOK
 
 if TYPE_CHECKING:
@@ -75,12 +84,13 @@ _DEV_PATH = "iceErrorCorpus/data/**/*.xml"
 IECCATS: DefaultDict[str, List[str]] = defaultdict(list)
 GCCATS: DefaultDict[str, List[str]] = defaultdict(list)
 
+# GreynirCorrect instance
+settings = Settings()
+rc = GreynirCorrect(settings=settings)
 # Define the command line arguments
 
 parser = argparse.ArgumentParser(
-    description=(
-        "This program collects examples of each error category"
-    )
+    description=("This program collects examples of each error category")
 )
 
 parser.add_argument(
@@ -92,14 +102,14 @@ parser.add_argument(
 
 
 def element_text(element: ET.Element) -> str:
-    """ Return the text of the given element,
-        including all its subelements, if any """
+    """Return the text of the given element,
+    including all its subelements, if any"""
     return "".join(element.itertext())
 
 
 def correct_spaces(tokens: Iterable[Tuple[str, str]]) -> str:
-    """ Returns a string with a reasonably correct concatenation
-        of the tokens, where each token is a (tag, text) tuple. """
+    """Returns a string with a reasonably correct concatenation
+    of the tokens, where each token is a (tag, text) tuple."""
     return detokenize(
         Tok(TOK.PUNCTUATION if tag == "c" else TOK.WORD, txt, None)
         for tag, txt in tokens
@@ -108,7 +118,7 @@ def correct_spaces(tokens: Iterable[Tuple[str, str]]) -> str:
 
 def get_examples(fpath: str) -> None:
 
-    """ Process a single error corpus file in TEI XML format """
+    """Process a single error corpus file in TEI XML format"""
 
     # Set up XML namespace stuff
     NS = "http://www.tei-c.org/ns/1.0"
@@ -121,8 +131,8 @@ def get_examples(fpath: str) -> None:
     # swoop at the end (after acquiring the output lock)
     buffer: List[str] = []
 
-    def bprint(s: str):
-        """ Buffered print: accumulate output for printing at the end """
+    def bprint(s: str) -> None:
+        """Buffered print: accumulate output for printing at the end"""
         buffer.append(s)
 
     try:
@@ -207,8 +217,7 @@ def get_examples(fpath: str) -> None:
             # Pass it to GreynirCorrect
             if ONLYREF:
                 continue
-
-            pg = [list(p) for p in gc.check(text)]
+            pg = [list(p) for p in check(text, rc=rc)]
             s: Optional[AnnotatedSentence] = None
             if len(pg) >= 1 and len(pg[0]) >= 1:
                 assert isinstance(pg[0][0], AnnotatedSentence)
@@ -221,15 +230,9 @@ def get_examples(fpath: str) -> None:
                     errcode = errcode.replace("/", "_")
                 GCCATS[errcode].append(
                     "{}\t{}-{}\t{}\t{}\n".format(
-                        text,
-                        ann.start,
-                        ann.end,
-                        ann.text,
-                        ann.suggest
+                        text, ann.start, ann.end, ann.text, ann.suggest
                     )
-
-                )    
-
+                )
 
     except ET.ParseError:
         # Already handled the exception: exit as gracefully as possible
@@ -237,21 +240,20 @@ def get_examples(fpath: str) -> None:
 
 
 if __name__ == "__main__":
-    
+
     # Parse the command line arguments
     args = parser.parse_args()
 
     global ONLYREF
     ONLYREF = args.ref
 
-
     it = glob.iglob(_DEV_PATH, recursive=True)
     j = 0
     for fpath in it:
-        if j%10 == 0:
+        if j % 10 == 0:
             print("{} files done".format(j))
         get_examples(fpath)
-        j+=1
+        j += 1
 
     for xtype in IECCATS:
         with open("examples_iEC/" + xtype + ".txt", "w") as myfile:

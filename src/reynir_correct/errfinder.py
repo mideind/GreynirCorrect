@@ -4,7 +4,7 @@
 
     Error finder for parse trees
 
-    Copyright (C) 2021 Miðeind ehf.
+    Copyright (C) 2022 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -38,40 +38,44 @@
 
 """
 
-from typing import (
-    Mapping,
-    Tuple,
-    List,
-    Dict,
-    Any,
-    Callable,
-    Union,
-    Optional,
-    cast,
-)
-from typing_extensions import Protocol
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union, cast
+from typing_extensions import Protocol, TypedDict
 
 import re
 
-from reynir import correct_spaces, Tok, TOK, _Sentence
-from reynir.fastparser import ParseForestNavigator, Node
+from reynir import TOK, Sentence, Tok, correct_spaces
 from reynir.binparser import BIN_Terminal, BIN_Token
+from reynir.fastparser import Node, ParseForestNavigator
 from reynir.settings import VerbSubjects
 from reynir.simpletree import SimpleTree
+from reynir.verbframe import VerbErrors, VerbFrame
 
 from .annotation import Annotation
 from .errtokenizer import emulate_case
+from .pattern import PatternMatcher
+
 
 # Typing stuff
-AnnotationDict = Dict[str, Union[str, int]]
+class AnnotationDict(TypedDict):
+    """The annotation for a sentence"""
+
+    text: str
+    detail: str
+    start: int
+    end: int
+    original: Optional[str]
+    suggest: Optional[str]
+
+
 AnnotationTuple2 = Tuple[str, str]
 AnnotationTuple4 = Tuple[str, int, int, str]
-AnnotationReturn = Union[str, AnnotationTuple2, AnnotationTuple4, AnnotationDict]
+AnnotationTuple6 = Tuple[str, str, int, int, str, str]
+AnnotationReturn = Union[None, str, AnnotationTuple2, AnnotationTuple4, AnnotationTuple6, AnnotationDict]
 AnnotationFunc = Callable[[str, str, Node], AnnotationReturn]
 
 
 class CastFunction(Protocol):
-    """ Type annotation protocol for a case casting function """
+    """Type annotation protocol for a case casting function"""
 
     def fget(self, tree: SimpleTree) -> str:
         ...
@@ -132,15 +136,15 @@ ORDINALS = {
 
 class ErrorDetectionToken(BIN_Token):
 
-    """ A subclass of BIN_Token that adds error detection behavior
-        to the base class """
+    """A subclass of BIN_Token that adds error detection behavior
+    to the base class"""
 
     _VERB_ERROR_SUBJECTS = VerbSubjects.VERBS_ERRORS
 
     def __init__(self, t: Tok, original_index: int) -> None:
-        """ original_index is the index of this token in
-            the original token list, as submitted to the parser,
-            including not-understood tokens such as quotation marks """
+        """original_index is the index of this token in
+        the original token list, as submitted to the parser,
+        including not-understood tokens such as quotation marks"""
         super().__init__(t, original_index)
         # Store the capitalization state, carried over from CorrectToken instances.
         # The state is one of (None, "sentence_start", "after_ordinal", "in_sentence").
@@ -150,23 +154,23 @@ class ErrorDetectionToken(BIN_Token):
 
     @property
     def cap_sentence_start(self) -> bool:
-        """ True if this token appears at sentence start """
+        """True if this token appears at sentence start"""
         return self._cap == "sentence_start"
 
     @property
     def cap_after_ordinal(self) -> bool:
-        """ True if this token appears after an ordinal at sentence start """
+        """True if this token appears after an ordinal at sentence start"""
         return self._cap == "after_ordinal"
 
     @property
     def cap_in_sentence(self) -> bool:
-        """ True if this token appears within a sentence """
+        """True if this token appears within a sentence"""
         return self._cap == "in_sentence"
 
     @classmethod
     def verb_is_strictly_impersonal(cls, verb: str, form: str) -> bool:
-        """ Return True if the given verb should not be allowed to match
-            with a normal (non _op) verb terminal """
+        """Return True if the given verb should not be allowed to match
+        with a normal (non _op) verb terminal"""
         if "OP" in form and not VerbSubjects.is_strictly_impersonal(verb):
             # We have a normal terminal, but an impersonal verb form. However,
             # that verb is not marked with an error correction from nominative
@@ -182,7 +186,7 @@ class ErrorDetectionToken(BIN_Token):
 
     @classmethod
     def verb_cannot_be_impersonal(cls, verb: str, form: str) -> bool:
-        """ Return True if this verb cannot match an so_xxx_op terminal. """
+        """Return True if this verb cannot match an so_xxx_op terminal"""
         # We have a relaxed condition here because we want to catch
         # verbs being used impersonally that shouldn't be. So we don't
         # check for "OP" (impersonal) in the form, but we're not so relaxed
@@ -199,19 +203,24 @@ class ErrorDetectionToken(BIN_Token):
 
     @classmethod
     def verb_subject_matches(cls, verb: str, subj: str) -> bool:
-        """ Returns True if the given subject type/case is allowed
-            for this verb or if it is an erroneous subject
-            which we can flag """
-        return subj in cls._VERB_SUBJECTS.get(
-            verb, set()
-        ) or subj in cls._VERB_ERROR_SUBJECTS.get(verb, dict())
+        """Returns True if the given subject type/case is allowed
+        for this verb or if it is an erroneous subject
+        which we can flag"""
+        return subj in cls._VERB_SUBJECTS.get(verb, set()) or subj in cls._VERB_ERROR_SUBJECTS.get(verb, dict())
+
+    @classmethod
+    def verb_matches_arguments(cls, key: str) -> bool:
+        """Return True if the given arguments are allowed for this verb
+        or if these are erroneous arguments which we can flag"""
+        # This function overrides BIN_Token.verb_matches_arguments()
+        return VerbFrame.matches_arguments(key) or VerbFrame.matches_error_arguments(key)
 
 
 class ErrorFinder(ParseForestNavigator):
 
-    """ Utility class to find nonterminals in parse trees that are
-        tagged as errors in the grammar, and terminals matching
-        verb forms marked as errors """
+    """Utility class to find nonterminals in parse trees that are
+    tagged as errors in the grammar, and terminals matching
+    verb forms marked as errors"""
 
     _CAST_FUNCTIONS: Dict[str, CastFunction] = {
         "nf": cast(CastFunction, SimpleTree.nominative_np),
@@ -223,12 +232,11 @@ class ErrorFinder(ParseForestNavigator):
     _NON_OP_VERB_FORMS: Mapping[str, Tuple[str, str]] = {
         "lýst": (
             "líst",
-            "'Lýst' á sennilega að vera 'líst', þ.e. sögnin 'að líta(st)' "
-            "í stað sagnarinnar 'að ljósta'.",
+            "'Lýst' á sennilega að vera 'líst', þ.e. sögnin 'að líta(st)' " "í stað sagnarinnar 'að ljósta'.",
         ),
     }
 
-    def __init__(self, ann: List[Annotation], sent: _Sentence) -> None:
+    def __init__(self, ann: List[Annotation], sent: Sentence) -> None:
         super().__init__(visit_all=True)
         # Annotation list
         self._ann = ann
@@ -240,38 +248,38 @@ class ErrorFinder(ParseForestNavigator):
         self._terminal_nodes = sent.terminal_nodes
 
     def run(self) -> Any:
-        """ Start navigating the deep tree structure of the sentence """
+        """Start navigating the deep tree structure of the sentence"""
         return super().go(self._sent.deep_tree)
 
     @staticmethod
-    def _node_span(node: Node) -> Tuple[int, int]:
-        """ Return the start and end indices of the tokens
-            spanned by the given node """
+    def node_span(node: Node) -> Tuple[int, int]:
+        """Return the start and end indices of the tokens
+        spanned by the given node"""
         first_token, last_token = node.token_span
         return (first_token.index, last_token.index)
 
     def cast_to_case(self, case: str, tree: SimpleTree) -> str:
-        """ Return the contents of a noun phrase node
-            inflected in the given case """
+        """Return the contents of a noun phrase node
+        inflected in the given case"""
         return self._CAST_FUNCTIONS[case].fget(tree)
 
     def _simple_tree(self, node: Node) -> Optional[SimpleTree]:
-        """ Return a SimpleTree instance spanning the deep tree
-            of which node is the root """
+        """Return a SimpleTree instance spanning the deep tree
+        of which node is the root"""
         if node is None:
             return None
-        first, last = self._node_span(node)
+        first, last = self.node_span(node)
         toklist = self._tokens[first : last + 1]
         return SimpleTree.from_deep_tree(node, toklist, first_token_index=first)
 
-    def _node_text(self, node: Node, original_case: bool = False) -> str:
-        """ Return the text within the span of the node """
+    def node_text(self, node: Node, original_case: bool = False) -> str:
+        """Return the text within the span of the node"""
 
         def text(t: Tok) -> str:
-            """ If the token t is a word token, return a lower case
-                version of its text, unless we have a reason to keep
-                the original case, i.e. if it is a lemma that is upper case
-                in BÍN """
+            """If the token t is a word token, return a lower case
+            version of its text, unless we have a reason to keep
+            the original case, i.e. if it is a lemma that is upper case
+            in BÍN"""
             if t.kind != TOK.WORD:
                 # Not a word token: keep the original text
                 return t.txt
@@ -285,76 +293,100 @@ class ErrorFinder(ParseForestNavigator):
             # No uppercase lemma in BÍN: return a lower case copy
             return t.txt.lower()
 
-        first, last = self._node_span(node)
+        first, last = self.node_span(node)
         text_func: Callable[[Tok], str] = (lambda t: t.txt) if original_case else text
-        return correct_spaces(
-            " ".join(text_func(t) for t in self._tokens[first : last + 1] if t.txt)
-        )
+        return correct_spaces(" ".join(text_func(t) for t in self._tokens[first : last + 1] if t.txt))
 
     # Functions used to explain grammar errors associated with
     # nonterminals with error tags in the grammar
 
     def AðvörunHeldur(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'heldur' er ofaukið
-        # !!! TODO: Add suggestion here by replacing
-        # !!! 'heldur en' with 'en'
-        return dict(
+        orig_txt = self.node_text(node, original_case=True)
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text="'{0}' er sennilega ofaukið".format(txt),
-            detail="Yfirleitt nægir að nota 'en' í þessu samhengi.",
-            original=txt,
+            detail="Yfirleitt nægir að nota 'en' í þessu samhengi, 'heldur en' telst frekar óformlegt. "
+            "Það á þó stundum rétt hjá sér í löngum setningum ef langt er frá upphaflega samanburðarliðnum til seinni "
+            "samanburðarliðarins til að auka skýrleika textans.",
+            original=orig_txt,
+            start=start,
+            end=end,
+            suggest="",  # Word should be deleted
         )
 
     def AðvörunSíðan(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'fyrir tveimur mánuðum síðan'
-        return dict(
+        orig_txt = self.node_text(node, original_case=True)
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text="'síðan' er sennilega ofaukið",
-            detail=(
-                "Yfirleitt er óþarfi að nota orðið 'síðan' í samhengi á borð við "
-                "'fyrir tveimur dögum'"
-            ),
-            original="síðan",
+            detail=("Yfirleitt er óþarfi að nota orðið 'síðan' í samhengi á borð við " "'fyrir tveimur dögum (síðan)'"),
+            start=start,
+            end=end,
+            original=emulate_case("síðan", template=orig_txt),
+            suggest="",
         )
 
     def VillaVístAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'víst að' á sennilega að vera 'fyrst að'
-        return dict(
-            text="'{0}' á sennilega að vera 'fyrst að'".format(txt),
-            detail=(
-                "Rétt er að nota 'fyrst að' fremur en 'víst að' "
-                " til að tengja saman atburð og forsendu."
-            ),
-            original="víst að",
-            suggest="fyrst að",
+        ch0, _ = node.enum_child_nodes()
+        start, end = self.node_span(node)
+        orig = self.node_text(node)
+        if ch0:
+            start, end = self.node_span(ch0)
+            orig = self.node_text(ch0, original_case=True)
+        return AnnotationDict(
+            text="'{0}' á sennilega að vera 'fyrst'".format(orig),
+            detail=("Rétt er að nota 'fyrst að' fremur en 'víst að' " " til að tengja saman atburð og forsendu."),
+            start=start,
+            end=end,
+            original=orig,
+            suggest=emulate_case("fyrst", template=orig),
         )
 
     def VillaFráÞvíAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
-        # 'allt frá því' á sennilega að vera 'allt frá því að'
-        return dict(
+        # '(allt) frá því' á sennilega að vera '(allt) frá því að'
+        children = list(node.enum_child_nodes())
+        start, end = self.node_span(node)
+        orig_txt = self.node_text(node)
+        ch = children[-1]
+        if ch:
+            start, end = self.node_span(ch)
+            orig_txt = self.node_text(ch, original_case=True)
+        return AnnotationDict(
             text="'{0}' á sennilega að vera '{0} að'".format(txt),
             detail=(
-                "Rétt er að nota samtenginguna 'að' í þessu samhengi, "
-                "til dæmis 'allt frá því að Anna hóf námið'."
+                "Rétt er að nota samtenginguna 'að' í þessu samhengi, " "til dæmis 'allt frá því að Anna hóf námið'."
             ),
-            original=txt,
-            suggest="{0} að".format(txt),
+            start=start,
+            end=end,
+            original=orig_txt,
+            suggest=f"{orig_txt} að",
         )
 
     def VillaAnnaðhvort(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # Í stað 'annaðhvort' á sennilega að standa 'annað hvort'
-        return dict(
+        orig_txt = self.node_text(node, original_case=True)
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text="Í stað '{0}' á sennilega að standa 'annað hvort'".format(txt),
             detail=(
                 "Rita á 'annað hvort' þegar um er að ræða fornöfn, til dæmis "
-                "'annað hvort systkinanna'. Rita á 'annaðhvort' í samtengingu, "
-                "til dæmis 'Annaðhvort fer ég út eða þú'."
+                "'annað hvort systkinanna'. Rita á 'annaðhvort' í samtengingunni "
+                "'annaðhvort eða', til dæmis 'Annaðhvort fer ég út eða þú'."
             ),
-            original=txt,
-            suggest="annað hvort",
+            start=start,
+            end=end,
+            original=orig_txt,
+            suggest=emulate_case("annað hvort", template=orig_txt),
         )
 
     def VillaAnnaðHvort(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # Í stað 'annað hvort' á sennilega að standa 'annaðhvort'
-        return dict(
+        orig_txt = self.node_text(node, original_case=True)
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text="Í stað '{0}' á sennilega að standa 'annaðhvort'".format(txt),
             detail=(
                 "Rita á 'annaðhvort' í samtengingu, til dæmis "
@@ -362,19 +394,25 @@ class ErrorFinder(ParseForestNavigator):
                 "Rita á 'annað hvort' í tveimur orðum þegar um er að ræða fornöfn, "
                 "til dæmis 'annað hvort systkinanna'."
             ),
-            original=txt,
-            suggest="annaðhvort",
+            start=start,
+            end=end,
+            original=orig_txt,
+            suggest=emulate_case("annaðhvort", template=orig_txt),
         )
 
     def VillaTvípunkturFs(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # Tvípunktur milli forsetningar og nafnliðar
+        _, ch1, _ = node.enum_child_nodes()
+        start, end = self.node_span(node)
         correct = re.sub(r"\s*:", "", txt)
-        return dict(
-            text="Tvípunktur er óþarfi í '{0}'".format(txt),
-            detail=(
-                "Óþarft er að hafa tvípunkt milli forsetningar og nafnliðarins "
-                "sem hún stýrir falli á."
-            ),
+        if ch1:
+            start, end = self.node_span(ch1)
+            correct = ""
+        return AnnotationDict(
+            text="Tvípunktur er óþarfi",
+            detail=("Óþarft er að hafa tvípunkt milli forsetningar og nafnliðarins " "sem hún stýrir falli á."),
+            start=start,
+            end=end,
             original=txt,
             suggest=correct,
         )
@@ -383,9 +421,12 @@ class ErrorFinder(ParseForestNavigator):
         # Í stað fornafnsins 'annarra' í eignarfalli fleirtölu er ritað 'annara'
         d = {"annara": ("annar", "annarra"), "nokkura": ("nokkur", "nokkurra")}
         lemma, correct = d[txt.lower()]
-        return dict(
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text=f"Á líklega að vera '{correct}'",
             detail=f"Fornafnið '{lemma}' er ritað '{correct}' í eignarfalli fleirtölu.",
+            start=start,
+            end=end,
             original=txt,
             suggest=correct,
         )
@@ -394,10 +435,12 @@ class ErrorFinder(ParseForestNavigator):
         # Í stað fornafnsins 'annarri' í þágufalli eintölu er ritað 'annari'
         d = {"annari": ("annar", "annarri"), "nokkuri": ("nokkur", "nokkurri")}
         lemma, correct = d[txt.lower()]
-        return dict(
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text=f"Á líklega að vera '{correct}'",
-            detail=f"Fornafnið '{lemma}' er ritað '{correct}' "
-                "í þágufalli, eintölu, kvenkyni.",
+            detail=f"Fornafnið '{lemma}' er ritað '{correct}' " "í þágufalli, eintölu, kvenkyni.",
+            start=start,
+            end=end,
             original=txt,
             suggest=correct,
         )
@@ -406,58 +449,76 @@ class ErrorFinder(ParseForestNavigator):
         # Í stað fornafnsins 'annarrar' í þágufalli eintölu er ritað 'annarar'
         d = {"annarar": ("annar", "annarrar"), "nokkurar": ("nokkur", "nokkurrar")}
         lemma, correct = d[txt.lower()]
-        return dict(
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text=f"Á líklega að vera '{correct}'",
-            detail=f"Fornafnið '{lemma}' er ritað '{correct}' "
-                "í eignarfalli, eintölu, kvenkyni.",
+            detail=f"Fornafnið '{lemma}' er ritað '{correct}' " "í eignarfalli, eintölu, kvenkyni.",
+            start=start,
+            end=end,
             original=txt,
             suggest=correct,
         )
 
-    def singular_error(
-        self, txt: str, variants: str, node: Node, detail: str
-    ) -> AnnotationReturn:
-        """ Annotate a mismatch between singular and plural
-            in subject vs. verb """
+    def singular_error(self, txt: str, variants: str, node: Node, detail: str) -> AnnotationReturn:
+        """Annotate a mismatch between singular and plural
+        in subject vs. verb"""
         tnode = self._terminal_nodes[node.start]
         # Find the enclosing inflected phrase
-        p = tnode.enclosing_tag("IP")
-        verb = None
-        if p is not None:
+        ip = tnode.enclosing_tag("IP")
+        vp: Optional[SimpleTree] = None
+        if ip is not None:
             try:
                 # Found it: try to locate the main verb
-                verb = p.VP.VP
+                vp = ip.VP.VP
             except AttributeError:
                 try:
-                    verb = p.VP
+                    vp = ip.VP
                 except AttributeError:
                     pass
-        if verb is not None:
-            start, end = verb.span
-            return dict(
-                text=(
-                    "Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(
-                        verb.tidy_text
-                    )
-                ),
+        so = None if vp is None else vp.first_match("so_ft")
+
+        if so is not None:
+            start, end = so.span
+            vars = set(so.all_variants) - {"ft"}
+            vars.add("et")
+            suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, so.cat, vars)
+            return AnnotationDict(
+                text=("Sögnin '{0}' á sennilega að vera í eintölu, ekki fleirtölu".format(so.tidy_text)),
                 detail=detail,
                 start=start,
                 end=end,
-                original=verb.tidy_text,
+                original=so.tidy_text,
+                suggest=suggest,
             )
-        return (
-            "Sögn sem á við '{0}' á sennilega að vera "
-            "í eintölu, ekki fleirtölu".format(txt)
-        )
+        return f"Sögn sem á við '{txt}' á sennilega að vera í eintölu, ekki fleirtölu"
 
     def VillaFjöldiHluti(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
         # Sögn sem á við 'fjöldi Evrópuríkja' á að vera í eintölu
-        return self.singular_error(
-            txt,
-            variants,
-            node,
-            "Nafnliðurinn '{0}' er í eintölu "
-            "og með honum á því að vera sögn í eintölu.".format(txt),
+        # 'mikill:lo'_et_kk/fall? FjöldiHluti_et_kk/fall EfLiður_ft/kyn
+        tnode = self._terminal_nodes[node.start]
+        # Find the closing inflected phrase
+        ip = tnode.enclosing_tag("IP")
+        if ip is None:
+            return "Sögnin á sennilega að vera í eintölu eins og frumlagið"
+        verb = ip.first_match("so_ft")
+        if verb is None:
+            return "Sögnin á sennilega að vera í eintölu eins og frumlagið"
+        start, end = verb.span
+        children = list(node.enum_child_nodes())
+        _, ch1, ch2 = children
+        if ch1 is None or ch2 is None:
+            return "Sögnin á sennilega að vera í eintölu eins og frumlagið"
+        subjtext = self.node_text(ch1) + " " + self.node_text(ch2)
+        vars = set(verb.all_variants) - {"ft"}
+        vars.add("et")
+        suggestion = PatternMatcher.get_wordform(verb.text.lower(), verb.lemma, verb.cat, vars)
+        return AnnotationDict(
+            text=f"Sögnin '{verb.tidy_text}' á sennilega að vera í eintölu eins og frumlagið '{subjtext}'",
+            detail=f"Orðið '{self.node_text(ch1)}' stjórnar tölu sagnarinnar svo hún á að vera í eintölu.",
+            start=start,
+            end=end,
+            original=verb.tidy_text,
+            suggest=suggestion,
         )
 
     def VillaEinnAf(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
@@ -466,155 +527,220 @@ class ErrorFinder(ParseForestNavigator):
             txt,
             variants,
             node,
-            "Nafnliðurinn '{0}' er í eintölu "
-            "og með honum á því að vera sögn í eintölu.".format(txt),
+            f"Nafnliðurinn '{txt}' er í eintölu " f"og með honum á því að vera sögn í eintölu.",
         )
 
     def VillaEinkunn(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # Fornafn í einkunn er ekki í sama falli og nafnorð,
         # t.d. 'þessum mann'
-        wrong_pronoun = self._node_text(node, original_case=True)
+        wrong_pronoun = self.node_text(node, original_case=True)
         correct_case = variants.split("_")[0]
         pronoun_node = next(node.enum_child_nodes())
         assert pronoun_node is not None
         p = self._simple_tree(pronoun_node)
         assert p is not None
         correct_pronoun = self.cast_to_case(correct_case, p)
-        return dict(
-            text="'{0}' á sennilega að vera '{1}'".format(
-                wrong_pronoun, correct_pronoun
-            ),
+        start, end = self.node_span(pronoun_node)
+        return AnnotationDict(
+            text="'{0}' á sennilega að vera '{1}'".format(wrong_pronoun, correct_pronoun),
             detail=(
                 "Fornafnið '{0}' á að vera í {1}falli, eins og "
-                "nafnliðurinn sem fylgir á eftir".format(
-                    wrong_pronoun, CASE_NAMES[correct_case]
-                )
+                "nafnliðurinn sem fylgir á eftir".format(wrong_pronoun, CASE_NAMES[correct_case])
             ),
+            start=start,
+            end=end,
             original=wrong_pronoun,
             suggest=correct_pronoun,
         )
 
-    def AðvörunSem(self, txt: str, variants: str, node: Node) -> AnnotationDict:
+    def AðvörunSemOg(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'sem' er sennilega ofaukið
-        return dict(
-            text="'{0}' er að öllum líkindum ofaukið".format(txt),
-            detail=(
-                "Oft fer betur á að rita 'og', 'og einnig' eða 'og jafnframt' "
-                " í stað 'sem og'."
-            ),
+        ch1, ch2 = self._terminal_nodes[node.start : node.end]
+        start, _ = ch1.span
+        _, end = ch2.span
+        return AnnotationDict(
+            text="'{0}' er að öllum líkindum ofaukið".format(ch1.text),
+            detail=("Oft fer betur á að rita 'og', 'og einnig', 'og jafnframt' " " eða 'og auk þess' í stað 'sem og'."),
+            start=start,
+            end=end,
             original=txt,
-            suggest="",
+            suggest="og einnig",
         )
 
     def AðvörunAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # 'að' er sennilega ofaukið
-        return dict(
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text="'{0}' er að öllum líkindum ofaukið".format(txt),
-            detail=(
-                "'að' er yfirleitt ofaukið í samtengingum á "
-                "borð við 'áður en', 'síðan', 'enda þótt' o.s.frv."
-            ),
+            detail=("'að' er yfirleitt ofaukið í samtengingum á " "borð við 'áður en', 'síðan', 'enda þótt' o.s.frv."),
+            start=start,
+            end=end,
             original=txt,
-            suggest="",
+            suggest="",  # Token should be deleted
         )
 
     def AðvörunKomma(self, txt: str, variants: str, node: Node) -> AnnotationDict:
-        return dict(
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text="Komma er líklega óþörf",
             detail=(
                 "Kommu er yfirleitt ofaukið milli frumlags og umsagnar, "
                 "milli forsendu og meginsetningar "
                 "('áður en ég fer [,] má sækja tölvuna') o.s.frv."
             ),
+            start=start,
+            end=end,
             original=",",
-            suggest="",
+            suggest="",  # Token should be deleted
         )
 
     def VillaNé(self, txt: str, variants: str, node: Node) -> AnnotationDict:
-        return dict(text="'né' gæti átt að vera 'eða'", original="né", suggest="eða")
+        start, end = self.node_span(node)
+        return AnnotationDict(
+            text="'né' gæti átt að vera 'eða'",
+            detail="'né' er hluti af margorða samtengingunni 'hvorki né' en getur ekki "
+            "staðið ein og sér sem aðaltenging.",
+            original="né",
+            start=start,
+            end=end,
+            suggest="eða",
+        )
 
     def VillaÞóAð(self, txt: str, variants: str, node: Node) -> AnnotationDict:
         # [jafnvel] þó' á sennilega að vera '[jafnvel] þó að
-        suggestion = "{0} að".format(txt)
-        return dict(
+        suggestion = f"{txt} að"
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text="'{0}' á sennilega að vera '{1}' (eða 'þótt')".format(txt, suggestion),
             detail=(
-                "Réttara er að nota samtenginguna 'að' í samhengi á borð við "
-                "'jafnvel þó að von sé á sólskini'."
+                "Réttara er að nota samtenginguna 'að' í samhengi á borð við " "'jafnvel þó að von sé á sólskini'."
             ),
+            start=start,
+            end=end,
             original=txt,
             suggest=suggestion,
         )
 
-    def VillaÍTölu(self, txt: str, variants: str, node: Node) -> AnnotationDict:
+    def VillaÍTölu(self, txt: str, variants: str, node: Node) -> Optional[AnnotationDict]:
         # Sögn á að vera í sömu tölu og frumlag
         children = list(node.enum_child_nodes())
         ch0, ch1 = children
         assert ch0 is not None
-        subject = self._node_text(ch0)
-        # verb_phrase = self._node_text(children[1])
+        subject = self.node_text(ch0)
         number = "eintölu" if "et" in variants else "fleirtölu"
+        # Find the verb
+        ch1node = cast(Node, ch1)
+        vptree: Optional[SimpleTree] = self._simple_tree(ch1node)
+        so: Optional[SimpleTree] = None
+        if vptree is not None:
+            vp: Optional[SimpleTree] = vptree.first_match("VP >> so")
+            if vp is not None:
+                so = vp.first_match("so")
         # Annotate the verb phrase
         assert ch1 is not None
-        start, end = self._node_span(ch1)
-        return dict(
-            text="Sögn á sennilega að vera í {1} eins og frumlagið '{0}'".format(
-                subject, number
-            ),
+        start, end = self.node_span(ch1)
+        detail: str = f"Nafnliðurinn '{subject}' er í {number} og með honum á því að vera sögn í {number}."
+        origin = subject
+        if so is None:
+            return AnnotationDict(
+                text="Sögnin á sennilega að vera í {1} eins og frumlagið '{0}'".format(subject, number),
+                detail=detail,
+                start=start,
+                end=end,
+                original=origin,
+                suggest=None,  # No suggest value available
+            )
+        origin = so.tidy_text
+        sostart, soend = so.span
+        end = start + soend
+        start = start + sostart
+        v = set(so.all_variants)
+        if "et" in v:
+            v -= {"et"}
+            v.add("ft")
+        elif "ft" in v:
+            v -= {"ft"}
+            v.add("et")
+        suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, "so", v)
+        suggest = emulate_case(suggest, template=origin)
+        if suggest == origin or not suggest:
+            # Avoid meaningless annotation
+            return None
+        return AnnotationDict(
+            text="Sögnin á sennilega að vera í {1}, þ.e. '{0}'".format(suggest, number),
+            detail=detail,
             start=start,
             end=end,
+            original=origin,
+            suggest=suggest,
         )
 
-    def VillaFsMeðFallstjórn(
-        self, txt: str, variants: str, node: Node
-    ) -> AnnotationDict:
+    def VillaFsMeðFallstjórn(self, txt: str, variants: str, node: Node) -> Optional[AnnotationDict]:
         # Forsetningin z á að stýra x-falli en ekki y-falli
         tnode = self._terminal_nodes[node.start]
-        p = tnode.enclosing_tag("PP")
-        subj = None
-        if p is not None:
+        pp = tnode.enclosing_tag("PP")
+        obj = None
+        if pp is not None:
             try:
-                subj = p.NP
+                obj = pp.NP
             except AttributeError:
                 pass
-        if subj:
-            assert p is not None
-            preposition = p.P.text
-            suggestion = preposition + " " + self.cast_to_case(variants, subj)
+        if obj:
+            assert pp is not None
+            preposition = pp.P.text
+            suggestion = self.cast_to_case(variants, obj)
             correct_np = correct_spaces(suggestion)
-            if correct_np == p.text:
+            if correct_np == obj.text:
                 # Avoid suggesting the original text
-                return dict()
-            return dict(
+                return None
+            start, end = obj.span
+            return AnnotationDict(
                 text="Á sennilega að vera '{0}'".format(correct_np),
                 detail=(
                     "Forsetningin '{0}' stýrir {1}falli.".format(
-                        preposition.lower(), CASE_NAMES[variants],
+                        preposition.lower(),
+                        CASE_NAMES[variants],
                     )
                 ),
-                original=preposition,
+                start=start,
+                end=end,
+                original=obj.text,
                 suggest=suggestion,
             )
         # In this case, there's no suggested correction
-        return dict(
-            text="Forsetningin '{0}' stýrir {1}falli.".format(
-                txt.split()[0].lower(), CASE_NAMES[variants]
-            ),
-        )
+        # and it is likely a wrong annotation causing false positives
+        return None
+        # return dict(
+        #    text="Forsetningin '{0}' stýrir {1}falli.".format(
+        #        txt.split()[0].lower(), CASE_NAMES[variants]
+        #    ),
+        # )
 
-    def SvigaInnihaldNl(self, txt: str, variants: str, node: Node) -> AnnotationReturn:
-        """ Explanatory noun phrase in a different case than the noun phrase
-            that it explains """
+    def AðvörunSvigaInnihaldNl(self, txt: str, variants: str, node: Node) -> AnnotationDict:
+        """Explanatory noun phrase in a different case than the noun phrase
+        that it explains"""
         np = self._simple_tree(node)
         assert np is not None
-        return "Gæti átt að vera '{0}'".format(self.cast_to_case(variants, np))
+        suggest = self.cast_to_case(variants, np)
+        start, end = self.node_span(node)
+        return AnnotationDict(
+            text="Gæti átt að vera '{0}'".format(suggest),
+            detail="Fall liðarins stjórnast af öðru utan liðarins",
+            start=start,
+            end=end,
+            original=np.tidy_text,
+            suggest=suggest,
+        )
 
     def VillaSíðastLiðinn(self, txt: str, variants: str, node: Node) -> AnnotationDict:
-        """ 'síðast liðinn' written in two words instead of one """
+        """'síðast liðinn' written in two words instead of one"""
         correct = txt.replace(" ", "")
-        return dict(
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text="Venjulega er ritað '{0}'".format(correct),
             detail="'Síðastliðinn' er sjálfstætt og gilt lýsingarorð.",
+            start=start,
+            end=end,
             original=txt,
             suggest=correct,
         )
@@ -627,13 +753,16 @@ class ErrorFinder(ParseForestNavigator):
         suggestion = tnode.accusative_np
         correct_np = correct_spaces(suggestion)
         article = " með greini" if "gr" in tnode.all_variants else ""
-        return dict(
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text="Á sennilega að vera '{0}'".format(correct_np),
             detail=(
                 "Karlkyns orð sem enda á '-ir' í nefnifalli eintölu, "
                 "eins og '{0}', eru rituð "
                 "'{1}' í þolfalli{2}.".format(tnode.canonical_np, correct_np, article)
             ),
+            start=start,
+            end=end,
             original=txt,
             suggest=suggestion,
         )
@@ -661,17 +790,56 @@ class ErrorFinder(ParseForestNavigator):
                 "'{1}' með tveimur n-um í eignarfalli fleirtölu, "
                 "ekki '{2}' með einu n-i."
             ).format(canonical_np, correct_np, txt, canonical_np[-2:])
-        return dict(
+        start, end = self.node_span(node)
+        return AnnotationDict(
             text="Á sennilega að vera '{0}'".format(correct_np),
             detail=detail,
+            start=start,
+            end=end,
+            original=txt,
             suggest=suggestion,
+        )
+
+    def VillaManns(self, txt: str, variants: str, node: Node) -> Optional[AnnotationDict]:
+        # Sögn á að vera í fleirtölu, líkt og frumlagið
+        child = list(node.enum_child_nodes())
+        ch0node = child[0]
+        assert ch0node is not None
+        subject = self.node_text((ch0node))
+        # Find the verb
+        subjtree: Optional[SimpleTree] = self._simple_tree(ch0node)
+        if subjtree is None:
+            return None
+        if self._sent.tree is None:
+            return None
+        subjwhole = self._sent.tree.first_match('NP-SUBJ >> { "manns" }')
+        if subjwhole is None:
+            return None
+        ip = subjwhole.enclosing_tag("IP")
+        if ip is None:
+            return None
+        so = ip.first_match("so_et")
+        if so is None:
+            return None
+        start, end = so.span
+        vars = set(so.all_variants) - {"et"}
+        vars.add("ft")
+        suggest = PatternMatcher.get_wordform(so.text.lower(), so.lemma, so.cat, vars)
+        return AnnotationDict(
+            text=f"Sögn á að vera í fleirtölu líkt og frumlagið '{subject}'",
+            detail="Sögnin á að vera í fleirtölu, þrátt fyrir 'manns' í frumlagi.",
+            start=start,
+            end=end,
+            original=so.tidy_text,
+            suggest=suggest,
         )
 
     @staticmethod
     def find_verb_subject(tnode: SimpleTree) -> Optional[SimpleTree]:
-        """ Starting with a verb terminal node, attempt to find
-            the verb's subject noun phrase """
-        subj = None
+        """Starting with a verb terminal node, attempt to find
+        the verb's subject noun phrase"""
+        subj: Optional[SimpleTree] = None
+        # TODO does this belong in pattern.py?
         # First, check within the enclosing verb phrase
         # (the subject may be embedded within it, as in
         # ?'Í dag langaði Páli bróður að fara í sund')
@@ -684,10 +852,10 @@ class ErrorFinder(ParseForestNavigator):
                 pass
         if subj is None:
             # If not found there, look within the
-            # enclosing IP (inflected phrase) node, if any
+            # enclosing IP (inflectional phrase) node, if any
             p = tnode.enclosing_tag("IP")
             if p is not None:
-                # Found the inflected phrase:
+                # Found the inflectional phrase:
                 # find the NP-SUBJ node, if any
                 try:
                     subj = p.NP_SUBJ
@@ -695,8 +863,37 @@ class ErrorFinder(ParseForestNavigator):
                     pass
         return subj
 
+    @staticmethod
+    def find_verb_direct_object(tnode: SimpleTree) -> Optional[SimpleTree]:
+        """Starting with a verb terminal node, attempt to find the
+        verb's direct object noun phrase"""
+        obj: Optional[SimpleTree] = None
+        vp = tnode.enclosing_tag("VP")
+        if vp is None:
+            return obj
+        obj = vp.first_match("NP-OBJ")
+        if obj is None:
+            # The object could have been moved to the front
+            p = None if vp is None else vp.enclosing_tag("VP")
+            if p is not None:
+                try:
+                    obj = p.NP_OBJ
+                except AttributeError:
+                    pass
+            if obj is None:
+                # Not found in VP, look within enclosing
+                # IP node, if any
+                p = tnode.enclosing_tag("IP")
+                if p is not None:
+                    # Found the IP, find NP-OBJ if any
+                    try:
+                        obj = p.NP_OBJ
+                    except AttributeError:
+                        pass
+        return obj
+
     def _annotate_ordinal(self, node: Node) -> None:
-        """ Check for errors in ordinal number terminals ("2.") and annotate them """
+        """Check for errors in ordinal number terminals ("2.") and annotate them"""
         token = cast("ErrorDetectionToken", node.token)
         if token is None or token.t0 != TOK.ORDINAL:
             # The matched token is not a numeric ordinal: no complaint
@@ -722,27 +919,26 @@ class ErrorFinder(ParseForestNavigator):
             correct = correct.capitalize()
         self._ann.append(
             Annotation(
+                text="Betra væri '{0}'".format(correct),
+                detail=("Æskilegt er að rita lágar raðtölur " "með bókstöfum fremur en tölustöfum."),
                 start=node.start,
                 end=node.start,
                 code="number4word",
-                text="Betra væri '{0}'".format(correct),
-                detail=(
-                    "Æskilegt er að rita lágar raðtölur "
-                    "með bókstöfum fremur en tölustöfum."
-                ),
+                original=self.node_text(node),
                 suggest=correct,
             )
         )
 
     def _annotate_verb(self, node: Node) -> None:
-        """ Annotate a verb (so) terminal """
+        """Annotate a verb (so) terminal"""
+        # TODO does this belong in pattern.py?
         terminal = cast(BIN_Terminal, node.terminal)
         tnode = self._terminal_nodes[node.start]
         verb = tnode.lemma
 
         def annotate_wrong_subject_case(subj_case_abbr: str, correct_case_abbr: str) -> None:
-            """ Create an annotation that describes a verb having a subject
-                in the wrong case """
+            """Create an annotation that describes a verb having a subject
+            in the wrong case"""
             wrong_case = CASE_NAMES[subj_case_abbr]
             # Retrieve the correct case
             correct_case = CASE_NAMES[correct_case_abbr]
@@ -769,9 +965,7 @@ class ErrorFinder(ParseForestNavigator):
                             text="Á líklega að vera '{0}'".format(correct_np),
                             detail="Sögnin 'að {0}' er {3}. "
                             "Frumlag hennar á að vera "
-                            "í {1}falli í stað {2}falls.".format(
-                                verb, correct_case, wrong_case, personal
-                            ),
+                            "í {1}falli í stað {2}falls.".format(verb, correct_case, wrong_case, personal),
                             original=subj_text,
                             suggest=correct_np,
                         )
@@ -786,97 +980,160 @@ class ErrorFinder(ParseForestNavigator):
                         start=index,
                         end=index,
                         code=code,
-                        text="Frumlag sagnarinnar 'að {0}' "
-                        "á að vera í {1}falli".format(verb, correct_case),
+                        text="Frumlag sagnarinnar 'að {0}' " "á að vera í {1}falli".format(verb, correct_case),
                         detail="Sögnin 'að {0}' er {3}. "
                         "Frumlag hennar á að vera "
-                        "í {1}falli í stað {2}falls.".format(
-                            verb, correct_case, wrong_case, personal
-                        ),
+                        "í {1}falli í stað {2}falls.".format(verb, correct_case, wrong_case, personal),
                         original=verb,
-                        suggest="",
+                        suggest=None,  # No suggest value available
                     )
                 )
 
         def annotate_wrong_op_verb_form(verb: str, correct: str, detail: str) -> None:
-            """ Annotate wrong impersonal verb forms, such as 'Mér lýst' """
+            """Annotate wrong impersonal verb forms, such as 'Mér lýst'"""
             token = node.token
             assert token is not None
             index = token.index
             self._ann.append(
                 Annotation(
+                    text="Sögnin '{0}' á sennilega að vera '{1}'".format(verb.lower(), correct),
+                    detail=detail,
                     start=index,
                     end=index,
                     code="P_WRONG_OP_FORM",
-                    text="Sögnin '{0}' á sennilega að vera '{1}'".format(
-                        verb.lower(), correct
-                    ),
-                    detail=detail,
                     original=verb,
                     suggest=emulate_case(correct, template=verb),
                 )
             )
 
-        if not terminal.is_subj:
-            # Check whether we had to match an impersonal verb
-            # with this "normal" (non _subj) terminal
-            # Check whether the verb is present in the VERBS_ERRORS
-            # dictionary, with an 'nf' entry mapping to another case
-            errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
-            if "nf" in errors:
-                # We are using an impersonal verb as a normal verb,
-                # i.e. with a subject in nominative case:
-                # annotate an error
-                annotate_wrong_subject_case("nf", errors["nf"])
-            return
+        def annotate_wrong_obj_case(obj_case_abbr: str, correct_case_abbr: str) -> None:
+            """Create an annotation that describes a verb having a direct object
+            in the wrong case"""
+            wrong_case = CASE_NAMES[obj_case_abbr]
+            # Retrieve the correct case
+            correct_case = CASE_NAMES[correct_case_abbr]
+            # Try to recover the verb's direct object
+            objtree = self.find_verb_direct_object(tnode)
+            if objtree is None:
+                return
+            code = "P_WRONG_CASE_" + obj_case_abbr + "_" + correct_case_abbr
+            if objtree is not None:
+                # We know what the object is: annotate it
+                start, end = objtree.span
+                obj_text: str = objtree.tidy_text
+                suggestion: str = self.cast_to_case(correct_case_abbr, objtree)
+                correct_np = correct_spaces(suggestion)
+                correct_np = emulate_case(correct_np, template=obj_text)
+                # Skip the annotation if it suggests the same text as the
+                # original one; this can happen if the word forms for two
+                # cases are identical
+                if obj_text != correct_np:
+                    self._ann.append(
+                        Annotation(
+                            text="Á líklega að vera '{0}'".format(correct_np),
+                            detail="Andlag sagnarinnar {0} á að vera "
+                            "í {1}falli í stað {2}falls.".format(verb, correct_case, wrong_case),
+                            start=start,
+                            end=end,
+                            code=code,
+                            original=obj_text,
+                            suggest=correct_np,
+                        )
+                    )
+            else:
+                # We don't seem to find the object, so just annotate the verb.
+                # In this case, there's no suggested correction.
+                assert node.token is not None
+                index = node.token.index
+                self._ann.append(
+                    Annotation(
+                        text="Andlag sagnarinnar 'að {0}' " "á að vera í {1}falli".format(verb, correct_case),
+                        detail="Andlag sagnarinnar {0} á að vera "
+                        "í {1}falli í stað {2}falls.".format(verb, correct_case, wrong_case),
+                        start=index,
+                        end=index,
+                        code=code,
+                        original=verb,
+                        suggest=None,  # No suggest value available
+                    )
+                )
 
-        # This is a so_subj terminal
-        if not (terminal.is_op or terminal.is_sagnb or terminal.is_nh):
-            return
-        # This is a so_subj_op, so_subj_sagnb or so_subj_nh terminal
-        # Check whether the associated verb is allowed
-        # with a subject in this case
-        # node points to a fastparser.Node instance
-        # tnode points to a SimpleTree instance
-        subj_case_abbr = terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
-        if subj_case_abbr == "none":
-            # so_subj_nh_none or similar:
-            # hidden subject ('Í raun þyrfti að yfirfara alla ferla')
-            return
-        assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, (
-            "Unknown case in " + terminal.name
-        )
+        def check_obj() -> None:
+            obj: str = ""
+            if len(terminal._vparts) < 1 or terminal.variant(0) == "0":
+                # No objects to check
+                pass
+            else:
+                obj = "" if len(terminal._vparts) < 2 else terminal.variant(1)
+            if not obj:
+                return
+            obj_errors = VerbErrors.OBJ_ERRORS.get(verb, dict())
+            if obj in obj_errors:
+                annotate_wrong_obj_case(obj, obj_errors[obj])
 
-        # Check whether this is a verb form that is forbidden from
-        # impersonal use, such as 'lýst' which cannot be used impersonally
-        # as a form of 'ljósta' ('Eldingunni laust niður')
-        token = node.token
-        assert token is not None
-        if token.lower in self._NON_OP_VERB_FORMS:
-            correct, detail = self._NON_OP_VERB_FORMS[token.lower]
-            annotate_wrong_op_verb_form(token.text, correct, detail)
-            return
+        def check_subj() -> None:
+            if not terminal.is_subj:
+                # Check whether we had to match an impersonal verb
+                # with this "normal" (non _subj) terminal
+                # Check whether the verb is present in the VERBS_ERRORS
+                # dictionary, with an 'nf' entry mapping to another case
+                errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
+                if "nf" in errors:
+                    # We are using an impersonal verb as a normal verb,
+                    # i.e. with a subject in nominative case:
+                    # annotate an error
+                    annotate_wrong_subject_case("nf", errors["nf"])
+                return
 
-        # Check whether this verb has an entry in the VERBS_ERRORS
-        # dictionary, and whether that entry then has an item for
-        # the present subject case
-        errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
-        if subj_case_abbr in errors:
-            # Yes, this appears to be an erroneous subject case
-            annotate_wrong_subject_case(subj_case_abbr, errors[subj_case_abbr])
+            # This is a so_subj terminal
+            if not (terminal.is_op or terminal.is_sagnb or terminal.is_nh):
+                return
+            # This is a so_subj_op, so_subj_sagnb or so_subj_nh terminal
+            # Check whether the associated verb is allowed
+            # with a subject in this case
+            # node points to a fastparser.Node instance
+            # tnode points to a SimpleTree instance
+            subj_case_abbr = terminal.variant(-1)  # so_1_þgf_subj_op_et_þf
+            if subj_case_abbr == "none":
+                # so_subj_nh_none or similar:
+                # hidden subject ('Í raun þyrfti að yfirfara alla ferla')
+                return
+            assert subj_case_abbr in {"nf", "þf", "þgf", "ef"}, "Unknown case in " + terminal.name
+
+            # Check whether this is a verb form that is forbidden from
+            # impersonal use, such as 'lýst' which cannot be used impersonally
+            # as a form of 'ljósta' ('Eldingunni laust niður')
+            token = node.token
+            assert token is not None
+            if token.lower in self._NON_OP_VERB_FORMS:
+                correct, detail = self._NON_OP_VERB_FORMS[token.lower]
+                annotate_wrong_op_verb_form(token.text, correct, detail)
+                return
+
+            # Check whether this verb has an entry in the VERBS_ERRORS
+            # dictionary, and whether that entry then has an item for
+            # the present subject case
+            # TODO: This will get more complex when all arguments are in the same frame
+            subj_errors = VerbSubjects.VERBS_ERRORS.get(verb, dict())
+            if subj_case_abbr in subj_errors:
+                # Yes, this appears to be an erroneous subject case
+                annotate_wrong_subject_case(subj_case_abbr, subj_errors[subj_case_abbr])
+
+        check_obj()
+        check_subj()
 
     def visit_token(self, level: int, w: Node) -> None:
-        """ Entering a terminal/token match node """
+        """Entering a terminal/token match node"""
         terminal = cast(BIN_Terminal, w.terminal)
         if terminal.category == "so":
             self._annotate_verb(w)
         # TODO: The following actually reduces GreynirCorrect's score on the
         # iceErrorCorpus test set, so we comment it out for the time being.
         # elif terminal.category == "raðnr":
-        #    self._annotate_ordinal(node)
+        #    self._annotate_ordinal(w)
 
     def visit_nonterminal(self, level: int, node: Node) -> Any:
-        """ Entering a nonterminal node """
+        """Entering a nonterminal node"""
         if node.is_interior or node.nonterminal is None or node.nonterminal.is_optional:
             # Not an interesting node
             return None
@@ -886,10 +1143,10 @@ class ErrorFinder(ParseForestNavigator):
         # in the grammar file (Greynir.grammar)
         suggestion = None
         original = None
-        ann_text = None
+        ann_text: str = ""
         ann_detail = None
-        start, end = self._node_span(node)
-        span_text = self._node_text(node)
+        start, end = self.node_span(node)
+        span_text = self.node_text(node)
         # See if we have a custom text function for this
         # error-tagged nonterminal
         name = node.nonterminal.name
@@ -921,19 +1178,21 @@ class ErrorFinder(ParseForestNavigator):
             elif isinstance(ann, tuple):
                 if len(ann) == 2:
                     ann_text, suggestion = cast(AnnotationTuple2, ann)
-                else:
+                elif len(ann) == 4:
                     ann_text, start, end, suggestion = cast(AnnotationTuple4, ann)
+                elif len(ann) == 6:
+                    ann_text, ann_detail, start, end, original, suggestion = cast(AnnotationTuple6, ann)
             else:
-                if len(ann) == 0:
-                    # Empty dict: this means that upon closer inspection,
+                if not ann:
+                    # Empty or no dict: this means that upon closer inspection,
                     # there was no need to annotate
                     return None
-                ann_text = cast(str, ann.get("text"))
-                ann_detail = cast(str, ann.get("detail"))
-                original = cast(str, ann.get("original"))
-                suggestion = cast(str, ann.get("suggest"))
-                start = cast(int, ann.get("start", start))
-                end = cast(int, ann.get("end", end))
+                ann_text = ann.get("text") or ""
+                ann_detail = ann.get("detail") or ""
+                original = ann.get("original") or ""
+                suggestion = ann.get("suggest") or ""
+                start = ann.get("start", start)
+                end = ann.get("end", end)
         else:
             # No: use a default text
             ann_text = "'{0}' er líklega rangt".format(span_text)
@@ -952,4 +1211,3 @@ class ErrorFinder(ParseForestNavigator):
             )
         )
         return None
-

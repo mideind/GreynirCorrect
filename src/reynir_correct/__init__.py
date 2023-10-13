@@ -3,7 +3,7 @@
 
     Greynir: Natural language processing for Icelandic
 
-    Copyright (C) 2021 Miðeind ehf.
+    Copyright (C) 2022 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -28,37 +28,51 @@
 
 """
 
+import importlib.metadata
+
 # Expose the reynir-correct API
-
-from reynir import Greynir, correct_spaces, mark_paragraphs, Sentence, Paragraph
+from reynir import Greynir, Paragraph, Sentence, correct_spaces, mark_paragraphs
 from tokenizer import detokenize
-from .settings import Settings
-
-# Token-level correction
-from .errtokenizer import (
-    CorrectionPipeline,
-    tokenize,
-    Correct_TOK,
-)
-
-# Grammar checking
-from .checker import (
-    GreynirCorrect,
-    check,
-    check_single,
-    check_with_stats,
-    check_with_custom_parser,
-    AnnotatedSentence,
-)
-
-from .version import __version__
 
 # Annotations
 from .annotation import Annotation
 
+# Grammar checking
+from .checker import AnnotatedSentence, GreynirCorrect
 
-__author__ = u"Miðeind ehf"
-__copyright__ = "(C) 2021 Miðeind ehf."
+# Token-level correction
+from .errtokenizer import Correct_TOK, CorrectionPipeline, CorrectToken
+from .readability import FleschKincaidFeedback, FleschKincaidScorer, RareWordsFinder
+from .settings import Settings
+from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, ParseResultStats, check_errors
 
+__author__ = "Miðeind ehf"
+__copyright__ = "(C) 2023 Miðeind ehf."
+__version__ = importlib.metadata.version("reynir-correct")
 
-Settings.read("config/GreynirCorrect.conf")
+__all__ = (
+    "Greynir",
+    "correct_spaces",
+    "mark_paragraphs",
+    "Sentence",
+    "Paragraph",
+    "detokenize",
+    "Settings",
+    "ParseResultStats",
+    "FleschKincaidScorer",
+    "FleschKincaidFeedback",
+    "RareWordsFinder",
+    "CorrectionPipeline",
+    "Correct_TOK",
+    "CorrectToken",
+    "GreynirCorrect",
+    "GreynirCorrectAPI",
+    "CorrectionResult",
+    "CorrectedSentence",
+    "check_errors",
+    "AnnotatedSentence",
+    "Annotation",
+    "__version__",
+    "__author__",
+    "__copyright__",
+)
