@@ -78,7 +78,7 @@ class IcelandicPlaces:
         # "fjörður": "á",  # Skip this since 'í *firði' is also common
         "eyri": "á",
         "vogur": "í",
-        "brekka": "í",  #Ath. algeng ending á bæjarheitum sem taka með sér 'á'
+        "brekka": "í",  # Ath. algeng ending á bæjarheitum sem taka með sér 'á'
         "staðir": "á",
         # "höfn": "á",  # Skip this since 'í *höfn' is also common
         "eyjar": "í",
@@ -124,26 +124,25 @@ class IcelandicPlaces:
         assert cls.ICELOC_PREP is not None
         return place in cls.ICELOC_PREP
 
+
 class Countries:
 
-    """ Wraps a dictionary of country names with their
-        associated prepositions """
+    """Wraps a dictionary of country names with their
+    associated prepositions"""
 
     COUNTRIES_PREP: Optional[Dict[str, str]] = None
-    COUNTRIES_PREP_JSONPATH = os.path.join(
-        os.path.dirname(__file__), "resources", "countries_prep.json"
-    )
+    COUNTRIES_PREP_JSONPATH = os.path.join(os.path.dirname(__file__), "resources", "countries_prep.json")
 
     @classmethod
     def _load_json(cls) -> None:
-        """ Load the place name dictionary from a JSON file into memory """
+        """Load the place name dictionary from a JSON file into memory"""
         with open(cls.COUNTRIES_PREP_JSONPATH, encoding="utf-8") as f:
             cls.COUNTRIES_PREP = json.load(f)
 
     @classmethod
     def lookup_preposition(cls, place: str) -> Optional[str]:
-        """ Look up the correct preposition to use with a placename,
-            or None if the placename is not known """
+        """Look up the correct preposition to use with a placename,
+        or None if the placename is not known"""
         if cls.COUNTRIES_PREP is None:
             cls._load_json()
         assert cls.COUNTRIES_PREP is not None
@@ -152,7 +151,7 @@ class Countries:
 
     @classmethod
     def includes(cls, place: str) -> bool:
-        """ Return True if the given place is found in the dictionary """
+        """Return True if the given place is found in the dictionary"""
         if cls.COUNTRIES_PREP is None:
             cls._load_json()
         assert cls.COUNTRIES_PREP is not None
@@ -223,11 +222,11 @@ class PatternMatcher:
         return wordforms[0].bmynd
 
     def get_wordform(self, lemma, cat, variants):
-        """ Get correct wordform from BinPackage, 
-        given a set of variants """
+        """Get correct wordform from BinPackage,
+        given a set of variants"""
 
         # Get rid of argument variants in verbs:
-        variants = list( [ x for x in variants if not x.isdigit()])
+        variants = list([x for x in variants if not x.isdigit()])
         realvars = []
         for x in variants:
             if x.isdigit():
@@ -2619,25 +2618,6 @@ class PatternMatcher:
                 self.ctx_dir_loc,
             )
         )
-<<<<<<< HEAD
-#        cls.add_pattern(
-#            (
-#                "inn",  # Trigger lemma for this pattern
-#                "IP > { IP-INF > { VP > { VP > { %verb } ADVP > { 'inn' } } } PP > { P > { ('á'|'í') } NP } }",
-#                #"VP > { VP > { %verb } ADVP > { 'inn' } }",
-#                lambda self, match: self.dir_loc(match),
-#                cls.ctx_dir_loc,
-#            )
-#        )
-#        cls.add_pattern(
-#            (
-#                "inn",  # Trigger lemma for this pattern
-#                "VP > { VP > { %verb } ADVP > { 'inn' } }",
-#                lambda self, match: self.dir_loc(match),
-#                cls.ctx_dir_loc,
-#            )
-#        )
-=======
         self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
@@ -2646,7 +2626,6 @@ class PatternMatcher:
                 self.ctx_dir_loc,
             )
         )
->>>>>>> e7d0ac4a2829215916c424e2fc254b8ac5615edc
 
         self.add_pattern(
             (
