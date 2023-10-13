@@ -5,7 +5,7 @@
 
     Spelling and grammar checking module
 
-    Copyright (C) 2021 Miðeind ehf.
+    Copyright (C) 2022 Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -36,163 +36,168 @@
 
 """
 
-from typing import List, Sequence, Tuple, Iterator, Iterable, Dict, Any, Union, cast
+from typing import Dict, Union
 
-import sys
 import argparse
-import json
-from functools import partial
+import sys
 
-from tokenizer import Tok, detokenize, normalized_text_from_tokens
-from tokenizer.definitions import AmountTuple, NumberTuple
-from .errtokenizer import TOK, CorrectToken, Error, tokenize
-
+from .wrappers import check_errors
 
 # File types for UTF-8 encoded text files
-ReadFile = argparse.FileType('r', encoding="utf-8")
-WriteFile = argparse.FileType('w', encoding="utf-8")
+ReadFile = argparse.FileType("r", encoding="utf-8")
+WriteFile = argparse.FileType("w", encoding="utf-8")
 
 # Define the command line arguments
 
 parser = argparse.ArgumentParser(description="Corrects Icelandic text")
 
 parser.add_argument(
-    'infile',
-    nargs='?',
+    "infile",
+    nargs="?",
     type=ReadFile,
     default=sys.stdin,
     help="UTF-8 text file to correct",
 )
 parser.add_argument(
-    'outfile',
-    nargs='?',
+    "outfile",
+    nargs="?",
     type=WriteFile,
     default=sys.stdout,
-    help="UTF-8 output text file"
+    help="UTF-8 output text file",
 )
 
-group = parser.add_mutually_exclusive_group()
-group.add_argument(
-    "--csv",
-    help="Output one token per line in CSV format", action="store_true"
+parser.add_argument(
+    "--suppress_suggestions",
+    "-ss",
+    action="store_true",
+    help="Suppress more agressive error suggestions",
 )
-group.add_argument(
+
+parser.add_argument("--spaced", "-sp", help="Separate tokens with spaces", action="store_true")
+
+# Determines the output format
+parser.add_argument(
+    "--format",
+    "-f",
+    nargs="?",
+    type=str,
+    default="text",
+    help="""Determine output format.
+text: Corrected text only.
+csv: One token per line in CSV format.
+json: One token per line in JSON format.
+m2: M2 format, GEC standard.""",
+)
+
+# Determines whether we supply only token-level annotations or also sentence-level annotations
+parser.add_argument(
+    "--all_errors",
+    "-a",
+    help="Annotate both grammar and spelling errors",
+    action="store_true",
+)
+
+# Add --grammar for compatibility; works the same as --all_errors
+parser.add_argument(
+    "--grammar",
+    "-g",
+    help="Annotate both grammar and spelling errors",
+    action="store_true",
+)
+
+# Add --json for compatibility; works the same as --format=json
+parser.add_argument(
     "--json",
-    help="Output one token per line in JSON format", action="store_true"
+    "-j",
+    help="Output in JSON format",
+    action="store_true",
 )
-group.add_argument(
-    "--spaced",
-    help="Separate tokens with spaces", action="store_true"
+
+# Add --csv for compatibility; works the same as --format=csv
+parser.add_argument(
+    "--csv",
+    "-c",
+    help="Output in CSV format",
+    action="store_true",
 )
+
+# Add --normalize
+parser.add_argument(
+    "--normalize",
+    "-n",
+    help="Normalize punctuation",
+    action="store_true",
+)
+
+parser.add_argument(
+    "--sentence_prefilter",
+    help="""Run a heuristic filter on sentences to determine whether they are probably
+correct. Probably correct sentences will not go through the full parsing process.""",
+    action="store_true",
+)
+parser.add_argument(
+    "--flesch",
+    help="Calculate Flesch readability score for the input text",
+    action="store_true",
+)
+parser.add_argument(
+    "--rare_words",
+    help="Show rare words in the input text",
+    action="store_true",
+)
+
+parser.add_argument(
+    "--tov_config",
+    nargs=1,
+    type=str,
+    help="""Add additional use-specific rules in a configuration file to check for custom
+tone-of-voice issues. Uses the same format as the default GreynirCorrect.conf file""",
+    default=None,
+)
+
+parser.add_argument(
+    "--suggest_not_correct",
+    help="Instead of directly changing the text, some stylistic errors are presented as suggestions only.",
+    action="store_true",
+    default=False,
+)
+
+
+def from_args(args: argparse.Namespace) -> Dict[str, Union[str, bool]]:
+    """Fill options with information from args"""
+    format = args.format
+    if args.json:
+        format = "json"
+    elif args.csv:
+        format = "csv"
+    return {
+        "input": args.infile,
+        "suppress_suggestions": args.suppress_suggestions,
+        "format": format,
+        "spaced": args.spaced,
+        "normalize": args.normalize,
+        "all_errors": args.all_errors or args.grammar,
+        "sentence_prefilter": args.sentence_prefilter,
+        "tov_config": args.tov_config,
+        "suggest_not_correct": args.suggest_not_correct,
+        "flesch": args.flesch,
+        "rare_words": args.rare_words,
+    }
 
 
 def main() -> None:
-    """ Main function, called when the correct command is invoked """
+    """Main function, called when the 'correct' command is invoked"""
 
     args = parser.parse_args()
+    # Fill options with information from args
+    if args.infile is sys.stdin and sys.stdin.isatty():
+        # terminal input is empty, most likely no value was given for infile:
+        # Nothing we can do
+        print("No input has been given, nothing can be returned")
+        sys.exit(1)
+    options = from_args(args)
 
-    # By default, no options apply
-    options: Dict[str, bool] = {}
-    if not (args.csv or args.json):
-        # If executing a plain ('shallow') correct,
-        # apply most suggestions to the text
-        options["apply_suggestions"] = True
-
-    def quote(s: str) -> str:
-        """ Return the string s within double quotes, and with any contained
-            backslashes and double quotes escaped with a backslash """
-        if not s:
-            return "\"\""
-        return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
-
-    def gen(f: Iterator[str]) -> Iterable[str]:
-        """ Generate the lines of text in the input file """
-        yield from f
-
-    def val(t: CorrectToken, quote_word: bool=False) -> Union[None, str, float, Tuple[Any, ...], Sequence[Any]]:
-        """ Return the value part of the token t """
-        if t.val is None:
-            return None
-        if t.kind in {TOK.WORD, TOK.PERSON, TOK.ENTITY}:
-            # No need to return list of meanings
-            return None
-        if t.kind in {TOK.PERCENT, TOK.NUMBER, TOK.CURRENCY}:
-            return cast(NumberTuple, t.val)[0]
-        if t.kind == TOK.AMOUNT:
-            num, iso, _, _ = cast(AmountTuple, t.val)
-            if quote_word:
-                # Format as "1234.56|USD"
-                return "\"{0}|{1}\"".format(num, iso)
-            return num, iso
-        if t.kind == TOK.S_BEGIN:
-            return None
-        if t.kind == TOK.PUNCTUATION:
-            punct = t.punctuation
-            return quote(punct) if quote_word else punct
-        if quote_word and t.kind in {
-            TOK.DATE, TOK.TIME, TOK.DATEABS, TOK.DATEREL, TOK.TIMESTAMP,
-            TOK.TIMESTAMPABS, TOK.TIMESTAMPREL, TOK.TELNO, TOK.NUMWLETTER,
-            TOK.MEASUREMENT
-        }:
-            # Return a |-delimited list of numbers
-            return quote("|".join(str(v) for v in cast(Iterable[Any], t.val)))
-        if quote_word and isinstance(t.val, str):
-            return quote(t.val)
-        return t.val
-
-    # Function to convert a token list to output text
-    if args.spaced:
-        to_text = normalized_text_from_tokens
-    else:
-        to_text = partial(detokenize, normalize=True)
-
-    # Configure our JSON dump function
-    json_dumps = partial(json.dumps, ensure_ascii=False, separators=(',', ':'))
-
-    # Initialize sentence accumulator list
-    curr_sent: List[CorrectToken] = []
-
-    for t in tokenize(gen(args.infile), **options):
-        if args.csv:
-            # Output the tokens in CSV format, one line per token
-            if t.txt:
-                print(
-                    "{0},{1},{2},{3}"
-                    .format(
-                        t.kind,
-                        quote(t.txt),
-                        val(t, quote_word=True) or "\"\"",
-                        quote(str(t.error) if t.error else "")
-                    ),
-                    file=args.outfile
-                )
-            elif t.kind == TOK.S_END:
-                # Indicate end of sentence
-                print("0,\"\",\"\"", file=args.outfile)
-        elif args.json:
-            # Output the tokens in JSON format, one line per token
-            d: Dict[str, Any] = dict(k=TOK.descr[t.kind])
-            if t.txt is not None:
-                d["t"] = t.txt
-            v = val(t)
-            if t.kind not in {TOK.WORD, TOK.PERSON, TOK.ENTITY} and v is not None:
-                d["v"] = v
-            if isinstance(t.error, Error):
-                d["e"] = t.error.to_dict()
-            print(json_dumps(d), file=args.outfile)
-        else:
-            # Normal shallow parse, one line per sentence,
-            # tokens separated by spaces
-            if t.kind in TOK.END:
-                # End of sentence/paragraph
-                if curr_sent:
-                    print(to_text(cast(Iterable[Tok], curr_sent)), file=args.outfile)
-                    curr_sent = []
-            else:
-                curr_sent.append(t)
-
-    if curr_sent:
-        print(to_text(cast(Iterable[Tok], curr_sent)), file=args.outfile)
+    print(check_errors(**options), file=args.outfile)
 
 
 if __name__ == "__main__":

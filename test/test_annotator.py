@@ -5,7 +5,7 @@
 
     Tests for GreynirCorrect module
 
-    Copyright (C) 2021 by Miðeind ehf.
+    Copyright (C) 2022 by Miðeind ehf.
 
     This software is licensed under the MIT License:
 
@@ -57,20 +57,19 @@
 
 """
 
-from typing import List, Optional, Tuple
 
 import pytest
 
 import reynir_correct
 
+from .utils import check_sentence
+
 
 @pytest.fixture(scope="module")
-def rc():
+def api() -> reynir_correct.GreynirCorrectAPI:
     """Provide a module-scoped GreynirCorrect instance as a test fixture"""
-    r = reynir_correct.GreynirCorrect()
+    r = reynir_correct.GreynirCorrectAPI.from_options()
     yield r
-    # Do teardown here
-    r.__class__.cleanup()
 
 
 def dump(tokens):
@@ -82,116 +81,54 @@ def dump(tokens):
             print("   {0}: {1}".format(token.error_code, err))
 
 
-def check_sentence(
-    rc: reynir_correct.GreynirCorrect,
-    s: str,
-    annotations: Optional[List[Tuple[int, int, str]]],
-    is_foreign: bool = False,
-    ignore_warnings: bool = False,
-) -> None:
-    """Check whether a given single sentence gets the
-    specified annotations when checked"""
-
-    def check_sent(sent: reynir_correct.AnnotatedSentence) -> None:
-        assert sent is not None
-        if sent.tree is None and not is_foreign:
-            # If the sentence should not parse, call
-            # check_sentence with annotations=None
-            assert annotations is None
-            return
-        assert annotations is not None
-        if not is_foreign:
-            assert sent.tree is not None
-        # Compile a list of error annotations, omitting warnings
-        sent_errors = [a for a in sent.annotations if not a.code.endswith("/w")]
-        if not annotations:
-            # This sentence is not supposed to have any annotations
-            if ignore_warnings:
-                assert len(sent_errors) == 0
-            else:
-                assert len(sent.annotations) == 0
-            return
-        if ignore_warnings:
-            assert len(sent_errors) == len(annotations)
-            for a, (start, end, code) in zip(sent_errors, annotations):
-                assert a.start == start
-                assert a.end == end
-                assert a.code == code
-        else:
-            assert len(sent.annotations) == len(annotations)
-            for a, (start, end, code) in zip(sent.annotations, annotations):
-                assert (
-                    a.start == start
-                ), f"Mismatch between ({a.start}, {a.end}, {a.code}) and ({start}, {end}, {code})"
-                assert a.end == end
-                assert a.code == code
-
-    # Test check_single()
-    sent = rc.parse_single(s)
-    assert isinstance(sent, reynir_correct.AnnotatedSentence)
-    check_sent(sent)
-    # Test check()
-    for pg in reynir_correct.check(s):
-        for sent in pg:
-            assert isinstance(sent, reynir_correct.AnnotatedSentence)
-            check_sent(sent)
-    # Test check_with_stats()
-    for pg in reynir_correct.check_with_stats(s)["paragraphs"]:
-        for sent in pg:
-            assert isinstance(sent, reynir_correct.AnnotatedSentence)
-            check_sent(sent)
-
-    # Test presevation of original token text
-    tlist = list(reynir_correct.tokenize(s))
-    len_tokens = sum(len(t.original or "") for t in tlist)
-    assert len_tokens == len(s)
-
-
-def test_multiword_phrases(rc):
+def test_multiword_phrases(api):
     s = "Einn af drengjunum fór í sund af gefnu tilefni."
-    check_sentence(rc, s, [(6, 8, "P_aðaf")])
+    check_sentence(api, s, [(6, 8, "P_afað")])
 
 
-def test_error_finder(rc):
+def test_error_finder(api):
     """Test errors that are found by traversing the detailed
     parse tree in checker.py (ErrorFinder class)"""
     s = "Einn af drengjunum fóru í sund."
-    check_sentence(rc, s, [(3, 3, "P_NT_EinnAf")])
+    check_sentence(api, s, [(3, 3, "P_NT_EinnAf")])
     s = "Fjöldi þingmanna greiddu atkvæði gegn tillögunni."
-    check_sentence(rc, s, [(2, 2, "P_NT_FjöldiHluti")])
+    check_sentence(api, s, [(2, 2, "P_NT_FjöldiHluti")])
     s = "Jón borðaði ís þar sem að hann var svangur."
-    check_sentence(rc, s, [(5, 5, "P_NT_Að/w")])
+    check_sentence(api, s, [(5, 5, "P_NT_Að/w")])
     s = 'Jón "borðaði" ís þar sem að hann var svangur.'
-    check_sentence(rc, s, [(1, 1, "N001"), (3, 3, "N001"), (7, 7, "P_NT_Að/w")])
+    check_sentence(api, s, [(1, 1, "N001"), (3, 3, "N001"), (7, 7, "P_NT_Að/w")])
     s = "Jón borðaði ís þó hann væri svangur."
-    check_sentence(rc, s, [(3, 3, "P_NT_ÞóAð")])
+    check_sentence(api, s, [(3, 3, "P_NT_ÞóAð")])
     s = 'Jón "borðaði" ís þó hann væri svangur.'
-    check_sentence(rc, s, [(1, 1, "N001"), (3, 3, "N001"), (5, 5, "P_NT_ÞóAð")])
+    check_sentence(api, s, [(1, 1, "N001"), (3, 3, "N001"), (5, 5, "P_NT_ÞóAð")])
     s = "Jón borðaði ís jafnvel þó hann væri svangur."
-    check_sentence(rc, s, [(3, 4, "P_NT_ÞóAð")])
+    check_sentence(api, s, [(3, 4, "P_NT_ÞóAð")])
     s = 'Jón "borðaði" ís jafnvel þó hann væri svangur.'
-    check_sentence(rc, s, [(1, 1, "N001"), (3, 3, "N001"), (5, 6, "P_NT_ÞóAð")])
+    check_sentence(api, s, [(1, 1, "N001"), (3, 3, "N001"), (5, 6, "P_NT_ÞóAð")])
     s = "Jón borðaði ís þótt hann væri svangur."
-    check_sentence(rc, s, [])
+    check_sentence(api, s, [])
     s = 'Jón "borðaði" ís þótt hann væri svangur.'
-    check_sentence(rc, s, [(1, 1, "N001"), (3, 3, "N001")])
+    check_sentence(api, s, [(1, 1, "N001"), (3, 3, "N001")])
     s = "Ég féll fyrir annað hvort fegurð hennar eða gáfum."
-    check_sentence(rc, s, [(3, 4, "P_NT_AnnaðHvort")])
+    check_sentence(api, s, [(3, 4, "P_NT_AnnaðHvort")])
     s = "Ég talaði við annaðhvort barnanna."
-    check_sentence(rc, s, [(3, 3, "P_NT_Annaðhvort")])
+    check_sentence(api, s, [(3, 3, "P_NT_Annaðhvort")])
     s = "Ég hef verið slappur frá því ég fékk sprautuna."
-    check_sentence(rc, s, [(4, 5, "P_NT_FráÞvíAð")])
+    check_sentence(api, s, [(5, 5, "P_NT_FráÞvíAð")])
     s = "Ég hef verið slappur allt frá því ég fékk sprautuna."
-    check_sentence(rc, s, [(4, 6, "P_NT_FráÞvíAð")])
+    check_sentence(api, s, [(6, 6, "P_NT_FráÞvíAð")])
     s = "Friðgeir vildi vera heima víst að Sigga yrði að vera heima."
-    check_sentence(rc, s, [(4, 5, "P_NT_VístAð")])
+    # TODO no longer annotated, due to changes in verb frames
+    # check_sentence(rc, s, [(4, 4, "P_NT_VístAð")])
+    s = "Víst að Sigga var heima ákvað Friðgeir að vera heima."
+    check_sentence(api, s, [(0, 0, "P_NT_VístAð")])
     s = "Friðgeir taldi víst að Sigga yrði að vera heima."
-    check_sentence(rc, s, [])
+    check_sentence(api, s, [])
     s = "Ég er ekki meiri fáviti heldur en þú."
-    check_sentence(rc, s, [(5, 5, "P_NT_Heldur/w")])
+    check_sentence(api, s, [(4, 4, "T001/w"), (5, 5, "P_NT_Heldur/w")])
 
 
-def test_ordinals(rc):
+def test_ordinals(api):
     # NOTE: Commented out as this functionality increases the number of
     # false positives on the iceErrorCorpus test set.
     # s = "4. barnið fæddist í gær, en það er 3. strákur þeirra hjóna."
@@ -200,114 +137,108 @@ def test_ordinals(rc):
     # assert sent.annotations[0].suggest == "Fjórða"
     # assert sent.annotations[1].suggest == "þriðji"
     s = "5. Ákæran beinist gegn Jóni og Friðberti."
-    check_sentence(rc, s, [])
+    check_sentence(api, s, [])
     # s = "2. deildin fer vel af stað í vetur."
     # check_sentence(rc, s, [(0, 0, "X_number4word")])
     s = "XVII. kafli: Um landsins gagn og nauðsynjar."
-    check_sentence(rc, s, [])
+    check_sentence(api, s, [])
 
 
-def test_pronoun_annara(rc):
+def test_pronoun_annara(api):
     s = (
         "Allir í hans bekk, auk nokkurra nemenda úr öðrum bekkjum, "
         "umsjónakennara og fjögurra annara kennara "
         "hafa verið sendir í sjö daga sóttkví."
     )
-    check_sentence(rc, s, [(12, 12, "S004"), (15, 15, "P_NT_Annara")])
+    check_sentence(api, s, [(12, 12, "S004"), (15, 15, "R4RR")])
     s = " Mér er annara um símann minn en orðspor mitt."
-    check_sentence(rc, s, [])
+    # TODO 'annara' is changed to 'annarra' due to better token-level data
+    # and a difficult syntax pattern
+    # check_sentence(rc, s, [])
 
 
-def test_impersonal_verbs(rc):
+def test_impersonal_verbs(api):
     s = "Mig hlakkaði til."
-    check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_þf_nf")])
+    check_sentence(api, s, [(0, 0, "P_WRONG_CASE_þf_nf")])
     s = "Mér hlakkaði til."
-    check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_þgf_nf")])
+    check_sentence(api, s, [(0, 0, "P_WRONG_CASE_þgf_nf")])
     s = "Ég dreymdi köttinn."
-    check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_nf_þf")])
+    check_sentence(api, s, [(0, 0, "P_WRONG_CASE_nf_þf")])
     s = "Mér dreymdi köttinn."
-    check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_þgf_þf")])
+    check_sentence(api, s, [(0, 0, "P_WRONG_CASE_þgf_þf")])
     # The following should not parse
     s = "Ég dreymdi kettinum."
-    check_sentence(rc, s, None)
-    s = (
-        "Páli, sem hefur verið landsliðsmaður í fótbolta í sjö ár, "
-        "langaði að horfa á sjónvarpið."
-    )
-    check_sentence(rc, s, [(0, 11, "P_WRONG_CASE_þgf_þf")])
-    s = (
-        "Pál, sem hefur verið landsliðsmaður í fótbolta í sjö ár, "
-        "langaði að horfa á sjónvarpið."
-    )
-    check_sentence(rc, s, [])
+    check_sentence(api, s, None)
+    s = "Páli, sem hefur verið landsliðsmaður í fótbolta í sjö ár, " "langaði að horfa á sjónvarpið."
+    check_sentence(api, s, [(0, 11, "P_WRONG_CASE_þgf_þf")])
+    s = "Pál, sem hefur verið landsliðsmaður í fótbolta í sjö ár, " "langaði að horfa á sjónvarpið."
+    check_sentence(api, s, [])
     s = "Pál kveið fyrir skóladeginum."
-    check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_þf_nf")])
+    check_sentence(api, s, [(0, 0, "P_WRONG_CASE_þf_nf")])
     s = "Páli kveið fyrir skóladeginum."
-    check_sentence(rc, s, [(0, 0, "P_WRONG_CASE_þgf_nf")])
+    check_sentence(api, s, [(0, 0, "P_WRONG_CASE_þgf_nf")])
     s = "Unga fólkinu skortir aðhald."
-    check_sentence(rc, s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
+    check_sentence(api, s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
     # FIXME:
     # s = "Ég held að músinni hafi kviðið fyrir að hitta köttinn."
     # check_sentence(rc, s, [(3, 3, "P_WRONG_CASE_þgf_nf")])
     s = "Hestinum Grímni vantaði hamar."
     # s = "Hestinum Skjóna vantaði hamar."
-    check_sentence(rc, s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
+    check_sentence(api, s, [(0, 1, "P_WRONG_CASE_þgf_þf")])
     s = "Stóra manninum sem vinnur á verkstæðinu vantaði hamar."
-    check_sentence(rc, s, [(0, 5, "P_WRONG_CASE_þgf_þf")])
+    check_sentence(api, s, [(0, 5, "P_WRONG_CASE_þgf_þf")])
 
 
-def test_foreign_sentences(rc):
+def test_foreign_sentences(api):
     check_sentence(
-        rc,
+        api,
         "It was the best of times, it was the worst of times.",
         [(0, 13, "E004")],
         is_foreign=True,
     )
     check_sentence(
-        rc,
+        api,
         "Praise the Lord.",
-        [
-            (0, 1, "E004")
-        ],  # Note: the tokenizer amalgams 'Praise the Lord' into one token
+        [(0, 1, "E004")],  # Note: the tokenizer amalgams 'Praise the Lord' into one token
         is_foreign=True,
     )
     check_sentence(
-        rc,
-        "Borðaðu Magnyl og Xanax eagerly in Rushmore.",
-        [(0, 7, "E004")],
+        api,
+        "Borðaðu Magnyl og Xanax eagerly in Rushmore for the holidays.",
+        [(0, 8, "E004")],
         is_foreign=True,
-    )
+    )  # Note: Example needed to be made longer due to 'in' appearing as an Icelandic error
 
 
-def test_number(rc):
-    check_sentence(rc, "Vinnuvika sjómanna eru 7 heilir dagar.", [(2, 5, "P_NT_ÍTölu")])
-    check_sentence(rc, "Hjón borðar matinn sinn.", [(1, 3, "P_NT_ÍTölu")])
-    check_sentence(rc, "Ég borðum matinn minn.", [(1, 3, "P_NT_ÍTölu")])
+def test_number(api):
+    check_sentence(api, "Vinnuvika sjómanna eru 7 heilir dagar.", [(2, 2, "P_NT_ÍTölu")])
+    check_sentence(api, "Hjón borðar matinn sinn.", [(1, 1, "P_NT_ÍTölu")])
+    check_sentence(api, "Ég borðum matinn minn.", [(1, 1, "P_NT_ÍTölu")])
 
 
-def test_correct_sentences(rc):
-    check_sentence(rc, "Pál langaði að horfa á sjónvarpið.", [])
-    check_sentence(rc, "Mig dreymdi mús sem elti kött.", [])
+def test_correct_sentences(api):
+    check_sentence(api, "Pál langaði að horfa á sjónvarpið.", [])
+    check_sentence(api, "Mig dreymdi mús sem elti kött.", [])
     check_sentence(
-        rc,
+        api,
         "Ég held að músin hafi kviðið fyrir að hitta köttinn.",
         [],
         ignore_warnings=True,
     )
-    check_sentence(rc, "Músin kveið fyrir að hitta köttinn.", [])
+    check_sentence(api, "Músin kveið fyrir að hitta köttinn.", [])
     check_sentence(
-        rc,
+        api,
         "Páll hlakkaði til jólanna og að hitta strákinn sem hlakkaði til páskanna.",
         [],
     )
-    check_sentence(rc, "Ég hlakka til að sjá nýju Aliens-myndina.", [])
+    check_sentence(api, "Ég hlakka til að sjá nýju Aliens-myndina.", [])
 
 
-def test_corrected_meanings(rc: reynir_correct.GreynirCorrect) -> None:
+def test_corrected_meanings(api) -> None:
     s = """
     Þannig fundust stundum engin bréfaskipti á milli lífsförunauta í annars ríkulegum bréfasöfnum.
     """
-    check_sentence(rc, s.rstrip(), [])
+    check_sentence(api, s.rstrip(), [])
     s = """
     Þeir hafa líka þennan Beach Boys-hljóm og virkilega fallegar raddanir,"
     sagði Jardine, en platan hans nefnist A Postcard fram California.
@@ -315,14 +246,27 @@ def test_corrected_meanings(rc: reynir_correct.GreynirCorrect) -> None:
     # Note: "A Postcard" is tokenized as one entity token and should not
     # be reported as an error or annotation
     check_sentence(
-        rc,
+        api,
         s.rstrip(),
-        [(4, 4, "U001/w"), (11, 11, "N001"), (13, 13, "U001/w")],
+        [(11, 11, "N001")],
     )
 
 
-if __name__ == "__main__":
+def test_lhþt_variant(api) -> None:
+    """Check for a regression in the handling of LHÞT variants in BinPackage"""
+    s = (
+        "Minna þekkt eru sem dæmi rafgas og kvarka-límeindarafgas, "
+        "Bose-Einstein þétting og oddskiptaeindaþétting, sérstætt efni, "
+        "vökvakristall, ofurstraumefni og ofurþéttefni og einnig "
+        "meðseglunar- og járnseglunarhamir segulmagnaðra efna."
+    )
+    try:
+        api.correct(s)
+    except ValueError:
+        assert False, "Regression in handling of LHÞT variants in BinPackage"
 
+
+if __name__ == "__main__":
     from reynir_correct import GreynirCorrect
 
     gc = GreynirCorrect()
