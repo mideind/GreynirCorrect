@@ -1708,6 +1708,7 @@ class PatternMatcher:
         )
 
     def agreement_conj(self, match: SimpleTree) -> None:
+        """A verb, whose subject precedes a conjunction, is not in agreement with the subject. E.g. 'Bílarnir eru léttari og gæti verið hraðari.'"""
         vp = match.first_match("VP > (so_ft|so_et)")
         if vp is None:
             return
@@ -1738,6 +1739,7 @@ class PatternMatcher:
         )
 
     def agreement_subpost_sing(self, match: SimpleTree) -> None:
+        """A plural verb which precedes its subject is not in agreement with the subject, which is singular. E.g. 'Í skrúðgöngunni eru fólk klætt...'"""
         vp = match.first_match("VP > (so_ft)")
         if vp is None:
             return
@@ -1768,11 +1770,13 @@ class PatternMatcher:
         )
 
     def agreement_concord(self, match: SimpleTree) -> None:
+        """A pronoun is not in agreement with the following noun, e.g. 'Við kaupum ákveðin hluti'"""
         np = match.first_match("NP")
-        # if vp is None: return
-        assert np is not None
+        if np is None:
+            return
         fn = np.first_match("fn")
-        assert fn is not None
+        if fn is None:
+            return
         no = np.first_match("no")
         start, end = np.span
         suggest = self.get_wordform(fn.lemma, fn.cat, no.lemma, no.cat)
