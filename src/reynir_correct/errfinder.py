@@ -544,8 +544,9 @@ class ErrorFinder(ParseForestNavigator):
         return AnnotationDict(
             text="'{0}' á sennilega að vera '{1}'".format(wrong_pronoun, correct_pronoun),
             detail=(
-                "Fornafnið '{0}' á að vera í {1}falli, eins og "
-                "nafnliðurinn sem fylgir á eftir".format(wrong_pronoun, CASE_NAMES[correct_case])
+                "Fornafnið '{0}' á að vera í {1}falli, eins og " "nafnliðurinn sem fylgir á eftir".format(
+                    wrong_pronoun, CASE_NAMES[correct_case]
+                )
             ),
             start=start,
             end=end,
@@ -1031,8 +1032,9 @@ class ErrorFinder(ParseForestNavigator):
                     self._ann.append(
                         Annotation(
                             text="Á líklega að vera '{0}'".format(correct_np),
-                            detail="Andlag sagnarinnar {0} á að vera "
-                            "í {1}falli í stað {2}falls.".format(verb, correct_case, wrong_case),
+                            detail="Andlag sagnarinnar {0} á að vera " "í {1}falli í stað {2}falls.".format(
+                                verb, correct_case, wrong_case
+                            ),
                             start=start,
                             end=end,
                             code=code,
@@ -1048,8 +1050,9 @@ class ErrorFinder(ParseForestNavigator):
                 self._ann.append(
                     Annotation(
                         text="Andlag sagnarinnar 'að {0}' " "á að vera í {1}falli".format(verb, correct_case),
-                        detail="Andlag sagnarinnar {0} á að vera "
-                        "í {1}falli í stað {2}falls.".format(verb, correct_case, wrong_case),
+                        detail="Andlag sagnarinnar {0} á að vera " "í {1}falli í stað {2}falls.".format(
+                            verb, correct_case, wrong_case
+                        ),
                         start=index,
                         end=index,
                         code=code,
