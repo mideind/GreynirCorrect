@@ -226,15 +226,7 @@ class PatternMatcher:
         given a set of variants"""
 
         # Get rid of argument variants in verbs:
-        variants = list([x for x in variants if not x.isdigit()])
-        realvars = []
-        for x in variants:
-            if x.isdigit():
-                continue
-            if x in SKIPVARS:
-                continue
-            else:
-                realvars.append(x)
+        realvars = [x for x in variants if not x.isdigit() and x not in SKIPVARS]
 
         wordforms = BIN.lookup_variants(lemma, cat, realvars)
         if not wordforms:
