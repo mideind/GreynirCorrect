@@ -590,7 +590,7 @@ GCSKIPCODES = frozenset(["E001"])
 
 parser = argparse.ArgumentParser(
     description=(
-        "This program evaluates the spelling and grammar checking performance " "of GreynirCorrect on iceErrorCorpus"
+        "This program evaluates the spelling and grammar checking performance of GreynirCorrect on iceErrorCorpus"
     )
 )
 
