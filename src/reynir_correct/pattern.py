@@ -78,7 +78,7 @@ class IcelandicPlaces:
         # "fjörður": "á",  # Skip this since 'í *firði' is also common
         "eyri": "á",
         "vogur": "í",
-        "brekka": "í",
+        "brekka": "í",  # Ath. algeng ending á bæjarheitum sem taka með sér 'á'
         "staðir": "á",
         # "höfn": "á",  # Skip this since 'í *höfn' is also common
         "eyjar": "í",
@@ -123,6 +123,39 @@ class IcelandicPlaces:
             cls._load_json()
         assert cls.ICELOC_PREP is not None
         return place in cls.ICELOC_PREP
+
+
+class Countries:
+
+    """Wraps a dictionary of country names with their
+    associated prepositions"""
+
+    COUNTRIES_PREP: Optional[Dict[str, str]] = None
+    COUNTRIES_PREP_JSONPATH = os.path.join(os.path.dirname(__file__), "resources", "countries_prep.json")
+
+    @classmethod
+    def _load_json(cls) -> None:
+        """Load the place name dictionary from a JSON file into memory"""
+        with open(cls.COUNTRIES_PREP_JSONPATH, encoding="utf-8") as f:
+            cls.COUNTRIES_PREP = json.load(f)
+
+    @classmethod
+    def lookup_preposition(cls, place: str) -> Optional[str]:
+        """Look up the correct preposition to use with a placename,
+        or None if the placename is not known"""
+        if cls.COUNTRIES_PREP is None:
+            cls._load_json()
+        assert cls.COUNTRIES_PREP is not None
+        prep = cls.COUNTRIES_PREP.get(place)
+        return prep
+
+    @classmethod
+    def includes(cls, place: str) -> bool:
+        """Return True if the given place is found in the dictionary"""
+        if cls.COUNTRIES_PREP is None:
+            cls._load_json()
+        assert cls.COUNTRIES_PREP is not None
+        return place in cls.COUNTRIES_PREP
 
 
 class PatternMatcher:
@@ -187,6 +220,20 @@ class PatternMatcher:
             return ""
         # Can be many possible word forms; we want the first one in most cases
         return wordforms[0].bmynd
+
+    def get_wordform(self, lemma, cat, variants):
+        """Get correct wordform from BinPackage,
+        given a set of variants"""
+
+        # Get rid of argument variants in verbs:
+        realvars = [x for x in variants if not x.isdigit() and x not in SKIPVARS]
+
+        wordforms = BIN.lookup_variants(lemma, cat, realvars)
+        if not wordforms:
+            return ""
+        else:
+            # Can be many possible word forms, want the first one in most cases
+            return wordforms[0].bmynd
 
     def wrong_preposition_af(self, match: SimpleTree) -> None:
         """Handle a match of a suspect preposition pattern"""
@@ -1104,8 +1151,10 @@ class PatternMatcher:
         place = match.NP.lemma
         correct_preposition = IcelandicPlaces.lookup_preposition(place)
         if correct_preposition is None:
-            # This is not a known or likely place name
-            return
+            correct_preposition = Countries.lookup_preposition(place)
+            if correct_preposition is None:
+                # This is not a known or likely place name
+                return
         preposition = match.P.lemma
         if correct_preposition == preposition:
             # Correct: return
