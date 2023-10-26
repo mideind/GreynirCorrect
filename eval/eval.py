@@ -85,29 +85,38 @@
     $ python eval.py -a
 
 """
-
 from typing import (
     TYPE_CHECKING,
+    Any,
+    Counter,
+    DefaultDict,
     Dict,
+    Iterable,
     List,
     Optional,
     Set,
-    Union,
     Tuple,
-    Iterable,
+    Union,
     cast,
-    Any,
-    DefaultDict,
-    Counter,
 )
 
+import argparse
+import glob
 import os
+import random
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 from datetime import datetime
-import glob
-import random
-import argparse
-import xml.etree.ElementTree as ET
+
+from reynir_correct import (
+    Annotation,
+    CorrectedSentence,
+    CorrectionPipeline,
+    GreynirCorrect,
+    GreynirCorrectAPI,
+    Settings,
+)
+from tokenizer import TOK, Tok, detokenize
 
 if TYPE_CHECKING:
     # For some reason, types seem to be missing from the multiprocessing module
@@ -115,17 +124,6 @@ if TYPE_CHECKING:
     import multiprocessing.dummy as multiprocessing
 else:
     import multiprocessing
-
-from reynir import _Sentence
-from tokenizer import detokenize, Tok, TOK
-
-from reynir_correct.annotation import Annotation
-from reynir_correct.checker import (
-    GreynirCorrect,
-    Settings,
-    AnnotatedSentence,
-    check as gc_check,
-)
 
 
 # Disable Pylint warnings arising from Pylint not understanding the typing module
@@ -157,7 +155,8 @@ CatResultDict = Dict[str, Union[int, float, str]]
 
 settings = Settings()
 settings.read(os.path.join("config", "GreynirCorrect.conf"))
-rc = GreynirCorrect(settings)
+gc = GreynirCorrect(settings, pipeline=CorrectionPipeline("", settings=settings))
+rc = GreynirCorrectAPI(gc=gc)
 
 # Create a lock to ensure that only one process outputs at a time
 OUTPUT_LOCK = multiprocessing.Lock()
@@ -591,7 +590,7 @@ GCSKIPCODES = frozenset(["E001"])
 
 parser = argparse.ArgumentParser(
     description=(
-        "This program evaluates the spelling and grammar checking performance " "of GreynirCorrect on iceErrorCorpus"
+        "This program evaluates the spelling and grammar checking performance of GreynirCorrect on iceErrorCorpus"
     )
 )
 
@@ -1687,20 +1686,13 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 # Nothing to do: drop this and go to the next sentence
                 continue
             # print(text)
-            options = {}
-            options["annotate_unparsed_sentences"] = True  # True is default
-            options["suppress_suggestions"] = False  # False is default
-            options["ignore_rules"] = set(
-                [
-                    "",
-                ]
-            )
             # Pass it to GreynirCorrect
-            pg = [list(p) for p in gc_check(text, rc=rc, **options)]
-            s: Optional[_Sentence] = None
-            if len(pg) >= 1 and len(pg[0]) >= 1:
-                s = pg[0][0]
-            if len(pg) > 1 or (len(pg) == 1 and len(pg[0]) > 1):
+            result = rc.correct(text=text, suppress_suggestions=False, ignore_rules=set())
+            pg = result.sentences
+            s: Optional[CorrectedSentence] = None
+            if len(pg) >= 1:
+                s = pg[0]
+            if len(pg) > 1 or (len(pg) == 1):
                 # if QUIET:
                 #     bprint(f"In file {fpath}:")
                 # bprint(
@@ -1770,8 +1762,8 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 return gc_error, ice_error
 
             assert s is not None
-            assert isinstance(s, AnnotatedSentence)
-            gc_error, ice_error = sentence_results(s.annotations, errors)
+            assert isinstance(s, CorrectedSentence)
+            gc_error, ice_error = sentence_results(s.annotations or [], errors)
 
             def token_results(
                 hyp_annotations: Iterable[Annotation],
@@ -2019,7 +2011,6 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                     wrong_span,
                 )
 
-            assert isinstance(s, AnnotatedSentence)
             (
                 tp,
                 fp,
@@ -2031,7 +2022,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 cfn,
                 right_span,
                 wrong_span,
-            ) = token_results(s.annotations, errors)
+            ) = token_results(s.annotations or [], errors)
             tn = len(tokens) - tp - fp - fn
             ctn = len(tokens) - ctp - cfp - cfn
             # Collect statistics into the stats list, to be returned

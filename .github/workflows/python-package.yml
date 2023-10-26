@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [ "3.8", "3.9", "3.10", "3.11", "pypy-3.9", "pypy-3.10"]
+        python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12", "pypy-3.9", "pypy-3.10"]
 
     steps:
     - uses: actions/checkout@v4
@@ -28,11 +28,11 @@ jobs:
         python -m pip install --upgrade pip wheel setuptools pytest
         python -m pip install git+https://github.com/mideind/Tokenizer#egg=tokenizer
         python -m pip install git+https://github.com/mideind/GreynirPackage#egg=reynir
-        # The neural sentence classifier doesn't work with pypy so don't try to install it
-        if [ "${{ matrix.python-version }}" == "pypy-3.9" ] || [ "${{ matrix.python-version }}" == "pypy-3.10" ]; then
-          python -m pip install -e .
+        # No need to test the sentence classifier in every build (also doesn't work with PyPy)
+        if [ "${{ matrix.python-version }}" == "3.8" ]; then
+          python -m pip install -e ".[sentence_classifier]"
         else
-          python -m pip install -e .[sentence_classifier]
+          python -m pip install -e ".[dev]"
         fi
     - name: Typecheck with mypy
       run: |
