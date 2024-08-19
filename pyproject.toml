@@ -1,6 +1,6 @@
 [project]
 name = "reynir-correct"
-version = "4.0.0"
+version = "4.0.1"
 description = "Spelling and grammar correction for Icelandic"
 authors = [{ name = "Miðeind ehf.", email = "mideind@mideind.is" }]
 readme = { file = "README.rst", content-type = "text/x-rst" }
@@ -30,7 +30,7 @@ classifiers = [
     "Topic :: Text Processing :: Linguistic",
 ]
 requires-python = ">=3.8"
-dependencies = ["reynir>=3.5.3", "icegrams>=1.1.2", "typing_extensions"]
+dependencies = ["reynir>=3.5.6", "icegrams>=1.1.2", "typing_extensions"]
 
 [project.urls]
 Repository = "https://github.com/mideind/GreynirCorrect"

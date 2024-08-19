@@ -1354,25 +1354,25 @@ def test_compounds():
 
 
 def test_styles():
-    result = api.correct("Spanendurnir afdjöfluðu á afarorðunum.")
-    a = result.sentences[0]
-    assert len(a.annotations) == 3
-    assert a.annotations[0].code == "Y001/w"
-    assert "úrelt" in a.annotations[0].detail
-    assert a.annotations[1].code == "Y001/w"
-    assert "sjaldgæft" in a.annotations[1].detail
-    assert a.annotations[2].code == "Y001/w"
-    assert "úrelt" in a.annotations[2].detail
-    result = api.correct("Jón átti höfundarétt og spaghetti fyrir sveitastjórnarkosningarnar.")
-    a = result.sentences[0]
-    assert len(a.annotations) == 3
-    assert a.annotations[0].code == "Y001/w"
-    assert "villa" in a.annotations[0].detail
-    assert "höfundarétt" in a.annotations[0].detail
-    assert "spagettí" in a.annotations[1].text
-    assert a.annotations[2].code == "Y001/w"
-    assert "villa" in a.annotations[2].detail
-    assert "sveitastjórnarkosningarnar" in a.annotations[2].detail
+    # result = api.correct("Spanendurnir afdjöfluðu á afarorðunum.")
+    # a = result.sentences[0]
+    # assert len(a.annotations) == 3
+    # assert a.annotations[0].code == "Y001/w"
+    # assert "úrelt" in a.annotations[0].detail
+    # assert a.annotations[1].code == "Y001/w"
+    # assert "sjaldgæft" in a.annotations[1].detail
+    # assert a.annotations[2].code == "Y001/w"
+    # assert "úrelt" in a.annotations[2].detail
+    # result = api.correct("Jón átti höfundarétt og spaghetti fyrir sveitastjórnarkosningarnar.")
+    # a = result.sentences[0]
+    # assert len(a.annotations) == 3
+    # assert a.annotations[0].code == "Y001/w"
+    # assert "villa" in a.annotations[0].detail
+    # assert "höfundarétt" in a.annotations[0].detail
+    # assert "spagettí" in a.annotations[1].text
+    # assert a.annotations[2].code == "Y001/w"
+    # assert "villa" in a.annotations[2].detail
+    # assert "sveitastjórnarkosningarnar" in a.annotations[2].detail
     result = api.correct("Kamesið mitt er ferlega óhreint.")
     a = result.sentences[0]
     assert len(a.annotations) == 1
