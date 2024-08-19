@@ -263,7 +263,8 @@ class CapitalizationErrors:
         suffix_rev = self.reverse_capitalization(suffix, split_on_hyphen=split_on_hyphen)
         _, m = db.lookup_g(suffix_rev)
         # Only consider lemmas
-        m = [mm for mm in m if mm.stofn == mm.ordmynd]
+        STOFN_NOT_IN_ORDMYNDIR = ("Bandaríki",)
+        m = [mm for mm in m if (mm.stofn == mm.ordmynd) or (mm.stofn in STOFN_NOT_IN_ORDMYNDIR)]
         if not m:
             raise ConfigError(
                 "No BÍN meaning for '{0}' (from error word '{1}') in capitalization_errors section".format(
@@ -574,7 +575,6 @@ class WrongFormersCID:
 
 
 class Settings:
-
     """Global settings"""
 
     def __init__(self):
