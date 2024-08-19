@@ -76,7 +76,6 @@ log = logging.getLogger(__name__)
 
 
 class AnnTokenDict(TypedDict, total=False):
-
     """Type of the token dictionaries returned from check_errors()"""
 
     # Token kind
@@ -90,7 +89,6 @@ class AnnTokenDict(TypedDict, total=False):
 
 
 class AnnDict(TypedDict):
-
     """A single annotation, as returned by the Yfirlestur.is API"""
 
     start: int
@@ -104,7 +102,6 @@ class AnnDict(TypedDict):
 
 
 class AnnResultDict(TypedDict):
-
     """The annotation result for a sentence"""
 
     original: str

@@ -5,7 +5,6 @@ description = "Spelling and grammar correction for Icelandic"
 authors = [{ name = "Miðeind ehf.", email = "mideind@mideind.is" }]
 readme = { file = "README.rst", content-type = "text/x-rst" }
 license = { file = "LICENSE.txt" }
-# For classifier list see: https://pypi.org/pypi?%3Aaction=list_classifiers
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
