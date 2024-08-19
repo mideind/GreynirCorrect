@@ -47,7 +47,7 @@ from .settings import Settings
 from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, ParseResultStats, check_errors
 
 __author__ = "Miðeind ehf"
-__copyright__ = "(C) 2023 Miðeind ehf."
+__copyright__ = "(C) 2019-2024 Miðeind ehf."
 __version__ = importlib.metadata.version("reynir-correct")
 
 __all__ = (
