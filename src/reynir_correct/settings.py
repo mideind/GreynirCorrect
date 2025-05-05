@@ -41,15 +41,16 @@
 
 """
 
-from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
 
 import os
 import threading
 from collections import defaultdict
+from importlib.resources import files
 
-from reynir.basics import ConfigError, LineReader
 from reynir.bindb import GreynirBin
 from reynir.bintokenizer import StateDict
+
 
 ErrorFormTuple = Tuple[str, str, int, str, str]
 # (lemma, id, cat, correct_word_form, tag, eink, malsnid, stafs, aslatt, beyg)
@@ -67,6 +68,119 @@ R_EINKUNN: Mapping[int, str] = {
     4: "R004",
     5: "R005",
 }
+
+
+class ConfigError(Exception):
+    """Exception class for configuration errors"""
+
+    def __init__(self, s: str) -> None:
+        super().__init__(s)
+        self.fname: Optional[str] = None
+        self.line = 0
+
+    def set_pos(self, fname: str, line: int) -> None:
+        """Set file name and line information, if not already set"""
+        if not self.fname:
+            self.fname = fname
+            self.line = line
+
+    def __str__(self) -> str:
+        """Return a string representation of this exception"""
+        s = Exception.__str__(self)
+        if not self.fname:
+            return s
+        return "File {0}, line {1}: {2}".format(self.fname, self.line, s)
+
+
+class LineReader:
+    """Read lines from a text file, recognizing $include directives"""
+
+    def __init__(
+        self,
+        fname: str,
+        *,
+        package_name: Optional[str] = None,
+        outer_fname: Optional[str] = None,
+        outer_line: int = 0
+    ) -> None:
+        self._fname = fname
+        self._package_name = package_name
+        self._line = 0
+        self._inner_rdr: Optional[LineReader] = None
+        self._outer_fname = outer_fname
+        self._outer_line = outer_line
+
+    def fname(self) -> str:
+        """The name of the file being read"""
+        return self._fname if self._inner_rdr is None else self._inner_rdr.fname()
+
+    def line(self) -> int:
+        """The number of the current line within the file"""
+        return self._line if self._inner_rdr is None else self._inner_rdr.line()
+
+    def lines(self) -> Iterator[str]:
+        """Generator yielding lines from a text file"""
+        self._line = 0
+        try:
+            if self._package_name:
+                ref = files(self._package_name).joinpath(self._fname)
+                stream = ref.open("rb")
+            else:
+                stream = open(self._fname, "rb")
+            with stream as inp:
+                # Read config file line-by-line from the package resources
+                accumulator = ""
+                for b in inp:
+                    # We get byte strings; convert from utf-8 to Python strings
+                    s = b.decode("utf-8")
+                    self._line += 1
+                    if s.rstrip().endswith("\\"):
+                        # Backslash at end of line: continuation in next line
+                        accumulator += s.strip()[:-1]
+                        continue
+                    if accumulator:
+                        # Add accumulated text from preceding
+                        # backslash-terminated lines, but drop leading whitespace
+                        s = accumulator + s.lstrip()
+                        accumulator = ""
+                    # Check for include directive: $include filename.txt
+                    if s.startswith("$") and s.lower().startswith("$include "):
+                        iname = s.split(maxsplit=1)[1].strip()
+                        # Do some path magic to allow the included path
+                        # to be relative to the current file path, or a
+                        # fresh (absolute) path by itself
+                        head, _ = os.path.split(self._fname)
+                        iname = os.path.join(head, iname)
+                        rdr = self._inner_rdr = LineReader(
+                            iname,
+                            package_name=self._package_name,
+                            outer_fname=self._fname,
+                            outer_line=self._line,
+                        )
+                        yield from rdr.lines()
+                        self._inner_rdr = None
+                    else:
+                        yield s
+                if accumulator:
+                    # Catch corner case where last line of file ends with a backslash
+                    yield accumulator
+        except (IOError, OSError):
+            if self._outer_fname:
+                # This is an include file within an outer config file
+                c = ConfigError(
+                    "Error while opening or reading include file '{0}'".format(
+                        self._fname
+                    )
+                )
+                c.set_pos(self._outer_fname, self._outer_line)
+            else:
+                # This is an outermost config file
+                c = ConfigError(
+                    "Error while opening or reading config file '{0}'".format(
+                        self._fname
+                    )
+                )
+            raise c
 
 
 class AllowedMultiples:

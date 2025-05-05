@@ -1,3 +1,6 @@
+
+from __future__ import annotations
+
 from typing import Iterable, List, Optional, Tuple
 
 from functools import partial
@@ -139,3 +142,4 @@ def correct_grammar_format(
     # Some tests verify that there are indeed no errors on these tokens.
     alltoks = [CorrectToken(-10, "", -10)] + alltoks + [CorrectToken(-20, "", -20)]
     return accumstr, alltoks
+

@@ -99,8 +99,7 @@ def load_config(tov_config_path: Optional[str] = None) -> Settings:
     """Load the default configuration file and return a Settings object. Optionally load
     an additional config if given."""
     settings = Settings()
-    settings_file = os.path.join(__file__, "..", "config", "GreynirCorrect.conf")
-    settings.read(settings_file, external=True)
+    settings.read("config/GreynirCorrect.conf")
     if tov_config_path is not None:
         # check whether the config path is valid:
         try:
