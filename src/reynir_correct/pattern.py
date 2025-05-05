@@ -2949,7 +2949,7 @@ class PatternMatcher:
 
     def run(self) -> None:
         """Apply the patterns to the sentence"""
-        tree = None if self._sent is None else self._sent.tree
+        tree = self._sent.tree
         if tree is None:
             # No tree: nothing to do
             return

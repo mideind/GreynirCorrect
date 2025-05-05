@@ -106,7 +106,7 @@ import os
 import random
 import xml.etree.ElementTree as ET
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 
 from reynir_correct import (
     Annotation,
@@ -698,7 +698,7 @@ class Stats:
 
     def __init__(self) -> None:
         """Initialize empty defaults for the stats collection"""
-        self._starttime = datetime.utcnow()
+        self._starttime = datetime.now(timezone.utc)
         self._files: Dict[str, int] = defaultdict(int)
         # We employ a trick to make the defaultdicts picklable between processes:
         # instead of the usual lambda: defaultdict(int), use defaultdict(int).copy
@@ -817,7 +817,7 @@ class Stats:
 
         def output_duration() -> None:  # type: ignore
             """Calculate the duration of the processing"""
-            dur = int((datetime.utcnow() - self._starttime).total_seconds())
+            dur = int((datetime.now(timezone.utc) - self._starttime).total_seconds())
             h = dur // 3600
             m = (dur % 3600) // 60
             s = dur % 60
@@ -1138,7 +1138,7 @@ class Stats:
             write_basic_value(wrong_span, "wrong_span", num_tokens, tp)
             calc_recall(right_span, wrong_span, "right_span", "wrong_span", "spanrecall")
 
-        def output_error_cat_scores() -> None:
+        def output_error_cat_scores() -> None:  # type: ignore[reportUnusedFunction]
             """Calculate and write scores for each error category to stdout"""
             bprint(f"\n\nResults for each error category in order by frequency")
             freqdict: Dict[str, int] = dict()
@@ -1202,7 +1202,7 @@ class Stats:
             else:
                 bprint(f"F0.5-score: N/A")
 
-        def output_supercategory_scores():
+        def output_supercategory_scores():  # type: ignore[reportUnusedFunction]
             """Error detection results for each supercategory in iEC given
             in SUPERCATEGORIES, each subcategory, and error code"""
             bprint("Supercategory: frequency, F-score")
@@ -1687,7 +1687,7 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
                 continue
             # print(text)
             # Pass it to GreynirCorrect
-            result = rc.correct(text=text, suppress_suggestions=False, ignore_rules=set())
+            result = rc.correct(text=text, suppress_suggestions=False, ignore_rules=frozenset())
             pg = result.sentences
             s: Optional[CorrectedSentence] = None
             if len(pg) >= 1:
@@ -2027,27 +2027,26 @@ def process(fpath_and_category: Tuple[str, str]) -> Dict[str, Any]:
             ctn = len(tokens) - ctp - cfp - cfn
             # Collect statistics into the stats list, to be returned
             # to the parent process
-            if stats is not None:
-                stats.append(
-                    (
-                        category,
-                        len(tokens),
-                        ice_error,
-                        gc_error,
-                        tp,
-                        tn,
-                        fp,
-                        fn,
-                        right_corr,
-                        wrong_corr,
-                        ctp,
-                        ctn,
-                        cfp,
-                        cfn,
-                        right_span,
-                        wrong_span,
-                    )
+            stats.append(
+                (
+                    category,
+                    len(tokens),
+                    ice_error,
+                    gc_error,
+                    tp,
+                    tn,
+                    fp,
+                    fn,
+                    right_corr,
+                    wrong_corr,
+                    ctp,
+                    ctn,
+                    cfp,
+                    cfn,
+                    right_span,
+                    wrong_span,
                 )
+            )
             if ANALYSIS:
                 with open("analysis.txt", "a+") as analysis:
                     analysis.write("\n".join(analysisblob))
@@ -2094,23 +2093,23 @@ def main() -> None:
     # quiet operation. We store the flag in a global variable
     # that is accessible to child processes.
     global QUIET
-    QUIET = args.measure
+    QUIET = args.measure  # type: ignore[reportConstantRedefinition]
 
     # Overriding flags
     if args.verbose is not None:
-        QUIET = False
+        QUIET = False  # type: ignore[reportConstantRedefinition]
     # --quiet has precedence over --verbose
     if args.quiet is not None:
-        QUIET = True
+        QUIET = True  # type: ignore[reportConstantRedefinition]
 
     global EXCLUDE
-    EXCLUDE = args.exclude
+    EXCLUDE = args.exclude  # type: ignore[reportConstantRedefinition]
 
     global SINGLE
-    SINGLE = args.single
+    SINGLE = args.single  # type: ignore[reportConstantRedefinition]
 
     global ANALYSIS
-    ANALYSIS = args.analysis
+    ANALYSIS = args.analysis  # type: ignore[reportConstantRedefinition]
 
     # Maximum number of files to process (0=all files)
     max_count = args.number
@@ -2123,7 +2122,7 @@ def main() -> None:
 
     initialize_cats(args.catfile)
 
-    if path is None:
+    if not path:
         path = _TEST_PATH if args.measure else _DEV_PATH
 
     def gen_files() -> Iterable[Tuple[str, str]]:

@@ -34,6 +34,8 @@
 
 """
 
+from __future__ import annotations
+
 from typing import (
     Any,
     Dict,
@@ -48,6 +50,7 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
+    TypedDict,
     Union,
     cast,
 )
@@ -84,6 +87,13 @@ from .spelling import Corrector
 
 # Token constructor classes
 TokenCtor = Type["Correct_TOK"]
+
+class TemplateDict(TypedDict):
+    """TypedDict representing the structure returned by create_template_dict()"""
+    explanation: str
+    explanation_w_sugg: str
+    error_warning: Type[ToneOfVoiceWarning] | Type[TabooWarning]
+    words: Dict[str, Tuple[str, str]]
 
 # Words that contain any letter from the following set are assumed
 # to be foreign and their spelling is not corrected, but suggestions are made
@@ -1456,7 +1466,7 @@ class MultiwordErrorStream(MatchingStream):
         db: GreynirBin,
         token_ctor: TokenCtor,
         ignore_rules: FrozenSet[str],
-        settings,
+        settings: Settings,
     ) -> None:
         super().__init__(settings.multiword_errors.DICT)
         self._token_ctor = token_ctor
@@ -2504,7 +2514,7 @@ def late_fix_capitalization(
                 suppress_suggestions
                 and token.error_code == "Z001"
                 and isinstance(token.val, list)
-                and any(v.ordfl == "lo" for v in token.val)
+                and any(getattr(v, "ordfl") == "lo" for v in token.val)
             ):
                 orig = token.original.strip() if token.original else token.txt
                 token.remove_error(orig)
@@ -2655,13 +2665,19 @@ def late_fix_merges(
         yield token
 
 
-def create_template_dict(settings, explanation: str, explanation_w_sugg: str, error_warning, words):
-    template_dict = {}
-    template_dict["explanation"] = explanation
-    template_dict["explanation_w_sugg"] = explanation_w_sugg
-    template_dict["error_warning"] = error_warning
-    template_dict["words"] = words
-    return template_dict
+def create_template_dict(
+    settings: Settings,
+    explanation: str,
+    explanation_w_sugg: str,
+    error_warning: Type[ToneOfVoiceWarning] | Type[TabooWarning],
+    words: Dict[str, Tuple[str, str]],
+) -> TemplateDict:
+    return TemplateDict(
+        explanation=explanation,
+        explanation_w_sugg=explanation_w_sugg,
+        error_warning=error_warning,
+        words=words,
+    )
 
 
 def check_wording(
@@ -2688,10 +2704,10 @@ def check_wording(
         settings.tone_of_voice_words.DICT,
     )
 
-    def handle_template_data(token_stream, tdict) -> Iterator[CorrectToken]:
+    def handle_template_data(token_stream: Iterable[CorrectToken], tdict: TemplateDict) -> Iterator[CorrectToken]:
         for token in token_stream:
             # Check taboo words
-            if token.val is not None and token.has_meanings and token.txt not in NOT_TABOO:  # type: ignore
+            if token.val is not None and token.has_meanings and token.txt not in NOT_TABOO:
                 # We skip checks for tokens already containing an error, as the flagged word
                 # might be the system's invention.
                 for m in token.meanings:
@@ -2735,23 +2751,29 @@ def check_wording(
                             orig = token.original.strip() if token.original else token.txt.strip()
                             token.remove_error(orig)
                         else:
-                            beyging = token[2][0].beyging
-                            suggest_object = db.lookup_variants(suggest, sugg_cat, beyging, lemma=suggest)
-                            if suggest_object:
-                                bmynd = suggest_object[0].bmynd
-                                suggest = emulate_case(bmynd, template=token.txt)
-                            # Word not found in BÍN
-                            # else:
-                            token.set_error(
-                                tdict["error_warning"](
-                                    "001",
-                                    explanation,
-                                    detail or None,
-                                    token.txt,
-                                    suggest,
-                                    sugglist,
+                            val = token[2]
+                            beyging = ""
+                            if isinstance(val, list) and len(val) > 0:
+                                val0 = val[0]
+                                if isinstance(val0, BIN_Tuple):
+                                    beyging = val0.beyging
+                            if beyging:
+                                suggest_object = db.lookup_variants(suggest, sugg_cat, beyging, lemma=suggest)
+                                if suggest_object:
+                                    bmynd = suggest_object[0].bmynd
+                                    suggest = emulate_case(bmynd, template=token.txt)
+                                # Word not found in BÍN
+                                # else:
+                                token.set_error(
+                                    tdict["error_warning"](
+                                        "001",
+                                        explanation,
+                                        detail or None,
+                                        token.txt,
+                                        suggest,
+                                        sugglist,
+                                    )
                                 )
-                            )
                         break
             yield token
 
@@ -2981,7 +3003,7 @@ class CorrectionPipeline(DefaultPipeline):
         self._suggest_not_correct = options.pop("suggest_not_correct", False)
         # Wordlist for words that should not be marked as errors or corrected
         self._ignore_wordlist = options.pop("ignore_wordlist", set())
-        self._ignore_rules = cast(frozenset, options.pop("ignore_rules", frozenset()))
+        self._ignore_rules = cast(frozenset[str], options.pop("ignore_rules", frozenset()))
         self.settings = settings
 
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:

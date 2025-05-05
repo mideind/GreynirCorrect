@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Set, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 from functools import partial
 
@@ -10,7 +10,7 @@ from reynir_correct.wrappers import GreynirCorrectAPI
 
 
 def check_sentence(
-    api: reynir_correct.GreynirCorrectAPI,
+    api: GreynirCorrectAPI,
     s: str,
     annotations: Optional[List[Tuple[int, int, str]]],
     is_foreign: bool = False,
@@ -88,7 +88,7 @@ def correct_grammar_format(
     api: GreynirCorrectAPI,
     print_annotations: bool = False,
     print_all: bool = False,
-    ignore_rules: Optional[Set[str]] = None,
+    ignore_rules: Optional[frozenset[str]] = None,
     suppress_suggestions: bool = False,
 ) -> Tuple[str, List[CorrectToken]]:
     """Do a full spelling and grammar check of the source text. This is only used for testing"""

@@ -42,7 +42,7 @@
 
 """
 
-from typing import List, Union, overload
+from typing import Any, List, Union, overload
 
 
 class SentenceClassifier:
@@ -66,7 +66,11 @@ class SentenceClassifier:
             )
             warnings.warn(warningtext)
             raise ImportError(warningtext)
-        self.pipe = pipeline("text2text-generation", model=self._model_name, tokenizer="google/byt5-base")
+        self.pipe: Any = pipeline(
+            "text2text-generation",
+            model=self._model_name,
+            tokenizer="google/byt5-base",
+        )
 
     @overload
     def classify(self, text: str) -> bool:

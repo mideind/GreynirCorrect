@@ -32,7 +32,7 @@ import importlib.metadata
 
 # Expose the reynir-correct API
 from reynir import Greynir, Paragraph, Sentence, correct_spaces, mark_paragraphs
-from tokenizer import detokenize
+from tokenizer import tokenize, detokenize
 
 # Annotations
 from .annotation import Annotation
@@ -52,10 +52,11 @@ __version__ = importlib.metadata.version("reynir-correct")
 
 __all__ = (
     "Greynir",
-    "correct_spaces",
-    "mark_paragraphs",
     "Sentence",
     "Paragraph",
+    "correct_spaces",
+    "mark_paragraphs",
+    "tokenize",
     "detokenize",
     "Settings",
     "ParseResultStats",

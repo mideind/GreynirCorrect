@@ -53,7 +53,8 @@
 """
 
 from __future__ import annotations
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union, cast
+
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union, cast
 from typing_extensions import TypedDict
 
 import argparse
@@ -65,8 +66,7 @@ from functools import partial
 from tokenizer import TOK, calculate_indexes, detokenize, normalized_text_from_tokens, text_from_tokens
 from tokenizer.definitions import AmountTuple, NumberTuple
 
-from reynir_correct.readability import FleschKincaidFeedback, FleschKincaidScorer, RareWordsFinder
-
+from .readability import FleschKincaidFeedback, FleschKincaidScorer, RareWordsFinder
 from .annotation import Annotation
 from .checker import AnnotatedSentence, CheckResult, GreynirCorrect, load_config
 from .classifier import SentenceClassifier
@@ -186,7 +186,7 @@ class CorrectedSentence:
                 tok.txt = token_map.get(ix, tok.txt)
         return CorrectedSentence(tokens=tokens, parsed=parsed, annotations=sentence.annotations)
 
-    def filter_annotations(self, ignore_rules: Set[str]) -> None:
+    def filter_annotations(self, ignore_rules: frozenset[str]) -> None:
         """Remove ignored annotations"""
         # If there are no annotations, or no ignore rules, we return early
         if self.annotations is None or not ignore_rules:
@@ -221,7 +221,7 @@ class CorrectionResult:
     flesch_result: Optional[Tuple[float, FleschKincaidFeedback]] = None
     rare_words: Optional[List[Tuple[str, float]]] = None
 
-    def filter_annotations(self, ignore_rules: Set[str]) -> None:
+    def filter_annotations(self, ignore_rules: frozenset[str]) -> None:
         """Remove ignored annotations"""
         for sent in self.sentences:
             sent.filter_annotations(ignore_rules)
@@ -246,7 +246,7 @@ class GreynirCorrectAPI:
         self.rare_word_analyzer = rare_word_analyzer
 
     @staticmethod
-    def from_options(**options) -> GreynirCorrectAPI:
+    def from_options(**options: Any) -> GreynirCorrectAPI:
         """Create a GreynirCorrectAPI from the given options"""
         settings = load_config(options.pop("tov_config", None))
         do_flesch_analysis = bool(options.pop("flesch", False))
@@ -263,36 +263,28 @@ class GreynirCorrectAPI:
         )
         rare_word_analyzer = RareWordsFinder() if do_rare_word_analysis else None
         do_grammar_check = options.get("all_errors", True)
+        sentence_prefilter: SentenceClassifier | None = None
         if options.get("sentence_prefilter", False):
             # Only construct the classifier model if we need it
             from .classifier import SentenceClassifier
-
-            sentence_classifier = SentenceClassifier()
-            return GreynirCorrectAPI(
-                gc,
-                sentence_prefilter=sentence_classifier,
-                do_flesch=do_flesch_analysis,
-                rare_word_analyzer=rare_word_analyzer,
-                do_grammar_check=do_grammar_check,
-            )
-
+            sentence_prefilter = SentenceClassifier()
         return GreynirCorrectAPI(
             gc,
-            sentence_prefilter=None,
+            sentence_prefilter=sentence_prefilter,
             do_flesch=do_flesch_analysis,
             rare_word_analyzer=rare_word_analyzer,
             do_grammar_check=do_grammar_check,
         )
 
     def _correct_spelling(
-        self, text: Iterable[str], ignore_rules: Optional[Set] = None, suppress_suggestions: bool = False
+        self, text: Iterable[str], ignore_rules: Optional[frozenset[str]] = None, suppress_suggestions: bool = False
     ) -> Iterable[CorrectToken]:
         """Correct the token-level errors in the text"""
         # TODO: The pipeline needs a refactoring.
         # We use some hacks here to avoid having to rewrite the pipeline at this point.
-        self.gc.pipeline._text_or_gen = text
-        self.gc.pipeline._ignore_rules = cast(frozenset, ignore_rules or frozenset())
-        self.gc.pipeline._suppress_suggestions = suppress_suggestions
+        self.gc.pipeline._text_or_gen = text  # type: ignore[reportPrivateUsage]
+        self.gc.pipeline._ignore_rules = ignore_rules or frozenset()  # type: ignore[reportPrivateUsage]
+        self.gc.pipeline._suppress_suggestions = suppress_suggestions  # type: ignore[reportPrivateUsage]
         return self.gc.pipeline.tokenize()  # type: ignore
 
     def _sentence_contains_error(self, corrected_tokens: Iterable[CorrectToken]) -> bool:
@@ -300,7 +292,6 @@ class GreynirCorrectAPI:
         if self.sentence_prefilter is None:
             raise ValueError("Sentence classifier not initialized - did you forget to set sentence_prefilter=True?")
         original_sentence = "".join(t.original or t.txt for t in corrected_tokens)
-
         return self.sentence_prefilter.classify(original_sentence)
 
     def _correct_grammar(self, corrected_tokens: Iterable[CorrectToken]) -> CheckResult:
@@ -308,7 +299,7 @@ class GreynirCorrectAPI:
         return results
 
     def correct(
-        self, text: Iterable[str], ignore_rules: Optional[Set] = None, suppress_suggestions: bool = False
+        self, text: Iterable[str], ignore_rules: Optional[frozenset[str]] = None, suppress_suggestions: bool = False
     ) -> CorrectionResult:
         """Correct the input text by first correcting spelling and then grammatical errors."""
         corrected_tokens = self._correct_spelling(
@@ -362,24 +353,24 @@ class GreynirCorrectAPI:
             ),
         )
         # Filter annotations based on ignore rules
-        result.filter_annotations(ignore_rules=ignore_rules or set())
+        result.filter_annotations(ignore_rules=ignore_rules or frozenset())
         return result
 
 
 def check_errors(**options: Any) -> str:
     """Return a string in the chosen format and correction level
     using the spelling and grammar checker"""
-    all_errors = options.pop("all_errors", True)
-    text = options.pop("input", None)
-    format = options.pop("format", "json")
-    spaced = options.pop("spaced", False)
-    normalize = options.pop("normalize", False)
-    annotations = options.pop("annotations", False)
-    print_all = options.pop("print_all", False)
-    ignore_rules = options.pop("ignore_rules", set())
-    suppress_suggestions = options.pop("suppress_suggestions", False)
-    if text is None:
-        raise ValueError("No input text")
+    text: str | List[str] = options.pop("input", "")
+    if not text:
+        return ""
+    all_errors: bool = options.pop("all_errors", True)
+    format: str = options.pop("format", "json")
+    spaced: bool = options.pop("spaced", False)
+    normalize: bool = options.pop("normalize", False)
+    annotations: bool = options.pop("annotations", False)
+    print_all: bool = options.pop("print_all", False)
+    ignore_rules: frozenset[str] = options.pop("ignore_rules", frozenset())
+    suppress_suggestions: bool = options.pop("suppress_suggestions", False)
     api = GreynirCorrectAPI.from_options(**options)
     if isinstance(text, str):
         text = [text]
@@ -457,7 +448,7 @@ def format_spelling(
             elif format == "json":
                 # Output the tokens in JSON format, one line per token
                 d: Dict[str, Any] = dict(k=TOK.descr[t.kind])
-                if t.txt is not None:
+                if t.txt:
                     d["t"] = t.txt
                 v = val(t)
                 if t.kind not in {TOK.WORD, TOK.PERSON, TOK.ENTITY} and v is not None:

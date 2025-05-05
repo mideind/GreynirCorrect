@@ -1,15 +1,16 @@
 .. _customization:
 
 Custom configuration
-=========
+====================
 
 Tone-of-voice issues
----------------------------
+--------------------
 
 The user can customize GreynirCorrect by providing a configuration file 
 with additional issues to check for. The configuration file should be in the 
-same format as the [GreynirCorrect.conf](src/reynir_correct/config/GreynirCorrect.conf) default configuration file, with 
-any of the needed sections from that file, defined with a header in square brackets.
+same format as the [GreynirCorrect.conf](src/reynir_correct/config/GreynirCorrect.conf)
+default configuration file, with any of the needed sections from that file,
+defined with a header in square brackets.
 
 The user can then pass in the path to the configuration file using 
 the ``--tov-config`` command line argument. The config is loaded in addition to the
@@ -33,7 +34,8 @@ An example of a tone-of-voice section is as follows:
 This only works for single words, in whitespace-separated columns within each line. The format is as follows:
 
 1. Word + '_' + category
-2. Optional replacement word + '_' + category. There can be multiple replacement words, separated by tight forward slashes '/'
+2. Optional replacement word + '_' + category. There can be multiple replacement words,
+   separated by tight forward slashes '/'
 3. Optional explanatory comment, enclosed in double quotes.
 
 Note that lines can be continued by ending them with a backslash '\',
@@ -41,13 +43,13 @@ which is especially useful for long explanatory comments.
 
 
 Other sections
-------------------------
+--------------
 Other sections can be added to the configuration file, as long as they
 are the same as the sections in the default configuration file, such as
 ``[capitalization_errors]`` or ``[multiword_errors]``.
 
 More complex issues
-------------------------
+-------------------
 In case the user wants to check for more complex issues, such as multiword phrases
 or grammatical errors which require pattern matching, the user can add a separate 
 python module where these issues are handled. This module is provided in a file path 

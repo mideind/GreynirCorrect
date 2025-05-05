@@ -72,8 +72,7 @@ from reynir.reducer import Reducer
 from reynir.reynir import Job, ProgressFunc
 from tokenizer import Abbreviations, Tok
 
-from reynir_correct.settings import Settings
-
+from .settings import Settings
 from .annotation import Annotation
 from .errfinder import ErrorDetectionToken, ErrorFinder
 from .errtokenizer import CorrectionPipeline, CorrectToken
@@ -100,7 +99,8 @@ def load_config(tov_config_path: Optional[str] = None) -> Settings:
     """Load the default configuration file and return a Settings object. Optionally load
     an additional config if given."""
     settings = Settings()
-    settings.read(os.path.join("config", "GreynirCorrect.conf"))
+    settings_file = os.path.join(__file__, "..", "config", "GreynirCorrect.conf")
+    settings.read(settings_file, external=True)
     if tov_config_path is not None:
         # check whether the config path is valid:
         try:
@@ -200,7 +200,7 @@ class GreynirCorrect(Greynir):
     def tokenize(self, text: StringIterable) -> Iterator[Tok]:
         """Use the correcting tokenizer instead of the normal one"""
         # This is a bit of a hack: we set the pipeline's text_or_gen
-        self.pipeline._text_or_gen = text
+        self.pipeline._text_or_gen = text  # type: ignore[reportPrivateUsage]
         return self.pipeline.tokenize()
 
     @classmethod
@@ -227,7 +227,7 @@ class GreynirCorrect(Greynir):
             if GreynirCorrect._parser is None or GreynirCorrect._parser.is_grammar_modified()[0]:
                 # Initialize a singleton instance of the parser and the reducer.
                 # Both classes are re-entrant and thread safe.
-                GreynirCorrect._parser = edp = ErrorDetectingParser()
+                GreynirCorrect._parser = edp = ErrorDetectingParser()  # type: ignore[reportIncompatibleVarType]
                 GreynirCorrect._reducer = Reducer(edp.grammar)
             return GreynirCorrect._parser
 

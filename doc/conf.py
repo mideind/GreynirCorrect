@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# type: ignore
 #
 # GreynirCorrect documentation build configuration file, created by
 # sphinx-quickstart on Sun Apr  8 01:20:08 2018.

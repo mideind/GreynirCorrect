@@ -62,22 +62,22 @@ class FleschKincaidFeedback(Enum):
     VERY_DIFFICULT = (0, "Mjög þungur texti")
     VERY_DIFFICULT_OR_INVALID = (-math.inf, "Mjög þungur eða ómarktækur texti.")
 
-    def __ge__(self, other):
+    def __ge__(self, other: FleschKincaidFeedback):
         if self.__class__ is other.__class__:
             return self.value >= other.value
         return NotImplemented
 
-    def __gt__(self, other):
+    def __gt__(self, other: FleschKincaidFeedback):
         if self.__class__ is other.__class__:
             return self.value > other.value
         return NotImplemented
 
-    def __le__(self, other):
+    def __le__(self, other: FleschKincaidFeedback):
         if self.__class__ is other.__class__:
             return self.value <= other.value
         return NotImplemented
 
-    def __lt__(self, other):
+    def __lt__(self, other: FleschKincaidFeedback):
         if self.__class__ is other.__class__:
             return self.value < other.value
         return NotImplemented

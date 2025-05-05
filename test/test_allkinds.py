@@ -189,7 +189,8 @@ def test_accepted_doubling(verbose=False):
 
 def test_wrong_compounds(verbose=False):
     s, g = check(
-        "Fötin koma í margskonar litum og fara afturábak afþvíað annarstaðar " "eru fjögurhundruð mikilsháttar hestar."
+        "Fötin koma í margskonar litum og fara afturábak afþvíað annarstaðar "
+        "eru fjögurhundruð mikilsháttar hestar."
     )
     assert len(g) == 23
     assert "margs konar" in s

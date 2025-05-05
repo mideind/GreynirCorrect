@@ -198,7 +198,7 @@ class ToneOfVoicePatterns:
         self.PATH: str = ""
 
     def add(self, fpath: str) -> None:
-        self.PATH = fpath
+        self.PATH = fpath  # type: ignore[reportConstantRedefinition]
 
 
 class Suggestions:
@@ -612,7 +612,7 @@ class Settings:
         val = a[1].strip()
         try:
             if par == "debug":
-                Settings.DEBUG = val in TRUE
+                Settings.DEBUG = val in TRUE  # type: ignore[reportConstantRedefinition]
             else:
                 raise ConfigError("Unknown configuration parameter '{0}'".format(par))
         except ValueError:

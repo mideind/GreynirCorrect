@@ -35,7 +35,7 @@
 
 """
 
-from typing import TYPE_CHECKING, Callable, DefaultDict, Iterable, List, Optional, Set, Tuple
+from typing import Callable, DefaultDict, Iterable, List, Optional, Set, Tuple
 
 import math
 import re
@@ -48,11 +48,7 @@ from reynir import TOK, correct_spaces, tokenize
 from reynir.bindb import GreynirBin, ResultTuple
 from reynir.bintokenizer import StringIterable
 
-if __name__ == "__main__":
-    if not TYPE_CHECKING:
-        from settings import Settings  # pylint: disable=no-name-in-module
-else:
-    from .settings import Settings
+from .settings import Settings
 
 
 EDIT_0_FACTOR = math.log(1.0 / 1.0)

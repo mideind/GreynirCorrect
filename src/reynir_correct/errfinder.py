@@ -266,8 +266,6 @@ class ErrorFinder(ParseForestNavigator):
     def _simple_tree(self, node: Node) -> Optional[SimpleTree]:
         """Return a SimpleTree instance spanning the deep tree
         of which node is the root"""
-        if node is None:
-            return None
         first, last = self.node_span(node)
         toklist = self._tokens[first : last + 1]
         return SimpleTree.from_deep_tree(node, toklist, first_token_index=first)
@@ -875,7 +873,7 @@ class ErrorFinder(ParseForestNavigator):
         obj = vp.first_match("NP-OBJ")
         if obj is None:
             # The object could have been moved to the front
-            p = None if vp is None else vp.enclosing_tag("VP")
+            p = vp.enclosing_tag("VP")
             if p is not None:
                 try:
                     obj = p.NP_OBJ
@@ -895,7 +893,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def _annotate_ordinal(self, node: Node) -> None:
         """Check for errors in ordinal number terminals ("2.") and annotate them"""
-        token = cast("ErrorDetectionToken", node.token)
+        token = cast(ErrorDetectionToken | None, node.token)
         if token is None or token.t0 != TOK.ORDINAL:
             # The matched token is not a numeric ordinal: no complaint
             return
@@ -1015,8 +1013,6 @@ class ErrorFinder(ParseForestNavigator):
             correct_case = CASE_NAMES[correct_case_abbr]
             # Try to recover the verb's direct object
             objtree = self.find_verb_direct_object(tnode)
-            if objtree is None:
-                return
             code = "P_WRONG_CASE_" + obj_case_abbr + "_" + correct_case_abbr
             if objtree is not None:
                 # We know what the object is: annotate it
@@ -1063,11 +1059,11 @@ class ErrorFinder(ParseForestNavigator):
 
         def check_obj() -> None:
             obj: str = ""
-            if len(terminal._vparts) < 1 or terminal.variant(0) == "0":
+            if len(terminal._vparts) < 1 or terminal.variant(0) == "0":  # type: ignore[reportPrivateUsage]
                 # No objects to check
                 pass
             else:
-                obj = "" if len(terminal._vparts) < 2 else terminal.variant(1)
+                obj = "" if len(terminal._vparts) < 2 else terminal.variant(1)  # type: ignore[reportPrivateUsage]
             if not obj:
                 return
             obj_errors = VerbErrors.OBJ_ERRORS.get(verb, dict())
@@ -1180,11 +1176,11 @@ class ErrorFinder(ParseForestNavigator):
                 ann_text = ann
             elif isinstance(ann, tuple):
                 if len(ann) == 2:
-                    ann_text, suggestion = cast(AnnotationTuple2, ann)
+                    ann_text, suggestion = ann
                 elif len(ann) == 4:
-                    ann_text, start, end, suggestion = cast(AnnotationTuple4, ann)
+                    ann_text, start, end, suggestion = ann
                 elif len(ann) == 6:
-                    ann_text, ann_detail, start, end, original, suggestion = cast(AnnotationTuple6, ann)
+                    ann_text, ann_detail, start, end, original, suggestion = ann
             else:
                 if not ann:
                     # Empty or no dict: this means that upon closer inspection,
