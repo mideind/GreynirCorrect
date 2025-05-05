@@ -85,13 +85,14 @@ class Annotation:
             orig_sugg = f" | '{self._original}' -> '{self._suggest}'"
         else:
             orig_sugg = ""
-        return "{0:03}-{1:03}: {2:6} {3}{4} | {5}".format(
+        sugg_list = f" | {self._suggestlist}" if self._suggestlist else ""
+        return "{0:03}-{1:03}: {2:20} {3}{4}{5}".format(
             self._start,
             self._end,
             self._code,
             self._text,
             orig_sugg,
-            self._suggestlist,
+            sugg_list,
         )
 
     @property

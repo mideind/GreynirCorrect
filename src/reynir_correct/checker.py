@@ -61,20 +61,20 @@ from threading import Lock
 from types import ModuleType
 
 from islenska.basics import Ksnid
-from reynir import TOK, Greynir, Sentence, TokenList, _Job, correct_spaces
+from reynir import TOK, Greynir, Paragraph, Sentence, TokenList, _Job, correct_spaces
 from reynir.binparser import BIN_Grammar, BIN_Parser, VariantHandler
 from reynir.bintokenizer import StringIterable
 from reynir.fastparser import ffi  # type: ignore
 from reynir.fastparser import Fast_Parser
 from reynir.incparser import ICELANDIC_RATIO
 from reynir.reducer import Reducer
-from reynir.reynir import Job, ProgressFunc
+from reynir.reynir import Job, ProgressFunc, DEFAULT_MAX_SENT_TOKENS
 from tokenizer import Abbreviations, Tok
 
 from .settings import Settings
 from .annotation import Annotation
 from .errfinder import ErrorDetectionToken, ErrorFinder
-from .errtokenizer import CorrectionPipeline, CorrectToken
+from .errtokenizer import CorrectionPipeline, CorrectToken, settings_or_default
 from .pattern import PatternMatcher
 
 # Style mark from BÍN:
@@ -478,3 +478,88 @@ class GreynirCorrect(Greynir):
             ambiguity=job.ambiguity,
             parse_time=job.parse_time,
         )
+
+
+def check_single(
+    sentence_text: str, rc: Optional[GreynirCorrect] = None, **options: Any
+) -> Optional[AnnotatedSentence]:
+    """Check and annotate a single sentence, given in plain text"""
+    # Returns None if no sentence was parsed
+    max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
+    if rc is None:
+        settings = settings_or_default()
+        pipeline = CorrectionPipeline("", settings, **options)
+        rc = GreynirCorrect(settings, pipeline, **options)
+    return cast(AnnotatedSentence, rc.parse_single(sentence_text, max_sent_tokens=max_sent_tokens))
+
+
+def check_tokens(
+    tokens: Iterable[CorrectToken], rc: Optional[GreynirCorrect] = None, **options: Any
+) -> Optional[Sentence]:
+    """Check and annotate a single sentence, given as a token list"""
+    # Returns None if no sentence was parsed
+    max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
+    if rc is None:
+        settings = settings_or_default()
+        pipeline = CorrectionPipeline("", settings, **options)
+        rc = GreynirCorrect(settings, pipeline, **options)
+    return rc.parse_tokens(tokens, max_sent_tokens=max_sent_tokens)
+
+
+def check(
+    text: str, rc: Optional[GreynirCorrect] = None, **options: Any
+) -> Iterable[Paragraph]:
+    """Return a generator of checked paragraphs of text,
+    each being a generator of checked sentences with
+    annotations"""
+    split_paragraphs = options.pop("split_paragraphs", False)
+    max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
+    if rc is None:
+        settings = settings_or_default()
+        pipeline = CorrectionPipeline("", settings, **options)
+        rc = GreynirCorrect(settings, pipeline, **options)
+    # This is an asynchronous (on-demand) parse job
+    job = rc.submit(
+        text,
+        parse=True,
+        split_paragraphs=split_paragraphs,
+        max_sent_tokens=max_sent_tokens,
+    )
+    yield from job.paragraphs()
+
+
+def check_with_stats(
+    text: str,
+    *,
+    settings: Optional[Settings] = None,
+    split_paragraphs: bool = False,
+    progress_func: ProgressFunc = None,
+    **options: Any,
+) -> CheckResult:
+    """Return a dict containing parsed paragraphs as well as statistics,
+    using the given correction/parser class. This is a low-level
+    function; normally check_with_stats() should be used."""
+    settings = settings_or_default(settings)
+    split_paragraphs = options.pop("split_paragraphs", False)
+    max_sent_tokens = options.pop("max_sent_tokens", DEFAULT_MAX_SENT_TOKENS)
+    pipeline = CorrectionPipeline("", settings, **options)
+    rc = GreynirCorrect(settings, pipeline, **options)
+    # This is an asynchronous (on-demand) parse job
+    job = rc.submit(
+        text,
+        parse=True,
+        split_paragraphs=split_paragraphs,
+        progress_func=progress_func,
+        max_sent_tokens=max_sent_tokens,
+    )
+    # Enumerating through the job's paragraphs and sentences causes them
+    # to be parsed and their statistics collected
+    sentences = [cast(AnnotatedSentence, sent) for pg in job.paragraphs() for sent in pg]
+    return CheckResult(
+        sentences=sentences,
+        num_tokens=job.num_tokens,
+        num_sentences=job.num_sentences,
+        num_parsed=job.num_parsed,
+        ambiguity=job.ambiguity,
+        parse_time=job.parse_time,
+    )

@@ -217,6 +217,9 @@ ERROR_CLASS_REGISTRY: Dict[str, ErrorType] = dict()
 
 _ErrorClass = TypeVar("_ErrorClass", bound=ErrorType)
 
+# Cached settings for simple (legacy) API
+_cached_settings: Optional[Settings] = None
+
 
 def load_config(tov_config_path: Optional[str] = None) -> Settings:
     """Load the default configuration file and return a Settings object. Optionally load
@@ -239,10 +242,19 @@ def register_error_class(cls: _ErrorClass) -> _ErrorClass:
 
 def emulate_case(s: str, *, template: str) -> str:
     """Return the string s but emulating the case of the template
-    (lower/upper/capitalized)"""
+    (lower/upper/capitalized), also for multi-word templates ('Hesturinn Skjóni')"""
+    s_list = s.split()
+    if len(s_list) > 1:
+        template_list = template.split()
+        if len(s_list) == len(template_list):
+            # Multi-word case emulation
+            return " ".join(
+                emulate_case(word, template=template_word) for word, template_word in zip(s_list, template_list)
+            )
     if template.isupper():
         return s.upper()
     if template and template[0].isupper():
+        # The first letter of the template word is uppercase
         return s.capitalize()
     return s
 
@@ -2677,7 +2689,6 @@ def late_fix_merges(
 
 
 def create_template_dict(
-    settings: Settings,
     explanation: str,
     explanation_w_sugg: str,
     error_warning: Type[ToneOfVoiceWarning] | Type[TabooWarning],
@@ -2700,15 +2711,12 @@ def check_wording(
     """Annotate words to be flagged, with warnings. Here we check for both taboo words and
     tone of voice issues as determined by an additional config, if given."""
     taboo_data = create_template_dict(
-        settings,
         "Óheppilegt eða óviðurkvæmilegt orð",
         "Óheppilegt eða óviðurkvæmilegt orð, skárra væri t.d. ",
         TabooWarning,
         settings.taboo_words.DICT,
     )
-
     tone_of_voice_data = create_template_dict(
-        settings,
         "Orðið er ekki í samræmi við raddblæ okkar",
         "Orðið er ekki í samræmi við raddblæ okkar, í staðinn gætirðu notað",
         ToneOfVoiceWarning,
@@ -3058,7 +3066,6 @@ class CorrectionPipeline(DefaultPipeline):
         err_codes = {"T001/w", "T001", "V001/w", "V001"}
         if not only_ci and all(code not in ignore_rules for code in err_codes):
             ct_stream = check_wording(ct_stream, self.settings, self._db, self._suggest_not_correct)
-
         # Check context-independent style errors, indicated in BÍN
         ct_stream = check_style(ct_stream, self._db, ignore_rules)
         return ct_stream
@@ -3079,23 +3086,27 @@ class CorrectionPipeline(DefaultPipeline):
             self._suppress_suggestions,
             self.settings,
         )
-
         ct_stream = late_fix_merges(ct_stream, self._ignore_wordlist, self._ignore_rules)
         return ct_stream
 
-_cached_settings: Optional[Settings] = None
+
+def settings_or_default(settings: Optional[Settings] = None) -> Settings:
+    """Return the given settings or a cached default if not given"""
+    if settings is not None:
+        # If a settings object is provided, use it
+        return settings
+    global _cached_settings
+    if _cached_settings is None:
+        # Create a new default settings object and cache it
+        _cached_settings = load_config()
+    return _cached_settings
+
 
 def tokenize(
     text_or_gen: StringIterable, *, settings: Optional[Settings] = None, **options: Any
 ) -> Iterator[CorrectToken]:
     """Tokenize text using the correction pipeline,
     overriding a part of the default tokenization pipeline"""
-    if settings is None:
-        global _cached_settings
-        settings = _cached_settings
-        if settings is None:
-            # Create a new settings object if none is provided
-            settings = load_config()
-            _cached_settings = settings
+    settings = settings_or_default(settings)
     pipeline = CorrectionPipeline(text_or_gen, settings, **options)
     return cast(Iterator[CorrectToken], pipeline.tokenize())

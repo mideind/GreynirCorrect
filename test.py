@@ -1,17 +1,22 @@
-# type: ignore
+
 
 import sys
+from typing import cast
 import reynir_correct as rc
+from reynir_correct.checker import AnnotatedSentence
 
 
+"""
 from reynir_correct import check_single
 sent = check_single("Páli, vini mínum, langaði að horfa á sjónnvarpið.")
-for annotation in sent.annotations:
-    print("{0}".format(annotation))
+if sent:
+    for annotation in sent.annotations:
+        print("{0}".format(annotation))
 
 sys.exit(0)
+"""
 
-def display_annotations(sent):
+def display_annotations(sent: rc.AnnotatedSentence):
     print("\nSetning:")
     print(sent.text)
     print("\nNiðurstaða tókunar:")
@@ -37,7 +42,7 @@ txt = (
 print("\nUpphaflegur texti: '{0}'".format(txt))
 for pg in rc.check(txt, split_paragraphs=True):
     for sent in pg:
-        display_annotations(sent)
+        display_annotations(cast(AnnotatedSentence, sent))
     print("---")
 
 sys.exit(0)
@@ -51,7 +56,7 @@ with GreynirBin.get_db() as db:
     c = Corrector(db)  # type: Corrector
 
 
-def test(c, word):
+def test(c: Corrector, word: str) -> None:
     t0 = time.time()
     result = list(c.subs(word))
     valid = [r for r in result if r in c]

@@ -38,13 +38,26 @@ from tokenizer import detokenize
 from .annotation import Annotation
 
 # Grammar checking
-from .checker import AnnotatedSentence, GreynirCorrect
+from .checker import (
+    AnnotatedSentence,
+    GreynirCorrect,
+    check,
+    check_single,
+    check_with_stats,
+    check_tokens,
+)
 
 # Token-level correction
 from .errtokenizer import Correct_TOK, CorrectionPipeline, CorrectToken, tokenize
 from .readability import FleschKincaidFeedback, FleschKincaidScorer, RareWordsFinder
 from .settings import Settings
-from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, ParseResultStats, check_errors
+from .wrappers import (
+    CorrectedSentence,
+    CorrectionResult,
+    GreynirCorrectAPI,
+    ParseResultStats,
+    check_errors,
+)
 
 __author__ = "Miðeind ehf"
 __copyright__ = "© 2025 Miðeind ehf."
@@ -70,6 +83,10 @@ __all__ = (
     "GreynirCorrectAPI",
     "CorrectionResult",
     "CorrectedSentence",
+    "check",
+    "check_single",
+    "check_with_stats",
+    "check_tokens",
     "check_errors",
     "AnnotatedSentence",
     "Annotation",

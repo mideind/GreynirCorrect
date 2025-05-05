@@ -166,7 +166,7 @@ parser.add_argument(
 def from_args(args: argparse.Namespace) -> Dict[str, Union[str, bool]]:
     """Fill options with information from args"""
     format = args.format
-    if args.json:
+    if args.json or args.grammar:  # The --grammar option implies --json
         format = "json"
     elif args.csv:
         format = "csv"
