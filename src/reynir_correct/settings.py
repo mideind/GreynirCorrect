@@ -1102,7 +1102,7 @@ class Settings:
 
             try:
                 # If an external path is given, use it to read the file
-                package_name = None if external else __name__
+                package_name = None if external else __name__.split(".")[0]
                 rdr = LineReader(fname, package_name=package_name)
                 for s in rdr.lines():
                     # Ignore comments
