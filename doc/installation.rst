@@ -6,7 +6,7 @@ Installation
 Prerequisites
 -------------
 
-GreynirCorrect runs on **CPython 3.8** or newer, and on **PyPy 3.8**
+GreynirCorrect runs on **CPython 3.9** or newer, and on **PyPy 3.9**
 or newer (more info on PyPy `here <http://pypy.org/>`_).
 
 On GNU/Linux and similar systems, you may need to have ``python3-dev``
