@@ -32,7 +32,7 @@ import importlib.metadata
 
 # Expose the reynir-correct API
 from reynir import Greynir, Paragraph, Sentence, correct_spaces, mark_paragraphs
-from tokenizer import tokenize, detokenize
+from tokenizer import detokenize
 
 # Annotations
 from .annotation import Annotation
@@ -41,13 +41,13 @@ from .annotation import Annotation
 from .checker import AnnotatedSentence, GreynirCorrect
 
 # Token-level correction
-from .errtokenizer import Correct_TOK, CorrectionPipeline, CorrectToken
+from .errtokenizer import Correct_TOK, CorrectionPipeline, CorrectToken, tokenize
 from .readability import FleschKincaidFeedback, FleschKincaidScorer, RareWordsFinder
 from .settings import Settings
 from .wrappers import CorrectedSentence, CorrectionResult, GreynirCorrectAPI, ParseResultStats, check_errors
 
 __author__ = "Miðeind ehf"
-__copyright__ = "(C) 2019-2024 Miðeind ehf."
+__copyright__ = "© 2025 Miðeind ehf."
 __version__ = importlib.metadata.version("reynir-correct")
 
 __all__ = (

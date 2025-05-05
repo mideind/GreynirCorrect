@@ -4,6 +4,13 @@ import sys
 import reynir_correct as rc
 
 
+from reynir_correct import check_single
+sent = check_single("Páli, vini mínum, langaði að horfa á sjónnvarpið.")
+for annotation in sent.annotations:
+    print("{0}".format(annotation))
+
+sys.exit(0)
+
 def display_annotations(sent):
     print("\nSetning:")
     print(sent.text)

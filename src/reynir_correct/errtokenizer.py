@@ -218,6 +218,17 @@ ERROR_CLASS_REGISTRY: Dict[str, ErrorType] = dict()
 _ErrorClass = TypeVar("_ErrorClass", bound=ErrorType)
 
 
+def load_config(tov_config_path: Optional[str] = None) -> Settings:
+    """Load the default configuration file and return a Settings object. Optionally load
+    an additional config if given."""
+    settings = Settings()
+    # The forward slash below is intentional and correct, also under Windows
+    settings.read("config/GreynirCorrect.conf")
+    if tov_config_path:
+        settings.read(tov_config_path, external=True)
+    return settings
+
+
 def register_error_class(cls: _ErrorClass) -> _ErrorClass:
     """A decorator that populates the registry of all error classes,
     to aid in serialization"""
@@ -3071,3 +3082,20 @@ class CorrectionPipeline(DefaultPipeline):
 
         ct_stream = late_fix_merges(ct_stream, self._ignore_wordlist, self._ignore_rules)
         return ct_stream
+
+_cached_settings: Optional[Settings] = None
+
+def tokenize(
+    text_or_gen: StringIterable, *, settings: Optional[Settings] = None, **options: Any
+) -> Iterator[CorrectToken]:
+    """Tokenize text using the correction pipeline,
+    overriding a part of the default tokenization pipeline"""
+    if settings is None:
+        global _cached_settings
+        settings = _cached_settings
+        if settings is None:
+            # Create a new settings object if none is provided
+            settings = load_config()
+            _cached_settings = settings
+    pipeline = CorrectionPipeline(text_or_gen, settings, **options)
+    return cast(Iterator[CorrectToken], pipeline.tokenize())

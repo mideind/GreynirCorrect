@@ -4,7 +4,7 @@
 
     Readability module
 
-    Copyright (C) 2023-2024 Miðeind ehf.
+    Copyright © 2025 Miðeind ehf.
 
     This software is licensed under the MIT License:
 

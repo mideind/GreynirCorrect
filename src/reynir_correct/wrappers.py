@@ -66,11 +66,11 @@ from functools import partial
 from tokenizer import TOK, calculate_indexes, detokenize, normalized_text_from_tokens, text_from_tokens
 from tokenizer.definitions import AmountTuple, NumberTuple
 
+from .errtokenizer import CorrectionPipeline, CorrectToken, Error, load_config
 from .readability import FleschKincaidFeedback, FleschKincaidScorer, RareWordsFinder
 from .annotation import Annotation
-from .checker import AnnotatedSentence, CheckResult, GreynirCorrect, load_config
+from .checker import AnnotatedSentence, CheckResult, GreynirCorrect
 from .classifier import SentenceClassifier
-from .errtokenizer import CorrectionPipeline, CorrectToken, Error
 
 log = logging.getLogger(__name__)
 

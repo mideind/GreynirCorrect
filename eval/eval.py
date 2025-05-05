@@ -108,6 +108,7 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict
 from datetime import datetime, timezone
 
+from tokenizer import TOK, Tok, detokenize
 from reynir_correct import (
     Annotation,
     CorrectedSentence,
@@ -116,7 +117,6 @@ from reynir_correct import (
     GreynirCorrectAPI,
     Settings,
 )
-from tokenizer import TOK, Tok, detokenize
 
 if TYPE_CHECKING:
     # For some reason, types seem to be missing from the multiprocessing module

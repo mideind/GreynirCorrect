@@ -53,9 +53,8 @@
 from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Tuple, cast
 from typing_extensions import TypedDict
 
-import importlib.util
 import os
-import sys
+import importlib.util
 from importlib.abc import Loader
 from importlib.machinery import ModuleSpec
 from threading import Lock
@@ -93,21 +92,6 @@ STYLE_WARNINGS: Mapping[str, str] = {
     "VILLA": "villa",
     "GAM": "gamalt",
 }
-
-
-def load_config(tov_config_path: Optional[str] = None) -> Settings:
-    """Load the default configuration file and return a Settings object. Optionally load
-    an additional config if given."""
-    settings = Settings()
-    settings.read("config/GreynirCorrect.conf")
-    if tov_config_path is not None:
-        # check whether the config path is valid:
-        try:
-            settings.read(tov_config_path, external=True)
-        except FileNotFoundError:
-            print(f"File not found: {tov_config_path}")
-            sys.exit(1)
-    return settings
 
 
 def style_warning(k: Ksnid) -> str:
