@@ -893,7 +893,7 @@ class ErrorFinder(ParseForestNavigator):
 
     def _annotate_ordinal(self, node: Node) -> None:
         """Check for errors in ordinal number terminals ("2.") and annotate them"""
-        token = cast(ErrorDetectionToken | None, node.token)
+        token = cast(Optional[ErrorDetectionToken], node.token)
         if token is None or token.t0 != TOK.ORDINAL:
             # The matched token is not a numeric ordinal: no complaint
             return
