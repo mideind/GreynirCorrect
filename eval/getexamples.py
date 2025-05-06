@@ -86,7 +86,7 @@ GCCATS: DefaultDict[str, List[str]] = defaultdict(list)
 
 # GreynirCorrect instance
 settings = Settings()
-rc = GreynirCorrect(settings=settings)
+rc = GreynirCorrect(settings=settings)  # !!! TODO: This is out of date
 # Define the command line arguments
 
 parser = argparse.ArgumentParser(

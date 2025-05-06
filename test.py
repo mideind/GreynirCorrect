@@ -7,6 +7,9 @@ from reynir_correct.checker import AnnotatedSentence
 
 
 """
+
+# Test 1
+
 from reynir_correct import check_single
 sent = check_single("Páli, vini mínum, langaði að horfa á sjónnvarpið.")
 if sent:
@@ -15,6 +18,8 @@ if sent:
 
 sys.exit(0)
 """
+
+# Test 2
 
 def display_annotations(sent: rc.AnnotatedSentence):
     print("\nSetning:")
@@ -46,6 +51,8 @@ for pg in rc.check(txt, split_paragraphs=True):
     print("---")
 
 sys.exit(0)
+
+# Test 3
 
 import time
 
