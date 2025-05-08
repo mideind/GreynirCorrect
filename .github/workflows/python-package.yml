@@ -15,24 +15,23 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [ "3.9", "3.10", "3.11", "3.12", "pypy-3.9", "pypy-3.10"]
+        python-version: [ "3.9", "3.13", "pypy-3.9", "pypy-3.10"]
 
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install GreynirCorrect
       run: |
-        python -m pip install --upgrade pip wheel setuptools pytest
-        python -m pip install git+https://github.com/mideind/Tokenizer#egg=tokenizer
-        python -m pip install git+https://github.com/mideind/GreynirPackage#egg=reynir
+        python -m pip install uv
+        uv pip install --system --upgrade wheel setuptools pytest tokenizer reynir
         # No need to test the sentence classifier in every build (also doesn't work with PyPy)
         if [ "${{ matrix.python-version }}" == "3.9" ]; then
-          python -m pip install -e ".[sentence_classifier]"
+          uv pip install --system -e ".[sentence_classifier]"
         else
-          python -m pip install -e ".[dev]"
+          uv pip install --system -e ".[dev]"
         fi
     - name: Typecheck with mypy
       run: |
