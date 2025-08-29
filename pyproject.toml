@@ -1,6 +1,6 @@
 [project]
 name = "reynir-correct"
-version = "4.1.0"
+version = "4.1.1"
 description = "Spelling and grammar correction for Icelandic"
 authors = [{ name = "Miðeind ehf.", email = "mideind@mideind.is" }]
 readme = { file = "README.rst", content-type = "text/x-rst" }
@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -61,11 +62,17 @@ filterwarnings = [
 [tool.ruff]
 line-length = 120
 
-[tool.black]
-line-length = 120
+[tool.ruff.lint]
+#select = ["ALL"] # We use default rules for now
+extend-select = ["E501"] # Complain about line length
+# Ignore specific rules
+# (we should aim to have these as few as possible)
+ignore = [
+    "F405", # 'F405: Name may be undefined, or defined from star imports: typing'
+    "E731", # 'E731: Do not assign a lambda expression, use a def'
+]
 
 [tool.isort]
 # This forces these imports to placed at the top
 known_future_library = ["__future__", "typing", "typing_extensions"]
-profile = "black"
 line_length = 120
