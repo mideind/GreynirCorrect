@@ -1,9 +1,9 @@
 [project]
 name = "reynir-correct"
-version = "4.1.1"
+version = "4.1.2"
 description = "Spelling and grammar correction for Icelandic"
 authors = [{ name = "Miðeind ehf.", email = "mideind@mideind.is" }]
-readme = { file = "README.rst", content-type = "text/x-rst" }
+readme = { file = "README.md", content-type = "text/markdown" }
 license = { file = "LICENSE.txt" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
