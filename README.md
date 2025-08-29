@@ -156,7 +156,7 @@ includes binary wheels for common environments, but if the setup on your OS
 requires compilation from sources, you may need
 
 ```bash
-$ sudo apt-get install python3-dev
+sudo apt-get install python3-dev
 ```
 
 ...or something to similar effect to enable this.
@@ -166,17 +166,17 @@ $ sudo apt-get install python3-dev
 To install this package (assuming you have Python >= 3.9 with `pip` installed):
 
 ```bash
-$ pip install reynir-correct
+pip install reynir-correct
 ```
 
 If you want to be able to edit the source, do like so
 (assuming you have `git` installed):
 
 ```bash
-$ git clone https://github.com/mideind/GreynirCorrect
-$ cd GreynirCorrect
-$ # [ Activate your virtualenv here if you have one ]
-$ pip install -e .
+git clone https://github.com/mideind/GreynirCorrect
+cd GreynirCorrect
+# [ Activate your virtualenv here if you have one ]
+pip install -e .
 ```
 
 The package source code is now in `GreynirCorrect/src/reynir_correct`.
@@ -186,7 +186,7 @@ The package source code is now in `GreynirCorrect/src/reynir_correct`.
 After installation, the corrector can be invoked directly from the command line:
 
 ```bash
-$ correct input.txt output.txt
+correct input.txt output.txt
 ```
 
 ...or:
@@ -315,7 +315,7 @@ To run the built-in tests, install [pytest](https://docs.pytest.org/en/latest/),
 virtualenv), then run:
 
 ```bash
-$ python -m pytest
+python -m pytest
 ```
 
 ## Acknowledgements
@@ -353,7 +353,7 @@ This software is licensed under the *MIT License*:
    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.*
 
-----    
+----
 
 GreynirCorrect indirectly embeds the [Database of Icelandic Morphology](https://bin.arnastofnun.is)
 ([Beygingarlýsing íslensks nútímamáls](https://bin.arnastofnun.is))
@@ -371,4 +371,3 @@ In accordance with the BÍN license terms, credit is hereby given as follows:
 
 *Beygingarlýsing íslensks nútímamáls. Stofnun Árna Magnússonar í íslenskum fræðum.*
 *Höfundur og ritstjóri Kristín Bjarnadóttir.*
-
