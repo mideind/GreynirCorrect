@@ -1,6 +1,6 @@
 [project]
 name = "reynir-correct"
-version = "4.1.0"
+version = "4.1.1"
 description = "Spelling and grammar correction for Icelandic"
 authors = [{ name = "Miðeind ehf.", email = "mideind@mideind.is" }]
 readme = { file = "README.rst", content-type = "text/x-rst" }
@@ -61,11 +61,16 @@ filterwarnings = [
 [tool.ruff]
 line-length = 120
 
-[tool.black]
-line-length = 120
+[tool.ruff.lint]
+#select = ["ALL"] # We use default rules for now
+# extend-select = ["E501"] # Complain about line length
+# Ignore specific rules
+# (we should aim to have these as few as possible)
+ignore = [
+    "E731", # 'E731: Do not assign a lambda expression, use a def'
+]
 
 [tool.isort]
 # This forces these imports to placed at the top
 known_future_library = ["__future__", "typing", "typing_extensions"]
-profile = "black"
 line_length = 120

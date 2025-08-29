@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [ "3.9", "3.13", "pypy-3.9", "pypy-3.10"]
+        python-version: [ "3.9", "3.13", "pypy-3.9", "pypy-3.11"] # "3.14.0-beta.4"
 
     steps:
     - uses: actions/checkout@v4
@@ -33,9 +33,13 @@ jobs:
         else
           uv pip install --system -e ".[dev]"
         fi
+    - name: Lint with ruff
+      run: |
+        if [ "${{ matrix.python-version }}" == "3.9" ]; then uv pip install --system ruff; fi
+        if [ "${{ matrix.python-version }}" == "3.9" ]; then ruff check src/reynir_correct; fi
     - name: Typecheck with mypy
       run: |
-        if [ "${{ matrix.python-version }}" == "3.9" ]; then python -m pip install mypy; fi
+        if [ "${{ matrix.python-version }}" == "3.9" ]; then uv pip install --system mypy; fi
         if [ "${{ matrix.python-version }}" == "3.9" ]; then mypy --ignore-missing-imports --python-version=3.9 src/reynir_correct; fi
     - name: Test with pytest
       run: |

@@ -372,7 +372,7 @@ class CorrectToken(Tok):
 
     def __repr__(self) -> str:
         return "<CorrectToken(kind: {0}, txt: '{1}', val: {2}, original: '{3}')>".format(
-            TOK.descr[self.kind], self.txt, self.val, self.original
+            TOK.descr[self.kind], self.txt, self.val, self.original # type: ignore
         )
 
     __str__ = __repr__
@@ -383,7 +383,7 @@ class CorrectToken(Tok):
         self_txt = self.txt or ""
         other_txt = other.txt or ""
         new_txt = self_txt + separator + other_txt
-        self_original = self.original or ""
+        self_original = self.original or "" # type: ignore
         other_original = other.original or ""
         new_original = self_original + other_original
 
@@ -433,7 +433,7 @@ class CorrectToken(Tok):
         from another CorrectToken instance"""
         if isinstance(other, CorrectToken):
             self._err = other._err
-            self.original = other.original
+            self.original = other.original # type: ignore
             if coalesce and other.error_span > 1:
                 # The original token had an associated error
                 # spanning more than one token; now we're creating
