@@ -66,7 +66,7 @@ class SentenceClassifier:
             )
             warnings.warn(warningtext)
             raise ImportError(warningtext)
-        self.pipe: Any = pipeline(
+        self.pipe: Any = pipeline(  # type: ignore[call-overload]
             "text2text-generation",
             model=self._model_name,
             tokenizer="google/byt5-base",

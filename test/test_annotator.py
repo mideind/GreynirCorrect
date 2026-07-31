@@ -252,6 +252,30 @@ def test_corrected_meanings(api) -> None:
     )
 
 
+def test_adjective_agreement(api) -> None:
+    """Check annotation of a postposed adjective with a case-governed
+    complement that does not agree with its head noun phrase in case:
+    'forstöðumenn fyrirtækja tengdum sjávarútvegi' -> 'tengdra'"""
+    nts = api.gc.parser.grammar.nonterminals
+    if not any(name.startswith("VillaLoEftirNlMeðAndlagi") for name in nts):
+        # The installed reynir version does not include the
+        # VillaLoEftirNlMeðAndlagi error grammar rule
+        pytest.skip("reynir version lacks the VillaLoEftirNlMeðAndlagi grammar rule")
+    s = "Ég ræddi við forstöðumenn fyrirtækja tengdum sjávarútvegi."
+    check_sentence(api, s, [(5, 5, "P_NT_LoEftirNlMeðAndlagi")])
+    # The corresponding correct sentence should not be annotated
+    s = "Ég ræddi við forstöðumenn fyrirtækja tengdra sjávarútvegi."
+    check_sentence(api, s, [])
+    # Check the suggested correction
+    sent = reynir_correct.check_single(
+        "Ég ræddi við forstöðumenn fyrirtækja tengdum sjávarútvegi."
+    )
+    anns = [a for a in sent.annotations if a.code == "P_NT_LoEftirNlMeðAndlagi"]
+    assert len(anns) == 1
+    assert anns[0].suggest == "tengdra"
+    assert anns[0].original == "tengdum"
+
+
 def test_lhþt_variant(api) -> None:
     """Check for a regression in the handling of LHÞT variants in BinPackage"""
     s = (
