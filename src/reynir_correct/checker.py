@@ -176,6 +176,11 @@ class GreynirCorrect(Greynir):
         pipeline: CorrectionPipeline,
         **options: Any,
     ) -> None:
+        # Greynir (reynir >= 3.7) rejects unknown keyword arguments;
+        # only pass through the options that it recognizes
+        known = getattr(self, "_KNOWN_OPTIONS", None)
+        if known is not None:
+            options = {k: v for k, v in options.items() if k in known}
         super().__init__(**options)
         self.settings = settings
         self.pipeline = pipeline
