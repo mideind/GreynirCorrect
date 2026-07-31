@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14', 'pypy-3.11']
+        python-version: ['3.11', '3.12', '3.13', '3.14', 'pypy-3.11']
 
     steps:
     - uses: actions/checkout@v4
@@ -28,19 +28,19 @@ jobs:
         python -m pip install uv
         uv pip install --system --upgrade wheel setuptools pytest tokenizer reynir
         # No need to test the sentence classifier in every build (also doesn't work with PyPy)
-        if [ "${{ matrix.python-version }}" == "3.9" ]; then
+        if [ "${{ matrix.python-version }}" == "3.11" ]; then
           uv pip install --system -e ".[sentence_classifier]"
         else
           uv pip install --system -e ".[dev]"
         fi
     - name: Lint with ruff
       run: |
-        if [ "${{ matrix.python-version }}" == "3.9" ]; then uv pip install --system ruff; fi
-        if [ "${{ matrix.python-version }}" == "3.9" ]; then ruff check src/reynir_correct; fi
+        if [ "${{ matrix.python-version }}" == "3.11" ]; then uv pip install --system ruff; fi
+        if [ "${{ matrix.python-version }}" == "3.11" ]; then ruff check src/reynir_correct; fi
     - name: Typecheck with mypy
       run: |
-        if [ "${{ matrix.python-version }}" == "3.9" ]; then uv pip install --system mypy; fi
-        if [ "${{ matrix.python-version }}" == "3.9" ]; then mypy --ignore-missing-imports --python-version=3.9 src/reynir_correct; fi
+        if [ "${{ matrix.python-version }}" == "3.11" ]; then uv pip install --system mypy; fi
+        if [ "${{ matrix.python-version }}" == "3.11" ]; then mypy --ignore-missing-imports --python-version=3.11 src/reynir_correct; fi
     - name: Test with pytest
       run: |
         python -m pytest
