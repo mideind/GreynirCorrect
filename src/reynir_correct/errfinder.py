@@ -84,6 +84,14 @@ class CastFunction(Protocol):
 # Case name prefixes
 CASE_NAMES = {"nf": "nefni", "þf": "þol", "þgf": "þágu", "ef": "eignar"}
 
+# Adjective inflection variants other than case, kept unchanged when
+# suggesting a corrected case form. Note that strong/weak declension
+# variants ('sb'/'vb'/'esb'/'evb') are deliberately not included, as
+# BinPackage's lookup_variants() does not map them onto the FSB/FVB/
+# ESB/EVB inflection marks; BÍN returns strong (FSB) forms first,
+# which is the standard declension in this construction anyway.
+ADJECTIVE_NON_CASE_VARIANTS = frozenset(("et", "ft", "kk", "kvk", "hk", "mst"))
+
 # Replacements for numeric ordinals, in the various genders and cases
 ORDINALS = {
     1: {
@@ -550,6 +558,38 @@ class ErrorFinder(ParseForestNavigator):
             end=end,
             original=wrong_pronoun,
             suggest=correct_pronoun,
+        )
+
+    def VillaLoEftirNlMeðAndlagi(self, txt: str, variants: str, node: Node) -> Optional[AnnotationDict]:
+        # Lýsingarorð með fallstýrðu andlagi, á eftir nafnlið sem það
+        # sambeygist ekki í falli, t.d.
+        # 'móðurfélag fleiri félaga tengdum rekstri' -> 'tengdra'
+        correct_case = variants.split("_")[0]
+        # The offending adjective is the first terminal within the error phrase
+        tnode = self._terminal_nodes[node.start]
+        wrong_adj = tnode.text
+        # Preserve the adjective's other inflection features,
+        # replacing only the case
+        keep = [v for v in tnode.all_variants if v in ADJECTIVE_NON_CASE_VARIANTS]
+        suggestion = PatternMatcher.get_wordform(
+            wrong_adj.lower(), tnode.lemma, tnode.cat, keep + [correct_case]
+        )
+        if not suggestion or suggestion == wrong_adj.lower():
+            # Can't find a correct form, or it's identical to the original:
+            # don't annotate
+            return None
+        suggestion = emulate_case(suggestion, template=wrong_adj)
+        start, end = tnode.span
+        return AnnotationDict(
+            text="'{0}' á sennilega að vera '{1}'".format(wrong_adj, suggestion),
+            detail=(
+                "Lýsingarorðið '{0}' á að vera í {1}falli, í samræmi við "
+                "nafnliðinn á undan".format(wrong_adj, CASE_NAMES[correct_case])
+            ),
+            start=start,
+            end=end,
+            original=wrong_adj,
+            suggest=suggestion,
         )
 
     def AðvörunSemOg(self, txt: str, variants: str, node: Node) -> AnnotationDict:
