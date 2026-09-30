@@ -320,8 +320,11 @@ def test_verb_líst(api):
 def test_dir_loc(api):
     s = "Börnin voru út á túni allan daginn."
     check_sentence(api, s, [(2, 4, "P_DIR_LOC")])
+    # 'útá' and 'inná' are frequent in the 2026 Icegrams model (315 and 11,899
+    # occurrences), so they no longer get the W001/w rare-word warning
     s = "Börnin voru útá túni allan daginn."
-    check_sentence(api, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
+    check_sentence(api, s, [(2, 3, "P_DIR_LOC")])
+    #    check_sentence(api, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
     #    s = "Út í heimi er þetta öðruvísi."
     #    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
     #    s = "Útí heimi er þetta öðruvísi."
@@ -329,7 +332,8 @@ def test_dir_loc(api):
     s = "Börnin voru inn á vellinum allan daginn."
     check_sentence(api, s, [(2, 4, "P_DIR_LOC")])
     s = "Börnin voru inná vellinum allan daginn."
-    check_sentence(api, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
+    check_sentence(api, s, [(2, 3, "P_DIR_LOC")])
+    #    check_sentence(api, s, [(2, 3, "P_DIR_LOC"), (2, 2, "W001/w")])
     #    s = "Hann var oft upp á hestinum."
     #    check_sentence(rc, s, [(3, 5, "P_DIR_LOC")])
     s = "Málið liggur í augum upp."
