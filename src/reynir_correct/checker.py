@@ -66,6 +66,7 @@ from reynir.binparser import BIN_Grammar, BIN_Parser, VariantHandler
 from reynir.bintokenizer import StringIterable
 from reynir.fastparser import ffi  # type: ignore
 from reynir.fastparser import Fast_Parser
+from reynir.grammar import GrammarError
 from reynir.incparser import ICELANDIC_RATIO
 from reynir.reducer import Reducer
 from reynir.reynir import Job, ProgressFunc, DEFAULT_MAX_SENT_TOKENS
@@ -109,10 +110,68 @@ class ErrorDetectingGrammar(BIN_Grammar):
     $if(include_errors)...$endif(include_errors),
     to be included in the grammar as it is read and parsed"""
 
+    # Fallback productions for error-grammar nonterminals that
+    # GreynirEngine 3.9.0 references but does not define. Version 3.9.0
+    # added the value 'sp' (clitic subject, as in 'ertu', 'viltu') to the
+    # /pers variant, so the error production
+    #     BeygingarliðurÁnUmröðunar/tala/pers/kyn → > VillaÍTölu/tala/pers/kyn
+    # now expands to VillaÍTölu_et_sp/kyn and VillaÍTölu_ft_sp/kyn, which
+    # have no productions of their own. The engine's own tests do not
+    # compile the error productions and therefore never see this.
+    # Each fallback below is appended to the grammar text only if the
+    # grammar has the 'sp' person variant and does not define the
+    # nonterminal itself, so this is a no-op for engine versions that
+    # do not have the problem. The productions mirror the p1/p2/p3 ones.
+    _FALLBACK_PRODUCTIONS: Mapping[str, str] = {
+        "VillaÍTölu_et_sp": "VillaÍTölu_et_sp/kyn →\n"
+        "    Frumlag_sp_et/kyn BeygingarliðurMegin_ft_sp/kyn",
+        "VillaÍTölu_ft_sp": "VillaÍTölu_ft_sp/kyn →\n"
+        "    Frumlag_sp_ft/kyn BeygingarliðurMegin_et_sp/kyn",
+    }
+
     def __init__(self) -> None:
         super().__init__()
         # Enable the 'include_errors' condition
         self.set_conditions({"include_errors"})
+
+    @classmethod
+    def _fallback_lines(cls, lines: List[str]) -> List[str]:
+        """Return the fallback productions that need to be appended
+        to the given grammar text, if any"""
+        has_sp_person = False
+        defined: set[str] = set()
+        for s in lines:
+            s = s.split("#", 1)[0].rstrip()
+            if not s or s[0].isspace():
+                continue
+            if s.startswith("/pers"):
+                # Variant definition: /pers = p1 p2 p3 [sp]
+                _, _, values = s.partition("=")
+                has_sp_person = "sp" in values.split()
+            elif "→" in s:
+                # Nonterminal definition: take the name before any variants
+                defined.add(s.split("→", 1)[0].strip().split("/", 1)[0])
+        if not has_sp_person:
+            return []
+        return [
+            production + "\n"
+            for name, production in cls._FALLBACK_PRODUCTIONS.items()
+            if name not in defined
+        ]
+
+    def read(
+        self, fname: str, verbose: bool = False, binary_fname: Optional[str] = None
+    ) -> None:
+        """Read the grammar from a text file, appending fallback
+        productions for nonterminals that the file references but
+        does not define"""
+        try:
+            with open(fname, "r", encoding="utf-8") as inp:
+                lines = inp.readlines()
+        except (IOError, OSError):
+            raise GrammarError("Unable to open or read grammar file", fname, 0)
+        lines.extend(self._fallback_lines(lines))
+        self.read_from_generator(fname, iter(lines), verbose, binary_fname)
 
 
 class AnnotatedSentence(Sentence):

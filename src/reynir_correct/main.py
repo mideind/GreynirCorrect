@@ -41,6 +41,7 @@ from typing import Dict, Union
 import argparse
 import sys
 
+from .ngrams import ModelNotFoundError
 from .wrappers import check_errors
 
 # File types for UTF-8 encoded text files
@@ -197,7 +198,14 @@ def main() -> None:
         sys.exit(1)
     options = from_args(args)
 
-    print(check_errors(**options), file=args.outfile)
+    try:
+        result = check_errors(**options)
+    except ModelNotFoundError as e:
+        # The Icegrams trigram model has not been downloaded:
+        # explain what to do instead of showing a traceback
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
+    print(result, file=args.outfile)
 
 
 if __name__ == "__main__":

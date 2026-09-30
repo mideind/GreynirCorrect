@@ -42,8 +42,9 @@ import re
 from enum import Enum
 
 import tokenizer
-from icegrams.ngrams import Ngrams
 from islenska import Bin
+
+from .ngrams import load_ngrams
 
 diphtong_pattern = re.compile(r"(ei|ey|au)")
 vowel_pattern = re.compile(r"[aeiouyáéíóúýöæ]")
@@ -197,7 +198,7 @@ class RareWordsFinder:
 
     def __init__(self):
         self.bin = Bin()
-        self.ng = Ngrams()
+        self.ng = load_ngrams()
 
     def get_rare_words_from_stream(
         self, tok_stream: Iterable[tokenizer.Tok], max_words: int, low_prob_cutoff: float

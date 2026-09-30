@@ -43,11 +43,11 @@ import time
 from collections import defaultdict
 from functools import lru_cache
 
-from icegrams.ngrams import MAX_ORDER, Ngrams
 from reynir import TOK, correct_spaces, tokenize
 from reynir.bindb import GreynirBin, ResultTuple
 from reynir.bintokenizer import StringIterable
 
+from .ngrams import MAX_ORDER, Ngrams, load_ngrams
 from .settings import Settings
 
 
@@ -395,7 +395,7 @@ class Corrector:
             self.ngrams = dictionary
         else:
             if self._NGRAMS is None:
-                self.__class__._NGRAMS = Ngrams()
+                self.__class__._NGRAMS = load_ngrams()
             assert self._NGRAMS is not None
             self.ngrams = self._NGRAMS
         # Function for log probability of word

@@ -1,6 +1,6 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![PyPI version](https://img.shields.io/pypi/v/reynir-correct)](https://pypi.org/project/reynir-correct/)
 [![GitHub release](https://shields.io/github/v/release/mideind/GreynirCorrect?display_name=tag)](https://github.com/mideind/GreynirCorrect/releases)
 [![Python package](https://github.com/mideind/GreynirCorrect/actions/workflows/python-package.yml/badge.svg)](https://github.com/mideind/GreynirCorrect/actions?query=workflow%3A%22Python+package%22)
@@ -9,7 +9,7 @@
 
 ## Overview
 
-**GreynirCorrect** is a Python 3 (>=3.9) package and command line tool for
+**GreynirCorrect** is a Python 3 (>=3.11) package and command line tool for
 **checking and correcting spelling and grammar** in Icelandic text.
 
 GreynirCorrect relies on the [Greynir](https://pypi.org/project/reynir/) package,
@@ -149,7 +149,7 @@ An overview of error codes is available [here](https://github.com/mideind/Greyni
 
 ## Prerequisites
 
-GreynirCorrect runs on CPython 3.9 or newer, and on PyPy 3.9 or newer. It has
+GreynirCorrect runs on CPython 3.11 or newer, and on PyPy 3.11 or newer. It has
 been tested on Linux, macOS and Windows. The
 [PyPi package](https://pypi.org/project/reynir-correct/)
 includes binary wheels for common environments, but if the setup on your OS
@@ -163,11 +163,25 @@ sudo apt-get install python3-dev
 
 ## Installation
 
-To install this package (assuming you have Python >= 3.9 with `pip` installed):
+To install this package (assuming you have Python >= 3.11 with `pip` installed):
 
 ```bash
 pip install reynir-correct
 ```
+
+GreynirCorrect uses the trigram model of the
+[Icegrams](https://pypi.org/project/icegrams/) package for spelling
+correction. The model is not bundled with the package; it must be downloaded
+once, after installation:
+
+```bash
+python -m icegrams.download
+```
+
+The model is stored in a per-user cache directory. If it is missing,
+GreynirCorrect raises `ModelNotFoundError` on first use, with these same
+instructions. See the Icegrams documentation for how to store the model
+elsewhere via the `ICEGRAMS_MODEL_FILE` environment variable.
 
 If you want to be able to edit the source, do like so
 (assuming you have `git` installed):
@@ -177,6 +191,7 @@ git clone https://github.com/mideind/GreynirCorrect
 cd GreynirCorrect
 # [ Activate your virtualenv here if you have one ]
 pip install -e .
+python -m icegrams.download
 ```
 
 The package source code is now in `GreynirCorrect/src/reynir_correct`.

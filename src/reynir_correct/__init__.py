@@ -49,6 +49,7 @@ from .checker import (
 
 # Token-level correction
 from .errtokenizer import Correct_TOK, CorrectionPipeline, CorrectToken, tokenize
+from .ngrams import ModelNotFoundError
 from .readability import FleschKincaidFeedback, FleschKincaidScorer, RareWordsFinder
 from .settings import Settings
 from .wrappers import (
@@ -90,6 +91,7 @@ __all__ = (
     "check_errors",
     "AnnotatedSentence",
     "Annotation",
+    "ModelNotFoundError",
     "__version__",
     "__author__",
     "__copyright__",
