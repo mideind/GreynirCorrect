@@ -6,7 +6,7 @@ Installation
 Prerequisites
 -------------
 
-GreynirCorrect runs on **CPython 3.9** or newer, and on **PyPy 3.9**
+GreynirCorrect runs on **CPython 3.11** or newer, and on **PyPy 3.11**
 or newer (more info on PyPy `here <http://pypy.org/>`_).
 
 On GNU/Linux and similar systems, you may need to have ``python3-dev``
@@ -56,6 +56,26 @@ downloaded and compiled to binary.
 
 Pull requests are welcome in the project's
 `GitHub repository <https://github.com/mideind/GreynirCorrect>`_.
+
+
+Download the trigram model
+--------------------------
+
+GreynirCorrect uses the trigram model of the
+`Icegrams <https://pypi.org/project/icegrams/>`_ package for spelling
+correction and for finding rare words. The model is not bundled with the
+package. Download it once, after installation:
+
+.. code-block:: bash
+
+    $ python -m icegrams.download
+
+The model is stored in a per-user cache directory, and is shared by all
+Python environments of that user. If the model is missing, GreynirCorrect
+raises ``ModelNotFoundError`` (a subclass of ``FileNotFoundError``) on
+first use, with these same instructions. To keep the model in another
+location, point the ``ICEGRAMS_MODEL_FILE`` environment variable at the
+model file; see the Icegrams documentation for details.
 
 
 Install into a virtualenv

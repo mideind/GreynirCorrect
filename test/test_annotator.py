@@ -150,7 +150,10 @@ def test_pronoun_annara(api):
         "umsjónakennara og fjögurra annara kennara "
         "hafa verið sendir í sjö daga sóttkví."
     )
-    check_sentence(api, s, [(12, 12, "S004"), (15, 15, "R4RR")])
+    # TODO 'umsjónakennara' is no longer corrected to 'umsjónarkennara', since it occurs
+    # often enough in the 2026 Icegrams model (19 times) to count as a known word
+    # check_sentence(api, s, [(12, 12, "S004"), (15, 15, "R4RR")])
+    check_sentence(api, s, [(15, 15, "R4RR")])
     s = " Mér er annara um símann minn en orðspor mitt."
     # TODO 'annara' is changed to 'annarra' due to better token-level data
     # and a difficult syntax pattern

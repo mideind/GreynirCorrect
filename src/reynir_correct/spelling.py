@@ -43,11 +43,11 @@ import time
 from collections import defaultdict
 from functools import lru_cache
 
-from icegrams.ngrams import MAX_ORDER, Ngrams
 from reynir import TOK, correct_spaces, tokenize
 from reynir.bindb import GreynirBin, ResultTuple
 from reynir.bintokenizer import StringIterable
 
+from .ngrams import MAX_ORDER, Ngrams, load_ngrams
 from .settings import Settings
 
 
@@ -369,20 +369,37 @@ class Corrector:
     # Create a regex to extract word fragments ending with substitution keys
     _SUBSTITUTE_REGEX = re.compile("(.*?(" + "|".join(_SUBSTITUTE_KEYS) + "))")
 
-    # Minimum probability of a candidate other than the original
-    # word in order for it to be returned
-    _MIN_LOG_PROBABILITY = -16.5
-    # If a unigram is independently above this threshold,
+    # The probability thresholds used by the corrector are expressed
+    # as occurrence counts in the trigram model, so that they mean the
+    # same thing regardless of the size of the corpus behind the model.
+    # They are converted to log probabilities in __init__(), using the
+    # total unigram count of the loaded model. The counts below reproduce
+    # the log probability thresholds that were used with the 2019 model
+    # (about 0.8 billion tokens): -16.5 corresponded to about 55
+    # occurrences and -12.0 to about 4,900 occurrences.
+
+    # Minimum number of occurrences (in context, after edit-distance and
+    # backoff penalties) of a candidate other than the original word
+    # in order for it to be returned, when the original word is known
+    _MIN_CANDIDATE_COUNT = 55
+    # If a unigram occurs at least this often,
     # just assume it's OK without further checking
-    _UNIGRAM_ACCEPT_THRESHOLD = -12.0
-    # Words that appear approximately 8 or fewer times in the trigrams database
-    # are considered rare
-    _RARE_THRESHOLD = -16.5
-    # For uppercase words, the rarity threshold is even lower,
-    # or half the lowercase one
-    _RARE_THRESHOLD_UPPERCASE = _RARE_THRESHOLD + math.log(0.5)
-    # Minimum frequency in trigrams database to be considered a "known" word
-    _KNOWN_WORD_MIN_FREQUENCY = 3
+    _UNIGRAM_ACCEPT_COUNT = 4900
+    # Words that occur this often or less are considered rare
+    _RARE_MAX_COUNT = 55
+    # Minimum number of occurrences, per billion tokens in the model, for a
+    # word that is not in BÍN to be considered a "known" word. The 2019
+    # model kept no words with fewer than 3 occurrences, so any word in it
+    # was known; the 2026 model is larger and keeps words that occur twice.
+    _KNOWN_WORD_MIN_PER_BILLION = 4.0
+
+    # The log probability thresholds and the known-word frequency are
+    # set per instance in __init__(), derived from the counts above
+    _MIN_LOG_PROBABILITY: float
+    _UNIGRAM_ACCEPT_THRESHOLD: float
+    _RARE_THRESHOLD: float
+    _RARE_THRESHOLD_UPPERCASE: float
+    _KNOWN_WORD_MIN_FREQUENCY: int
 
     # Singleton Ngrams dictionary
     _NGRAMS: Optional[Ngrams] = None
@@ -395,13 +412,109 @@ class Corrector:
             self.ngrams = dictionary
         else:
             if self._NGRAMS is None:
-                self.__class__._NGRAMS = Ngrams()
+                self.__class__._NGRAMS = load_ngrams()
             assert self._NGRAMS is not None
             self.ngrams = self._NGRAMS
         # Function for log probability of word
         self.logprob = self.ngrams.logprob
         # Function for (adjusted) frequency of word
         self.freq = self.ngrams.adj_freq
+        # Calibrate the thresholds to the size of the loaded model.
+        # The unigram log probability is log(count + 1) - log(total),
+        # and the adjusted frequency is count + 1, so their difference
+        # is the log of the total unigram count of the model.
+        self._log_total = math.log(self.freq("og")) - self.logprob("og")
+        self._MIN_LOG_PROBABILITY = math.log(self._MIN_CANDIDATE_COUNT) - self._log_total
+        self._UNIGRAM_ACCEPT_THRESHOLD = math.log(self._UNIGRAM_ACCEPT_COUNT) - self._log_total
+        self._RARE_THRESHOLD = math.log(self._RARE_MAX_COUNT) - self._log_total
+        # For uppercase words, the rarity threshold is even lower,
+        # or half the lowercase one
+        self._RARE_THRESHOLD_UPPERCASE = self._RARE_THRESHOLD + math.log(0.5)
+        # The frequency is compared against the adjusted frequency (count + 1)
+        billions = math.exp(self._log_total) / 1.0e9
+        self._KNOWN_WORD_MIN_FREQUENCY = max(3, round(self._KNOWN_WORD_MIN_PER_BILLION * billions))
+
+    def is_known(self, word: str) -> bool:
+        """Return True if the word occurs often enough in the trigram
+        model to be considered a known word, regardless of BÍN"""
+        return self.freq(word) >= self._KNOWN_WORD_MIN_FREQUENCY
+
+    @staticmethod
+    def _use_title_case(original_word: str, at_sentence_start: bool) -> bool:
+        """Return True if probability queries for this word should also
+        try the title case form. This applies to a word that was originally
+        in title case, such as 'Ísland', and also to a lower case word at
+        a sentence start, since it is then probably in the wrong case and
+        should be subject to correction as such."""
+        return original_word.istitle() or at_sentence_start
+
+    def _backoff_logprob(self, w: str, context: Tuple[str, ...], use_title: bool) -> float:
+        """Return the log probability of the word w in the given context,
+        using 'stupid backoff' to shorter contexts when the n-gram
+        does not occur in the model"""
+
+        # !!! TODO: We may need a more sophisticated probability function
+        # !!! TODO: here, such as Kneser-Ney or Katz
+
+        def logprob_title(*args: str) -> float:
+            """Return the log probability of an n-gram as a maximum of
+            the log probability of the lower case n-gram and the title case
+            n-gram, respectively"""
+            ctx, w = args[:-1], args[-1]
+            return max(self.logprob(*ctx, w), self.logprob(*ctx, w.title()))
+
+        def freq_title(*args: str) -> int:
+            """Return the frequency of an n-gram as a maximum of
+            the frequency of the lower case n-gram and the title case
+            n-gram, respectively"""
+            ctx, w = args[:-1], args[-1]
+            return max(self.freq(*ctx, w), self.freq(*ctx, w.title()))
+
+        if use_title:
+            logprob = logprob_title
+            freq = freq_title
+        else:
+            # Shortcut to the simple and common query functions
+            logprob = self.logprob
+            freq = self.freq
+
+        ctx = context
+        lamb = 0.0
+        while True:
+            if not ctx:
+                # No context: simply return the logprob of the unigram,
+                # multiplied with the current lambda (backoff) factor
+                return logprob(w) + lamb
+            # !!! TODO: Optimize the following
+            cw = ctx + (w,)
+            fq = freq(*cw)
+            if fq > 1:
+                # We have a meaningful frequency here:
+                # return the logprob multiplied with the current lambda
+                if Settings.DEBUG:
+                    print(
+                        "stupid_backoff() returning logprob of '{0}' "
+                        "which is {1:.3} + {2:.3} = {3:.3}".format(cw, logprob(*cw), lamb, logprob(*cw) + lamb)
+                    )
+                return logprob(*cw) + lamb
+            # Insignificant frequency: back off to a simpler context
+            # and use the 'stupid backoff' to reduce the probability
+            ctx = ctx[1:]
+            # Multiply the prob by 0.4, i.e. add log(0.4) to the logprob
+            lamb += LOG_LAMBDA
+
+    def _reject_best(self, best: Tuple[str, float], original_word: str, word: str) -> bool:
+        """Return True if the best candidate is not good enough to be
+        offered as a replacement for the original word"""
+        if self.is_known(word) or self.is_known(original_word):
+            # The original word is known to the model, so it may well
+            # be correct: only replace it with a candidate that is
+            # likely enough in its own right
+            return best[1] < self._MIN_LOG_PROBABILITY
+        # The original word is unknown to the model: the candidates are
+        # all known words, so the best one is accepted even if it is
+        # not likely in its own right (such as a rare compound)
+        return False
 
     @property
     def db(self) -> GreynirBin:
@@ -469,7 +582,7 @@ class Corrector:
             return word
         # Find the candidate with the highest probability
         m = max(candidates, key=lambda t: t[1])
-        if m[1] < self._MIN_LOG_PROBABILITY and (word in self.ngrams or original_word in self.ngrams):
+        if self._reject_best(m, original_word, word):
             # Best candidate is very unlikely: return the original word
             # print(f"Best candidate {m[0]} is highly unlikely, returning original {word}")
             return word
@@ -497,10 +610,10 @@ class Corrector:
             """Consider a word to be in-dictionary if it occurs in
             BÍN (potentially also in title case) or
             frequently enough in the trigrams database"""
-            if w in self._db or self.freq(w) >= self._KNOWN_WORD_MIN_FREQUENCY:
+            if w in self._db or self.is_known(w):
                 return True
             wt = w.title()
-            return False if wt == w else (wt in self._db or self.freq(wt) >= self._KNOWN_WORD_MIN_FREQUENCY)
+            return False if wt == w else (wt in self._db or self.is_known(wt))
 
         def known(words: Iterable[str]) -> Iterable[str]:
             """Return a generator of words that are actually in the dictionary."""
@@ -536,63 +649,11 @@ class Corrector:
         def _gen_candidates(original_word: str, word: str) -> Iterable[Tuple[str, float]]:
             """Generate candidates in order of generally decreasing likelihood"""
 
-            def logprob_title(*args: str) -> float:
-                """Return the log probability of an n-gram as a maximum of
-                the log probability of the lower case n-gram and the title case
-                n-gram, respectively"""
-                ctx, w = args[:-1], args[-1]
-                return max(self.logprob(*ctx, w), self.logprob(*ctx, w.title()))
+            use_title = self._use_title_case(original_word, at_sentence_start)
 
-            def freq_title(*args: str) -> int:
-                """Return the frequency of an n-gram as a maximum of
-                the frequency of the lower case n-gram and the title case
-                n-gram, respectively"""
-                ctx, w = args[:-1], args[-1]
-                return max(self.freq(*ctx, w), self.freq(*ctx, w.title()))
+            def P(w: str) -> float:
+                return self._backoff_logprob(w, context, use_title)
 
-            if original_word.istitle() or at_sentence_start:
-                # If we are dealing with a word that was originally in title
-                # case, such as 'Ísland', use the title case query functions
-                # that try both the title case trigrams and the lower case trigrams.
-                # The same applies even if the original word is lower case,
-                # if it is at a sentence start, because it is then probably
-                # in the wrong case and should be subject to correction as such.
-                logprob = logprob_title
-                freq = freq_title
-            else:
-                # Otherwise, just shortcut to the simple and common query functions
-                logprob = self.logprob
-                freq = self.freq
-
-            def stupid_backoff(w: str) -> float:
-                # !!! TODO: We may need a more sophisticated probability function
-                # !!! TODO: here, such as Kneser-Ney or Katz
-                ctx = context
-                lamb = 0.0
-                while True:
-                    if not ctx:
-                        # No context: simply return the logprob of the unigram,
-                        # multiplied with the current lambda (backoff) factor
-                        return logprob(w) + lamb
-                    # !!! TODO: Optimize the following
-                    cw = ctx + (w,)
-                    fq = freq(*cw)
-                    if fq > 1:
-                        # We have a meaningful frequency here:
-                        # return the logprob multiplied with the current lambda
-                        if Settings.DEBUG:
-                            print(
-                                "stupid_backoff() returning logprob of '{0}' "
-                                "which is {1:.3} + {2:.3} = {3:.3}".format(cw, logprob(*cw), lamb, logprob(*cw) + lamb)
-                            )
-                        return logprob(*cw) + lamb
-                    # Insignificant frequency: back off to a simpler context
-                    # and use the 'stupid backoff' to reduce the probability
-                    ctx = ctx[1:]
-                    # Multiply the prob by 0.4, i.e. add log(0.4) to the logprob
-                    lamb += LOG_LAMBDA
-
-            P = stupid_backoff
             e0 = edits0(word)  # | edits0(original_word)
             for c in known(e0):
                 yield (c, P(c) + EDIT_0_FACTOR)
@@ -641,7 +702,7 @@ class Corrector:
             for i, (c, log_prob) in enumerate(sorted(candidates, key=lambda t: t[1], reverse=True)[0:5]):
                 print("Candidate {0} for {1} is {2} with log_prob {3:.3f}".format(i + 1, word, c, log_prob))
         m = max(candidates, key=lambda t: t[1])
-        if m[1] < self._MIN_LOG_PROBABILITY and (word in self.ngrams or original_word in self.ngrams):
+        if self._reject_best(m, original_word, word):
             # Best candidate is very unlikely: return an empty list of suggestions
             # print(f"Best candidate {m[0]} is highly unlikely, returning an empty list")
             return []

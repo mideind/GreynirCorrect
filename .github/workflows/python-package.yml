@@ -33,6 +33,9 @@ jobs:
         else
           uv pip install --system -e ".[dev]"
         fi
+    - name: Download the Icegrams trigram model
+      run: |
+        python -m icegrams.download
     - name: Lint with ruff
       run: |
         if [ "${{ matrix.python-version }}" == "3.11" ]; then uv pip install --system ruff; fi

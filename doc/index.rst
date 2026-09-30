@@ -60,8 +60,15 @@ you (usually) need :ref:`only one command <installation>`:
 
    $ pip install reynir-correct
 
+...followed by a one-time download of the trigram model used for
+spelling correction:
+
+.. code-block:: bash
+
+   $ python -m icegrams.download
+
 There is no database to set up or other external dependencies to install;
-everything you need is included. GreynirCorrect is thoroughly documented,
+everything else you need is included. GreynirCorrect is thoroughly documented,
 and its source code is of course open and
 `available on GitHub <https://github.com/mideind/GreynirCorrect>`_.
 Your contribution, for instance via pull requests, is welcome!
