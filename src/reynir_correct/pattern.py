@@ -1707,6 +1707,96 @@ class PatternMatcher:
             )
         )
 
+    def agreement_conj(self, match: SimpleTree) -> None:
+        """A verb, whose subject precedes a conjunction, is not in agreement with the subject.
+        E.g. 'Bílarnir eru léttari og gæti verið hraðari.'"""
+        vp = match.first_match("VP > (so_ft|so_et)")
+        if vp is None:
+            return
+        so = vp.first_match("so")
+        if so is None:
+            return
+        start, end = so.span
+        sbj = match.first_match("NP-SUBJ")
+        if sbj is None:
+            return
+        if len(sbj) > 1:  # TODO: more accurate subject selection
+            sbj = sbj[0]
+        variants = [f for f in so.all_variants if f != "vh"]
+        variants.append("fh")
+        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if not suggest:
+            return
+        text = f"Hér á sögnin '{so.lemma}' að samræmast frumlaginu '{sbj.lemma}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_NT",
+                text=text,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def agreement_subpost_sing(self, match: SimpleTree) -> None:
+        """A plural verb which precedes its subject is not in agreement with the subject,
+        which is singular. E.g. 'Í skrúðgöngunni eru fólk klætt...'"""
+        vp = match.first_match("VP > (so_ft)")
+        if vp is None:
+            return
+        so = vp.first_match("so")
+        if so is None:
+            return
+        start, end = so.span
+        sbj = match.first_match("NP-SUBJ > { (no_nf_et|fn_nf_et) }")
+        if sbj is None:
+            return
+        if len(sbj) > 1:  # TODO: more accurate subject selection
+            sbj = sbj[0]
+        variants = [f for f in so.all_variants if f != "vh"]
+        variants.append("fh")
+        suggest = self.get_wordform(so.lemma, so.cat, variants)
+        if not suggest:
+            return
+        text = f"Hér á sögnin '{so.lemma}' að samræmast eintölufrumlaginu '{sbj.lemma}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_NT",
+                text=text,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    def agreement_concord(self, match: SimpleTree) -> None:
+        """A pronoun is not in agreement with the following noun, e.g. 'Við kaupum ákveðin hluti'"""
+        np = match.first_match("NP")
+        if np is None:
+            return
+        fn = np.first_match("fn")
+        if fn is None:
+            return
+        no = np.first_match("no")
+        start, end = np.span
+        suggest = self.get_wordform(fn.lemma, fn.cat, no.lemma, no.cat)
+        if not suggest:
+            return
+        text = f"Hér á fornafnið '{fn.lemma}' að samræmast nafnorðinu '{no.lemma}'"
+        self._ann.append(
+            Annotation(
+                start=start,
+                end=end,
+                code="P_NT",
+                text=text,
+                original=so.tidy_text,
+                suggest=suggest,
+            )
+        )
+
+    @classmethod
     def add_pattern(self, p: PatternTuple) -> None:
         """Validates and adds a pattern to the class global pattern list"""
         _, pattern, _, ctx = p
@@ -2892,6 +2982,24 @@ class PatternMatcher:
                 "Skagi",  # Trigger lemma for this pattern
                 "VP > { VP > { 'vera' } PP >> { PP > { ADVP > { 'upp' } P > { 'á' } NP > { 'Skagi' } } } }",
                 lambda match: self.dir_loc(match),
+                None,
+            )
+        )
+
+        self.add_pattern(
+            (
+                frozenset(("og", "en", "heldur")),  # Trigger lemma for this pattern
+                "S0 > { S-MAIN > { IP > { NP-SUBJ > { no_et_nf } } } C S-MAIN >> [ VP > { so_ft } .* ] }",
+                lambda match: self.agreement_conj(match),
+                None,
+            )
+        )
+
+        self.add_pattern(
+            (
+                "þessi",  # Trigger lemma for this pattern
+                "NP-POSS > { NP-POSS > { fn_et_ef_kk } no_ft_ef_kk }",
+                lambda self, match: self.agreement_conj(match),
                 None,
             )
         )
