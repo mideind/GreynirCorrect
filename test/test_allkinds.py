@@ -1403,8 +1403,10 @@ def test_né():
     check_sentence(api, s, [(3, 3, "P_Né")])
     s = "Við keyptum annaðhvort brauð né ost."
     check_sentence(api, s, [(4, 4, "P_Né")])
+    # GreynirEngine 4.2 joins the two question clauses, so the error is
+    # found by the pattern (P_Né) and not by the grammar (P_NT_Né)
     s = "Ég hugsa ekki um hvað Bretland gerir né hvað Ísland gerir."
-    check_sentence(api, s, [(7, 7, "P_NT_Né")])
+    check_sentence(api, s, [(7, 7, "P_Né")])
     s = "Hann er sakaður um kynþáttafordóma en eftir því sem ég best veit eru fylgdarlaus ungmenni ekki kynþáttur, þjóð né þjóðarbrot."
     check_sentence(api, s, [(19, 19, "P_Né")])
     s = "Alþjóðaheilbrigðisstofnunin hefur gefið út að suðurafríska afbrigði kórónuveirunnar leiði ekki til verri veikinda né sé það banvænna en önnur."

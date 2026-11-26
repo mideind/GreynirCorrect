@@ -226,7 +226,7 @@ class GreynirCorrect(Greynir):
     # separate from the Greynir class, as they use different settings and
     # parsing enviroments
     _parser: Optional[ErrorDetectingParser] = None
-    _reducer = None
+    _reducer: Optional[Reducer] = None
     _lock = Lock()
 
     def __init__(
