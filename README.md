@@ -89,7 +89,7 @@ for annotation in sent.annotations:
 Output:
 
 ```
-000-004: P_WRONG_CASE_þgf_þf  Á líklega að vera 'Pál, vin minn' | 'Páli, vini mínum,' -> 'Pál, vin minn'
+000-004: P_WRONG_CASE_þgf_þf  Á líklega að vera 'Pál, vin minn,' | 'Páli, vini mínum,' -> 'Pál, vin minn,'
 009-009: S004                 Orðið 'sjónnvarpið' var leiðrétt í 'sjónvarpið' | 'sjónnvarpið' -> 'sjónvarpið'
 ```
 
@@ -128,9 +128,9 @@ print(s)
 Output:
 
 ```
-Pál, vin minn langaði að horfa á sjónvarpið.
+Pál, vin minn, langaði að horfa á sjónvarpið.
 009-009: S004                 Orðið 'sjónnvarpið' var leiðrétt í 'sjónvarpið' | 'sjónnvarpið' -> 'sjónvarpið'
-000-004: P_WRONG_CASE_þgf_þf  Á líklega að vera 'Pál, vin minn' | 'Páli, vini mínum,' -> 'Pál, vin minn'
+000-004: P_WRONG_CASE_þgf_þf  Á líklega að vera 'Pál, vin minn,' | 'Páli, vini mínum,' -> 'Pál, vin minn,'
 ```
 
 The first line is the text with both the token-level corrections and the

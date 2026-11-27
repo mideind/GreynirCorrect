@@ -46,7 +46,7 @@ import os
 from functools import partial
 
 from islenska import Bin
-from reynir import NounPhrase, Sentence
+from reynir import NounPhrase, Sentence, correct_spaces
 from reynir.bintokenizer import ALL_CASES
 from reynir.matcher import ContextDict
 from reynir.simpletree import SimpleTree
@@ -168,6 +168,23 @@ class PatternMatcher:
 
         # First instance: create the class-wide pattern list
         self.create_patterns()
+
+    def span_text(self, start: int, end: int, replace: Optional[Tuple[int, int, str]] = None) -> str:
+        """Return the text of the tokens from start to end, optionally with
+        the tokens from replace[0] to replace[1] replaced by replace[2].
+        The suggestion of an annotation replaces all the tokens of its span,
+        so a handler that corrects one word within a wider span uses this to
+        keep the words around it."""
+        words: List[str] = []
+        for ix in range(start, end + 1):
+            if replace is not None and replace[0] <= ix <= replace[1]:
+                if ix == replace[0] and replace[2]:
+                    words.append(replace[2])
+                continue
+            txt = self._tokens[ix].txt
+            if txt:
+                words.append(txt)
+        return correct_spaces(" ".join(words))
 
     @staticmethod
     def get_wordform(word: str, lemma: str, cat: str, variants: Iterable[str]) -> str:
@@ -1295,10 +1312,21 @@ class PatternMatcher:
             "Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
             "svokallað dvalarhorf ('Ég er ekki að skilja þetta')."
         )
-        # TODO better original value!
         if suggest == "vera að":
             # No need to annotate, no changes were made
             return
+        # The suggestion replaces the whole span, from 'vera' to the verb:
+        # the new verb form, followed by what stands between 'vera' and the
+        # verb other than the infinitive marker ('er ekki að skilja' ->
+        # 'skil ekki', 'Er ég að skilja' -> 'Skil ég')
+        between = [
+            self._tokens[ix].txt
+            for ix in range(start + 1, end)
+            if self._tokens[ix].txt and self._tokens[ix].txt.lower() != "að"
+        ]
+        if so.tidy_text[:1].isupper():
+            suggest = suggest.capitalize()
+        suggest = correct_spaces(" ".join([suggest] + between))
         self._ann.append(
             Annotation(
                 start=start,
@@ -1306,7 +1334,7 @@ class PatternMatcher:
                 code="P_VeraAð",
                 text=text,
                 detail=detail,
-                original="vera að",
+                original=self.span_text(start, end),
                 suggest=suggest,
             )
         )
@@ -1338,6 +1366,7 @@ class PatternMatcher:
         if correction == adv.tidy_text:
             # No need to annotate, no changes were made
             return
+        # The suggestion replaces the whole span: keep the prepositional phrase
         self._ann.append(
             Annotation(
                 start=start,
@@ -1345,8 +1374,8 @@ class PatternMatcher:
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
-                original=adv.tidy_text,
-                suggest=correction,
+                original=self.span_text(start, end),
+                suggest=self.span_text(start, end, (adv.span[0], adv.span[1], correction)),
             )
         )
 
@@ -1406,6 +1435,7 @@ class PatternMatcher:
         if correction == advp.tidy_text:
             # No need to annotate, no changes were made
             return
+        # The suggestion replaces the whole span: keep the words around the adverb
         self._ann.append(
             Annotation(
                 start=start,
@@ -1413,8 +1443,8 @@ class PatternMatcher:
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
+                original=self.span_text(start, end),
+                suggest=self.span_text(start, end, (advp.span[0], advp.span[1], correction)),
             )
         )
 
@@ -1423,8 +1453,8 @@ class PatternMatcher:
         if advp is None:
             return
         start, end = match.span
-        if "niður" in match.tidy_text:
-            correction = "niðri"
+        if "niður" in match.tidy_text.lower():
+            correction = "Niðri" if advp.tidy_text[:1].isupper() else "niðri"
         else:
             correction = advp.tidy_text + "i"
         text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
@@ -1434,6 +1464,7 @@ class PatternMatcher:
         if correction == advp.tidy_text:
             # No need to annotate, no changes were made
             return
+        # The suggestion replaces the whole span: keep the words around the adverb
         self._ann.append(
             Annotation(
                 start=start,
@@ -1441,8 +1472,8 @@ class PatternMatcher:
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
+                original=self.span_text(start, end),
+                suggest=self.span_text(start, end, (advp.span[0], advp.span[1], correction)),
             )
         )
 

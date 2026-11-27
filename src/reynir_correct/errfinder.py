@@ -266,10 +266,42 @@ class ErrorFinder(ParseForestNavigator):
         first_token, last_token = node.token_span
         return (first_token.index, last_token.index)
 
+    # The characters that SimpleTree._np_form() cuts off the end of a noun phrase
+    _NP_CUT_AT_END = frozenset((",", ":", ";", "!", "-", "."))
+
     def cast_to_case(self, case: str, tree: SimpleTree) -> str:
-        """Return the contents of a noun phrase node
-        inflected in the given case"""
-        return self._CAST_FUNCTIONS[case].fget(tree)
+        """Return the contents of a noun phrase node inflected in the given
+        case. The result stands for all the tokens of the node, so that it
+        can replace them: an annotation of a noun phrase has the span of the
+        node and this text as its suggestion."""
+        form: str = self._CAST_FUNCTIONS[case].fget(tree)
+        if tree.is_terminal or not form or not tree.match_tag("NP"):
+            return form
+        # SimpleTree leaves two things out of the forms of a noun phrase,
+        # which suits a phrase on its own but not a replacement for its
+        # tokens ('Einnig Páli, vini mínum, langaði heim' became 'Pál, vin
+        # minn langaði heim'). Both are put back here; the conditions are
+        # those of SimpleTree._np_form().
+        # 1) Adverbs in front, if the phrase has no adjective
+        children = list(tree.children)
+        if not any(ch.is_terminal and ch.tcat == "lo" for ch in children):
+            adverbs: List[str] = []
+            for ch in children:
+                if not (ch.is_terminal and ch.tcat == "eo"):
+                    break
+                adverbs.append(ch.text)
+            if adverbs and len(adverbs) < len(children):
+                form = " ".join(adverbs) + " " + form
+        # 2) Punctuation at the end, cut two characters at a time: a
+        # punctuation token and the space before it, but also the end of an
+        # abbreviation ('Samherja hf.' became 'Samherja h'). What was cut
+        # is not inflected, so it is at the end of the original text.
+        text = tree.text
+        end = len(text)
+        while end >= 2 and text[end - 1] in self._NP_CUT_AT_END:
+            end -= 2
+        form += text[end:]
+        return correct_spaces(form)
 
     def _simple_tree(self, node: Node) -> Optional[SimpleTree]:
         """Return a SimpleTree instance spanning the deep tree
@@ -727,9 +759,8 @@ class ErrorFinder(ParseForestNavigator):
         if obj:
             assert pp is not None
             preposition = pp.P.text
-            suggestion = self.cast_to_case(variants, obj)
-            correct_np = correct_spaces(suggestion)
-            if correct_np == obj.text:
+            correct_np = self.cast_to_case(variants, obj)
+            if correct_np == obj.tidy_text:
                 # Avoid suggesting the original text
                 return None
             start, end = obj.span
@@ -743,8 +774,8 @@ class ErrorFinder(ParseForestNavigator):
                 ),
                 start=start,
                 end=end,
-                original=obj.text,
-                suggest=suggestion,
+                original=obj.tidy_text,
+                suggest=correct_np,
             )
         # In this case, there's no suggested correction
         # and it is likely a wrong annotation causing false positives
