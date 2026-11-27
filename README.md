@@ -214,10 +214,13 @@ second thread could fail with
 versions, give each thread an object of its own.
 
 On free-threaded Python (3.14t and newer), the threads run in parallel, and
-the GIL stays off when the package is imported. In our measurements, 8 threads
-checked news text about 4 times as fast as one, and more threads than that
-added little. What holds it back is spelling correction, where the lookups in
-the Icegrams trigram model do not yet run in parallel.
+the GIL stays off when the package is imported. On a machine where 16
+processes check news text 6.4 times as fast as one process, 16 threads check
+it 5.1 times as fast as one thread (and 8 threads 4.3 times as fast). Each
+thread there has its own object for the Icegrams trigram model, which costs a
+few megabytes per thread; the model itself is a memory-mapped file that the
+threads share. Tools that add up the resident memory of each mapping show
+more than is in use.
 
 With the GIL, threads are safe but not faster than one thread, and many
 threads are slower. To use more cores there, use processes.
