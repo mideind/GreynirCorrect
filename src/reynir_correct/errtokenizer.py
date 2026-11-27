@@ -55,7 +55,9 @@ from typing import (
     cast,
 )
 
+import copy
 import re
+import threading
 from abc import ABC, abstractmethod
 
 from islenska.basics import Ksnid
@@ -219,6 +221,7 @@ _ErrorClass = TypeVar("_ErrorClass", bound=ErrorType)
 
 # Cached settings for simple (legacy) API
 _cached_settings: Optional[Settings] = None
+_cached_settings_lock = threading.Lock()
 
 
 def load_config(tov_config_path: Optional[str] = None) -> Settings:
@@ -3025,6 +3028,31 @@ class CorrectionPipeline(DefaultPipeline):
         self._ignore_rules = cast(frozenset[str], options.pop("ignore_rules", frozenset()))
         self.settings = settings
 
+    def clone(
+        self,
+        text_or_gen: StringIterable,
+        *,
+        ignore_rules: Optional[frozenset[str]] = None,
+        suppress_suggestions: Optional[bool] = None,
+    ) -> "CorrectionPipeline":
+        """Return a pipeline with the options of this one, for the given text.
+        A pipeline holds the text that it is tokenizing, so an object that
+        is shared between threads (GreynirCorrect, GreynirCorrectAPI) must
+        tokenize each text with a pipeline of its own."""
+        pipeline = copy.copy(self)
+        pipeline._text_or_gen = text_or_gen
+        pipeline._db = None
+        if ignore_rules is not None:
+            pipeline._ignore_rules = ignore_rules
+        if suppress_suggestions is not None:
+            pipeline._suppress_suggestions = suppress_suggestions
+        # The phases are bound methods of this pipeline: bind them to the copy
+        pipeline._phases = [
+            getattr(pipeline, phase.__name__) if getattr(phase, "__self__", None) is self else phase
+            for phase in self._phases
+        ]
+        return pipeline
+
     def correct_tokens(self, stream: TokenIterator) -> TokenIterator:
         """Add a correction pass just before BÍN annotation"""
         assert self._db is not None
@@ -3096,10 +3124,15 @@ def settings_or_default(settings: Optional[Settings] = None) -> Settings:
         # If a settings object is provided, use it
         return settings
     global _cached_settings
-    if _cached_settings is None:
-        # Create a new default settings object and cache it
-        _cached_settings = load_config()
-    return _cached_settings
+    cached = _cached_settings
+    if cached is None:
+        # Create a new default settings object and cache it. The lock is
+        # there so that threads that start at the same time load it once.
+        with _cached_settings_lock:
+            cached = _cached_settings
+            if cached is None:
+                _cached_settings = cached = load_config()
+    return cached
 
 
 def tokenize(

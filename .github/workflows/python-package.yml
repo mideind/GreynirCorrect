@@ -95,7 +95,8 @@ jobs:
       if: ${{ !startsWith(matrix.python-version, 'pypy') }}
       run: uv run mypy src/reynir_correct
     - name: Test with pytest
-      # Unlike in GreynirEngine, there is no run with --parallel-threads on
-      # free-threaded Python: the tests fail when run in threads at once
-      # ("DefaultPipeline.tokenize() is not re-entrant")
       run: uv run pytest
+    - name: Test with pytest in parallel threads
+      # On free-threaded Python, also run each test in 8 threads at once
+      if: ${{ endsWith(matrix.python-version, 't') }}
+      run: uv run pytest --parallel-threads=8

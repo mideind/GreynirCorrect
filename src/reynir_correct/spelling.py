@@ -39,6 +39,7 @@ from typing import Callable, DefaultDict, Iterable, List, Optional, Set, Tuple
 
 import math
 import re
+import threading
 import time
 from collections import defaultdict
 from functools import lru_cache
@@ -401,8 +402,9 @@ class Corrector:
     _RARE_THRESHOLD_UPPERCASE: float
     _KNOWN_WORD_MIN_FREQUENCY: int
 
-    # Singleton Ngrams dictionary
+    # Singleton Ngrams dictionary, loaded on first use
     _NGRAMS: Optional[Ngrams] = None
+    _NGRAMS_LOCK = threading.Lock()
 
     def __init__(self, db: GreynirBin, dictionary: Optional[Ngrams] = None) -> None:
         # Word database
@@ -411,10 +413,16 @@ class Corrector:
         if dictionary is not None:
             self.ngrams = dictionary
         else:
-            if self._NGRAMS is None:
-                self.__class__._NGRAMS = load_ngrams()
-            assert self._NGRAMS is not None
-            self.ngrams = self._NGRAMS
+            cls = self.__class__
+            ngrams = cls._NGRAMS
+            if ngrams is None:
+                # The lock is there so that threads that start at the same
+                # time load the model once
+                with cls._NGRAMS_LOCK:
+                    ngrams = cls._NGRAMS
+                    if ngrams is None:
+                        cls._NGRAMS = ngrams = load_ngrams()
+            self.ngrams = ngrams
         # Function for log probability of word
         self.logprob = self.ngrams.logprob
         # Function for (adjusted) frequency of word
