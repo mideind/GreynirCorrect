@@ -333,6 +333,16 @@ virtualenv), then run:
 python -m pytest
 ```
 
+With [uv](https://docs.astral.sh/uv/), the repository's `uv.lock` gives the
+versions of the dependencies that the tests are run with on GitHub:
+
+```bash
+uv sync
+uv run pytest
+uv run ruff check src/reynir_correct
+uv run mypy src/reynir_correct
+```
+
 ## Acknowledgements
 
 Parts of this software are developed under the auspices of the
