@@ -1,15 +1,19 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "reynir-correct"
 version = "4.3.0"
 description = "Spelling and grammar correction for Icelandic"
 authors = [{ name = "Miðeind ehf.", email = "mideind@mideind.is" }]
 readme = { file = "README.md", content-type = "text/markdown" }
-license = { file = "LICENSE.txt" }
+license = "MIT"
+license-files = ["LICENSE.txt"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: Unix",
     "Operating System :: POSIX",
     "Operating System :: Microsoft :: Windows",
@@ -21,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -39,10 +44,27 @@ dependencies = ["reynir>=4.2.0,<4.3.0", "icegrams>=2.0.0", "typing_extensions"]
 Repository = "https://github.com/mideind/GreynirCorrect"
 
 [project.optional-dependencies]
-# dev dependencies
-dev = ["pytest"]
+# Development dependencies, as an extra: 'uv sync --extra dev', or
+# 'pip install -e ".[dev]"'. This is the same list as in the 'dev'
+# dependency group below; keep the two in step.
+# mypy is excluded on PyPy, where its native dependencies don't build.
+dev = [
+    "pytest",
+    "ruff",
+    "mypy; implementation_name != 'pypy'",
+]
 # sentence_classifier dependencies
 sentence_classifier = ["transformers", "datasets", "torch"]
+
+[dependency-groups]
+# Development dependencies, as a dependency group: uv installs these
+# automatically with a plain 'uv sync' (which is what CI does);
+# with pip (>=25.1), use 'pip install --group dev'.
+dev = [
+    "pytest",
+    "ruff",
+    "mypy; implementation_name != 'pypy'",
+]
 
 [project.scripts]
 # 'correct' command line tool
@@ -61,6 +83,10 @@ filterwarnings = [
     # Ignore deprecation warnings in libraries, their problem not ours
     "ignore::DeprecationWarning",
 ]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 120
