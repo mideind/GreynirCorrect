@@ -1,6 +1,6 @@
 [project]
 name = "reynir-correct"
-version = "4.2.0"
+version = "4.3.0"
 description = "Spelling and grammar correction for Icelandic"
 authors = [{ name = "Miðeind ehf.", email = "mideind@mideind.is" }]
 readme = { file = "README.md", content-type = "text/markdown" }
@@ -28,7 +28,12 @@ classifiers = [
     "Topic :: Text Processing :: Linguistic",
 ]
 requires-python = ">=3.11"
-dependencies = ["reynir>=3.7.0", "icegrams>=2.0.0", "typing_extensions"]
+# The error patterns (pattern.py) and the tests depend on the shapes of the
+# trees that GreynirEngine returns, and those change between its minor
+# versions (4.2.0 moved many prepositional phrases). The range is therefore
+# one minor version of reynir: widen it after running the test suite against
+# the next one.
+dependencies = ["reynir>=4.2.0,<4.3.0", "icegrams>=2.0.0", "typing_extensions"]
 
 [project.urls]
 Repository = "https://github.com/mideind/GreynirCorrect"

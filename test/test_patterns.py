@@ -299,6 +299,22 @@ def test_placename_pp(api):
     check_sentence(api, s, [])
     s = "Það eru mörg náttúruvætti á Reykjanesi en ekki í Húsavík."
     check_sentence(api, s, [(8, 9, "P_WRONG_PLACE_PP")])
+    # A word in front of the name does not hide it
+    s = "Hún býr í gömlu Akureyri."
+    check_sentence(api, s, [(2, 4, "P_WRONG_PLACE_PP")])
+    # The preposition goes with the head of the noun phrase, not with a
+    # place name in a possessor or in a phrase that hangs on the head
+    s = "Þetta er á vegum Reykjavíkurborgar."
+    check_sentence(api, s, [])
+    s = "Hann var á fundi Kópavogs."
+    check_sentence(api, s, [])
+    s = "Höfundur skipar 4. sæti á lista Viðreisnar í Reykjavík."
+    check_sentence(api, s, [])
+    s = "Eldur kviknaði í verslun Bónuss á Egilsstöðum á laugardagsmorgun."
+    check_sentence(api, s, [])
+    # ...nor with the last part of a longer name
+    s = "Rannsókn á bruna á Center Hotel Skjaldbreið er enn í gangi."
+    check_sentence(api, s, [])
 
 
 def test_verb_líst(api):
@@ -351,7 +367,15 @@ def test_dir_loc(api):
     #    check_sentence(rc, s, [(0, 2, "P_DIR_LOC")])
     s = "Börnin safnast saman inn í búð."
     check_sentence(api, s, [(3, 5, "P_DIR_LOC")])
+    # After a pronoun, GreynirEngine 4.2 attaches the prepositional phrase
+    # to the verb; after a noun it can be inside the object
     s = "Ég keypti þetta út í búð."
+    check_sentence(api, s, [(3, 5, "P_DIR_LOC")])
+    s = "Ég keypti brauðið út í búð."
+    check_sentence(api, s, [(3, 5, "P_DIR_LOC")])
+    s = "Hann geymdi þetta inn í skáp."
+    check_sentence(api, s, [(3, 5, "P_DIR_LOC")])
+    s = "Hann geymdi bókina inn í skáp."
     check_sentence(api, s, [(3, 5, "P_DIR_LOC")])
     s = "Illgresið er út um allt."
     check_sentence(api, s, [(2, 4, "P_DIR_LOC")])

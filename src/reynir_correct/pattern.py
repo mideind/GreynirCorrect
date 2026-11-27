@@ -1102,6 +1102,29 @@ class PatternMatcher:
     def check_pp_with_place(self, match: SimpleTree) -> None:
         """Check whether the correct preposition is being used with a place name"""
         place = match.NP.lemma
+        if not IcelandicPlaces.includes(place):
+            # Not a known place name as a whole ('Vík í Mýrdal' is one):
+            # go by what the preposition governs, that is the words of the
+            # noun phrase itself from its first name on ('gömlu Akureyri'),
+            # without the phrases that hang on it. Otherwise 'á lista
+            # Viðreisnar í Reykjavík' and 'á vegum Reykjavíkurborgar' are
+            # taken for the places at their end.
+            words: List[str] = []
+            for child in match.NP.children:
+                if not child.is_terminal:
+                    if words:
+                        # What follows the name hangs on it
+                        break
+                    # A phrase before any name: the name that the pattern
+                    # saw is inside it ('lista Viðreisnar'), or is a part
+                    # of a longer name ('Center Hotel Skjaldbreið')
+                    return
+                if words or child.lemma[:1].isupper():
+                    words.append(child.lemma)
+            if not words:
+                # The head of the noun phrase is not a name
+                return
+            place = " ".join(words)
         correct_preposition = IcelandicPlaces.lookup_preposition(place)
         if correct_preposition is None:
             # This is not a known or likely place name
@@ -2545,6 +2568,17 @@ class PatternMatcher:
                 self.ctx_dir_loc,
             )
         )
+        # The same, with the prepositional phrase in the verb phrase and not
+        # inside the object, which is where GreynirEngine 4.2 attaches it
+        # after a pronoun ('Ég keypti þetta út í búð')
+        self.add_pattern(
+            (
+                "út",  # Trigger lemma for this pattern
+                "VP > { VP > { %verb } NP PP > { ADVP > { 'út' } P > { 'í' } NP > { 'búð' } } }",
+                lambda match: self.dir_loc(match),
+                self.ctx_dir_loc,
+            )
+        )
         self.add_pattern(
             (
                 "inn",  # Trigger lemma for this pattern
@@ -2557,6 +2591,16 @@ class PatternMatcher:
             (
                 "inn",  # Trigger lemma for this pattern
                 "VP > { VP > { %verb } NP > { PP > { ADVP > { 'inn' } } } }",
+                lambda match: self.dir_loc(match),
+                self.ctx_dir_loc,
+            )
+        )
+        # The same, with the prepositional phrase in the verb phrase
+        # ('Hann geymdi þetta inn í skáp')
+        self.add_pattern(
+            (
+                "inn",  # Trigger lemma for this pattern
+                "VP > { VP > { %verb } NP PP > { ADVP > { 'inn' } } }",
                 lambda match: self.dir_loc(match),
                 self.ctx_dir_loc,
             )
