@@ -246,9 +246,9 @@ class GreynirCorrect(Greynir):
 
     def tokenize(self, text: StringIterable) -> Iterator[Tok]:
         """Use the correcting tokenizer instead of the normal one"""
-        # This is a bit of a hack: we set the pipeline's text_or_gen
-        self.pipeline._text_or_gen = text  # type: ignore[reportPrivateUsage]
-        return self.pipeline.tokenize()
+        # Each text is tokenized with a pipeline of its own, as this object
+        # may be in use in other threads
+        return self.pipeline.clone(text).tokenize()
 
     @classmethod
     def _dump_token(cls, tok: Tok) -> Tuple[Any, ...]:

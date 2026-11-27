@@ -46,7 +46,7 @@ import os
 from functools import partial
 
 from islenska import Bin
-from reynir import NounPhrase, Sentence
+from reynir import NounPhrase, Sentence, correct_spaces
 from reynir.bintokenizer import ALL_CASES
 from reynir.matcher import ContextDict
 from reynir.simpletree import SimpleTree
@@ -168,6 +168,64 @@ class PatternMatcher:
 
         # First instance: create the class-wide pattern list
         self.create_patterns()
+
+    def span_text(self, start: int, end: int, replace: Optional[Tuple[int, int, str]] = None) -> str:
+        """Return the text of the tokens from start to end, optionally with
+        the tokens from replace[0] to replace[1] replaced by replace[2].
+        The suggestion of an annotation replaces all the tokens of its span,
+        so a handler that corrects one word within a wider span uses this to
+        keep the words around it."""
+        words: List[str] = []
+        for ix in range(start, end + 1):
+            if replace is not None and replace[0] <= ix <= replace[1]:
+                if ix == replace[0] and replace[2]:
+                    words.append(replace[2])
+                continue
+            txt = self._tokens[ix].txt
+            if txt:
+                words.append(txt)
+        return correct_spaces(" ".join(words))
+
+    @staticmethod
+    def pronoun_objects_after(clause: SimpleTree, verb: SimpleTree) -> List[SimpleTree]:
+        """Return the pronouns that are objects of the verb, within the
+        clause, and stand directly after it, in order. These are the objects
+        that go in front of the negation and other adverbs of the clause
+        when the verb is finite ('Ég skil þetta ekki', 'Ég gef honum það
+        ekki', 'Þið standið ykkur ekki vel'), while a noun phrase stays
+        behind them ('Ég skil ekki þetta mál'), as do indefinite pronouns
+        ('Ég skil ekki neitt') and a pronoun with a relative clause ('Ég
+        skil ekki þá sem tala svona')."""
+        for vp in clause.all_matches("VP"):
+            children = list(vp.children)
+            # Find the verb phrase whose first child is the verb alone
+            if not children or children[0].is_terminal or children[0].span != verb.span:
+                continue
+            result: List[SimpleTree] = []
+            next_token = verb.span[1] + 1
+            for obj in children[1:]:
+                if obj.is_terminal or not obj.match_tag("NP") or obj.span[0] != next_token:
+                    break
+                words = list(obj.children)
+                word = words[0]
+                # Personal and reflexive pronouns, and the demonstratives
+                # 'þessi' and 'sá' ('þetta', 'það', 'því')
+                if not word.is_terminal or not (
+                    word.tcat in ("pfn", "abfn") or (word.tcat == "fn" and word.lemma in ("þessi", "sá", "það"))
+                ):
+                    break
+                # The pronoun is the whole object, or it stands for a clause
+                # that follows, possibly after a particle of the verb ('Ég
+                # held því ekki fram að hann komi')
+                rest = words[1:]
+                if any(w.is_terminal or not (w.match_tag("ADVP") or w.match_tag("CP-THT")) for w in rest):
+                    break
+                result.append(word)
+                if rest:
+                    break
+                next_token += 1
+            return result
+        return []
 
     @staticmethod
     def get_wordform(word: str, lemma: str, cat: str, variants: Iterable[str]) -> str:
@@ -1274,10 +1332,10 @@ class PatternMatcher:
             return
         # nhm = match.first_match("TO > nhm").first_match("nhm")
         start, _ = so.span
-        realso = match.first_match("IP-INF >> VP")
-        if realso is None:
+        ipinf = match.first_match("IP-INF >> VP")
+        if ipinf is None:
             return
-        realso = realso.first_match("so_nh")
+        realso = ipinf.first_match("so_nh")
         if realso is None:
             return
         _, end = realso.span
@@ -1295,10 +1353,38 @@ class PatternMatcher:
             "Skýrara er að nota beina ræðu ('Ég skil þetta ekki') fremur en "
             "svokallað dvalarhorf ('Ég er ekki að skilja þetta')."
         )
-        # TODO better original value!
         if suggest == "vera að":
             # No need to annotate, no changes were made
             return
+        # The suggestion replaces the whole span, so it has all the words of
+        # the span other than 'vera' and the infinitive marker, in the order
+        # that they have with a finite verb:
+        # 1) The verb, in the form that 'vera' had
+        # 2) The subject, if it stands after 'vera' ('Er ég að skilja' -> 'Skil ég')
+        # 3) Pronoun objects that directly follow the verb. They go in front
+        #    of an adverb ('er ekki að skilja þetta' -> 'skil þetta ekki',
+        #    not 'skil ekki þetta'), and the span is extended to take them in.
+        # 4) What else stood between 'vera' and the verb: the negation and
+        #    other adverbs ('er alls ekki að skilja' -> 'skil alls ekki')
+        subj_start, subj_end = subj.span
+        subject: List[str] = []
+        adverbs: List[str] = []
+        for ix in range(start + 1, end):
+            txt = self._tokens[ix].txt
+            if not txt or txt.lower() == "að":
+                continue
+            if subj_start <= ix <= subj_end:
+                subject.append(txt)
+            else:
+                adverbs.append(txt)
+        pronouns: List[str] = []
+        if adverbs:
+            for obj in self.pronoun_objects_after(ipinf, realso):
+                pronouns.append(obj.tidy_text)
+                end = obj.span[1]
+        if so.tidy_text[:1].isupper():
+            suggest = suggest.capitalize()
+        suggest = correct_spaces(" ".join([suggest] + subject + pronouns + adverbs))
         self._ann.append(
             Annotation(
                 start=start,
@@ -1306,7 +1392,7 @@ class PatternMatcher:
                 code="P_VeraAð",
                 text=text,
                 detail=detail,
-                original="vera að",
+                original=self.span_text(start, end),
                 suggest=suggest,
             )
         )
@@ -1338,6 +1424,7 @@ class PatternMatcher:
         if correction == adv.tidy_text:
             # No need to annotate, no changes were made
             return
+        # The suggestion replaces the whole span: keep the prepositional phrase
         self._ann.append(
             Annotation(
                 start=start,
@@ -1345,8 +1432,8 @@ class PatternMatcher:
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
-                original=adv.tidy_text,
-                suggest=correction,
+                original=self.span_text(start, end),
+                suggest=self.span_text(start, end, (adv.span[0], adv.span[1], correction)),
             )
         )
 
@@ -1406,6 +1493,7 @@ class PatternMatcher:
         if correction == advp.tidy_text:
             # No need to annotate, no changes were made
             return
+        # The suggestion replaces the whole span: keep the words around the adverb
         self._ann.append(
             Annotation(
                 start=start,
@@ -1413,8 +1501,8 @@ class PatternMatcher:
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
+                original=self.span_text(start, end),
+                suggest=self.span_text(start, end, (advp.span[0], advp.span[1], correction)),
             )
         )
 
@@ -1423,8 +1511,8 @@ class PatternMatcher:
         if advp is None:
             return
         start, end = match.span
-        if "niður" in match.tidy_text:
-            correction = "niðri"
+        if "niður" in match.tidy_text.lower():
+            correction = "Niðri" if advp.tidy_text[:1].isupper() else "niðri"
         else:
             correction = advp.tidy_text + "i"
         text = f"Hér á líklega að vera '{correction}' í stað '{advp.tidy_text}'"
@@ -1434,6 +1522,7 @@ class PatternMatcher:
         if correction == advp.tidy_text:
             # No need to annotate, no changes were made
             return
+        # The suggestion replaces the whole span: keep the words around the adverb
         self._ann.append(
             Annotation(
                 start=start,
@@ -1441,8 +1530,8 @@ class PatternMatcher:
                 code="P_DIR_LOC",
                 text=text,
                 detail=detail,
-                original=advp.tidy_text,
-                suggest=correction,
+                original=self.span_text(start, end),
+                suggest=self.span_text(start, end, (advp.span[0], advp.span[1], correction)),
             )
         )
 

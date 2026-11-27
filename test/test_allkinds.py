@@ -1166,7 +1166,8 @@ def test_munu(verbose=False):
 def test_vera(verbose=False):
     # vera að + so.nh.
     s = "Ég er ekki að skilja þetta."
-    check_sentence(api, s, [(1, 4, "P_VeraAð")])
+    # The span includes the pronoun object, which goes in front of the negation ('skil þetta ekki')
+    check_sentence(api, s, [(1, 5, "P_VeraAð")])
     s = "Ég er að fara í sund þegar ég fæ símtalið."
     # check_sentence(api, s, [(1, 3, "P_VeraAð")])
     s = "Hún er að skrifa vel."

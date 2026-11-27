@@ -280,12 +280,14 @@ class GreynirCorrectAPI:
         self, text: Iterable[str], ignore_rules: Optional[frozenset[str]] = None, suppress_suggestions: bool = False
     ) -> Iterable[CorrectToken]:
         """Correct the token-level errors in the text"""
-        # TODO: The pipeline needs a refactoring.
-        # We use some hacks here to avoid having to rewrite the pipeline at this point.
-        self.gc.pipeline._text_or_gen = text  # type: ignore[reportPrivateUsage]
-        self.gc.pipeline._ignore_rules = ignore_rules or frozenset()  # type: ignore[reportPrivateUsage]
-        self.gc.pipeline._suppress_suggestions = suppress_suggestions  # type: ignore[reportPrivateUsage]
-        return self.gc.pipeline.tokenize()  # type: ignore
+        # Each text is tokenized with a pipeline of its own, as this object
+        # may be in use in other threads
+        pipeline = self.gc.pipeline.clone(
+            text,
+            ignore_rules=ignore_rules or frozenset(),
+            suppress_suggestions=suppress_suggestions,
+        )
+        return pipeline.tokenize()  # type: ignore
 
     def _sentence_contains_error(self, corrected_tokens: Iterable[CorrectToken]) -> bool:
         """Classify a sentence as probably correct or not."""

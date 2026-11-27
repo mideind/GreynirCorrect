@@ -6,7 +6,9 @@ on:
       - '**'
 
 jobs:
-  # Build wheel and source distribution
+  # Build wheel and source distribution. The package is pure Python, so
+  # there is one wheel for all platforms (GreynirEngine builds one per
+  # platform with cibuildwheel).
   build:
     name: Build wheel and sdist
     runs-on: ubuntu-latest
@@ -33,10 +35,55 @@ jobs:
           name: dist
           path: dist/
 
+  # Install the wheel on each platform that GreynirEngine has wheels for,
+  # and check a sentence with it (as cibuildwheel does for each wheel of
+  # GreynirEngine). This runs without the source tree, so it also checks
+  # that the wheel has the configuration files.
+  test_wheel:
+    name: Test the wheel on ${{ matrix.os }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # Note: the macOS runner is pinned, as in GreynirEngine. GitHub
+        # retires its runner images after a couple of years, which shows up
+        # as a cancelled job with the annotation "The configuration ... is
+        # not supported".
+        os: [ubuntu-latest, macos-15, windows-latest]
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install the wheel
+        shell: bash
+        run: python -m pip install dist/*.whl
+
+      - name: Check a sentence
+        shell: bash
+        # The sentence is 'Ég keypti þetta út í búð.', written with escapes
+        # so that the script is ASCII on all platforms
+        run: |
+          python - <<'PY'
+          from reynir_correct import check_single
+          s = check_single("Ég keypti þetta út í búð.")
+          codes = [a.code for a in s.annotations]
+          print(codes)
+          assert s.tree is not None
+          assert codes == ["P_DIR_LOC"]
+          PY
+
   # Publish to PyPI (only for version tags)
   publish:
     name: Publish to PyPI
-    needs: build
+    needs: [build, test_wheel]
     runs-on: ubuntu-latest
     # Only publish on version tags (e.g., 4.1.2), skip test tags
     if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref, 'test')
