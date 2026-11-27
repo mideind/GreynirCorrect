@@ -125,16 +125,50 @@ def test_dir_loc_keeps_phrase(api: reynir_correct.GreynirCorrectAPI) -> None:
 
 
 def test_vera_að_keeps_words(api: reynir_correct.GreynirCorrectAPI) -> None:
-    """P_VeraAð keeps what stands between 'vera' and the verb, the negation above all"""
+    """P_VeraAð keeps what stands between 'vera' and the verb, the negation above all,
+    in the word order of a finite verb"""
     for sentence, original, suggestion, result in [
-        ("Ég er ekki að skilja þetta.", "er ekki að skilja", "skil ekki", "Ég skil ekki þetta."),
+        ("Kristín er að skrifa vel.", "er að skrifa", "skrifar", "Kristín skrifar vel."),
+        # A noun phrase stays behind the adverb
         (
             "Ég er alls ekki að skilja þetta mál.",
             "er alls ekki að skilja",
             "skil alls ekki",
             "Ég skil alls ekki þetta mál.",
         ),
-        ("Kristín er að skrifa vel.", "er að skrifa", "skrifar", "Kristín skrifar vel."),
+        ("Ég er ekki að tala við hann.", "er ekki að tala", "tala ekki", "Ég tala ekki við hann."),
+        # ...as do an indefinite pronoun and a pronoun with a relative clause
+        ("Ég er ekki að skilja neitt.", "er ekki að skilja", "skil ekki", "Ég skil ekki neitt."),
+        (
+            "Ég er ekki að skilja þá sem tala svona.",
+            "er ekki að skilja",
+            "skil ekki",
+            "Ég skil ekki þá sem tala svona.",
+        ),
+        # A pronoun object goes in front of the adverb, and is a part of the span
+        ("Ég er ekki að skilja þetta.", "er ekki að skilja þetta", "skil þetta ekki", "Ég skil þetta ekki."),
+        (
+            "Þið eruð ekki að standa ykkur vel.",
+            "eruð ekki að standa ykkur",
+            "standið ykkur ekki",
+            "Þið standið ykkur ekki vel.",
+        ),
+        (
+            "Ég er ekki að gefa honum það.",
+            "er ekki að gefa honum það",
+            "gef honum það ekki",
+            "Ég gef honum það ekki.",
+        ),
+        ("Ég er ekki að gefa honum bókina.", "er ekki að gefa honum", "gef honum ekki", "Ég gef honum ekki bókina."),
+        # ...also a pronoun that stands for a clause, with a particle of the verb in between
+        (
+            "Ég er ekki að halda því fram að hann komi.",
+            "er ekki að halda því",
+            "held því ekki",
+            "Ég held því ekki fram að hann komi.",
+        ),
+        # Without an adverb, nothing moves, and the span ends at the verb
+        ("Ég er að skilja þetta.", "er að skilja", "skil", "Ég skil þetta."),
         # The subject of a question, and the capital letter
         ("Er ég að skilja þetta rétt?", "Er ég að skilja", "Skil ég", "Skil ég þetta rétt?"),
     ]:
